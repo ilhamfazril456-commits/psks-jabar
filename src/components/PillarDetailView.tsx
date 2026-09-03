@@ -1003,12 +1003,6 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           {/* Top Row for Navigation - Spacious layout */}
           <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-8 pb-3 sm:pb-4 border-b border-emerald-800/60">
             <BackToHomeButton onClick={onBackToDashboard} variant="gold" id="btn-back-top-pillar-detail" />
-
-            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-[#e5c158] bg-black/30 px-3 py-1 sm:py-1.5 rounded-full border border-[#d4af37]/30">
-              <span>SISTEM INFORMAPSKS JABAR</span>
-              <span>•</span>
-              <span>DINSOS PROV. JABAR</span>
-            </div>
           </div>
 
           <div className="inline-block bg-[#e5c158] text-[#043e2e] font-extrabold text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded uppercase mb-2 sm:mb-3 tracking-wider shadow-sm">

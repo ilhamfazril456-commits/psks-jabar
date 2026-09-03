@@ -355,7 +355,11 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
               {/* Recharts Donut Visual - Clean Fixed Center, Side Floating Inspector (Zero Collision) */}
               <div
                 className="relative h-[290px] sm:h-[310px] w-full flex items-center justify-center select-none"
-                onClick={() => setActiveDonutIndex(null)}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setActiveDonutIndex(null);
+                  }
+                }}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <RePieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -372,7 +376,8 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       onMouseLeave={() => {
                         /* Keep active index on touch devices */
                       }}
-                      onClick={(_, index) => {
+                      onClick={(_, index, e) => {
+                        if (e && (e as any).stopPropagation) (e as any).stopPropagation();
                         setActiveDonutIndex((prev) => (prev === index ? null : index));
                       }}
                     >
@@ -388,6 +393,10 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                             style={{
                               filter: isHovered ? 'drop-shadow(0px 4px 10px rgba(0,0,0,0.28))' : 'none',
                               transformOrigin: 'center center',
+                            }}
+                            onClick={(e: any) => {
+                              if (e && e.stopPropagation) e.stopPropagation();
+                              setActiveDonutIndex((prev) => (prev === index ? null : index));
                             }}
                           />
                         );
@@ -411,15 +420,15 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                   </div>
                 </div>
 
-                {/* FLOATING SIDE CARD: Melayang pada sisi donat saat disentuh/disorot (Tidak menutupi teks tengah) */}
+                {/* FLOATING SIDE CARD: Melayang pada sisi donat saat disentuh/disorot (Laptop: Sisi berlawanan | HP: Terpusat rapi & nyaman di atas donat) */}
                 {activeDonutIndex !== null && pillarDistributionData[activeDonutIndex] && (() => {
                   const activePillar = pillarDistributionData[activeDonutIndex];
                   return (
                     <div
-                      className={`absolute top-2 sm:top-3 z-30 w-[175px] sm:w-[195px] bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 sm:p-3 shadow-2xl border border-slate-700/80 transition-all duration-200 animate-fadeIn ${
+                      className={`absolute z-30 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 sm:p-3 shadow-2xl border border-slate-700/80 transition-all duration-200 animate-fadeIn max-sm:top-1.5 max-sm:left-1/2 max-sm:-translate-x-1/2 max-sm:w-[268px] max-sm:max-w-[calc(100%-1rem)] ${
                         activePositionOnRight
-                          ? 'right-1 sm:right-2'
-                          : 'left-1 sm:left-2'
+                          ? 'sm:top-3 sm:w-[195px] sm:right-2 sm:left-auto sm:translate-x-0'
+                          : 'sm:top-3 sm:w-[195px] sm:left-2 sm:right-auto sm:translate-x-0'
                       }`}
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -501,8 +510,20 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       key={item.id}
                       type="button"
                       onMouseEnter={() => setActiveDonutIndex(index)}
-                      onMouseLeave={() => setActiveDonutIndex(null)}
-                      onClick={() => handlePillarClick(item.id)}
+                      onMouseLeave={() => {
+                        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                          setActiveDonutIndex(null);
+                        }
+                      }}
+                      onClick={(e) => {
+                        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveDonutIndex((prev) => (prev === index ? null : index));
+                        } else {
+                          handlePillarClick(item.id);
+                        }
+                      }}
                       className={`flex items-center justify-between p-1.5 rounded-xl border text-left transition-all text-xs cursor-pointer group ${
                         isSelected
                           ? 'border-emerald-600 bg-emerald-50/80 shadow-xs ring-1 ring-emerald-500'

@@ -154,33 +154,48 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, [detectedIp]);
 
-  // State and Helper for device registered accounts with realtime auto-sync against active database accounts
+  // State and Helper for device registered accounts: max 3 per IP / per device
   const [deviceRegCountTrigger, setDeviceRegCountTrigger] = useState(0);
+
+  const getLocalDeviceId = (): string => {
+    try {
+      let dId = localStorage.getItem('simpsks_device_uuid');
+      if (!dId) {
+        dId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+        localStorage.setItem('simpsks_device_uuid', dId);
+      }
+      return dId;
+    } catch {
+      return 'dev_' + Date.now();
+    }
+  };
 
   const deviceRegisteredAccounts = useMemo(() => {
     try {
+      // 1. Akun yang didaftarkan dari perangkat lokal ini (localStorage)
       const raw = localStorage.getItem('simpsks_device_registered_accounts');
-      let registeredList: string[] = [];
+      let localList: string[] = [];
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          registeredList = parsed.map((uname) => String(uname || '').trim()).filter((u) => u.length > 0);
+          localList = parsed.map((uname) => String(uname || '').trim()).filter((u) => u.length > 0);
         }
       }
 
-      // Auto-include any user accounts stored in active database (such as IlhamFazril1, IlhamFazril2)
-      if (adminAccounts && adminAccounts.length > 0) {
-        const dbUserAccounts = adminAccounts
-          .filter((a) => a.role === 'user' && a.username)
-          .map((a) => a.username.trim());
-        dbUserAccounts.forEach((u) => {
-          if (!registeredList.some((item) => item.toLowerCase() === u.toLowerCase())) {
-            registeredList.push(u);
+      // 2. Akun yang didaftarkan dari alamat IP yang sama (jika detectedIp valid dan ada di database)
+      const ipAccounts: string[] = [];
+      if (detectedIp && adminAccounts && adminAccounts.length > 0) {
+        adminAccounts.forEach((acc) => {
+          if (acc.role === 'user' && acc.registeredIp && acc.registeredIp === detectedIp && acc.username) {
+            ipAccounts.push(acc.username.trim());
           }
         });
       }
 
-      // STRICT RULE: ONLY purge accounts that were EXPLICITLY deleted (in psks_deleted_admin_ids)
+      // Gabungkan akun yang berasal dari perangkat ini atau alamat IP ini
+      const combinedAccounts = Array.from(new Set([...localList, ...ipAccounts]));
+
+      // 3. Filter akun yang sudah dihapus oleh admin (di psks_deleted_admin_ids atau tidak ada di adminAccounts)
       const rawDeleted = localStorage.getItem('psks_deleted_admin_ids');
       let deletedList: string[] = [];
       if (rawDeleted) {
@@ -192,18 +207,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         } catch {}
       }
 
-      const validLocalAccounts = registeredList.filter(
-        (uname) => !deletedList.includes(uname.toLowerCase())
-      );
+      const validAccounts = combinedAccounts.filter((uname) => {
+        const uLower = uname.toLowerCase();
+        if (deletedList.includes(uLower)) return false;
+        if (adminAccounts && adminAccounts.length > 0) {
+          return adminAccounts.some((a) => (a.username || '').toLowerCase().trim() === uLower);
+        }
+        return true;
+      });
 
+      // Update penyimpanan lokal dengan akun aktif pada perangkat ini
+      const updatedLocal = localList.filter((u) => validAccounts.some((v) => v.toLowerCase() === u.toLowerCase()));
       try {
-        localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(validLocalAccounts));
+        localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(updatedLocal));
       } catch {}
 
-      return Array.from(new Set(validLocalAccounts));
+      return validAccounts;
     } catch {}
     return [];
-  }, [adminAccounts, regSuccess, deviceRegCountTrigger, isOpen]);
+  }, [adminAccounts, regSuccess, deviceRegCountTrigger, isOpen, detectedIp]);
 
   const getDeviceRegisteredAccounts = (): string[] => {
     return deviceRegisteredAccounts;
@@ -359,6 +381,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         isOnline: false,
         statusKoneksi: 'OFFLINE',
         statusLayar: 'OFFLINE',
+        registeredIp: detectedIp || undefined,
+        deviceId: getLocalDeviceId(),
       };
 
       if (onRegisterAccount) {

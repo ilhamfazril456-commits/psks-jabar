@@ -187,6 +187,8 @@ export interface AdminAccount {
   isGuest?: boolean;
   isDeveloper?: boolean;
   statusActive?: 'SAH_TERDAFTAR' | 'GUEST' | string;
+  registeredIp?: string;
+  deviceId?: string;
 }
 
 export interface AdminMessage {

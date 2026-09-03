@@ -758,32 +758,6 @@ export default function App() {
           setAdminAccounts(finalList);
           try {
             localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
-
-            // Ensure registered user accounts from database (e.g. IlhamFazril1, IlhamFazril2) persist on this device
-            const dbUserUnames = finalList
-              .filter((a) => a.role === 'user' && a.username)
-              .map((a) => a.username.trim());
-            if (dbUserUnames.length > 0) {
-              const rawDev = localStorage.getItem('simpsks_device_registered_accounts');
-              let devList: string[] = [];
-              if (rawDev) {
-                try {
-                  const parsed = JSON.parse(rawDev);
-                  if (Array.isArray(parsed)) devList = parsed.map(String);
-                } catch {}
-              }
-              let changed = false;
-              dbUserUnames.forEach((u) => {
-                if (!devList.some((d) => d.toLowerCase() === u.toLowerCase())) {
-                  devList.push(u);
-                  changed = true;
-                }
-              });
-              if (changed) {
-                localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(devList));
-                window.dispatchEvent(new Event('simpsks_device_accounts_changed'));
-              }
-            }
           } catch {}
         }
       },
@@ -2243,23 +2217,6 @@ export default function App() {
       const next = [...filtered, fullAdmin];
       try {
         localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
-
-        // Auto-increment / sync device registered accounts
-        if (fullAdmin.role === 'user') {
-          const rawDevice = localStorage.getItem('simpsks_device_registered_accounts');
-          let currentList: string[] = [];
-          if (rawDevice) {
-            try {
-              const parsed = JSON.parse(rawDevice);
-              if (Array.isArray(parsed)) currentList = parsed.map(String);
-            } catch {}
-          }
-          if (!currentList.some((u) => u.toLowerCase().trim() === newUname)) {
-            currentList.push(fullAdmin.username);
-            localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(currentList));
-            window.dispatchEvent(new Event('simpsks_device_accounts_changed'));
-          }
-        }
       } catch {}
       return next;
     });
