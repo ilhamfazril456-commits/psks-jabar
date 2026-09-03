@@ -565,6 +565,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
           badge: 'INFORMASI WEBSITE 1/8',
         };
       case 'smart_card':
+        if (session?.role !== 'developer' && !session?.isDeveloper) {
+          return {
+            title: 'Smart Acces Card',
+            desc: 'Tampilan visual kartu fisik resmi dan panduan penggunaan Smart Access Card.',
+            badge: 'VISUAL & PANDUAN',
+          };
+        }
         return {
           title: 'Smart Access Card & Link Vercel (QR & NFC)',
           desc: 'Pengaturan & pemrograman Smart Card, generator link auto-login resmi Vercel, serta payload NFC Mifare 13,56 MHz.',
@@ -1030,14 +1037,20 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
                         <h4 className="text-xs sm:text-base font-black text-slate-900 group-hover:text-[#043e2e] truncate">
-                          Smart Access Card & Link Vercel
+                          {session?.role !== 'developer' && !session?.isDeveloper
+                            ? 'Smart Acces Card'
+                            : 'Smart Access Card & Link Vercel'}
                         </h4>
                         <span className="text-[8.5px] sm:text-[10px] font-black bg-emerald-100 text-emerald-900 px-2 sm:px-2.5 py-0.5 rounded-md border border-emerald-300 whitespace-nowrap">
-                          VERCEL, QR & NFC
+                          {session?.role !== 'developer' && !session?.isDeveloper
+                            ? 'VISUAL & PANDUAN'
+                            : 'VERCEL, QR & NFC'}
                         </span>
                       </div>
                       <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
-                        Pengaturan & pemrograman smart card, tautan bypass Vercel resmi, token Superadmin & Developer.
+                        {session?.role !== 'developer' && !session?.isDeveloper
+                          ? 'Tampilan visual kartu fisik resmi dan panduan penggunaan Smart Access Card.'
+                          : 'Pengaturan & pemrograman smart card, tautan bypass Vercel resmi, token Superadmin & Developer.'}
                       </p>
                     </div>
                   </div>
