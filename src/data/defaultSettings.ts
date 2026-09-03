@@ -1,0 +1,67 @@
+import { AppSettings } from '../types';
+import { OFFICIAL_KADINAS_PHOTO } from '../assets/officialKadinasPhoto';
+import { OFFICIAL_ECOOFFICE_VIDEO } from '../assets/officialEcoOfficeVideo';
+import { DEFAULT_ANNOUNCEMENT_CONFIG } from './defaultAnnouncement';
+import psksLogoAsset from '../assets/images/official_psks_jabar_logo_transparent.png';
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  logoUrl: psksLogoAsset,
+  bgMode: 'video',
+  bgVideoUrl: OFFICIAL_ECOOFFICE_VIDEO,
+  kadinasPhotoUrl: OFFICIAL_KADINAS_PHOTO,
+  floatingWaNumber: '6289602421065',
+  floatingWaSuperadminNumber: '6289602421065',
+  floatingWaDeveloperNumber: '6289602421065',
+  floatingWaRegionNumbers: {
+    'Kab. Bogor': '6289602421065',
+    'Kab. Sukabumi': '6289602421065',
+    'Kab. Cianjur': '6289602421065',
+    'Kab. Bandung': '6289602421065',
+    'Kab. Garut': '6289602421065',
+    'Kab. Tasikmalaya': '6289602421065',
+    'Kab. Ciamis': '6289602421065',
+    'Kab. Kuningan': '6289602421065',
+    'Kab. Cirebon': '6289602421065',
+    'Kab. Majalengka': '6289602421065',
+    'Kab. Sumedang': '6289602421065',
+    'Kab. Indramayu': '6289602421065',
+    'Kab. Subang': '6289602421065',
+    'Kab. Purwakarta': '6289602421065',
+    'Kab. Karawang': '6289602421065',
+    'Kab. Bekasi': '6289602421065',
+    'Kab. Bandung Barat': '6289602421065',
+    'Kab. Pangandaran': '6289602421065',
+    'Kota Bogor': '6289602421065',
+    'Kota Sukabumi': '6289602421065',
+    'Kota Bandung': '6289602421065',
+    'Kota Cirebon': '6289602421065',
+    'Kota Bekasi': '6289602421065',
+    'Kota Depok': '6289602421065',
+    'Kota Cimahi': '6289602421065',
+    'Kota Tasikmalaya': '6289602421065',
+    'Kota Banjar': '6289602421065',
+  },
+  socialLinks: {
+    whatsapp: 'https://wa.me/6282126030038',
+    instagram: 'https://www.instagram.com/dinsos.jabar?igsh=MWI1NnRtMWcycmlwbg==',
+    youtube: 'https://youtube.com/@dinsosjabartv?si=ZlCTj5Crvbzmrqne',
+    facebook: 'https://www.facebook.com/share/1KVk3bkMSQ/',
+    tiktok: 'https://www.tiktok.com/@dinsos.jabar?_r=1&_t=ZS-98KXkZOGaWb',
+    email: 'mailto:dinsos@jabarprov.go.id',
+    x: 'https://x.com/dinsosjabar',
+  },
+  maintenanceUser: false,
+  maintenanceAdmin: false,
+  maintenanceSuperadmin: false,
+  maintenanceMsgUser: 'Mohon maaf, portal publik PSKS sedang dalam pemeliharaan rutin oleh tim Developer. Silakan coba beberapa saat lagi.',
+  maintenanceMsgAdmin: 'Mohon maaf, sistem administrasi wilayah sedang dalam pemeliharaan sistem. Silakan hubungi Developer.',
+  maintenanceMsgSuperadmin: 'Sistem Pusat Superadmin sedang dalam pemeliharaan dan pembaruan data oleh Developer.',
+  announcement: DEFAULT_ANNOUNCEMENT_CONFIG,
+  kadinasName: 'Noneng Komara Nengsih, S.E., M.A.P.',
+  profileSubtitle: 'Kepala Dinas Sosial Provinsi Jawa Barat',
+  profileGreeting: 'Assalamualaikum Wr. Wb.',
+  profileBody: `Selamat Datang di Website Resmi Dinas Sosial Provinsi Jawa Barat. Semoga Dengan Adanya Website Ini Bisa Membantu Masyarakat/Pengunjung Untuk Mendapatkan Informasi Yang Berkaitan Dengan Dinas Sosial Provinsi dan Juga Untuk Membantu Dalam Rangka Transparansi Dinas Kepada Masyarakat/Pengunjung Langsung.
+
+Semoga Upaya Kami Dalam Hal Ini Bisa Terus Ditingkatkan Guna Memenuhi Kebutuhan Informasi Masyarakat Luas Untuk Mendapatkan Pelayanan Dari Kami.`,
+  profileClosing: 'Wassalamualaikum Wr. Wb.',
+};

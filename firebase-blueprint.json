@@ -1,0 +1,156 @@
+{
+  "entities": {
+    "admin_accounts": {
+      "title": "Admin Accounts",
+      "description": "Daftar akun admin regional dan superadmin SIM-PSKS Jawa Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "namaAdmin": { "type": "string" },
+        "wilayahTugas": { "type": "string" },
+        "role": { "type": "string" },
+        "passwordPolos": { "type": "string" },
+        "terakhirLogin": { "type": "string" }
+      },
+      "required": ["username", "wilayahTugas", "role"]
+    },
+    "psks_records": {
+      "title": "PSKS Records",
+      "description": "Data record personil 12 Pilar PSKS se-Jawa Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pillarId": { "type": "string" },
+        "nama": { "type": "string" },
+        "nik": { "type": "string", "maxLength": 16, "minLength": 16, "pattern": "^[0-9]{16}$" },
+        "jenisKelamin": { "type": "string" },
+        "pendidikan": { "type": "string" },
+        "noTglSertifikasi": { "type": "string" },
+        "sertifikasiKompetensi": { "type": "string" },
+        "jenjangJabatan": { "type": "string" },
+        "tempatBertugas": { "type": "string" },
+        "instansiBertugas": { "type": "string" },
+        "statusPeksos": { "type": "string" },
+        "jenjangJabatanPemerintah": { "type": "string" },
+        "wilayah": { "type": "string" },
+        "kec": { "type": "string" },
+        "kelDesa": { "type": "string" },
+        "alamat": { "type": "string" },
+        "hp": { "type": "string" },
+        "predikatTerakhir": { "type": "string" },
+        "noTglSertifikatKompetensi": { "type": "string" },
+        "masaBerlakuSk": { "type": "string" },
+        "noSkKeanggotaan": { "type": "string" },
+        "statusKeaktifan": { "type": "string" },
+        "email": { "type": "string" },
+        "nomorKontak": { "type": "string" },
+        "bimtekDiikuti": { "type": "string" },
+        "sertifikasi": { "type": "string" },
+        "lembaga": { "type": "string" },
+        "status": { "type": "string" },
+        "masaBakti": { "type": "string" },
+        "noSk": { "type": "string" },
+        "statusAktif": { "type": "string" },
+        "nomorInduk": { "type": "string" },
+        "sertifikat": { "type": "string" },
+        "keahlian": { "type": "string" },
+        "pelatihan": { "type": "string" },
+        "namaLks": { "type": "string" },
+        "bidangPelayanan": { "type": "string" },
+        "ketua": { "type": "string" },
+        "nomorTandaDaftar": { "type": "string" },
+        "masaBerlaku": { "type": "string" },
+        "namaKarangTaruna": { "type": "string" },
+        "tahunBerdiri": { "type": "string" },
+        "namaLk3": { "type": "string" },
+        "kontak": { "type": "string" },
+        "jenisLayanan": { "type": "string" },
+        "instansi": { "type": "string" },
+        "jabatan": { "type": "string" },
+        "wilayahKerja": { "type": "string" },
+        "skPengangkatan": { "type": "string" },
+        "masaTugas": { "type": "string" },
+        "namaBadanUsaha": { "type": "string" },
+        "jenisUsaha": { "type": "string" },
+        "bentukCsr": { "type": "string" },
+        "bidangBantuan": { "type": "string" },
+        "namaSlrt": { "type": "string" },
+        "operator": { "type": "string" }
+      },
+      "required": ["pillarId", "nama", "nik", "wilayah"]
+    },
+    "app_settings": {
+      "title": "App Settings",
+      "description": "Konfigurasi global sistem (Video Background, Foto Kadinas, Social Links, Floating WA, dan Mode Maintenance)",
+      "type": "object",
+      "properties": {
+        "bgVideoUrl": { "type": "string" },
+        "kadinasPhotoUrl": { "type": "string" },
+        "floatingWaNumber": { "type": "string" },
+        "socialLinks": { "type": "object" },
+        "maintenanceUser": { "type": "boolean" },
+        "maintenanceAdmin": { "type": "boolean" },
+        "maintenanceSuperadmin": { "type": "boolean" },
+        "maintenanceMsgUser": { "type": "string" },
+        "maintenanceMsgAdmin": { "type": "string" },
+        "maintenanceMsgSuperadmin": { "type": "string" }
+      }
+    },
+    "system_video_chunks": {
+      "title": "System Video Chunks",
+      "description": "Potongan data multi-part video latar belakang untuk sinkronisasi realtime",
+      "type": "object",
+      "properties": {
+        "index": { "type": "number" },
+        "data": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "registration_submissions": {
+      "title": "Registration Submissions",
+      "description": "Antrean verifikasi pendaftaran mandiri anggota 10 Pilar PSKS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pillarId": { "type": "string" },
+        "wilayah": { "type": "string" },
+        "nama": { "type": "string" },
+        "nik": { "type": "string" },
+        "hp": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["pillarId", "wilayah", "nama", "status"]
+    },
+    "task_items": {
+      "title": "Task Items",
+      "description": "Daftar penugasan operasional dan instruksi kerja wilayah dari Superadmin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "targetWilayah": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "assignedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "targetWilayah", "priority", "status", "assignedBy"]
+    },
+    "security_signals": {
+      "title": "Security Signals",
+      "description": "Sinyal instan aksi keamanan (Freeze, Delete, Password Reset) untuk penegakan otorisasi realtime",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "targetUsername": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetWilayah": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "by": { "type": "string" }
+      }
+    }
+  }
+}

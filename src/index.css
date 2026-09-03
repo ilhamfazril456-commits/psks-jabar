@@ -1,0 +1,358 @@
+@import "tailwindcss";
+
+@keyframes scanLine {
+  0% {
+    top: 6%;
+    opacity: 0.7;
+  }
+  50% {
+    top: 90%;
+    opacity: 1;
+  }
+  100% {
+    top: 6%;
+    opacity: 0.7;
+  }
+}
+
+.animate-scan-line {
+  animation: scanLine 1.6s ease-in-out infinite;
+  will-change: top, opacity;
+}
+
+@keyframes scaleUp {
+  0% {
+    transform: scale(0.93);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Ultra Smooth Popping Spring Announcement Animation */
+@keyframes popSmoothSpring {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) translateY(30px);
+    filter: blur(6px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.025) translateY(-3px);
+    filter: blur(0px);
+  }
+  82% {
+    transform: scale(0.992) translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-pop-spring {
+  animation: popSmoothSpring 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes popSmoothExit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+    filter: blur(6px);
+  }
+}
+
+.animate-pop-exit {
+  animation: popSmoothExit 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes overlayFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-overlay-fade {
+  animation: overlayFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes overlayFadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-overlay-exit {
+  animation: overlayFadeOut 0.28s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out forwards;
+}
+
+/* Modern Animated Login Background Effects */
+@keyframes orbFloat1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(45px, -55px) scale(1.15);
+  }
+  66% {
+    transform: translate(-35px, 35px) scale(0.9);
+  }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-55px, 45px) scale(1.1);
+  }
+  66% {
+    transform: translate(40px, -40px) scale(0.92);
+  }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(65px, 50px) scale(1.18);
+  }
+}
+
+@keyframes waveSweep {
+  0% {
+    transform: translateX(-25%) rotate(-6deg);
+  }
+  50% {
+    transform: translateX(18%) rotate(-3deg);
+  }
+  100% {
+    transform: translateX(-25%) rotate(-6deg);
+  }
+}
+
+@keyframes particlePulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translateY(0px) scale(0.85);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-22px) scale(1.25);
+  }
+}
+
+@keyframes meshShift {
+  0% {
+    background-position: 0px 0px;
+  }
+  100% {
+    background-position: 48px 48px;
+  }
+}
+
+.animate-orb-1 {
+  animation: orbFloat1 14s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-orb-2 {
+  animation: orbFloat2 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-orb-3 {
+  animation: orbFloat3 16s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-wave-sweep {
+  animation: waveSweep 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-particle-1 {
+  animation: particlePulse 4s ease-in-out infinite;
+}
+
+.animate-particle-2 {
+  animation: particlePulse 6s ease-in-out infinite 1.5s;
+}
+
+.animate-particle-3 {
+  animation: particlePulse 5s ease-in-out infinite 3s;
+}
+
+.animate-mesh-grid {
+  animation: meshShift 25s linear infinite;
+}
+
+/* Global Hardware Acceleration & Smooth Leaflet Performance */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input, select, textarea, button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.leaflet-container {
+  background-color: #020617 !important;
+  font-family: inherit !important;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform;
+  transition-property: transform;
+  transition-duration: 250ms;
+}
+
+.leaflet-interactive {
+  transition: fill-opacity 0.15s ease, stroke-width 0.15s ease, stroke 0.15s ease;
+  will-change: stroke, fill;
+}
+
+.custom-jabar-pin {
+  background: transparent !important;
+  border: none !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.custom-jabar-tooltip {
+  font-family: inherit !important;
+  padding: 0 !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5) !important;
+}
+
+/* JABARPROV-STYLE DESKTOP & TABLET GLASSMORPHISM NAVBAR WITH AUTO GREEN ON SCROLL */
+@media (min-width: 768px) {
+  .jabarprov-navbar-transparent {
+    background-color: rgba(4, 62, 46, 0.25) !important;
+    background-image: none !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), background-image 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  
+  .jabarprov-navbar-transparent:hover {
+    background-color: #043e2e !important;
+    background-image: linear-gradient(to bottom right, #043e2e, #054836, #064e3b) !important;
+    border-bottom-color: rgba(212, 175, 55, 0.7) !important;
+    box-shadow: 0 10px 25px -5px rgba(4, 62, 46, 0.6) !important;
+  }
+
+  .jabarprov-navbar-scrolled {
+    background-color: #043e2e !important;
+    background-image: linear-gradient(to bottom right, #043e2e, #054836, #064e3b) !important;
+    border-bottom: 2px solid #d4af37 !important;
+    box-shadow: 0 10px 25px -5px rgba(2, 42, 31, 0.7) !important;
+    transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), background-image 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+}
+
+/* FLOATING WHATSAPP ULTRA-SMOOTH ANIMATIONS (COMPACT & HARMONIOUS WITH AI ASSISTANT) */
+@keyframes waPulseWave {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.5;
+  }
+  65%, 100% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes waFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+}
+
+@keyframes waIconWiggle {
+  0%, 80%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  84% {
+    transform: rotate(-8deg) scale(1.05);
+  }
+  88% {
+    transform: rotate(8deg) scale(1.05);
+  }
+  92% {
+    transform: rotate(-4deg) scale(1.03);
+  }
+  96% {
+    transform: rotate(4deg) scale(1.01);
+  }
+}
+
+.animate-wa-float {
+  animation: waFloat 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-wa-pulse-1 {
+  animation: waPulseWave 2.8s cubic-bezier(0.16, 0.8, 0.3, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.animate-wa-pulse-2 {
+  animation: waPulseWave 2.8s cubic-bezier(0.16, 0.8, 0.3, 1) infinite 1.4s;
+  will-change: transform, opacity;
+}
+
+.animate-wa-icon {
+  animation: waIconWiggle 6s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+

@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for security validation
+    function isNotEmpty(val) {
+      return val is string && val.size() > 0;
+    }
+
+    // Collection: app_settings (Global System Configuration & Settings)
+    match /app_settings/{documentId} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().size() > 0;
+    }
+
+    // Collection: system_video_chunks (Realtime Multi-part Video Storage for Zero-configuration Background Video Sync)
+    match /system_video_chunks/{chunkId} {
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    // Collection: psks_records (Data Rekapitulasi PSKS 27 Kab/Kota)
+    match /psks_records/{recordId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.nama is string 
+                            || request.resource.data.wilayah is string
+                            || request.resource.data.pillarId is string;
+      allow delete: if true;
+    }
+
+    // Collection: admin_messages (Kotak Masuk Pengaduan Publik & Pesan Aspirasi)
+    match /admin_messages/{messageId} {
+      allow read: if true;
+      // Allow public to submit messages/aspirations with validation
+      allow create: if request.resource.data.namaPengirim is string
+                    || request.resource.data.isiPesan is string
+                    || request.resource.data.subject is string;
+      allow update, delete: if true;
+    }
+
+    // Collection: admin_accounts (Manajemen Akun Admin Daerah & Provinsi)
+    match /admin_accounts/{accountId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().size() > 0;
+      allow delete: if true;
+    }
+
+    // Collection: system_logs (Catatan Riwayat Audit Aktivitas & Log Forensik)
+    match /system_logs/{logId} {
+      allow read: if true;
+      allow create: if request.resource.data.action is string 
+                    || request.resource.data.actionType is string 
+                    || request.resource.data.timestamp is string 
+                    || request.resource.data.timestamp is int
+                    || request.resource.data.createdAt is int
+                    || request.resource.data.createdAt is number;
+      allow update: if false;
+      allow delete: if true;
+    }
+
+    // Collection: registration_submissions (Pengajuan Pendaftaran Mandiri Anggota PSKS)
+    match /registration_submissions/{submissionId} {
+      allow read: if true;
+      allow create: if request.resource.data.namaLengkap is string || request.resource.data.nama is string;
+      allow update, delete: if true;
+    }
+
+    // Collection: task_items (Manajemen Tugas Operasional & Penugasan Wilayah)
+    match /task_items/{taskId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.title is string || request.resource.data.judul is string;
+      allow delete: if true;
+    }
+
+    // Collection: security_signals (Realtime Instant Broadcast Security Signals & Remote Kickout)
+    match /security_signals/{signalId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
+
