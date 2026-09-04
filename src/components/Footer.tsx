@@ -9,7 +9,6 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(17);
-  const [isMapLoaded, setIsMapLoaded] = useState<boolean>(false);
   const [isPrivacyTermsOpen, setIsPrivacyTermsOpen] = useState(false);
   const [privacyTermsTab, setPrivacyTermsTab] = useState<'privacy' | 'terms'>('privacy');
 
@@ -123,10 +122,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
                 loading="eager"
                 referrerPolicy="no-referrer-when-downgrade"
                 title="Google Maps Dinsos Jabar"
-                onLoad={() => setIsMapLoaded(true)}
-                className={`relative z-1 w-full h-full block transition-opacity duration-500 ${
-                  isMapLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="relative z-1 w-full h-full block"
               />
 
               {/* Zoom In / Zoom Out Controls (Bottom Right) */}

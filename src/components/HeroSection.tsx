@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ArrowDownCircle } from 'lucide-react';
 import { AppSettings } from '../types';
 import { OFFICIAL_ECOOFFICE_VIDEO } from '../assets/officialEcoOfficeVideo';
-import officialBuildingPoster from '../assets/images/eco_office_facade_1785570787977.jpg';
 
 interface HeroSectionProps {
   onScrollToGrid: () => void;
@@ -59,7 +58,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
               setIsVideoReady(true);
             })
             .catch((err) => {
-              console.warn('Video autoplay initial catch, retrying muted play:', err);
               vid.muted = true;
               vid.play().then(() => setIsVideoReady(true)).catch(() => {});
             });
@@ -86,7 +84,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   }, [showCustomPhoto, activeVideo]);
 
   const handleVideoError = () => {
-    console.warn('Primary video source failed, falling back to official asset');
     if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
       setFallbackToOfficial(true);
     } else {
@@ -95,23 +92,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   };
 
   return (
-    <section className="relative w-full h-[65vh] sm:h-[78vh] min-h-[360px] sm:min-h-[520px] md:-mt-[70px] md:pt-[70px] py-8 sm:py-0 flex items-center justify-center overflow-hidden bg-[#021f18]">
-      {/* Permanent High-Resolution Background Fallback Layer (Guarantees NO BLACK SCREEN) */}
-      <div 
-        className="absolute inset-0 w-full h-full bg-cover bg-center z-0 transition-opacity duration-700"
-        style={{
-          backgroundImage: `url(${showCustomPhoto && customUserPhoto ? customUserPhoto : officialBuildingPoster})`,
-          filter: 'brightness(0.92) contrast(1.05)'
-        }}
-      />
+    <section className="relative w-full h-[65vh] sm:h-[78vh] min-h-[360px] sm:min-h-[520px] md:-mt-[70px] md:pt-[70px] py-8 sm:py-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#011b15] via-[#022a1f] to-[#011712]">
+      {/* Photo Mode Layer (only if user explicitly uploaded custom photo in settings) */}
+      {showCustomPhoto && customUserPhoto && (
+        <div 
+          className="absolute inset-0 w-full h-full bg-cover bg-center z-0"
+          style={{
+            backgroundImage: `url(${customUserPhoto})`,
+            filter: 'brightness(0.92) contrast(1.05)'
+          }}
+        />
+      )}
 
-      {/* Background Layer: Real Video by Default with smooth fade-in */}
+      {/* Background Layer: Real Video by Default with smooth playback */}
       {!showCustomPhoto && !videoError && (
         <video
           key={activeVideo}
           ref={videoRef}
           src={activeVideo}
-          poster={officialBuildingPoster}
           autoPlay
           loop
           muted
@@ -129,7 +127,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
             }
           }}
           className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.08] contrast-[1.10] saturate-[1.12] ${
-            isVideoReady ? 'opacity-100' : 'opacity-80'
+            isVideoReady ? 'opacity-100' : 'opacity-90'
           }`}
           style={{
             willChange: 'transform, opacity',
