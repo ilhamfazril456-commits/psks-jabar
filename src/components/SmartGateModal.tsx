@@ -170,8 +170,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
   };
 
+  const isPrivateOrLocalIp = (ip: string) => {
+    if (!ip) return true;
+    const trimmed = ip.trim().toLowerCase();
+    return (
+      trimmed === '' ||
+      trimmed === '127.0.0.1' ||
+      trimmed === '::1' ||
+      trimmed === 'localhost' ||
+      trimmed.startsWith('10.') ||
+      trimmed.startsWith('192.168.') ||
+      trimmed.startsWith('172.16.') ||
+      trimmed === 'unknown'
+    );
+  };
+
   const deviceRegisteredAccounts = useMemo(() => {
     try {
+      const localDeviceId = getLocalDeviceId();
+
       // 1. Akun yang didaftarkan dari perangkat lokal ini (localStorage)
       const raw = localStorage.getItem('simpsks_device_registered_accounts');
       let localList: string[] = [];
@@ -182,9 +199,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         }
       }
 
-      // 2. Akun yang didaftarkan dari alamat IP yang sama (jika detectedIp valid dan ada di database)
+      // 2. Akun yang terdaftar dari deviceId perangkat ini di database
+      const deviceIdAccounts: string[] = [];
+      if (localDeviceId && adminAccounts && adminAccounts.length > 0) {
+        adminAccounts.forEach((acc) => {
+          if (acc.role === 'user' && acc.deviceId && acc.deviceId === localDeviceId && acc.username) {
+            deviceIdAccounts.push(acc.username.trim());
+          }
+        });
+      }
+
+      // 3. Akun yang didaftarkan dari alamat IP publik yang sama (hanya jika IP publik valid & bukan loopback/lokal)
       const ipAccounts: string[] = [];
-      if (detectedIp && adminAccounts && adminAccounts.length > 0) {
+      const hasValidPublicIp = detectedIp && !isPrivateOrLocalIp(detectedIp);
+      if (hasValidPublicIp && adminAccounts && adminAccounts.length > 0) {
         adminAccounts.forEach((acc) => {
           if (acc.role === 'user' && acc.registeredIp && acc.registeredIp === detectedIp && acc.username) {
             ipAccounts.push(acc.username.trim());
@@ -192,10 +220,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         });
       }
 
-      // Gabungkan akun yang berasal dari perangkat ini atau alamat IP ini
-      const combinedAccounts = Array.from(new Set([...localList, ...ipAccounts]));
+      // Gabungkan akun yang berasal dari perangkat ini (local storage + deviceId) atau alamat IP publik ini
+      const combinedAccounts = Array.from(new Set([...localList, ...deviceIdAccounts, ...ipAccounts]));
 
-      // 3. Filter akun yang sudah dihapus oleh admin (di psks_deleted_admin_ids atau tidak ada di adminAccounts)
+      // 4. Filter akun yang sudah dihapus oleh admin (di psks_deleted_admin_ids atau tidak ada di adminAccounts)
       const rawDeleted = localStorage.getItem('psks_deleted_admin_ids');
       let deletedList: string[] = [];
       if (rawDeleted) {
@@ -217,7 +245,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       });
 
       // Update penyimpanan lokal dengan akun aktif pada perangkat ini
-      const updatedLocal = localList.filter((u) => validAccounts.some((v) => v.toLowerCase() === u.toLowerCase()));
+      const updatedLocal = Array.from(new Set([...localList, ...deviceIdAccounts])).filter((u) =>
+        validAccounts.some((v) => v.toLowerCase() === u.toLowerCase())
+      );
       try {
         localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(updatedLocal));
       } catch {}

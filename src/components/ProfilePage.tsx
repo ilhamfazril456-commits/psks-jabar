@@ -351,10 +351,9 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             <div className="relative flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
               {/* PHOTO COLUMN */}
               <motion.div
-                initial={{ opacity: 0, x: -30, scale: 0.95 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, x: -20, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 className="w-full lg:w-80 shrink-0 flex flex-col items-center"
               >
                 {/* Frame Badge Header */}
@@ -364,24 +363,30 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
                 </div>
 
                 {/* Photo Card with Gold Border & Ambient Glow */}
-                <div className="relative w-full max-w-[290px] rounded-2xl overflow-hidden shadow-2xl border-4 border-[#d4af37] group bg-gradient-to-b from-amber-50 to-slate-100">
-                  <AnimatePresence mode="wait">
-                    <motion.img
+                <div className="relative w-full max-w-[290px] h-84 sm:h-96 rounded-2xl overflow-hidden shadow-2xl border-4 border-[#d4af37] group bg-slate-900">
+                  {/* Permanent Base Image Layer (Guarantees Photo NEVER disappears) */}
+                  <img
+                    src={OFFICIAL_KADINAS_PHOTO}
+                    alt={kadinasName}
+                    className="absolute inset-0 w-full h-full object-cover object-top z-0"
+                    loading="eager"
+                  />
+
+                  {/* Active Photo Layer if custom photo is loaded */}
+                  {currentPhoto && currentPhoto !== OFFICIAL_KADINAS_PHOTO && (
+                    <img
                       key={currentPhoto}
-                      initial={{ opacity: 0.3, scale: 1.05 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5 }}
                       src={currentPhoto}
                       alt={kadinasName}
                       referrerPolicy="no-referrer"
                       onError={() => setCurrentPhoto(OFFICIAL_KADINAS_PHOTO)}
-                      className="w-full h-84 sm:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-700 ease-out"
+                      className="absolute inset-0 w-full h-full object-cover object-top z-1 transition-opacity duration-500 group-hover:scale-105"
+                      loading="eager"
                     />
-                  </AnimatePresence>
+                  )}
 
                   {/* Verified Ribbon Badge on Photo */}
-                  <div className="absolute bottom-3 left-3 right-3 bg-gradient-to-r from-emerald-950/90 via-[#043e2e]/90 to-emerald-950/90 backdrop-blur-md text-white py-2 px-3 rounded-xl border border-amber-400/40 shadow-lg flex items-center justify-between">
+                  <div className="absolute bottom-3 left-3 right-3 bg-gradient-to-r from-emerald-950/90 via-[#043e2e]/90 to-emerald-950/90 backdrop-blur-md text-white py-2 px-3 rounded-xl border border-amber-400/40 shadow-lg flex items-center justify-between z-10">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-amber-300" />
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200">

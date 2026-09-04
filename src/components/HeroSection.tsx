@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ArrowDownCircle } from 'lucide-react';
 import { AppSettings } from '../types';
 import { OFFICIAL_ECOOFFICE_VIDEO } from '../assets/officialEcoOfficeVideo';
+import officialBuildingPoster from '../assets/images/eco_office_facade_1785570787977.jpg';
 
 interface HeroSectionProps {
   onScrollToGrid: () => void;
@@ -11,9 +12,15 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSettings }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoError, setVideoError] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [fallbackToOfficial, setFallbackToOfficial] = useState(false);
 
   // Determine active video URL
   const getActiveVideoUrl = () => {
+    if (fallbackToOfficial) {
+      return OFFICIAL_ECOOFFICE_VIDEO;
+    }
+
     const firestore = appSettings?.bgVideoUrl;
     const local = typeof window !== 'undefined' ? (localStorage.getItem('dinsos_bg_video_url') || localStorage.getItem('dinsos_eco_video_url')) : null;
 
@@ -44,30 +51,67 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
       vid.muted = true;
       vid.playbackRate = 1.0;
       
-      const playPromise = vid.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn('Video autoplay initial catch, retrying muted play:', err);
-          vid.muted = true;
-          vid.play().catch(() => {});
-        });
-      }
+      const tryPlay = () => {
+        const playPromise = vid.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsVideoReady(true);
+            })
+            .catch((err) => {
+              console.warn('Video autoplay initial catch, retrying muted play:', err);
+              vid.muted = true;
+              vid.play().then(() => setIsVideoReady(true)).catch(() => {});
+            });
+        }
+      };
+
+      tryPlay();
+
+      // Ensure autoplay succeeds on first user touch/scroll if browser paused it
+      const handleUserInteraction = () => {
+        if (vid.paused) {
+          vid.play().then(() => setIsVideoReady(true)).catch(() => {});
+        }
+      };
+
+      window.addEventListener('touchstart', handleUserInteraction, { once: true, passive: true });
+      window.addEventListener('click', handleUserInteraction, { once: true, passive: true });
+
+      return () => {
+        window.removeEventListener('touchstart', handleUserInteraction);
+        window.removeEventListener('click', handleUserInteraction);
+      };
     }
   }, [showCustomPhoto, activeVideo]);
 
   const handleVideoError = () => {
-    console.warn('Primary video source failed, checking fallback');
-    setVideoError(true);
+    console.warn('Primary video source failed, falling back to official asset');
+    if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
+      setFallbackToOfficial(true);
+    } else {
+      setVideoError(true);
+    }
   };
 
   return (
     <section className="relative w-full h-[65vh] sm:h-[78vh] min-h-[360px] sm:min-h-[520px] md:-mt-[70px] md:pt-[70px] py-8 sm:py-0 flex items-center justify-center overflow-hidden bg-[#021f18]">
-      {/* Background Layer: Real Video by Default */}
-      {!showCustomPhoto ? (
+      {/* Permanent High-Resolution Background Fallback Layer (Guarantees NO BLACK SCREEN) */}
+      <div 
+        className="absolute inset-0 w-full h-full bg-cover bg-center z-0 transition-opacity duration-700"
+        style={{
+          backgroundImage: `url(${showCustomPhoto && customUserPhoto ? customUserPhoto : officialBuildingPoster})`,
+          filter: 'brightness(0.92) contrast(1.05)'
+        }}
+      />
+
+      {/* Background Layer: Real Video by Default with smooth fade-in */}
+      {!showCustomPhoto && !videoError && (
         <video
           key={activeVideo}
           ref={videoRef}
           src={activeVideo}
+          poster={officialBuildingPoster}
           autoPlay
           loop
           muted
@@ -76,25 +120,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           preload="auto"
           disablePictureInPicture
           onError={handleVideoError}
+          onCanPlay={() => setIsVideoReady(true)}
+          onPlaying={() => setIsVideoReady(true)}
           onLoadedData={() => {
+            setIsVideoReady(true);
             if (videoRef.current) {
               videoRef.current.play().catch(() => {});
             }
           }}
-          className="absolute inset-0 w-full h-full object-cover z-0 opacity-100 transition-opacity duration-700 brightness-[1.08] contrast-[1.10] saturate-[1.12]"
+          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.08] contrast-[1.10] saturate-[1.12] ${
+            isVideoReady ? 'opacity-100' : 'opacity-80'
+          }`}
           style={{
-            willChange: 'transform',
+            willChange: 'transform, opacity',
             WebkitBackfaceVisibility: 'hidden',
             backfaceVisibility: 'hidden',
             transform: 'translateZ(0)',
             WebkitTransform: 'translateZ(0)',
           }}
-        />
-      ) : (
-        /* Only shown if Admin specifically uploaded a custom real photo */
-        <div 
-          className="absolute inset-0 w-full h-full bg-cover bg-center z-0 transition-all duration-700 transform scale-105"
-          style={{ backgroundImage: `url(${customUserPhoto})` }}
         />
       )}
 

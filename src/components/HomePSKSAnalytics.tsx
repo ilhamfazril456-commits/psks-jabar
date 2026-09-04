@@ -362,7 +362,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <RePieChart key={`piechart-${totalAllPillars}-${pillarDistributionData.length}`} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                     <Pie
                       data={pillarDistributionData}
                       cx="50%"
@@ -378,7 +378,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       }}
                       onClick={(_, index, e) => {
                         if (e && (e as any).stopPropagation) (e as any).stopPropagation();
-                        setActiveDonutIndex((prev) => (prev === index ? null : index));
+                        setActiveDonutIndex(index);
                       }}
                     >
                       {pillarDistributionData.map((entry, index) => {
@@ -394,9 +394,17 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                               filter: isHovered ? 'drop-shadow(0px 4px 10px rgba(0,0,0,0.28))' : 'none',
                               transformOrigin: 'center center',
                             }}
+                            onPointerDown={(e: any) => {
+                              if (e && e.stopPropagation) e.stopPropagation();
+                              setActiveDonutIndex(index);
+                            }}
+                            onTouchStart={(e: any) => {
+                              if (e && e.stopPropagation) e.stopPropagation();
+                              setActiveDonutIndex(index);
+                            }}
                             onClick={(e: any) => {
                               if (e && e.stopPropagation) e.stopPropagation();
-                              setActiveDonutIndex((prev) => (prev === index ? null : index));
+                              setActiveDonutIndex(index);
                             }}
                           />
                         );
@@ -420,12 +428,12 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                   </div>
                 </div>
 
-                {/* FLOATING SIDE CARD: Melayang pada sisi donat saat disentuh/disorot (Laptop: Sisi berlawanan | HP: Terpusat rapi & nyaman di atas donat) */}
+                {/* FLOATING CARD: Melayang pada sisi donat saat disentuh/disorot (Laptop: Sisi berlawanan | HP: Terpusat rapi, nyaman dipandang & bebas tumpang tindih) */}
                 {activeDonutIndex !== null && pillarDistributionData[activeDonutIndex] && (() => {
                   const activePillar = pillarDistributionData[activeDonutIndex];
                   return (
                     <div
-                      className={`absolute z-30 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 sm:p-3 shadow-2xl border border-slate-700/80 transition-all duration-200 animate-fadeIn max-sm:top-1.5 max-sm:left-1/2 max-sm:-translate-x-1/2 max-sm:w-[268px] max-sm:max-w-[calc(100%-1rem)] ${
+                      className={`absolute z-30 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 sm:p-3 shadow-2xl border border-slate-700/80 transition-all duration-200 animate-fadeIn max-sm:bottom-2 max-sm:left-1/2 max-sm:-translate-x-1/2 max-sm:w-[280px] max-sm:max-w-[calc(100%-1.5rem)] ${
                         activePositionOnRight
                           ? 'sm:top-3 sm:w-[195px] sm:right-2 sm:left-auto sm:translate-x-0'
                           : 'sm:top-3 sm:w-[195px] sm:left-2 sm:right-auto sm:translate-x-0'
@@ -638,6 +646,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
               <div className="h-[280px] sm:h-[310px] w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
+                    key={`barchart-${totalAllPillars}-${selectedPillarFilter}-${sortBy}`}
                     data={regionalData}
                     margin={{ top: 10, right: 10, left: -15, bottom: 55 }}
                   >

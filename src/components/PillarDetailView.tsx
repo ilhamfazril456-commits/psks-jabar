@@ -1005,9 +1005,6 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             <BackToHomeButton onClick={onBackToDashboard} variant="gold" id="btn-back-top-pillar-detail" />
           </div>
 
-          <div className="inline-block bg-[#e5c158] text-[#043e2e] font-extrabold text-[10px] sm:text-xs px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded uppercase mb-2 sm:mb-3 tracking-wider shadow-sm">
-            PILAR PSKS DINSOS PROV. JABAR
-          </div>
           <h1 className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-1.5 sm:mb-2">
             {pillar.title}
           </h1>

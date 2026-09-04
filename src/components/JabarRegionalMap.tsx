@@ -638,6 +638,60 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       }).addTo(map);
 
       geoJsonLayerRef.current = geoLayer;
+    } else {
+      // Robust Instant Fallback: Render JABAR_DETAILED_REGIONS immediately while GeoJSON is loading or if network drops
+      JABAR_DETAILED_REGIONS.forEach((region) => {
+        const stats = regionalStats[region.name] || { total: 0 };
+        const isSelected = selectedKabKota === region.name;
+        const color = getChoroplethColor(stats.total);
+
+        const polygon = L.polygon(region.coordinates as [number, number][], {
+          fillColor: color,
+          fillOpacity: 0.85,
+          color: isSelected ? '#38bdf8' : '#0f172a',
+          weight: isSelected ? 3.5 : 1.5,
+        }).addTo(map);
+
+        polygon.bindTooltip(
+          `
+          <div class="px-2.5 py-1.5 text-slate-900 font-sans">
+            <div class="font-extrabold text-xs text-slate-950 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full ${stats.total > 0 ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+              ${region.name}
+            </div>
+            <div class="text-[11px] font-bold text-emerald-800 mt-0.5">Total SDM PSKS: <span class="font-black text-emerald-950">${stats.total.toLocaleString('id-ID')}</span></div>
+          </div>
+          `,
+          {
+            permanent: false,
+            direction: 'top',
+            sticky: true,
+            className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
+          }
+        );
+
+        polygon.on({
+          mouseover: (e) => {
+            setHoveredKabKota(region.name);
+            e.target.setStyle({ weight: 2.5, color: '#ffffff', fillOpacity: 0.95 });
+          },
+          mouseout: (e) => {
+            setHoveredKabKota(null);
+            e.target.setStyle({
+              weight: isSelected ? 3.5 : 1.5,
+              color: isSelected ? '#38bdf8' : '#0f172a',
+              fillOpacity: 0.85,
+            });
+          },
+          click: () => {
+            setSelectedKabKota(region.name);
+            if (onSelectRegion) onSelectRegion(region.name);
+          },
+        });
+
+        polygonLayersRef.current[region.name] = polygon;
+        regionCentersMap[region.name] = L.latLng(region.center[0], region.center[1]);
+      });
     }
 
     // Render Precision Person Pin Markers with Live Badge Count
@@ -770,16 +824,47 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       }
     };
 
-    if (viewMode === 'map' && leafletMapRef.current) {
-      const timer = setTimeout(() => {
-        handleResize();
-      }, 100);
+    if (viewMode === 'map') {
+      // Multiple staged timers to guarantee Leaflet canvas matches layout perfectly
+      const timers = [
+        setTimeout(handleResize, 100),
+        setTimeout(handleResize, 350),
+        setTimeout(handleResize, 800),
+        setTimeout(handleResize, 1500),
+      ];
+
+      // ResizeObserver on the container to detect CSS animations/flex changes instantly
+      let ro: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+        ro = new ResizeObserver(() => {
+          if (leafletMapRef.current) {
+            leafletMapRef.current.invalidateSize();
+          }
+        });
+        ro.observe(mapContainerRef.current);
+      }
+
+      // IntersectionObserver so when user scrolls down to map section, map is immediately invalidated
+      let io: IntersectionObserver | null = null;
+      if (typeof IntersectionObserver !== 'undefined' && mapContainerRef.current) {
+        io = new IntersectionObserver(
+          (entries) => {
+            if (entries[0]?.isIntersecting && leafletMapRef.current) {
+              leafletMapRef.current.invalidateSize();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        io.observe(mapContainerRef.current);
+      }
 
       window.addEventListener('resize', handleResize);
       window.addEventListener('orientationchange', handleResize);
 
       return () => {
-        clearTimeout(timer);
+        timers.forEach((t) => clearTimeout(t));
+        if (ro) ro.disconnect();
+        if (io) io.disconnect();
         window.removeEventListener('resize', handleResize);
         window.removeEventListener('orientationchange', handleResize);
       };
