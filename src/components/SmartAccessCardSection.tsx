@@ -40,7 +40,7 @@ interface SmartAccessCardSectionProps {
   session?: UserSession;
 }
 
-const DEFAULT_VERCEL_URL = 'https://web-psks-jabar.vercel.app';
+const DEFAULT_VERCEL_URL = 'https://psks-jabar.vercel.app';
 
 export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'qr' | 'nfc'>('all');
@@ -59,10 +59,24 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
   const [domainMode, setDomainMode] = useState<'vercel' | 'custom' | 'origin'>('vercel');
   const [customVercelDomain, setCustomVercelDomain] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('psks_custom_vercel_domain') || DEFAULT_VERCEL_URL;
+      const stored = localStorage.getItem('psks_custom_vercel_domain');
+      if (stored && stored !== 'https://web-psks-jabar.vercel.app') {
+        return stored;
+      }
+      return DEFAULT_VERCEL_URL;
     }
     return DEFAULT_VERCEL_URL;
   });
+
+  // Automatically migrate legacy web-psks-jabar domain in localStorage if present
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('psks_custom_vercel_domain');
+      if (stored === 'https://web-psks-jabar.vercel.app') {
+        localStorage.setItem('psks_custom_vercel_domain', DEFAULT_VERCEL_URL);
+      }
+    }
+  }, []);
 
   // Target role selection (Superadmin vs Developer)
   const isDevSession = session?.role === 'developer' || session?.isDeveloper;
@@ -603,7 +617,7 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
                 id="input-custom-vercel-url"
                 value={customVercelDomain}
                 onChange={(e) => handleCustomDomainChange(e.target.value)}
-                placeholder="https://web-psks-jabar.vercel.app"
+                placeholder="https://psks-jabar.vercel.app"
                 className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-amber-500/50 text-xs font-mono text-emerald-300 focus:outline-none focus:border-amber-400 shadow-inner"
               />
               <button
