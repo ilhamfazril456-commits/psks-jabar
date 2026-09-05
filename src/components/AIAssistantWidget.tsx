@@ -78,9 +78,10 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
 
     let currentIndex = 0;
     const totalLength = content.length;
-    // Ultra high-speed typing streaming: fast rendering for snappy AI feel
-    const chunkSize = Math.max(28, Math.ceil(totalLength / 12));
-    const intervalMs = 4;
+    // High-speed typing stream animation: fast yet distinctly visible typing effect (~0.5s - 0.9s total)
+    // Ensures text does not just pop in instantly, but streams rapidly like modern AI
+    const chunkSize = Math.max(2, Math.ceil(totalLength / 55));
+    const intervalMs = 12;
 
     const timer = setInterval(() => {
       currentIndex = Math.min(currentIndex + chunkSize, totalLength);
@@ -619,6 +620,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         rawContent = data.reply;
       }
 
+      const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
+
       // Run answer verification and grounding system against local system state
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
@@ -629,7 +632,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         currentTab,
         activePillar,
         allPillarData,
-        appSettings
+        appSettings,
+        previousAssistantMessage
       );
 
       const botMsg: Message = {
@@ -651,6 +655,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     } catch (err: any) {
       console.warn('[AI Assistant] Server unreachable, using verified local knowledge engine:', err);
 
+      const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
+
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
         '',
@@ -660,7 +666,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         currentTab,
         activePillar,
         allPillarData,
-        appSettings
+        appSettings,
+        previousAssistantMessage
       );
 
       const fallbackMsg: Message = {

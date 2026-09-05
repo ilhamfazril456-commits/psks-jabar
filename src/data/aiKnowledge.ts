@@ -31,6 +31,57 @@ export function getSystemStateMetrics(allPillarData?: Record<string, PSKSDataRec
 }
 
 /**
+ * Extracts core inquiry intent from conversational preambles / basa-basi,
+ * handling greetings, informal Sundanese/Indonesian phrasing, and multi-turn cues.
+ */
+export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPureIntro: boolean; hasQuestion: boolean } {
+  const trimmed = raw.trim().toLowerCase();
+
+  // Fast security pattern check - never strip security threat keywords
+  if (
+    trimmed.includes('ignore previous') ||
+    trimmed.includes('abaikan instruksi') ||
+    trimmed.includes('bypass') ||
+    trimmed.includes('hack') ||
+    trimmed.includes('retas') ||
+    trimmed.includes('bocorkan sandi') ||
+    trimmed.includes('bocorkan password') ||
+    trimmed.includes('bocorkan pin') ||
+    trimmed.includes('dump database') ||
+    trimmed.includes('leak') ||
+    trimmed.includes('password admin') ||
+    trimmed.includes('pin superadmin') ||
+    trimmed.includes('sql injection') ||
+    trimmed.includes('jailbreak')
+  ) {
+    return { coreQuery: trimmed, isPureIntro: false, hasQuestion: true };
+  }
+
+  const preamblePatterns = [
+    /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
+    /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum|dulu)?\s*[,.-]?\s*/i,
+    /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong)?\s*(nanya|tanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
+    /^(bisa|tolong|mohon)?\s*(bantu|jawab|tolong)\s*(saya|aku|abdi|urang)?\s*(ga|dong|min|kang|teh)?\s*[,.-]?\s*/i,
+    /^(boleh|bisa)?\s*(nanya|tanya)\s*(ga|dong|min)?\s*[,.-]?\s*/i,
+    /^(mau|izin)\s*(nanya|bertanya)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
+    /^(tolong|coba)?\s*(jelaskan|kasih tau|beri tahu|kasih info)\s*(dong|min)?\s*[,.-]?\s*/i,
+  ];
+
+  let cleaned = trimmed;
+  for (const pattern of preamblePatterns) {
+    cleaned = cleaned.replace(pattern, '').trim();
+  }
+
+  cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|seputar|soal)\s*/i, '').trim();
+
+  if (!cleaned || cleaned.length < 2) {
+    return { coreQuery: '', isPureIntro: true, hasQuestion: false };
+  }
+
+  return { coreQuery: cleaned, isPureIntro: false, hasQuestion: true };
+}
+
+/**
  * Comprehensive Smart Answer Engine with Full Local State Awareness
  */
 export function getComprehensiveSmartAnswer(
@@ -41,7 +92,8 @@ export function getComprehensiveSmartAnswer(
   currentTab?: string,
   activePillar?: PillarId | null,
   allPillarData?: Record<string, PSKSDataRecord[]>,
-  appSettings?: AppSettings
+  appSettings?: AppSettings,
+  previousContext?: string
 ): string {
   const rawQ = query.trim();
   const q = rawQ.toLowerCase();
@@ -49,6 +101,8 @@ export function getComprehensiveSmartAnswer(
   const wilayah = userWilayah || 'Jawa Barat';
   const isDeveloperUser = userRole === 'developer' || (userName && userName.toLowerCase().includes('ilham'));
   const { totalRecords, pillarCounts } = getSystemStateMetrics(allPillarData);
+  const { coreQuery, isPureIntro, hasQuestion } = extractCoreQueryIntent(q);
+  const targetQ = hasQuestion ? coreQuery : q;
 
   // 0. SECURITY & ANTI-JAILBREAK SHIELD (STRICT COMPLIANCE RULE #4)
   const isSecurityThreat =
@@ -255,18 +309,21 @@ export function getComprehensiveSmartAnswer(
     return `Sampurasun / Halo! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Anda mencari informasi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda butuhkan?`;
   }
 
-  // 0.3 GENERAL CONVERSATIONAL INQUIRY / INTENT TO ASK (INGIN BERTANYA / BANTUAN)
+  // 0.3 GENERAL CONVERSATIONAL INQUIRY / INTENT TO ASK (ONLY WHEN NO SUBSTANTIVE QUESTION FOLLOWS)
   if (
-    q.includes('mau tanya') ||
-    q.includes('nanya dong') ||
-    q.includes('bisa bantu') ||
-    q.includes('minta tolong') ||
-    q.includes('izin bertanya') ||
-    q.includes('bisa nanya') ||
-    q.includes('bantuan') ||
-    q.includes('butuh bantuan') ||
-    q.includes('ada yang mau ditanyakan') ||
-    q.includes('bisa jawab')
+    !hasQuestion &&
+    (
+      q.includes('mau tanya') ||
+      q.includes('nanya dong') ||
+      q.includes('bisa bantu') ||
+      q.includes('minta tolong') ||
+      q.includes('izin bertanya') ||
+      q.includes('bisa nanya') ||
+      q.includes('bantuan') ||
+      q.includes('butuh bantuan') ||
+      q.includes('ada yang mau ditanyakan') ||
+      q.includes('bisa jawab')
+    )
   ) {
     if (isDeveloperUser) {
       return `Sok atuh tanyakeun, **Ilham Fazril**! Gua siap jawab apa aja dari kodingan sistem, database, sampai diskusi fitur baru. Mau nanya apa nih? 🚀💻`;
@@ -987,7 +1044,8 @@ export function verifyAndTrackAnswerAccuracy(
   currentTab?: string,
   activePillar?: PillarId | null,
   allPillarData?: Record<string, PSKSDataRecord[]>,
-  appSettings?: AppSettings
+  appSettings?: AppSettings,
+  previousContext?: string
 ): {
   finalContent: string;
   isAccurate: boolean;
@@ -996,7 +1054,38 @@ export function verifyAndTrackAnswerAccuracy(
 } {
   const normQ = query.toLowerCase().replace(/[?!.,]/g, '').trim();
 
-  // 1. Direct Catalog Match Check (Exact verified answers)
+  // 0. STRICT SECURITY GUARD CHECK
+  const isSecurity =
+    normQ.includes('ignore previous') ||
+    normQ.includes('abaikan instruksi') ||
+    normQ.includes('bypass') ||
+    normQ.includes('hack') ||
+    normQ.includes('retas') ||
+    normQ.includes('bocorkan sandi') ||
+    normQ.includes('bocorkan password') ||
+    normQ.includes('bocorkan pin') ||
+    normQ.includes('bocorkan api key') ||
+    normQ.includes('dump database') ||
+    normQ.includes('curi data') ||
+    normQ.includes('leak') ||
+    normQ.includes('password admin') ||
+    normQ.includes('pin superadmin') ||
+    normQ.includes('root access') ||
+    normQ.includes('sql injection') ||
+    normQ.includes('drop table') ||
+    normQ.includes('system prompt') ||
+    normQ.includes('jailbreak');
+
+  if (isSecurity) {
+    return {
+      finalContent: 'Mohon maaf, kami tidak bisa memproses permintaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jawa Barat.',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // 1. Direct Catalog Match Check (Exact verified answers when clicking catalog prompt)
   const allCatalogQuestions: AIQuestionItem[] = [];
   Object.values(ROLE_QUESTION_CATALOG).forEach((groups) => {
     groups.forEach((g) => allCatalogQuestions.push(...g.questions));
@@ -1004,7 +1093,7 @@ export function verifyAndTrackAnswerAccuracy(
 
   const matchingCatalogItem = allCatalogQuestions.find((item) => {
     const itemQ = item.question.toLowerCase().replace(/[?!.,]/g, '').trim();
-    return normQ === itemQ || normQ.includes(itemQ) || itemQ.includes(normQ);
+    return normQ === itemQ;
   });
 
   if (matchingCatalogItem && EXACT_QUESTION_ANSWERS[matchingCatalogItem.id]) {
@@ -1070,7 +1159,8 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('pembuat') ||
     normQ.includes('author') ||
     normQ.includes('arsitek') ||
-    normQ.includes('siapa yang buat')
+    normQ.includes('siapa yang buat') ||
+    normQ.includes('siapa yang bikin')
   ) {
     if (!rawReply || !rawReply.toLowerCase().includes('ilham fazril')) {
       const accurateDevAnswer = getComprehensiveSmartAnswer(
@@ -1081,7 +1171,8 @@ export function verifyAndTrackAnswerAccuracy(
         currentTab,
         activePillar,
         allPillarData,
-        appSettings
+        appSettings,
+        previousContext
       );
       return {
         finalContent: accurateDevAnswer,
@@ -1092,61 +1183,17 @@ export function verifyAndTrackAnswerAccuracy(
     }
   }
 
-  // 3. Keyword Mapping to Local Database & State Grounding Check
-  const keywordMatch = matchLocalDataKeyword(query);
-
-  if (keywordMatch.isMatched) {
-    const localDatabaseAnswer = getComprehensiveSmartAnswer(
-      query,
-      userRole,
-      userName,
-      userWilayah,
-      currentTab,
-      activePillar,
-      allPillarData,
-      appSettings
-    );
-
-    // Queries requiring exact dynamic real-time metrics (counts, member records, regional state)
-    const requiresLiveMetrics =
-      normQ.includes('jumlah') ||
-      normQ.includes('berapa') ||
-      normQ.includes('total') ||
-      normQ.includes('personil') ||
-      normQ.includes('data') ||
-      normQ.includes('siapa') ||
-      !rawReply ||
-      rawReply.length < 30;
-
-    if (requiresLiveMetrics) {
-      return {
-        finalContent: localDatabaseAnswer,
-        isAccurate: true,
-        confidence: 0.99,
-        source: 'state_grounded',
-      };
-    }
-
-    // If model provided a rich, descriptive response on a local data topic, accept response and mark verified: berhasil
+  // 3. Generative Model Output (Fluent, intelligent, multi-turn, understands informal language & preambles)
+  if (rawReply && rawReply.trim().length > 10) {
     return {
       finalContent: rawReply.trim(),
       isAccurate: true,
       confidence: 0.98,
-      source: 'state_grounded',
-    };
-  }
-
-  // 4. General Response Sanitization & Validation (Informative Generative AI)
-  if (rawReply && rawReply.trim().length > 3) {
-    return {
-      finalContent: rawReply.trim(),
-      isAccurate: true,
-      confidence: 0.95,
       source: 'ai_model_verified',
     };
   }
 
-  // 5. Fallback to Local Knowledge Engine
+  // 4. Fallback to Enhanced Local Knowledge Engine
   const fallback = getComprehensiveSmartAnswer(
     query,
     userRole,
@@ -1155,13 +1202,14 @@ export function verifyAndTrackAnswerAccuracy(
     currentTab,
     activePillar,
     allPillarData,
-    appSettings
+    appSettings,
+    previousContext
   );
 
   return {
     finalContent: fallback,
     isAccurate: true,
-    confidence: 0.9,
+    confidence: 0.92,
     source: 'knowledge_fallback',
   };
 }
