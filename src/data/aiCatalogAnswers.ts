@@ -417,4 +417,49 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 
   'd-19': `**Sistem Anti-Jailbreak & Sanitasi Prompt AI**:
 - Sistem dilengkapi filter pencegah manipulasi prompt, penolakan permintaan bocor kode rahasia, serta proteksi identitas developer resmi (**Ilham Fazril**).`,
+
+  // === FIELD SOP & CASE STUDIES (5 KASUS BESAR) ===
+  'u-sop-1': `**SOP Resmi Mutasi Personil Pilar Sosial Antar-Wilayah se-Jawa Barat**:
+1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat rekam jejak pengabdian dan nomor registrasi anggota.
+2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.
+3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui data penugasan anggota ke domisili baru tanpa menghapus NIK atau riwayat sertifikasi yang telah diraih.
+4. **KTA Otomatis Terbarui**: KTA Digital QR Code langsung otomatis menyesuaikan wilayah tugas baru dengan status \`SAH_TERDAFTAR\`.
+
+[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:akun:Cek Status Akun & KTA]]`,
+
+  'u-sop-2': `**SOP Penanganan KTA Digital Rusak atau Hilang di Lapangan**:
+1. **Tidak Perlu Daftar Ulang**: Data keanggotaan Anda tetap tersimpan aman dan terenkripsi di cloud database sistem PSKS Jabar.
+2. **Verifikasi NIK KTP**: Laporkan kepada Koordinator Pilar Kecamatan atau Admin Wilayah Dinsos dengan menunjukkan NIK KTP Anda.
+3. **Cetak Ulang Mandiri / Admin (Re-Print)**:
+   - Jika Anda memiliki akun: Masuk ke menu **Akun & Verifikasi**, pilih **Cetak Kartu Akses** untuk mengunduh KTA Digital QR Code baru seketika.
+   - Melalui Admin: Admin Wilayah atau Superadmin dapat langsung mencetak ulang kartu Anda melalui menu **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).
+4. Kartu yang baru dicetak langsung aktif dengan kode hash validasi resmi.
+
+[[action:tab:akun:Buka Halaman Akun & KTA]] [[action:tab:contact:Hubungi Bantuan Resmi]]`,
+
+  'u-sop-3': `**Informasi Jaminan Sosial & Tali Asih Relawan PSKS Jawa Barat**:
+1. **Perlindungan BPJS Ketenagakerjaan**: Pemprov Jawa Barat bersama Kementerian Sosial RI secara bertahap memfasilitasi relawan pilar sosial (seperti Tagana dan personil aktif) dalam program perlindungan Jaminan Kecelakaan Kerja (JKK) dan Jaminan Kematian (JKM) untuk menjamin keselamatan saat bertugas di medan risiko tinggi.
+2. **Tali Asih / Insentif Tanggap Darurat**: Relawan yang diterjunkan dalam operasi tanggap darurat bencana alam/sosial berhak mendapatkan tali asih operasional harian, akomodasi shelter, logistik dapur umum, dan APD lapangan sesuai Surat Keputusan (SK) Tanggap Darurat Kepala Daerah/Kemensos.
+3. **Prinsip Pengabdian**: Pilar sosial (PSM, Tagana, Karang Taruna) berlandaskan jiwa kerelawanan (*volunteerism*), gotong royong, dan kepedulian sosial kemasyarakatan.
+
+[[action:tab:contact:Konsultasi Hak Relawan]] [[action:pillar:tagana:Buka Info Tagana]]`,
+
+  'u-sop-4': `**SOP Respon Cepat 1x24 Jam Penanganan Kasus PPKS Darurat Lapangan**:
+1. **Deteksi & Laporan Awal (Tingkat Desa)**: Temuan kasus lansia telantar, disabilitas telantar, ABH, atau korban kekerasan segera dilaporkan ke Puskesos Desa/Kelurahan atau personil PSM.
+2. **Asesmen Cepat (Tingkat Kecamatan)**: Tenaga Kesejahteraan Sosial Kecamatan (TKSK) melakukan asesmen awal dan perlindungan darurat tempat singgah sementara.
+3. **Eskalasi ke Tim Reaksi Cepat (TRC) Dinsos**: Menghubungi TRC Dinsos Kabupaten/Kota atau hotline Dinsos Jabar untuk evakuasi darurat.
+4. **Rujukan ke Balai / Panti UPTD**: Korban dirujuk ke Balai Rehabilitasi Sosial Dinsos Jabar (seperti Balai Lansia Ciparay, Balai Netra Wyata Guna, atau Balai Anak) untuk penanganan medis dan pendampingan Pekerja Sosial Profesional (Peksos).
+
+[[action:tab:contact:Buka Kontak Hotline Darurat]] [[action:pillar:peksos:Info Layanan Peksos]]`,
+
+  'u-sop-5': `**6 Bidang Spesialisasi Kebencanaan Korps Tagana Jawa Barat**:
+Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialisasi lanjutan:
+1. **Water Rescue**: Evakuasi korban di wilayah banjir bandang, arung jeram, dan perairan terbuka.
+2. **Vertical Rescue**: Evakuasi korban di medan tebing curam, jurang, dan reruntuhan gempa bumi.
+3. **Dapur Umum Lapangan (Dumlap)**: Manajemen penyediaan ribuan porsi makanan higienis bergizi dalam 1x24 jam pasca-bencana.
+4. **Shelter & Pengungsian**: Manajemen pendirian tenda pleton ramah lansia, anak, dan ibu hamil.
+5. **Layanan Dukungan Psikososial (LDP)**: *Trauma healing* untuk anak-anak dan pemulihan kesehatan mental penyintas.
+6. **Logistik & Pergudangan**: Pengelolaan bufferstock sandang-pangan terintegrasi.
+
+[[action:pillar:tagana:Buka Modul Tagana Jabar]] [[action:tab:user_reg_history:Pantau Riwayat Penugasan]]`,
 };

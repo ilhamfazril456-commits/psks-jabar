@@ -2780,6 +2780,20 @@ export default function App() {
         activePillar={activePillar}
         allPillarData={allPillarData}
         appSettings={appSettings}
+        onNavigateTab={(tab: string) => {
+          if (tab === 'beranda') {
+            handleBackToHome();
+          } else {
+            if (currentTab === 'beranda') {
+              dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
+            }
+            setCurrentTab(tab);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        onSelectPillar={(pillarId: PillarId) => {
+          handleSelectPillar(pillarId);
+        }}
       />
 
       <InboxModal

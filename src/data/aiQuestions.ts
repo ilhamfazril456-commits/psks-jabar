@@ -193,6 +193,48 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
         },
       ],
     },
+    {
+      category: '🚨 SOP & Kasus Lapangan Dinsos Jabar',
+      iconName: 'ShieldAlert',
+      description: 'SOP resmi penanganan mutasi personil, KTA rusak/hilang, tali asih, respon cepat PPKS, dan keahlian Tagana.',
+      questions: [
+        {
+          id: 'u-sop-1',
+          category: 'SOP Kasus Lapangan',
+          role: 'user',
+          question: 'Bagaimana SOP resmi mutasi personil pilar sosial antar-wilayah di Jawa Barat?',
+          hint: 'Mutasi Antar 27 Kab/Kota',
+        },
+        {
+          id: 'u-sop-2',
+          category: 'SOP Kasus Lapangan',
+          role: 'user',
+          question: 'Apa yang harus dilakukan jika KTA Digital rusak atau hilang saat bertugas di lapangan?',
+          hint: 'Cetak Ulang / Re-Print KTA',
+        },
+        {
+          id: 'u-sop-3',
+          category: 'SOP Kasus Lapangan',
+          role: 'user',
+          question: 'Apakah relawan sosial dan Tagana mendapatkan BPJS Ketenagakerjaan dan tali asih?',
+          hint: 'Perlindungan & Tali Asih Relawan',
+        },
+        {
+          id: 'u-sop-4',
+          category: 'SOP Kasus Lapangan',
+          role: 'user',
+          question: 'Bagaimana alur respon cepat 1x24 jam penanganan kasus PPKS darurat di lapangan?',
+          hint: 'Kedaruratan PPKS & TRC',
+        },
+        {
+          id: 'u-sop-5',
+          category: 'SOP Kasus Lapangan',
+          role: 'user',
+          question: 'Apa saja pelatihan spesialisasi kebencanaan lanjutan bagi Korps Tagana?',
+          hint: '6 Spesialisasi Tagana Jabar',
+        },
+      ],
+    },
   ],
 
   admin: [

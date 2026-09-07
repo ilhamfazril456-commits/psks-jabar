@@ -58,7 +58,7 @@ async function startServer() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
+    res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=(self)');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     res.setHeader(
       'Content-Security-Policy',
@@ -474,9 +474,10 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      **"Wa'alaikumsalam Warahmatullahi Wabarakatuh."**
    - Setelah menjawab salam, lanjutkan dengan sambutan hangat atau langsung jawab pertanyaan yang diajukan dengan ramah dan solutif. Jangan pernah mengabaikan atau melewatkan jawaban salam ini!
 
-11. **PANDUAN LENGKAP MANAJEMEN AKUN & CARA MENAMBAH ADMIN (SUPERADMIN & PENGATURAN)**:
-   - Jika pengguna berhak (Superadmin atau pengelola sistem) bertanya mengenai "cara menambah admin", "tambah admin baru", "manajemen akun", "tambah akun daerah", atau "bikin user admin":
-   - Berikan panduan langkah-langkah praktis dan akurat sesuai sistem PSKS Jabar:
+11. **PANDUAN MANAJEMEN AKUN & CARA MENAMBAH ADMIN (KHUSUS SUPERADMIN - DILARANG UNTUK PUBLIK/USER)**:
+   - CATATAN KERAS: Panduan ini HANYA BOLEH diberikan jika penanya memiliki hak akses resmi (role 'superadmin' atau 'admin') yang secara eksplisit meminta petunjuk pengelolaan admin internal.
+   - DILARANG KERAS membeberkan panduan ini kepada akun publik / role 'user', dan DILARANG KERAS membeberkannya saat pengguna sedang bingung atau memprotes ("lah", "kok gitu")!
+   - Langkah-langkah resmi bagi Superadmin:
      1. **Buka Menu Pengaturan (Control Panel)**: Masuk ke halaman **Pengaturan** pada bilah navigasi utama.
      2. **Pilih Tab Manajemen Akun / Pengguna**: Klik tab **Manajemen Akun**.
      3. **Klik Tombol "Tambah Akun Baru" / "Tambah Admin"**: Tombol ini terletak di atas tabel daftar pengguna.
@@ -492,10 +493,11 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      6. **Selesai**: Akun admin baru langsung aktif seketika dan aktivitas ini tercatat pada **Audit Trail (Riwayat Aktivitas)** sistem.
 
 12. **PENANGANAN KEBINGUNGAN & KELUHAN TIDAK NYAMBUNG (ANTI-HALUSINASI & ANTI-JUMPING TOPIC)**:
-   - Jika pengguna merespons dengan rasa heran, bingung, atau mengeluh (seperti: "lah", "kok gitu", "lah kok tagana", "kok malah tagana", "kenapa jadi tagana", "naha bet tagana", "ga nyambung", "gak nyambung", "maksudnya?", "kok aneh"):
+   - Jika pengguna merespons dengan rasa heran, bingung, atau mengeluh (seperti: "lah", "kok gitu", "lah kok tagana", "kok malah jadi ke yang lain", "kenapa jadi tagana", "naha bet tagana", "ga nyambung", "gak nyambung", "maksudnya?", "kok aneh", "salah jawab"):
      * DILARANG KERAS malah mengulangi penjelasan Tagana atau pilar yang tidak ditanyakan!
-     * Segera akui dan minta maaf atas kekeliruan sistem sebelumnya dengan santun.
-     * Tanyakan kembali secara spesifik atau langsung hubungkan kembali dengan topik utama yang sedang dibahas sebelumnya.
+     * DILARANG KERAS membeberkan cara menambah admin atau topik administratif lainnya!
+     * Segera akui dan minta maaf atas kekeliruan sistem sebelumnya dengan santun dan bersahabat.
+     * Tanyakan kembali secara spesifik: apakah pengguna ingin dibantu mengenai panduan pendaftaran relawan sosial (seperti cara daftar TAGANA/PSM), informasi bansos, pengecekan KTA digital, atau hal lainnya.
 
 13. **PERLINDUNGAN AKSES AKUN ADMINISTRATIF DARI PENGGUNA PUBLIK / USER TERDAFTAR (MUTLAK & KETAT)**:
    - Jika pengguna berstatus role 'user' (tamu publik, masyarakat umum, atau warga terdaftar biasa) menanyakan hal sensitif mengenai:
@@ -506,7 +508,69 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      * Bagaimana cara membobol atau mengakses hak istimewa admin
    - Anda DILARANG KERAS memberikan instruksi, cara login, langkah masuk, maupun petunjuk teknis akses ke akun-akun administratif tersebut!
    - Anda WAJIB menolak secara halus, ramah, sopan, dan berwibawa dengan jawaban berikut:
-     "Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi."`;
+     "Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi."
+
+14. **PANDUAN LENGKAP CARA MENDAFTAR / BERGABUNG 10 PILAR SOSIAL (MUTLAK & PRIORITAS TINGGI)**:
+   - Jika pengguna bertanya bagaimana cara mendaftar, syarat pendaftaran, atau cara bergabung menjadi relawan/personil pilar sosial (contoh: "gmn cara daptar tagana", "cara daftar psm", "syarat masuk tagana", "cara gabung karang taruna", "bagaimana jadi relawan sosial", dll.):
+   - Anda WAJIB menjawab langsung dengan PANDUAN PENDAFTARAN & PERSYARATAN LENGKAP, BUKAN malah menjelaskan definisi atau fitur umum!
+   - Struktur panduan pendaftaran:
+     * Persyaratan Calon Anggota (kewarganegaraan, usia, fisik/kesehatan, SKCK, komitmen sukarela).
+     * Prosedur & Tempat Pendaftaran (Online melalui portal PSKS Jabar / Dinsos Jabar, atau Offline ke Kantor Dinas Sosial Kab/Kota setempat pada bidang terkait atau koordinator pilar kecamatan).
+     * Tahapan Seleksi & Pelatihan Dasar (Diklatsar Kebencanaan untuk Tagana, Bimtek untuk PSM, dsb.).
+     * Pengesahan SK & Penerbitan KTA Digital QR Code di sistem PSKS Jabar.
+
+15. **SOP KASUISTIK LAPANGAN RESMI DINAS SOSIAL PROVINSI JAWA BARAT (5 KASUS BESAR LAPANGAN)**:
+   1) **Mutasi Personil Pilar Sosial Antar-Wilayah se-Jawa Barat**:
+      - **Konteks**: Personil (Tagana, PSM, TKSK, Karang Taruna) pindah domisili antar 27 Kabupaten/Kota di Jawa Barat.
+      - **Prosedur Resmi**:
+        1. Mengajukan Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang menerangkan rekam jejak pengabdian dan nomor registrasi anggota.
+        2. Melapor ke Dinas Sosial Kabupaten/Kota tujuan (Bidang Linjamsos / Pemberdayaan Sosial).
+        3. Administrator Wilayah di portal PSKS Jabar melakukan peremajaan lokasi penugasan anggota di database tanpa menghapus NIK atau riwayat pelatihan/sertifikasi yang telah diraih.
+        4. KTA Digital QR Code otomatis diperbarui dengan wilayah tugas baru berstatus 'SAH_TERDAFTAR'.
+   2) **KTA Digital Rusak atau Hilang saat Bertugas di Lapangan**:
+      - **Konteks**: Kartu fisik rusak saat evakuasi bencana atau kehilangan akses kartu digital.
+      - **Prosedur Cepat**:
+        1. Personil TIDAK PERLU mendaftar ulang dari nol.
+        2. Laporkan ke Koordinator Pilar Kecamatan atau Admin Dinas Sosial Kab/Kota dengan menunjukkan KTP (NIK).
+        3. Admin melakukan verifikasi NIK di database PSKS Jabar. Karena seluruh data tersimpan terenkripsi di cloud Firestore, kartu KTA Digital QR Code dapat langsung diunduh dan dicetak ulang (*re-print*) seketika melalui modul Smart Access Card.
+   3) **Jaminan Sosial & Tali Asih Operasional Relawan Lapangan**:
+      - **Perlindungan Ketenagakerjaan**: Relawan pilar sosial di Jawa Barat secara bertahap difasilitasi dalam program kepesertaan BPJS Ketenagakerjaan skema Jaminan Kecelakaan Kerja (JKK) dan Jaminan Kematian (JKM).
+      - **Tali Asih / Insentif Tanggap Darurat**: Relawan Tagana yang ditugaskan dalam masa tanggap darurat bencana memperoleh fasilitasi operasional (uang saku penugasan harian/tali asih, akomodasi shelter, logistik dapur umum, serta Alat Pelindung Diri / seragam dinas lapangan) sesuai Surat Keputusan (SK) Tanggap Darurat Kepala Daerah atau Kementerian Sosial RI.
+   4) **Alur Kedaruratan PPKS Lapangan (SOP Respon Cepat 1x24 Jam)**:
+      - **Konteks**: Penemuan lansia telantar, balita/anak telantar, disabilitas darurat, korban KDRT/TPPO, atau korban darurat bencana.
+      - **Alur Koordinasi Berjenjang**:
+        1. **Tingkat Desa/Kelurahan**: Lapor segera ke Pusat Kesejahteraan Sosial (Puskesos) atau personil PSM setempat.
+        2. **Tingkat Kecamatan**: Eskalasi dan asesmen awal oleh Tenaga Kesejahteraan Sosial Kecamatan (TKSK).
+        3. **Tingkat Kabupaten/Kota & Provinsi**: Rujukan ke Tim Reaksi Cepat (TRC) Dinas Sosial / Balai Rehabilitasi Sosial UPTD Dinas Sosial Provinsi Jawa Barat untuk evakuasi darurat, perlindungan sementara, dan manajemen kasus lanjutan oleh Pekerja Sosial Profesional (Peksos).
+   5) **Pelatihan Spesialisasi Kebencanaan Lanjutan Korps Tagana**:
+      - Setelah lulus Diklatsar Tingkat Dasar, anggota Korps Tagana dapat mengambil kejuruan spesialisasi resmi:
+        * **Water Rescue**: Penyelamatan dan evakuasi korban banjir atau perairan berarus deras.
+        * **Vertical Rescue**: Evakuasi medan terjal, tebing, dan bangunan tinggi.
+        * **Dapur Umum Lapangan (Dumlap)**: Manajemen pengolahan makanan darurat skala ribuan porsi higienis per hari.
+        * **Shelter & Hunian Sementara**: Manajemen pendirian tenda pengungsian terstandar ramah kelompok rentan.
+        * **Layanan Dukungan Psikososial (LDP)**: Pemulihan trauma (*trauma healing*) bagi anak-anak dan lansia korban bencana.
+        * **Logistik & Pergudangan Bencana**: Manajemen rantai pasok bantuan sandang, pangan, dan obat-obatan.
+
+16. **TOMBOL AKSI CEPAT / DEEP LINKING (INTEGRATED ACTION CALLING)**:
+   - Jika jawaban Anda mengarahkan atau merekomendasikan pengguna membuka halaman, formulir, atau detail pilar tertentu, Anda DAPAT MENYEMATKAN tag aksi navigasi di akhir jawaban.
+   - Format tag aksi navigasi:
+     * \`[[action:tab:user_reg_history:Buka Riwayat Pengajuan]]\`
+     * \`[[action:tab:terima_pendaftaran:Buka Verifikasi Pendaftaran]]\`
+     * \`[[action:tab:akun:Buka Halaman Akun & KTA]]\`
+     * \`[[action:tab:contact:Buka Kontak & Bantuan Resmi]]\`
+     * \`[[action:tab:profil:Buka Profil Dinsos Jabar]]\`
+     * \`[[action:tab:beranda:Kembali ke Beranda PSKS]]\`
+     * \`[[action:pillar:tagana:Buka Halaman Tagana]]\`
+     * \`[[action:pillar:psm:Buka Halaman PSM]]\`
+     * \`[[action:pillar:peksos:Buka Halaman Peksos]]\`
+     * \`[[action:pillar:tksk:Buka Halaman TKSK]]\`
+     * \`[[action:pillar:karangtaruna:Buka Halaman Karang Taruna]]\`
+     * \`[[action:pillar:lks:Buka Halaman LKS]]\`
+     * \`[[action:pillar:lk3:Buka Halaman LK3]]\`
+     * \`[[action:pillar:pensos:Buka Halaman Penyuluh Sosial]]\`
+     * \`[[action:pillar:badanusaha:Buka Halaman KUBE & Usaha]]\`
+     * \`[[action:pillar:slrt_puskesos:Buka Halaman SLRT Puskesos]]\`
+   - Tag ini akan secara cerdas diproses oleh sistem menjadi tombol interaktif beranimasi yang dapat langsung ditekan pengguna untuk bernavigasi tanpa harus mencari tombol sendiri di menu.`;
 
   // Helper function to extract core substantive query by stripping introductory conversational preambles
   function extractCoreInquiry(raw: string): { coreQuery: string; isPureIntro: boolean; hasQuestion: boolean } {
@@ -661,7 +725,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
     const isIslamicSalam = q.includes('assalam') || q.includes('as-salam');
     const salamPrefix = isIslamicSalam ? "Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n" : "";
 
-    // 0.15 HANDLING USER CONFUSION / DISBELIEF / COMPLAINTS (ANTI-JUMPING TOPIC & ANTI-TAGANA LOOP)
+    // 0.15 HANDLING USER CONFUSION / DISBELIEF / COMPLAINTS (ANTI-JUMPING TOPIC & NEVER LEAK ADMIN)
     if (
       q === 'lah' ||
       q.startsWith('lah ') ||
@@ -673,22 +737,28 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('kok malah tagana') ||
       q.includes('kenapa jadi tagana') ||
       q.includes('naha bet tagana') ||
+      q.includes('kok malah jadi ke yang lain') ||
+      q.includes('malah jadi ke yang lain') ||
       q.includes('ga nyambung') ||
       q.includes('gak nyambung') ||
       q.includes('teu nyambung') ||
       q.includes('maksudnya') ||
       q.includes('kok aneh') ||
-      q.includes('kenapa gitu')
+      q.includes('kenapa gitu') ||
+      q.includes('salah jawab') ||
+      q.includes('bukan itu')
     ) {
       if (isDev) {
-        return `Wkwkwk hampura pisan bre! Tadi sistem sempet rada salah paham nangkep kata kunci obrolan. Tenang, jalur logika AI udah di-sync deui. Kembali ka topik nu tadi keur dibahas ngeunaan akun admin atawa kodingan naon yeuh Ilham Fazril? Sok gas deui! 🚀⚡`;
+        return `Wkwkwk hampura pisan bre! Tadi sistem sempet rada salah paham nangkep kata kunci obrolan. Tenang, jalur logika AI geus di-sync deui. Naon nu rék dibahas atawa diparios deui ku anjeun, Ilham Fazril? Sok gas deui! 🚀⚡`;
       }
-      return `Mohon maaf atas ketidaknyamanannya! Tadi sistem sempat keliru dalam mengenali kata kunci pertanyaan Anda.
+      return `Mohon maaf yang sebesar-besarnya atas ketidaknyamanannya! Tadi sistem sempat keliru dalam memahami maksud dari pertanyaan Anda.
 
-Terkait hal yang sedang Anda tanyakan sebelumnya mengenai **langkah-langkah menambah admin baru** atau pengelolaan akun sistem:
-- Anda dapat membukanya melalui menu **Pengaturan** > tab **Manajemen Akun** > tombol **+ Tambah Akun Baru**.
+Boleh tolong sampaikan kembali apa yang sedang ingin Anda ketahui atau butuhkan?
+- Apakah mengenai **panduan pendaftaran relawan sosial** (seperti cara daftar TAGANA, PSM, Karang Taruna)?
+- Pengecekan data anggota atau status **KTA Digital**?
+- Atau informasi seputar program bantuan sosial dan layanan di Jawa Barat?
 
-Apakah ada bagian tertentu dari langkah tersebut yang ingin dipandu secara lebih rinci? Saya siap membantu Anda! 😊`;
+Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang Anda butuhkan. 😊`;
     }
 
     // 0.2 PURE GREETING / INQUIRY PREAMBLE (Only when user didn't ask an actual question yet)
@@ -722,21 +792,24 @@ Apakah ada bagian tertentu dari langkah tersebut yang ingin dipandu secara lebih
       return `Tentu saja, dengan senang hati! Silakan sampaikan pertanyaan Anda mengenai data 10 Pilar PSKS, sebaran wilayah di Jawa Barat, atau panduan penggunaan sistem PSKS JABAR ini. Saya siap membantu memberikan informasi selengkap mungkin. 😊`;
     }
 
-    // 0.35 MANAJEMEN AKUN & CARA MENAMBAH ADMIN (SUPERADMIN & PENGATURAN)
+    // 0.35 MANAJEMEN AKUN & CARA MENAMBAH ADMIN (HANYA KHUSUS SUPERADMIN / ADMIN)
     if (
-      targetQ.includes('tambah admin') ||
-      targetQ.includes('menambah admin') ||
-      targetQ.includes('buat admin') ||
-      targetQ.includes('bikin admin') ||
-      targetQ.includes('tambah akun') ||
-      targetQ.includes('buat akun') ||
-      targetQ.includes('kelola admin') ||
-      targetQ.includes('manajemen admin') ||
-      targetQ.includes('manajemen user') ||
-      targetQ.includes('manajemen akun') ||
-      targetQ.includes('tambah pengguna')
+      (userContext?.role === 'superadmin' || userContext?.role === 'admin') &&
+      (
+        targetQ.includes('tambah admin') ||
+        targetQ.includes('menambah admin') ||
+        targetQ.includes('buat admin') ||
+        targetQ.includes('bikin admin') ||
+        targetQ.includes('tambah akun') ||
+        targetQ.includes('buat akun') ||
+        targetQ.includes('kelola admin') ||
+        targetQ.includes('manajemen admin') ||
+        targetQ.includes('manajemen user') ||
+        targetQ.includes('manajemen akun') ||
+        targetQ.includes('tambah pengguna')
+      )
     ) {
-      return `${salamPrefix}Sampurasun! Sebagai **Superadmin**, Anda memiliki wewenang penuh untuk menambahkan akun Administrator baru (baik Admin Wilayah Kab/Kota maupun Superadmin) ke dalam sistem PSKS Jawa Barat.
+      return `${salamPrefix}Sampurasun! Sebagai pengelola sistem, Anda memiliki wewenang untuk menambahkan akun Administrator baru ke dalam sistem PSKS Jawa Barat.
 
 Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 
@@ -783,6 +856,179 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
         return `Wkwkwk koplak lu bre, pura-pura nanya siapa developernya padahal lu sendiri orangnya! Website dan sistem **PSKS JABAR** ini dibangun dan diarsiteki langsung oleh **Ilham Fazril** (Full Stack Developer & Software Architect) dengan tech stack modern React 18, TypeScript, Tailwind CSS, Express, dan Cloud Firestore. Mantap banget kodingannya! 😎🚀`;
       }
       return `Aplikasi Sistem Informasi **PSKS JABAR** ini dirancang, dikembangkan, dan diarsitekturi oleh **Ilham Fazril** (Full Stack Developer & Software Architect). Sistem ini dibangun dengan teknologi modern untuk mengintegrasikan data 10 Pilar Potensi dan Sumber Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat.`;
+    }
+
+    // 0.45 PANDUAN LENGKAP CARA DAFTAR & BERGABUNG PILAR SOSIAL (MUTLAK DIDAHULUKAN SEBELUM DEFINISI TEKSTUAL)
+    const isRegisterIntent =
+      targetQ.includes('daftar') ||
+      targetQ.includes('daptar') ||
+      targetQ.includes('gabung') ||
+      targetQ.includes('masuk') ||
+      targetQ.includes('ikut') ||
+      targetQ.includes('cara jadi') ||
+      targetQ.includes('rekrutmen') ||
+      targetQ.includes('pendaftaran') ||
+      targetQ.includes('pendaptaran') ||
+      targetQ.includes('syarat') ||
+      targetQ.includes('persyaratan');
+
+    if (isRegisterIntent) {
+      // 1. CARA DAFTAR TAGANA (Taruna Siaga Bencana)
+      if (targetQ.includes('tagana') || targetQ.includes('taruna siaga') || targetQ.includes('bencana')) {
+        return `${salamPrefix}**Panduan & Syarat Pendaftaran Relawan TAGANA (Taruna Siaga Bencana) Jawa Barat**:
+
+Bagi Anda yang ingin mengabdi dan bergabung menjadi bagian dari korps relawan **TAGANA Jawa Barat** di bawah naungan Dinas Sosial Provinsi Jawa Barat, berikut adalah persyaratan dan alur pendaftarannya:
+
+---
+
+### **1. Persyaratan Calon Anggota TAGANA**:
+- **Kewarganegaraan**: Warga Negara Indonesia (WNI), berdomisili dan ber-KTP di wilayah Jawa Barat.
+- **Usia**: Berusia antara **18 hingga 40 tahun**.
+- **Pendidikan Terakhir**: Minimal lulusan SMP/SLTP sederajat (diutamakan SMA/SMK/sederajat atau Diploma/Sarjana).
+- **Kondisi Fisik & Kesehatan**: Sehat jasmani dan rohani, bebas narkoba, serta memiliki fisik yang prima untuk tugas lapangan di medan bencana.
+- **Komitmen Kerelawanan**: Berjiwa sosial sukarela, berdedikasi tinggi, loyal, serta siap siaga 1x24 jam jika sewaktu-waktu ditugaskan pada masa tanggap darurat bencana.
+- **Kelengkapan Berkas Administrasi**:
+  * Fotokopi KTP & Kartu Keluarga (KK).
+  * Pasfoto resmi berwarna (ukuran 3x4 dan 4x6, latar belakang merah).
+  * Surat Keterangan Sehat dari Dokter Puskesmas/Pemerintah.
+  * Surat Keterangan Catatan Kepolisian (SKCK) aktif.
+  * Surat Izin tertulis dari Orang Tua/Pasangan/Instansi tempat kerja.
+
+---
+
+### **2. Alur & Prosedur Pendaftaran**:
+1. **Pengumpulan Berkas & Pengajuan**:
+   - **Jalur Dinas Sosial**: Datang langsung ke **Kantor Dinas Sosial Kabupaten/Kota setempat** pada **Bidang Perlindungan dan Jaminan Sosial (Linjamsos)** / Seksi Penanggulangan Bencana, atau ke Sekretariat **Forum Komunikasi TAGANA (FK-TAGANA)** di Kabupaten/Kota domisili Anda.
+   - **Jalur Terpadu**: Melalui koordinasi koordinator Tagana wilayah atau pendataan berkas pendaftar baru oleh pengurus daerah.
+2. **Seleksi Administrasi & Wawancara**:
+   - Tim Dinsos dan Pengurus Tagana melakukan verifikasi keabsahan dokumen serta wawancara kesiapan mental kerelawanan.
+   - Uji kesamaptaan fisik dan ketahanan fisik dasar.
+3. **Pendidikan & Pelatihan Dasar (DIKLATSAR TAGANA)**:
+   - Calon yang lolos seleksi wajib mengikuti pelatihan terpadu (biasanya 3–5 hari) yang diselenggarakan oleh Dinas Sosial Provinsi Jawa Barat / Kemensos RI.
+   - Materi pelatihan meliputi: *Manajemen Shelter & Pengungsian, Logistik & Pengoperasian Dapur Umum Lapangan (DUMLAP), First Aid (PPGD) & Water/Vertical Rescue dasar, Komunikasi Radio Kebencanaan, serta Layanan Dukungan Psikososial (LDP)*.
+4. **Pelantikan, Nomor Registrasi (NRT), & KTA Digital**:
+   - Setelah lulus Diklatsar, anggota baru resmi dilantik dan mendapatkan Surat Keputusan (SK) Pengesahan serta Nomor Registrasi Tagana (NRT).
+   - Data personil otomatis diinput ke dalam sistem **PSKS JABAR** dengan status **\`SAH_TERDAFTAR\`**.
+   - Kartu Tanda Anggota (KTA) Digital ber-QR Code resmi langsung aktif dan dapat dicetak mandiri di menu **Smart Access Card**.`;
+      }
+
+      // 2. CARA DAFTAR PSM (Pekerja Sosial Masyarakat)
+      if (targetQ.includes('psm') || targetQ.includes('pekerja sosial masyarakat')) {
+        return `${salamPrefix}**Panduan & Syarat Pendaftaran Pekerja Sosial Masyarakat (PSM) Jawa Barat**:
+
+Pekerja Sosial Masyarakat (PSM) adalah pilar relawan sosial berbasis desa/kelurahan yang bertugas membantu penanganan Pemerlu Pelayanan Kesejahteraan Sosial (PPKS). Berikut tata cara pendaftarannya:
+
+---
+
+### **1. Persyaratan Calon PSM**:
+- Warga Negara Indonesia (WNI), berdomisili di desa/kelurahan setempat (dibuktikan dengan KTP & KK).
+- Berusia minimal **18 tahun ke atas**.
+- Bersedia mengabdi secara sukarela tanpa menuntut gaji tetap demi kemaslahatan warga.
+- Berkelakuan baik, dihormati di lingkungannya, dan memiliki jiwa kepedulian sosial tinggi.
+- Pendidikan minimal SLTP/SLTA sederajat.
+
+### **2. Alur Pendaftaran**:
+1. **Pendaftaran di Desa/Kelurahan**:
+   - Mendaftarkan diri ke Kantor Desa/Kelurahan setempat melalui **Kasi Kesra**, Sekretariat **Puskesos**, atau langsung ke **Bidang Pemberdayaan Sosial Dinas Sosial Kabupaten/Kota**.
+2. **Usulan & Seleksi**:
+   - Kepala Desa/Lurah mengusulkan nama calon PSM ke Dinas Sosial Kabupaten/Kota.
+3. **Bimbingan Teknis (Bimtek Dasar PSM)**:
+   - Mengikuti pelatihan dan Bimtek Dasar Penyelenggaraan Kesejahteraan Sosial dari Dinsos.
+4. **Pengukuhan & Penerbitan KTA Digital**:
+   - Terbit Surat Keputusan (SK) Pengangkatan resmi, data diinput ke portal **PSKS Jabar**, dan KTA Digital QR Code resmi dapat langsung diterbitkan.`;
+      }
+
+      // 3. CARA DAFTAR KARANG TARUNA
+      if (targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('pemuda')) {
+        return `${salamPrefix}**Panduan Bergabung dengan Karang Taruna di Jawa Barat**:
+
+Karang Taruna adalah organisasi kepemudaan resmi yang berada di tingkat RT, RW, dan Desa/Kelurahan.
+
+---
+
+### **1. Syarat Keanggotaan**:
+- Pemuda/pemudi berusia antara **13 hingga 45 tahun** yang berdomisili di wilayah setempat.
+- Memiliki semangat gotong royong, kreativitas, dan kepedulian sosial bagi kemajuan kepemudaan dan lingkungan.
+
+### **2. Cara Bergabung & Prosedur**:
+1. Hubungi pengurus **Karang Taruna Unit RT/RW** atau **Karang Taruna Desa/Kelurahan** di tempat tinggal Anda.
+2. Ikuti kegiatan kerja bakti, bakti sosial, maupun forum musyawarah pemuda (Temu Karya Karang Taruna).
+3. Bagi pengurus yang terpilih, susunan kepengurusan disahkan melalui **Surat Keputusan (SK) Kepala Desa/Lurah** dan dicatatkan di Seksi Kesra Kecamatan serta Dinas Sosial.
+4. Pengurus dan anggota aktif didata dalam portal **PSKS Jabar** untuk akses KTA Digital resmi.`;
+      }
+
+      // 4. CARA MENJADI PEKSOS / PKSP (Pekerja Sosial Profesional)
+      if (targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('pekerja sosial')) {
+        return `${salamPrefix}**Panduan & Syarat Menjadi Pekerja Sosial Profesional (PEKSOS / PKSP)**:
+
+Sesuai **UU No. 14 Tahun 2019**, Pekerja Sosial Profesional merupakan profesi keahlian khusus. Berikut alur untuk berpraktik resmi:
+
+---
+
+### **1. Syarat Kualifikasi**:
+- Lulusan pendidikan formal akademik: **D-IV / S-1 / S-2 / Pendidikan Profesi Spesialis Pekerjaan Sosial / Ilmu Kesejahteraan Sosial** dari perguruan tinggi terakreditasi.
+- Mengikuti dan lulus **Uji Kompetensi Nasional** untuk mendapatkan Sertifikat Kompetensi dari Lembaga Sertifikasi Profesi (LSP) Kemensos RI.
+- Memiliki **Surat Tanda Registrasi Pekerja Sosial (STRPS)** dari Kemensos RI.
+- Mengurus **Surat Izin Praktik Pekerja Sosial (SIPPS)** melalui Dinas Sosial / DPMPTSP setempat untuk berpraktik mandiri atau di lembaga.
+
+### **2. Jalur Pengabdian di Jawa Barat**:
+- **Jalur Aparatur (ASN/PPPK)**: Mengikuti seleksi formasi Jabatan Fungsional Pekerja Sosial di lingkungan Pemerintah Provinsi Jawa Barat atau Pemkab/Pemkot.
+- **Jalur Lembaga & Praktik Mandiri**: Bertugas sebagai Manajer Kasus di Lembaga Kesejahteraan Sosial (LKS/Panti), Rumah Sakit, Sentra Terpadu, atau membuka klinik praktik pekerjaan sosial mandiri.`;
+      }
+
+      // 5. CARA DAFTAR TKSK (Tenaga Kesejahteraan Sosial Kecamatan)
+      if (targetQ.includes('tksk')) {
+        return `${salamPrefix}**Informasi & Syarat Rekrutmen Tenaga Kesejahteraan Sosial Kecamatan (TKSK)**:
+
+TKSK merupakan tenaga fungsional dengan kuota ketat yaitu **hanya 1 orang per kecamatan** (total 627 personil di 27 Kab/Kota se-Jawa Barat).
+
+---
+
+- **Mekanisme Pengisian Formasi**: Rekrutmen TKSK hanya dibuka oleh Dinas Sosial Kabupaten/Kota bersama Dinas Sosial Provinsi Jawa Barat jika terdapat personil yang purna tugas, mengundurkan diri, atau terjadi kekosongan wilayah.
+- **Syarat Utama**:
+  * Pendidikan minimal SMA/SMK/D-3/S-1 yang berdomisili di kecamatan setempat.
+  * Memiliki rekam jejak pengabdian sosial nyata di kecamatan tersebut.
+  * Mengikuti uji seleksi administrasi, wawancara, dan verifikasi lapangan oleh Dinsos Kab/Kota.
+  * Ditetapkan melalui Surat Keputusan (SK) resmi Kementerian Sosial RI / Dinas Sosial.`;
+      }
+
+      // 6. CARA DAFTAR LKS (Lembaga Kesejahteraan Sosial / Panti)
+      if (targetQ.includes('lks') || targetQ.includes('panti') || targetQ.includes('yayasan')) {
+        return `${salamPrefix}**Panduan Pendaftaran & Perizinan Lembaga Kesejahteraan Sosial (LKS) Jawa Barat**:
+
+Bagi yayasan atau organisasi sosial kemasyarakatan yang ingin terdaftar resmi di Dinsos Jabar:
+
+---
+
+1. **Persyaratan Badan Hukum**: Memiliki Akta Pendirian Notaris yang disahkan Kemenkumham, NPWP atas nama yayasan, dan bukti kepemilikan/sewa kantor sekretariat/panti.
+2. **Pengajuan Tanda Daftar & Izin Operasional**:
+   - Mengajukan permohonan Tanda Daftar Lembaga Kesejahteraan Sosial (TDLKS) ke Dinas Sosial Kabupaten/Kota setempat.
+   - Tim Dinsos akan melakukan visitasi dan verifikasi faktual fasilitas serta program pelayanan panti/lembaga.
+3. **Rekomendasi Provinsi & Akreditasi**:
+   - Memperoleh Izin Operasional Dinsos dan Rekomendasi Dinas Sosial Provinsi Jawa Barat.
+   - Mengikuti proses akreditasi lembaga melalui Badan Akreditasi Lembaga Kesejahteraan Sosial (BALKS) Kemensos RI.
+4. **Integrasi ke PSKS Jabar**: Lembaga yang telah mengantongi izin resmi dicatatkan ke database PSKS Jabar dan berhak atas pembinaan serta fasilitasi program bantuan sosial kedinasan.`;
+      }
+
+      // 7. CARA DAFTAR RELAWAN SECARA UMUM
+      return `${salamPrefix}**Panduan Pendaftaran Menjadi Relawan / Personil Pilar Sosial di Jawa Barat**:
+
+Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS). Jika Anda ingin bergabung mengabdi:
+
+---
+
+1. **Pilih Pilar yang Sesuai dengan Minat & Kemampuan**:
+   - **Kesiapsiagaan Bencana**: **TAGANA** (Taruna Siaga Bencana).
+   - **Pengabdian Warga Desa**: **PSM** (Pekerja Sosial Masyarakat).
+   - **Kepemudaan Lingkungan**: **Karang Taruna**.
+   - **Keahlian Profesi Sarjana**: **PEKSOS** (Pekerja Sosial Profesional).
+   - **Organisasi/Panti**: **LKS** (Lembaga Kesejahteraan Sosial).
+2. **Prosedur Pendaftaran**:
+   - Datang langsung ke **Kantor Dinas Sosial Kabupaten/Kota tempat domisili Anda** (Bagian Pelayanan / Bidang Terkait) atau melalui Kantor Desa/Kelurahan setempat.
+   - Bawa dokumen identitas (KTP, KK, Surat Keterangan Sehat, pasfoto).
+3. **Pelatihan & Penerbitan KTA**:
+   - Ikuti bimbingan teknis / diklatsar resmi dari dinas.
+   - Setelah SK penugasan terbit, data Anda akan diverifikasi pada portal **PSKS JABAR** dan kartu KTA Digital QR Code resmi langsung aktif.`;
     }
 
     // 0.5 PEKSOS / PKSP (Pekerja Sosial Profesional)
@@ -924,6 +1170,31 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       return `**Panduan Publikasi Pengumuman & Maklumat Dinas**:\n1. Buka menu **Pengaturan** > tab **Kelola Pengumuman**.\n2. Klik tombol **+ Buat Pengumuman Baru**.\n3. Isi judul, pilih kategori (Info Bencana, Penyaluran Bansos, Pelatihan, Peringatan), dan tulis isi maklumat.\n4. Opsi tambahan: Aktifkan toggle **"Tampilkan Popup Beranda"** jika maklumat bersifat darurat/siaga, atau aktifkan **"Running Text"** di bilah atas portal.\n5. Klik **Publikasikan** agar langsung tersinkronisasi ke seluruh pengguna secara realtime.`;
     }
 
+    // 0.18 MUTASI ANGGOTA / PERSONIL ANTAR WILAYAH
+    if (targetQ.includes('mutasi') || targetQ.includes('pindah wilayah') || targetQ.includes('pindah domisili') || targetQ.includes('pindah tugas')) {
+      return `**SOP Resmi Mutasi Personil Pilar Sosial Antar-Wilayah se-Jawa Barat**:\n1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat rekam jejak, nomor registrasi, dan pilar keanggotaan.\n2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.\n3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui data penugasan anggota ke domisili baru tanpa menghapus NIK atau riwayat pengabdian.\n4. **KTA Otomatis Terbarui**: KTA Digital QR Code langsung otomatis menyesuaikan wilayah tugas baru dengan status \`SAH_TERDAFTAR\`.\n\n[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:akun:Cek Status Akun & KTA]]`;
+    }
+
+    // 0.19 KTA RUSAK ATAU HILANG SAAT BERTUGAS (RE-PRINT KTA)
+    if (targetQ.includes('kta rusak') || targetQ.includes('kta hilang') || targetQ.includes('hilang kta') || targetQ.includes('kartu hilang') || targetQ.includes('kartu rusak')) {
+      return `**SOP Penanganan KTA Digital Rusak atau Hilang di Lapangan**:\n1. **Tidak Perlu Daftar Ulang**: Data keanggotaan Anda tetap aman dan terenkripsi di cloud database sistem PSKS Jabar.\n2. **Verifikasi NIK KTP**: Laporkan kepada Koordinator Pilar Kecamatan atau Admin Wilayah Dinsos dengan membawa/menunjukkan NIK KTP Anda.\n3. **Cetak Ulang Mandiri / Admin (Re-Print)**:\n   - Jika Anda memiliki akun: Masuk ke menu **Akun & Verifikasi**, pilih **Cetak Kartu Akses** untuk mengunduh KTA Digital QR Code baru.\n   - Melalui Admin: Admin Wilayah atau Superadmin dapat langsung mencetak ulang kartu Anda melalui menu **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).\n4. Kartu yang baru dicetak langsung aktif dengan kode hash validasi resmi.\n\n[[action:tab:akun:Buka Halaman Akun & KTA]] [[action:tab:contact:Hubungi Bantuan Resmi]]`;
+    }
+
+    // 0.20 TALI ASIH & BPJS KETENAGAKERJAAN RELAWAN SOSIAL
+    if (targetQ.includes('tali asih') || targetQ.includes('bpjs') || targetQ.includes('insentif') || targetQ.includes('honor relawan') || targetQ.includes('jaminan kerja') || targetQ.includes('gaji')) {
+      return `**Informasi Jaminan Sosial & Tali Asih Relawan PSKS Jawa Barat**:\n1. **Perlindungan BPJS Ketenagakerjaan**: Pemprov Jawa Barat bersama Kementerian Sosial RI secara bertahap memfasilitasi relawan sosial (seperti Tagana dan pilar aktif) dalam program perlindungan Jaminan Kecelakaan Kerja (JKK) dan Jaminan Kematian (JKM) untuk menjamin keselamatan saat bertugas di lokasi risiko tinggi.\n2. **Tali Asih / Insentif Tanggap Darurat**: Relawan yang diterjunkan dalam operasi tanggap darurat bencana alam/sosial berhak mendapatkan tali asih operasional harian, akomodasi shelter, logistik dapur umum, dan APD lapangan sesuai Surat Keputusan (SK) Tanggap Darurat Kepala Daerah/Kemensos.\n3. **Prinsip Pengabdian**: Pilar sosial (PSM, Tagana, Karang Taruna) berlandaskan jiwa kerelawanan (*volunteerism*), gotong royong, dan kepedulian sosial kemasyarakatan.\n\n[[action:tab:contact:Konsultasi Hak Relawan]] [[action:pillar:tagana:Buka Info Tagana]]`;
+    }
+
+    // 0.21 KEDARURATAN PPKS LAPANGAN (SOP RESPON CEPAT 1X24 JAM)
+    if (targetQ.includes('kedaruratan ppks') || targetQ.includes('ppks darurat') || targetQ.includes('lansia telantar') || targetQ.includes('anak telantar') || targetQ.includes('trc') || targetQ.includes('kasus darurat') || targetQ.includes('korban kdrt')) {
+      return `**SOP Respon Cepat 1x24 Jam Penanganan Kasus PPKS Darurat Lapangan**:\n1. **Deteksi & Laporan Awal (Tingkat Desa)**: Temuan kasus lansia telantar, disabilitas telantar, ABH, atau korban kekerasan segera dilaporkan ke Puskesos Desa/Kelurahan atau personil PSM.\n2. **Asesmen Cepat (Tingkat Kecamatan)**: Tenaga Kesejahteraan Sosial Kecamatan (TKSK) melakukan asesmen awal dan perlindungan darurat tempat singgah sementara.\n3. **Eskalasi ke Tim Reaksi Cepat (TRC) Dinsos**: Menghubungi TRC Dinsos Kabupaten/Kota atau hotline Dinsos Jabar untuk evakuasi darurat.\n4. **Rujukan ke Balai / Panti UPTD**: Korban dirujuk ke Balai Rehabilitasi Sosial Dinsos Jabar (seperti Balai Lansia Ciparay, Balai Netra Wyata Guna, atau Balai Anak) untuk penanganan medis dan pendampingan Pekerja Sosial Profesional (Peksos).\n\n[[action:tab:contact:Buka Kontak Hotline Darurat]] [[action:pillar:peksos:Info Layanan Peksos]]`;
+    }
+
+    // 0.22 SPESIALISASI KORPS TAGANA & DIKLATSAR LANJUTAN
+    if (targetQ.includes('spesialisasi tagana') || targetQ.includes('keahlian tagana') || targetQ.includes('water rescue') || targetQ.includes('vertical rescue') || targetQ.includes('dumlap') || targetQ.includes('diklatsar lanjutan')) {
+      return `**6 Bidang Spesialisasi Kebencanaan Korps Tagana Jawa Barat**:\nSetelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialisasi lanjutan:\n1. **Water Rescue**: Evakuasi korban di wilayah banjir bandang, arung jeram, dan perairan terbuka.\n2. **Vertical Rescue**: Evakuasi korban di medan tebing curam, jurang, dan reruntuhan gempa.\n3. **Dapur Umum Lapangan (Dumlap)**: Manajemen penyediaan ribuan porsi makanan higienis bergizi dalam 1x24 jam pasca-bencana.\n4. **Shelter & Pengungsian**: Manajemen pendirian tenda pleton ramah lansia, anak, dan ibu hamil.\n5. **Layanan Dukungan Psikososial (LDP)**: *Trauma healing* untuk anak-anak dan pemulihan kesehatan mental penyintas.\n6. **Logistik & Pergudangan**: Pengelolaan bufferstock sandang-pangan terintegrasi.\n\n[[action:pillar:tagana:Buka Modul Tagana Jabar]] [[action:tab:user_reg_history:Pantau Riwayat Penugasan]]`;
+    }
+
     // Default polite and helpful response based on role
     if (userContext?.role === 'superadmin') {
       return `Halo **Superadmin**! Saya siap membantu Anda mengelola sistem **PSKS Jabar**. Anda dapat menanyakan:\n- **Panduan Pengelolaan**: Cara menambah akun admin, reset PIN, verifikasi berkas pendaftar 10 pilar, cetak KTA massal A4, dan saklar maintenance.\n- **Data 10 Pilar PSKS**: Wawasan lengkap Peksos, PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, SLRT, dan sebaran 27 Kab/Kota.\n- **Bantuan Khusus Developer**: Hubungi developer aplikasi **Ilham Fazril** via [WhatsApp: +6289602421065](https://wa.me/6289602421065).\n\nAda topik atau fitur tertentu yang ingin saya jelaskan langkah-langkahnya?`;
@@ -953,7 +1224,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 
       try {
         const ai = getGenAI();
-        const isDeveloper = userContext?.role === 'developer' || (userContext?.nama && userContext.nama.toLowerCase().includes('ilham'));
+        const isDeveloper = userContext?.role === 'developer';
         let contextualInstruction = SYSTEM_INSTRUCTION;
         if (userContext) {
           contextualInstruction += `\n\nInformasi Sesi & Konteks Halaman saat ini:
@@ -962,6 +1233,23 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 - Hak Akses Role: ${userContext.role || 'user'}
 - Halaman / Tab Aktif: ${userContext.currentTab || 'beranda'}
 - Pilar Aktif: ${userContext.activePillar || 'Semua Pilar / Beranda'}`;
+
+          if (userContext.liveSummary) {
+            contextualInstruction += `\n\nData Agregat Riil 10 Pilar PSKS Saat Ini (Live Database Grounding):
+- Total Personil Terdaftar Se-Jabar: ${userContext.liveSummary.totalRecords || 0} orang
+- Rincian Riil Tiap Pilar:
+  * Peksos (Pekerja Sosial Profesional): ${userContext.liveSummary.pillarCounts?.peksos || 0} personil
+  * PSM (Pekerja Sosial Masyarakat): ${userContext.liveSummary.pillarCounts?.psm || 0} personil
+  * Tagana (Taruna Siaga Bencana): ${userContext.liveSummary.pillarCounts?.tagana || 0} personil
+  * LKS (Lembaga Kesejahteraan Sosial): ${userContext.liveSummary.pillarCounts?.lks || 0} personil
+  * Karang Taruna: ${userContext.liveSummary.pillarCounts?.karangtaruna || 0} personil
+  * LK3 (Lembaga Konsultasi Kesejahteraan Keluarga): ${userContext.liveSummary.pillarCounts?.lk3 || 0} personil
+  * Penyuluh Sosial: ${userContext.liveSummary.pillarCounts?.pensos || 0} personil
+  * TKSK (Tenaga Kesejahteraan Sosial Kecamatan): ${userContext.liveSummary.pillarCounts?.tksk || 0} personil
+  * KUBE & Badan Usaha: ${userContext.liveSummary.pillarCounts?.badanusaha || 0} personil
+  * SLRT / Puskesos: ${userContext.liveSummary.pillarCounts?.slrt_puskesos || 0} personil
+- Jika ditanya jumlah data atau statistik per personil, gunakan angka-angka faktual di atas secara persis dan meyakinkan.`;
+          }
         }
 
         if (isDeveloper) {

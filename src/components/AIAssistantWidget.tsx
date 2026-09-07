@@ -23,12 +23,16 @@ import {
   CheckCircle2,
   Layers,
   MessageCircle,
+  Mic,
+  MicOff,
+  Volume2,
 } from 'lucide-react';
 import { UserSession, UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from '../data/aiQuestions';
 import {
   getComprehensiveSmartAnswer,
   verifyAndTrackAnswerAccuracy,
+  getSystemStateMetrics,
 } from '../data/aiKnowledge';
 import { PILLARS_CONFIG } from '../data/initialData';
 
@@ -41,12 +45,20 @@ interface Message {
   trackingSource?: 'verified_exact' | 'state_grounded' | 'ai_model_verified' | 'knowledge_fallback';
 }
 
+interface ActionTag {
+  type: 'tab' | 'pillar';
+  target: string;
+  label: string;
+}
+
 interface AIAssistantWidgetProps {
   session?: UserSession;
   currentTab?: string;
   activePillar?: PillarId | null;
   allPillarData?: Record<string, PSKSDataRecord[]>;
   appSettings?: AppSettings;
+  onNavigateTab?: (tab: string) => void;
+  onSelectPillar?: (pillarId: PillarId) => void;
 }
 
 // Fast & Fluid Typing Animation Helper Component for AI Bot Replies
@@ -55,6 +67,8 @@ interface TypingFormattedTextProps {
   isAnimated: boolean;
   onScrollToBottom?: () => void;
   onComplete?: () => void;
+  onNavigateTab?: (tab: string) => void;
+  onSelectPillar?: (pillarId: PillarId) => void;
 }
 
 const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
@@ -62,13 +76,31 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   isAnimated,
   onScrollToBottom,
   onComplete,
+  onNavigateTab,
+  onSelectPillar,
 }) => {
-  const [displayedLength, setDisplayedLength] = useState(isAnimated ? 0 : content.length);
+  // Extract interactive action tags: [[action:tab:ID:Label]] or [[action:pillar:ID:Label]]
+  const { cleanText, actions } = useMemo(() => {
+    const actionRegex = /\[\[action:(tab|pillar):([a-zA-Z0-9_\-]+):(.*?)]]/g;
+    const foundActions: ActionTag[] = [];
+    let match;
+    while ((match = actionRegex.exec(content)) !== null) {
+      foundActions.push({
+        type: match[1] as 'tab' | 'pillar',
+        target: match[2],
+        label: match[3],
+      });
+    }
+    const clean = content.replace(actionRegex, '').trim();
+    return { cleanText: clean, actions: foundActions };
+  }, [content]);
+
+  const [displayedLength, setDisplayedLength] = useState(isAnimated ? 0 : cleanText.length);
   const [isDone, setIsDone] = useState(!isAnimated);
 
   useEffect(() => {
     if (!isAnimated) {
-      setDisplayedLength(content.length);
+      setDisplayedLength(cleanText.length);
       setIsDone(true);
       return;
     }
@@ -77,9 +109,8 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     setIsDone(false);
 
     let currentIndex = 0;
-    const totalLength = content.length;
+    const totalLength = cleanText.length;
     // High-speed typing stream animation: fast yet distinctly visible typing effect (~0.5s - 0.9s total)
-    // Ensures text does not just pop in instantly, but streams rapidly like modern AI
     const chunkSize = Math.max(2, Math.ceil(totalLength / 55));
     const intervalMs = 12;
 
@@ -96,9 +127,9 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [content, isAnimated]);
+  }, [cleanText, isAnimated]);
 
-  const currentText = content.slice(0, displayedLength);
+  const currentText = cleanText.slice(0, displayedLength);
 
   const formatText = (text: string) => {
     const lines = text.split('\n');
@@ -167,7 +198,7 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
 
   const handleSkipTyping = () => {
     if (!isDone) {
-      setDisplayedLength(content.length);
+      setDisplayedLength(cleanText.length);
       setIsDone(true);
       if (onComplete) onComplete();
     }
@@ -183,6 +214,35 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
       {!isDone && (
         <span className="inline-block w-1.5 h-3.5 bg-amber-400 ml-1 animate-pulse align-middle font-bold rounded-xs shadow-xs" />
       )}
+
+      {/* Interactive Action Navigation Buttons when Typing is Complete */}
+      {actions.length > 0 && isDone && (
+        <div className="mt-3 pt-2.5 border-t border-slate-700/60 flex flex-wrap gap-2">
+          {actions.map((act, aIdx) => (
+            <button
+              key={aIdx}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (act.type === 'tab') {
+                  onNavigateTab?.(act.target);
+                } else if (act.type === 'pillar') {
+                  onSelectPillar?.(act.target as PillarId);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all transform hover:scale-103 active:scale-95 cursor-pointer"
+            >
+              {act.type === 'pillar' ? (
+                <Layers className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              )}
+              <span>{act.label}</span>
+              <ChevronRight className="w-3 h-3 text-slate-950 shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -193,6 +253,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   activePillar = null,
   allPillarData,
   appSettings,
+  onNavigateTab,
+  onSelectPillar,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -202,6 +264,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const [hasUnreadInBackground, setHasUnreadInBackground] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Speech Recognition (Voice-to-Text) State
+  const [isListening, setIsListening] = useState(false);
+  const [voiceToast, setVoiceToast] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Dynamic recommendation rotation seed (updates on every question & every user tab/pillar navigation)
   const [rotationSeed, setRotationSeed] = useState<number>(() => Math.floor(Math.random() * 100));
@@ -216,6 +283,80 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const quickScrollRef = useRef<HTMLDivElement>(null);
   const isOpenRef = useRef(isOpen);
+
+  // Compute live database metrics for grounding answers
+  const liveMetrics = useMemo(() => {
+    return getSystemStateMetrics(allPillarData);
+  }, [allPillarData]);
+
+  // Voice-to-Text handler using browser Web Speech API
+  const handleToggleVoice = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceToast('Browser ini belum mendukung Web Speech API untuk suara.');
+      setTimeout(() => setVoiceToast(null), 3500);
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'id-ID';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceToast('Mendengarkan suara... Silakan berbicara');
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        if (transcript) {
+          setInputMessage((prev) => (prev.trim() ? `${prev.trim()} ${transcript}` : transcript));
+          setVoiceToast(null);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('[AI Assistant Voice Error]:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          setVoiceToast('Izin akses mikrofon ditolak. Izinkan mikrofon di browser Anda.');
+        } else if (event.error === 'no-speech') {
+          setVoiceToast('Suara tidak terdeteksi. Silakan coba bicara lagi.');
+        } else {
+          setVoiceToast(`Gagal input suara (${event.error})`);
+        }
+        setTimeout(() => setVoiceToast(null), 3500);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setTimeout(() => {
+          setVoiceToast((curr) => (curr?.startsWith('Mendengarkan') ? null : curr));
+        }, 1200);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err: any) {
+      console.warn('[AI Assistant] Gagal memulai pengenalan suara:', err);
+      setIsListening(false);
+      setVoiceToast('Gagal mengaktifkan mikrofon.');
+      setTimeout(() => setVoiceToast(null), 3000);
+    }
+  };
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -610,6 +751,10 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             role: currentRole,
             currentTab,
             activePillar,
+            liveSummary: {
+              totalRecords: liveMetrics.totalRecords,
+              pillarCounts: liveMetrics.pillarCounts,
+            },
           },
         }),
       });
@@ -1137,6 +1282,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                             isAnimated={msg.id === typingMessageId}
                             onScrollToBottom={scrollToBottom}
                             onComplete={() => setTypingMessageId(null)}
+                            onNavigateTab={onNavigateTab}
+                            onSelectPillar={onSelectPillar}
                           />
                         ) : (
                           <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
@@ -1269,13 +1416,30 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                   </div>
                 )}
 
+                {/* Voice Input Toast / Feedback Banner */}
+                {voiceToast && (
+                  <div className="px-3 py-1.5 bg-slate-950/95 border-t border-amber-500/30 text-amber-300 text-[10.5px] font-medium flex items-center justify-between gap-2 shrink-0">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${isListening ? 'bg-red-500 animate-ping' : 'bg-amber-400'}`} />
+                      <span className="truncate">{voiceToast}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceToast(null)}
+                      className="text-slate-400 hover:text-white p-0.5 cursor-pointer shrink-0"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Input Bar */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleSendMessage();
                   }}
-                  className="p-2 sm:p-2.5 bg-slate-900 border-t border-emerald-900/40 flex items-center gap-2 shrink-0"
+                  className="p-2 sm:p-2.5 bg-slate-900 border-t border-emerald-900/40 flex items-center gap-1.5 sm:gap-2 shrink-0"
                 >
                   <input
                     ref={inputRef}
@@ -1283,13 +1447,36 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder={
-                      isDeveloperUser
+                      isListening
+                        ? 'Sedang mendengarkan suara Anda...'
+                        : isDeveloperUser
                         ? 'Halo Ilham Fazril, ketik pertanyaan teknis atau uji sistem...'
                         : `Tanya seputar ${contextLabel}...`
                     }
                     disabled={isLoading}
                     className="flex-1 bg-slate-950 text-white placeholder-slate-500 text-[11px] sm:text-xs px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 min-w-0"
                   />
+
+                  {/* Voice-to-Text Microphone Button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleVoice}
+                    disabled={isLoading}
+                    className={`p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer shrink-0 shadow-md ${
+                      isListening
+                        ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse ring-2 ring-red-400'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 border border-slate-700'
+                    }`}
+                    title={isListening ? 'Berhenti mendengarkan' : 'Bicara dengan Suara (Voice-to-Text)'}
+                  >
+                    {isListening ? (
+                      <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    ) : (
+                      <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    )}
+                  </button>
+
+                  {/* Send Button */}
                   <button
                     type="submit"
                     disabled={!inputMessage.trim() || isLoading}
