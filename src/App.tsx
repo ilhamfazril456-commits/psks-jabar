@@ -71,6 +71,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocFromServer } from
 import { recordSystemActivity } from './lib/activityLogger';
 import { subscribeToRealtimeVideo } from './lib/videoSync';
 import { validateQRCardPayload } from './utils/qrAuth';
+import { removeAccountFromQuota } from './services/ipRegistrationService';
 
 function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
   const cleaned: Record<string, any> = {};
@@ -670,6 +671,8 @@ export default function App() {
               terakhirLogin: data.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
               ...data,
               passwordPolos: plainPass,
+              registeredIp: data.registeredIp || undefined,
+              deviceId: data.deviceId || undefined,
             });
           });
 
@@ -2196,6 +2199,8 @@ export default function App() {
       namaAdmin: newAdmin.namaAdmin || '',
       wilayahTugas: newAdmin.wilayahTugas || '',
       role: newAdmin.role || 'admin',
+      registeredIp: newAdmin.registeredIp,
+      deviceId: newAdmin.deviceId,
     };
 
     const newUname = (fullAdmin.username || '').toLowerCase().trim();
@@ -2384,6 +2389,9 @@ export default function App() {
             window.dispatchEvent(new Event('simpsks_device_accounts_changed'));
           }
         }
+
+        // Clean up quota in Firestore
+        removeAccountFromQuota(targetUname, target?.registeredIp, target?.deviceId);
       } catch {}
       return next;
     });

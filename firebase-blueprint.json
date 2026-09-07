@@ -151,6 +151,65 @@
         "timestamp": { "type": "number" },
         "by": { "type": "string" }
       }
+    },
+    "ai_knowledge_base": {
+      "title": "AI Knowledge Base",
+      "description": "Pangkalan data basis pengetahuan cerdas asisten AI seputar 10 pilar PSKS, SOP penugasan, regulasi, dan layanan Dinas Sosial Jawa Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "actionTag": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["topic", "title", "category", "content"]
+    },
+    "ai_config": {
+      "title": "AI Brain & System Configuration",
+      "description": "Otak dan konfigurasi instruksi sistem asisten AI, aturan konteks obrolan, dan contoh simulasi yang tersimpan di Firestore",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "systemInstruction": { "type": "string" },
+        "contextRules": { "type": "string" },
+        "dialogueExamples": { "type": "string" },
+        "vocabularySummary": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["systemInstruction"]
+    },
+    "ai_vocabulary": {
+      "title": "AI Vocabulary & Dialect Normalizer",
+      "description": "Kamus kosakata baku, non-baku, bahasa Sunda, singkatan, dan slang untuk pemahaman konteks percakapan asisten AI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "word": { "type": "string" },
+        "canonical": { "type": "string" },
+        "category": { "type": "string" },
+        "intent": { "type": "string" }
+      },
+      "required": ["word", "canonical"]
+    },
+    "ip_registrations": {
+      "title": "IP & Device Registration Quota",
+      "description": "Pelacakan kuota pendaftaran akun secara realtime per alamat IP dan perangkat (maksimal 3 akun per IP/perangkat)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "identifier": { "type": "string" },
+        "type": { "type": "string" },
+        "registeredAccounts": { "type": "array", "items": { "type": "string" } },
+        "count": { "type": "number" },
+        "updatedAt": { "type": "string" },
+        "lastRegisteredAt": { "type": "string" }
+      },
+      "required": ["identifier", "registeredAccounts", "count"]
     }
   }
 }

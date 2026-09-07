@@ -78,6 +78,31 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Collection: ai_knowledge_base (Basis Pengetahuan Cerdas & Otak Asisten AI)
+    match /ai_knowledge_base/{docId} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().size() > 0;
+    }
+
+    // Collection: ai_config (Otak Asisten AI, System Instruction & Aturan Konteks Firestore)
+    match /ai_config/{configId} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().size() > 0;
+    }
+
+    // Collection: ai_vocabulary (Kamus Kosakata Baku, Non-Baku, Sunda & Slang)
+    match /ai_vocabulary/{vocabId} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().size() > 0;
+    }
+
+    // Collection: ip_registrations (Pelacakan Kuota Pendaftaran Akun Realtime per Alamat IP & Device)
+    match /ip_registrations/{ipDocId} {
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
   }
 }
 

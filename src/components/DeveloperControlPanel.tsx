@@ -83,6 +83,7 @@ import { OFFICIAL_KADINAS_PHOTO } from '../assets/officialKadinasPhoto';
 import { DEFAULT_PILLAR_DATA, DEFAULT_ADMIN_ACCOUNTS } from '../data/initialData';
 import { SmartAccessCardSection } from './SmartAccessCardSection';
 import { uploadVideoChunksToFirestore } from '../lib/videoSync';
+import { AIBrainFirestoreManager } from './AIBrainFirestoreManager';
 
 interface DeveloperControlPanelProps {
   isOpen?: boolean;
@@ -3444,6 +3445,9 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* REALTIME FIRESTORE BRAIN & VOCABULARY CONTROL SYSTEM */}
+                <AIBrainFirestoreManager />
               </div>
             )}
 

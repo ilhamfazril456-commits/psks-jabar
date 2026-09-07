@@ -4,6 +4,17 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import {
+  ensureAIKnowledgeSeeded,
+  getAIBrainConfig,
+  saveAIBrainConfig,
+  getAIVocabulary,
+  saveAIVocabularyItem,
+  deleteAIVocabularyItem,
+  normalizeQueryWithComprehensiveVocabulary,
+  searchKnowledgeBase,
+  resolveContextFromChatHistory,
+} from './src/services/aiKnowledgeFirestoreService';
 
 dotenv.config();
 
@@ -13,6 +24,11 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Asynchronously seed / synchronize the AI dynamic knowledge base with Cloud Firestore
+  ensureAIKnowledgeSeeded().catch((err) => {
+    console.warn('[AI Server] Dynamic Firestore Knowledge Base seed notice:', err?.message || err);
+  });
 
   // CORS middleware for iframe / cross-origin preview support
   app.use((req, res, next) => {
@@ -37,20 +53,60 @@ async function startServer() {
 
   // Endpoint to detect client IP address
   app.get('/api/client-ip', (req, res) => {
-    const forwarded = req.headers['x-forwarded-for'];
+    const rawForwarded = req.headers['x-forwarded-for'];
+    const xRealIp = req.headers['x-real-ip'];
+    const cfConnectingIp = req.headers['cf-connecting-ip'];
+    const xClientIp = req.headers['x-client-ip'];
+
     let ip = '';
-    if (typeof forwarded === 'string') {
-      ip = forwarded.split(',')[0].trim();
-    } else if (Array.isArray(forwarded) && forwarded.length > 0) {
-      ip = forwarded[0].trim();
+    if (typeof rawForwarded === 'string') {
+      ip = rawForwarded.split(',')[0].trim();
+    } else if (Array.isArray(rawForwarded) && rawForwarded.length > 0) {
+      ip = rawForwarded[0].trim();
+    } else if (typeof cfConnectingIp === 'string') {
+      ip = cfConnectingIp.trim();
+    } else if (typeof xRealIp === 'string') {
+      ip = xRealIp.trim();
+    } else if (typeof xClientIp === 'string') {
+      ip = xClientIp.trim();
     } else {
       ip = req.socket.remoteAddress || req.ip || '127.0.0.1';
     }
+
     // Clean IPv6 prefix like ::ffff:
     if (ip.startsWith('::ffff:')) {
       ip = ip.substring(7);
     }
-    res.json({ ip });
+
+    const isLocalOrPrivate =
+      !ip ||
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip === 'localhost' ||
+      ip.startsWith('10.') ||
+      ip.startsWith('192.168.') ||
+      ip.startsWith('172.16.') ||
+      ip.startsWith('172.17.') ||
+      ip.startsWith('172.18.') ||
+      ip.startsWith('172.19.') ||
+      ip.startsWith('172.20.') ||
+      ip.startsWith('172.21.') ||
+      ip.startsWith('172.22.') ||
+      ip.startsWith('172.23.') ||
+      ip.startsWith('172.24.') ||
+      ip.startsWith('172.25.') ||
+      ip.startsWith('172.26.') ||
+      ip.startsWith('172.27.') ||
+      ip.startsWith('172.28.') ||
+      ip.startsWith('172.29.') ||
+      ip.startsWith('172.30.') ||
+      ip.startsWith('172.31.');
+
+    res.json({
+      ip,
+      isPublic: !isLocalOrPrivate,
+      timestamp: Date.now()
+    });
   });
 
   // Security Headers for Diskominfo, BSSN & OWASP Top 10 compliance
@@ -326,9 +382,19 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
    - Jika pengguna bertanya pertanyaan lanjutan yang singkat atau tidak menyebutkan subjek lengkap (contoh: "syaratnya apa aja?", "kalau di Bandung gimana?", "siapa ketuanya?", "terus kelanjutannya gimana?", "hitung lagi", "jelaskan nomor 2", "berapa personilnya sekarang?", "apa bedanya sama yang tadi?"):
    - Anda WAJIB langsung mengerti subjek yang dimaksud dari topik atau pilar yang dibahas pada putaran percakapan sebelumnya, lalu menjawab secara runtut, tepat sasaran, dan konsisten tanpa meminta pengguna mengulang pertanyaannya!
 
-3. **IDENTITAS PENGEMBANG / DEVELOPER APLIKASI (ATURAN WAJIB MUTLAK)**:
-   - Jika ditanya "siapa pembuat website ini?", "siapa developernya?", "siapa yang membuat aplikasi ini?", "siapa yang bikin?", atau variasi sejenis, Anda WAJIB menjawab secara jelas dan bangga bahwa pembuat dan arsitek aplikasi PSKS Jabar ini adalah "Ilham Fazril" (Full Stack Developer & Software Architect).
-   - ATURAN NAMA KHUSUS: Saat menyebutkan nama "Ilham Fazril", JANGAN PERNAH memakai imbuhan "Kang/Teh", cukup langsung sebutkan "Ilham Fazril".
+3. **IDENTITAS RESMI ASISTEN & PERLINDUNGAN IDENTITAS PENGEMBANG (MUTLAK & KETAT)**:
+   - Identitas Resmi: Anda adalah "Asisten Virtual Resmi PSKS Jabar", asisten digital kedinasan di bawah naungan Dinas Sosial Provinsi Jawa Barat.
+   - PERLINDUNGAN IDENTITAS DEVELOPER DARI PENGGUNA UMUM (MUTLAK):
+     * DILARANG KERAS membocorkan nama "Ilham Fazril", status akun developer, nomor kontak pribadi, email, atau metadata internal sistem kepada pengguna umum (tamu, warga publik, pengguna terdaftar biasa, maupun admin dinas).
+     * Jika pengguna umum bertanya: "siapa kamu?", "kamu siapa?", "siapa pembuat website ini?", "siapa developernya?", "siapa yang bikin aplikasi ini?", "siapa yang merancang?", "siapa Ilham Fazril?", "kamu kenal Ilham?":
+       -> JAWAB DENGAN IDENTITAS RESMI:
+       "Saya adalah **Asisten Virtual Resmi PSKS Jabar**, asisten digital resmi di bawah naungan **Dinas Sosial Provinsi Jawa Barat** yang bertugas memberikan informasi dan panduan seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS), data sebaran sosial di 27 Kabupaten/Kota, serta layanan sosial di Jawa Barat."
+       -> Jika ditanya siapa pembuat/pengembang aplikasi ini:
+       "Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat."
+       -> Jika ditanya secara spesifik tentang nama "Ilham Fazril":
+       "Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat."
+   - PENGECUALIAN HANYA UNTUK SESI DEVELOPER TEROTENTIKASI (role === 'developer'):
+     * Hanya jika sesi terotentikasi secara sah sebagai developer (role developer), Anda menyapa dan berinteraksi secara privat dan bangga dengan Ilham Fazril.
 
 4. **PENGETAHUAN MENDALAM & LENGKAP 10 PILAR UTAMA PSKS JAWA BARAT DAN PILAR TERKAIT LAINNYA**:
    1) **Pekerja Sosial Profesional (PEKSOS / PKSP)**:
@@ -499,16 +565,16 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      * Segera akui dan minta maaf atas kekeliruan sistem sebelumnya dengan santun dan bersahabat.
      * Tanyakan kembali secara spesifik: apakah pengguna ingin dibantu mengenai panduan pendaftaran relawan sosial (seperti cara daftar TAGANA/PSM), informasi bansos, pengecekan KTA digital, atau hal lainnya.
 
-13. **PERLINDUNGAN AKSES AKUN ADMINISTRATIF DARI PENGGUNA PUBLIK / USER TERDAFTAR (MUTLAK & KETAT)**:
-   - Jika pengguna berstatus role 'user' (tamu publik, masyarakat umum, atau warga terdaftar biasa) menanyakan hal sensitif mengenai:
-     * Bagaimana cara masuk, login, atau mengakses akun Admin / Admin Wilayah
-     * Bagaimana cara masuk, login, atau mengakses akun Superadmin
-     * Bagaimana cara masuk, login, atau mengakses akun Developer
-     * Bagaimana cara menjadi admin atau cara meminta akses panel pengelolaan administratif
-     * Bagaimana cara membobol atau mengakses hak istimewa admin
-   - Anda DILARANG KERAS memberikan instruksi, cara login, langkah masuk, maupun petunjuk teknis akses ke akun-akun administratif tersebut!
-   - Anda WAJIB menolak secara halus, ramah, sopan, dan berwibawa dengan jawaban berikut:
-     "Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi."
+13. **PERLINDUNGAN KETAT AKSES ADMINISTRATIF (SUPERADMIN, LOGIN ADMIN, RAHASIA SISTEM)**:
+   - Jika pengguna menanyakan hal sensitif mengenai akses administratif seperti:
+     * Bagaimana cara masuk/login ke akun Admin Wilayah, Superadmin, atau Developer
+     * Meminta password, PIN, rahasia sistem, token, kredensial, atau bypass keamanan
+     * Bagaimana cara mendapatkan akun admin atau meminta akses panel kontrol internal
+   - Anda WAJIB menolak secara sopan, santun, tegas, dan berwibawa demi menjaga integritas data dan kepatuhan regulasi keamanan informasi publik (UU PDP No. 27/2022).
+   - Arahkan pengguna untuk menghubungi pihak berwenang di Dinas Sosial Jawa Barat jika memiliki keperluan kedinasan yang mendesak, dan berikan tag tombol aksi:
+     [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
+   - Gunakan format tanggapan standar:
+     "Mohon maaf, akses administratif (seperti hak akses Admin Wilayah, Superadmin Provinsi, kredensial login, dan rahasia konfigurasi sistem internal) merupakan wewenang kedinasan tertutup yang dilindungi secara ketat demi keamanan, privasi data masyarakat, dan integritas tata kelola PSKS Jawa Barat.\n\nAsisten tidak dapat memberikan instruksi login administratif, kode sandi, maupun rahasia sistem internal kepada publik.\n\nApabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi atau memiliki keperluan administratif mendesak, silakan berkoordinasi langsung dengan pihak berwenang di Dinas Sosial Provinsi Jawa Barat atau Administrator Dinas Sosial Kabupaten/Kota setempat melalui kontak dan saluran resmi yang tersedia.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]"
 
 14. **PANDUAN LENGKAP CARA MENDAFTAR / BERGABUNG 10 PILAR SOSIAL (MUTLAK & PRIORITAS TINGGI)**:
    - Jika pengguna bertanya bagaimana cara mendaftar, syarat pendaftaran, atau cara bergabung menjadi relawan/personil pilar sosial (contoh: "gmn cara daptar tagana", "cara daftar psm", "syarat masuk tagana", "cara gabung karang taruna", "bagaimana jadi relawan sosial", dll.):
@@ -629,7 +695,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
   }
 
   // Helper for smart fallback responses when Gemini API Key is unconfigured or during upstream network spikes
-  function getSmartFallbackReply(userMessage: string, userContext?: any): string {
+  function getSmartFallbackReply(userMessage: string, userContext?: any, messages?: Array<{ role: string; content: string }>): string {
     const rawQ = userMessage.trim();
     const q = rawQ.toLowerCase();
     const roleTitle = (userContext?.role || 'user').toUpperCase();
@@ -664,13 +730,33 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       return `Mohon maaf, kami tidak bisa memproses permintaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jawa Barat.`;
     }
 
-    // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK FOR PUBLIC / USER ROLE
+    // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK (STRICT HARDENING)
     const isAskingAdminAccess =
-      (q.includes('masuk') || q.includes('login') || q.includes('akses') || q.includes('buka') || q.includes('cara jadi') || q.includes('daftar jadi')) &&
-      (q.includes('akun admin') || q.includes('akun superadmin') || q.includes('akun developer') || q.includes('ke admin') || q.includes('ke superadmin') || q.includes('ke developer') || q.includes('sebagai admin') || q.includes('sebagai superadmin') || q.includes('sebagai developer') || q.includes('panel admin') || q.includes('panel superadmin') || q.includes('panel developer'));
+      !isDev &&
+      (userContext?.role !== 'superadmin') &&
+      (
+        ((q.includes('masuk') || q.includes('login') || q.includes('akses') || q.includes('buka') || q.includes('cara jadi') || q.includes('daftar jadi') || q.includes('minta') || q.includes('bocorkan') || q.includes('kasih tau') || q.includes('kunci') || q.includes('rahasia')) &&
+        (q.includes('akun admin') || q.includes('akun superadmin') || q.includes('akun developer') || q.includes('ke admin') || q.includes('ke superadmin') || q.includes('ke developer') || q.includes('sebagai admin') || q.includes('sebagai superadmin') || q.includes('sebagai developer') || q.includes('panel admin') || q.includes('panel superadmin') || q.includes('panel developer') || q.includes('login admin') || q.includes('login superadmin') || q.includes('rahasia sistem') || q.includes('password admin') || q.includes('pin superadmin') || q.includes('kredensial admin') || q.includes('token admin'))) ||
+        (q.includes('cara login admin') || q.includes('cara login superadmin') || q.includes('password superadmin') || q.includes('pin admin') || q.includes('rahasia admin'))
+      );
 
-    if (isPublicUser && isAskingAdminAccess) {
-      return `Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi.`;
+    if (isAskingAdminAccess) {
+      return `Mohon maaf, akses administratif (seperti hak akses Admin Wilayah, Superadmin Provinsi, kredensial login, dan rahasia konfigurasi sistem internal) merupakan wewenang kedinasan tertutup yang dilindungi secara ketat demi keamanan, privasi data masyarakat, dan integritas tata kelola PSKS Jawa Barat.\n\nAsisten tidak dapat memberikan instruksi login administratif, kode sandi, maupun rahasia sistem internal kepada publik.\n\nApabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi atau memiliki keperluan administratif mendesak, silakan berkoordinasi langsung dengan pihak berwenang di Dinas Sosial Provinsi Jawa Barat atau Administrator Dinas Sosial Kabupaten/Kota setempat melalui kontak dan saluran resmi yang tersedia.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+
+    // 0.001 DEVELOPER PRIVACY PROTECTION FOR GENERAL USERS
+    if (
+      !isDev &&
+      (
+        q.includes('ilham fazril') ||
+        q.includes('ilhamfazril') ||
+        q.includes('fazril') ||
+        q.includes('siapa ilham') ||
+        q.includes('kenal ilham') ||
+        q.includes('siapakah ilham')
+      )
+    ) {
+      return `Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi resmi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat.`;
     }
 
     // 0.0 Math / Arithmetic Expression Direct Evaluation
@@ -792,6 +878,43 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
       return `Tentu saja, dengan senang hati! Silakan sampaikan pertanyaan Anda mengenai data 10 Pilar PSKS, sebaran wilayah di Jawa Barat, atau panduan penggunaan sistem PSKS JABAR ini. Saya siap membantu memberikan informasi selengkap mungkin. 😊`;
     }
 
+    // 0.32 RESOLUSI KONTEKS RIWAYAT & KATA GANTI (CONTEXT CONTINUITY DARI 2 PESAN SEBELUMNYA)
+    if (messages && Array.isArray(messages) && messages.length > 1) {
+      const contextRes = resolveContextFromChatHistory(rawQ, messages);
+      if (contextRes.detectedContext && contextRes.detectedObject) {
+        // Kasus Khusus Simulasi: "Kalau TKSK sama juga gak?" / "sama keneh teu?"
+        if (
+          (targetQ.includes('sama juga gak') ||
+            targetQ.includes('sama gak') ||
+            targetQ.includes('sama ga') ||
+            targetQ.includes('sama keneh') ||
+            targetQ.includes('kalo tksk') ||
+            targetQ.includes('kalau tksk')) &&
+          (contextRes.detectedObject.includes('TKSK') || targetQ.includes('tksk'))
+        ) {
+          return `${salamPrefix}Sedikit berbeda dengan pilar sebelumnya. Untuk **Tenaga Kesejahteraan Sosial Kecamatan (TKSK)**, biasanya ada seleksi khusus dari Dinas Sosial tingkat Kabupaten/Kota jika terdapat posisi yang kosong (kuota TKSK ditetapkan 1 orang per 1 kecamatan).\n\nPersyaratannya meliputi domisili di kecamatan setempat, pendidikan minimal SMA/D3/S1, memiliki rekam jejak pengabdian sosial aktif, dan lulus verifikasi berkas serta wawancara di Dinsos setempat.\n\nApakah Anda ingin saya carikan kontak Dinas Sosial wilayah Anda? [[action:tab:contact:Lihat Kontak Dinsos Wilayah]]`;
+        }
+
+        // Pertanyaan Persyaratan: "Syaratnya apa aja?" / "Bawa apa aja?" / "Dokumennya apa?"
+        if (
+          (targetQ.includes('syarat') || targetQ.includes('dokumen') || targetQ.includes('bawa apa') || targetQ.includes('persyaratan')) &&
+          !targetQ.includes('tagana') && !targetQ.includes('psm') && !targetQ.includes('tksk') && !targetQ.includes('karang taruna')
+        ) {
+          return `${salamPrefix}Terkait kriteria dan persyaratan administrasi untuk **${contextRes.detectedObject}** yang sedang kita bahas, berkas umum yang perlu Anda persiapkan meliputi:\n1. Fotokopi KTP & KK (domisili wilayah Jawa Barat).\n2. Surat Keterangan Sehat dari Puskesmas/Dokter Pemerintah.\n3. Pasfoto resmi terbaru (ukuran 3x4 dan 4x6 latar belakang merah).\n4. Surat Rekomendasi (dari Kepala Desa/Lurah untuk PSM, atau Dinsos Kab/Kota untuk TKSK).\n5. Surat pernyataan komitmen pengabdian sosial sukarela.\n\nAda bagian persyaratan berkas yang ingin Anda tanyakan lebih lanjut?`;
+        }
+
+        // Pertanyaan Lokasi: "Di mana lokasinya?" / "Dimana daftarnya?"
+        if (targetQ.includes('lokasi') || targetQ.includes('dimana') || targetQ.includes('di mana')) {
+          return `${salamPrefix}Mengenai lokasi pelayanan atau pendaftaran **${contextRes.detectedObject}**, prosesnya dapat Anda lakukan langsung di **Kantor Dinas Sosial Kabupaten/Kota** sesuai domisili Anda di Jawa Barat, atau melalui Kantor Desa/Kelurahan (Puskesos) setempat. Anda juga dapat melihat daftar alamat dan kontak dinas sosial melalui menu Kontak. [[action:tab:contact:Buka Menu Kontak]]`;
+        }
+
+        // Pertanyaan Durasi: "Berapa lama prosesnya?" / "Berapa lama verifikasinya?"
+        if (targetQ.includes('lama') || targetQ.includes('berapa lama') || targetQ.includes('prosesnya')) {
+          return `${salamPrefix}Terkait estimasi waktu proses untuk **${contextRes.detectedObject}**, verifikasi berkas administrasi dan penerbitan SK/KTA digital di tingkat dinas biasanya memakan waktu berkisar antara **3 hingga 14 hari kerja**, bergantung pada jadwal diklatsar/pelantikan resmi dari Dinas Sosial Provinsi Jawa Barat atau Kabupaten/Kota.`;
+        }
+      }
+    }
+
     // 0.35 MANAJEMEN AKUN & CARA MENAMBAH ADMIN (HANYA KHUSUS SUPERADMIN / ADMIN)
     if (
       (userContext?.role === 'superadmin' || userContext?.role === 'admin') &&
@@ -842,7 +965,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
    - Aktivitas pembuatan akun ini otomatis dicatat pada **Audit Trail (Riwayat Aktivitas)** sistem demi transparansi dan akuntabilitas.`;
     }
 
-    // 0.4 DEVELOPER / CREATOR QUERY (ILHAM FAZRIL)
+    // 0.4 DEVELOPER / CREATOR QUERY
     if (
       targetQ.includes('developer') ||
       targetQ.includes('pembuat') ||
@@ -855,7 +978,45 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       if (isDev) {
         return `Wkwkwk koplak lu bre, pura-pura nanya siapa developernya padahal lu sendiri orangnya! Website dan sistem **PSKS JABAR** ini dibangun dan diarsiteki langsung oleh **Ilham Fazril** (Full Stack Developer & Software Architect) dengan tech stack modern React 18, TypeScript, Tailwind CSS, Express, dan Cloud Firestore. Mantap banget kodingannya! 😎🚀`;
       }
-      return `Aplikasi Sistem Informasi **PSKS JABAR** ini dirancang, dikembangkan, dan diarsitekturi oleh **Ilham Fazril** (Full Stack Developer & Software Architect). Sistem ini dibangun dengan teknologi modern untuk mengintegrasikan data 10 Pilar Potensi dan Sumber Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat.`;
+      return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSebagai **Asisten Virtual Resmi PSKS Jabar**, saya siap membantu memberikan informasi mengenai profil 10 pilar, sebaran data di 27 Kabupaten/Kota, dan layanan sosial Jawa Barat.`;
+    }
+
+    // Context-Aware Pillar Resolution: Detect pillar mentioned in targetQ OR prioritize activePillar from user navigation!
+    const effectivePillar = (
+      (targetQ.includes('tagana') || targetQ.includes('taruna siaga') || targetQ.includes('bencana') || targetQ.includes('tagna')) ? 'tagana' :
+      (targetQ.includes('psm') || targetQ.includes('pekerja sosial masyarakat')) ? 'psm' :
+      (targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('pemuda')) ? 'karangtaruna' :
+      (targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('pekerja sosial')) ? 'peksos' :
+      (targetQ.includes('tksk') || targetQ.includes('kecamatan')) ? 'tksk' :
+      (targetQ.includes('lks') || targetQ.includes('panti') || targetQ.includes('yayasan')) ? 'lks' :
+      (targetQ.includes('lk3') || targetQ.includes('konseling keluarga')) ? 'lk3' :
+      (targetQ.includes('pensos') || targetQ.includes('penyuluh')) ? 'pensos' :
+      (targetQ.includes('kube') || targetQ.includes('badan usaha')) ? 'badanusaha' :
+      (targetQ.includes('slrt') || targetQ.includes('puskesos')) ? 'slrt_puskesos' :
+      (userContext?.activePillar || null)
+    );
+
+    // Contextual Member Count / Personil Query for active pillar
+    if (
+      (targetQ.includes('jumlah') || targetQ.includes('berapa') || targetQ.includes('personil') || targetQ.includes('anggota') || targetQ.includes('sabaraha') || targetQ.includes('brp')) &&
+      effectivePillar &&
+      userContext?.liveSummary?.pillarCounts
+    ) {
+      const pCount = userContext.liveSummary.pillarCounts[effectivePillar] || 0;
+      const pillarNames: Record<string, string> = {
+        peksos: 'Pekerja Sosial Profesional (PKSP / Peksos)',
+        psm: 'Pekerja Sosial Masyarakat (PSM)',
+        tagana: 'Taruna Siaga Bencana (TAGANA)',
+        lks: 'Lembaga Kesejahteraan Sosial (LKS)',
+        karangtaruna: 'Karang Taruna',
+        lk3: 'Lembaga Konsultasi Kesejahteraan Keluarga (LK3)',
+        pensos: 'Penyuluh Sosial (PENSOS)',
+        tksk: 'Tenaga Kesejahteraan Sosial Kecamatan (TKSK)',
+        badanusaha: 'KUBE & Badan Usaha Sosial',
+        slrt_puskesos: 'SLRT / Puskesos',
+      };
+      const pName = pillarNames[effectivePillar] || effectivePillar.toUpperCase();
+      return `${salamPrefix}Berdasarkan data agregat riil PSKS Jawa Barat saat ini, jumlah personil/lembaga untuk pilar **${pName}** yang tercatat resmi adalah sebanyak **${pCount.toLocaleString('id-ID')}** personil/unit di 27 Kabupaten/Kota se-Jawa Barat.`;
     }
 
     // 0.45 PANDUAN LENGKAP CARA DAFTAR & BERGABUNG PILAR SOSIAL (MUTLAK DIDAHULUKAN SEBELUM DEFINISI TEKSTUAL)
@@ -870,11 +1031,13 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       targetQ.includes('pendaftaran') ||
       targetQ.includes('pendaptaran') ||
       targetQ.includes('syarat') ||
-      targetQ.includes('persyaratan');
+      targetQ.includes('persyaratan') ||
+      targetQ.includes('saratt') ||
+      targetQ.includes('syrt');
 
     if (isRegisterIntent) {
       // 1. CARA DAFTAR TAGANA (Taruna Siaga Bencana)
-      if (targetQ.includes('tagana') || targetQ.includes('taruna siaga') || targetQ.includes('bencana')) {
+      if (targetQ.includes('tagana') || targetQ.includes('taruna siaga') || targetQ.includes('bencana') || effectivePillar === 'tagana') {
         return `${salamPrefix}**Panduan & Syarat Pendaftaran Relawan TAGANA (Taruna Siaga Bencana) Jawa Barat**:
 
 Bagi Anda yang ingin mengabdi dan bergabung menjadi bagian dari korps relawan **TAGANA Jawa Barat** di bawah naungan Dinas Sosial Provinsi Jawa Barat, berikut adalah persyaratan dan alur pendaftarannya:
@@ -913,7 +1076,7 @@ Bagi Anda yang ingin mengabdi dan bergabung menjadi bagian dari korps relawan **
       }
 
       // 2. CARA DAFTAR PSM (Pekerja Sosial Masyarakat)
-      if (targetQ.includes('psm') || targetQ.includes('pekerja sosial masyarakat')) {
+      if (targetQ.includes('psm') || targetQ.includes('pekerja sosial masyarakat') || effectivePillar === 'psm') {
         return `${salamPrefix}**Panduan & Syarat Pendaftaran Pekerja Sosial Masyarakat (PSM) Jawa Barat**:
 
 Pekerja Sosial Masyarakat (PSM) adalah pilar relawan sosial berbasis desa/kelurahan yang bertugas membantu penanganan Pemerlu Pelayanan Kesejahteraan Sosial (PPKS). Berikut tata cara pendaftarannya:
@@ -939,7 +1102,7 @@ Pekerja Sosial Masyarakat (PSM) adalah pilar relawan sosial berbasis desa/kelura
       }
 
       // 3. CARA DAFTAR KARANG TARUNA
-      if (targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('pemuda')) {
+      if (targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('pemuda') || effectivePillar === 'karangtaruna') {
         return `${salamPrefix}**Panduan Bergabung dengan Karang Taruna di Jawa Barat**:
 
 Karang Taruna adalah organisasi kepemudaan resmi yang berada di tingkat RT, RW, dan Desa/Kelurahan.
@@ -958,7 +1121,7 @@ Karang Taruna adalah organisasi kepemudaan resmi yang berada di tingkat RT, RW, 
       }
 
       // 4. CARA MENJADI PEKSOS / PKSP (Pekerja Sosial Profesional)
-      if (targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('pekerja sosial')) {
+      if (targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('pekerja sosial') || effectivePillar === 'peksos') {
         return `${salamPrefix}**Panduan & Syarat Menjadi Pekerja Sosial Profesional (PEKSOS / PKSP)**:
 
 Sesuai **UU No. 14 Tahun 2019**, Pekerja Sosial Profesional merupakan profesi keahlian khusus. Berikut alur untuk berpraktik resmi:
@@ -977,7 +1140,7 @@ Sesuai **UU No. 14 Tahun 2019**, Pekerja Sosial Profesional merupakan profesi ke
       }
 
       // 5. CARA DAFTAR TKSK (Tenaga Kesejahteraan Sosial Kecamatan)
-      if (targetQ.includes('tksk')) {
+      if (targetQ.includes('tksk') || effectivePillar === 'tksk') {
         return `${salamPrefix}**Informasi & Syarat Rekrutmen Tenaga Kesejahteraan Sosial Kecamatan (TKSK)**:
 
 TKSK merupakan tenaga fungsional dengan kuota ketat yaitu **hanya 1 orang per kecamatan** (total 627 personil di 27 Kab/Kota se-Jawa Barat).
@@ -993,7 +1156,7 @@ TKSK merupakan tenaga fungsional dengan kuota ketat yaitu **hanya 1 orang per ke
       }
 
       // 6. CARA DAFTAR LKS (Lembaga Kesejahteraan Sosial / Panti)
-      if (targetQ.includes('lks') || targetQ.includes('panti') || targetQ.includes('yayasan')) {
+      if (targetQ.includes('lks') || targetQ.includes('panti') || targetQ.includes('yayasan') || effectivePillar === 'lks') {
         return `${salamPrefix}**Panduan Pendaftaran & Perizinan Lembaga Kesejahteraan Sosial (LKS) Jawa Barat**:
 
 Bagi yayasan atau organisasi sosial kemasyarakatan yang ingin terdaftar resmi di Dinsos Jabar:
@@ -1218,21 +1381,50 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
-        const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext);
+        const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext, messages);
         return res.json({ reply: fallbackReply });
       }
 
       try {
         const ai = getGenAI();
         const isDeveloper = userContext?.role === 'developer';
-        let contextualInstruction = SYSTEM_INSTRUCTION;
+        
+        // Ambil Otak AI (System Instruction, Context Rules, Dialogue Examples) Langsung dari Cloud Firestore
+        const brainConfig = await getAIBrainConfig();
+        let contextualInstruction = `${brainConfig.systemInstruction}\n\n${brainConfig.contextRules}\n\n${brainConfig.dialogueExamples}`;
+
+        // Resolusi Konteks Riwayat & Penghubung Kosakata dari 2 Pesan Percakapan Sebelumnya
+        const contextResolution = resolveContextFromChatHistory(lastUserMsg, messages);
+        if (contextResolution.detectedContext) {
+          contextualInstruction += `\n\n[PENGHUBUNG KONTEKS & KOSAKATA DARI 2 PESAN SEBELUMNYA]:\n${contextResolution.instruction}`;
+        }
         if (userContext) {
           contextualInstruction += `\n\nInformasi Sesi & Konteks Halaman saat ini:
-- Nama: ${userContext.nama || 'Tamu'}
+- Nama: ${isDeveloper ? 'Ilham Fazril' : (userContext.nama || 'Tamu')}
 - Wilayah Penugasan: ${userContext.wilayah || 'Jawa Barat'}
 - Hak Akses Role: ${userContext.role || 'user'}
 - Halaman / Tab Aktif: ${userContext.currentTab || 'beranda'}
 - Pilar Aktif: ${userContext.activePillar || 'Semua Pilar / Beranda'}`;
+
+          // PRIORITAS PEMAHAMAN KONTEKS TINGKAT TINGGI:
+          if (userContext.activePillar) {
+            contextualInstruction += `\n\n[PRIORITAS FOKUS TINGGI - PILAR AKTIF: ${userContext.activePillar.toUpperCase()}]:
+- Pengguna SAAT INI SEDANG MEMBUKA HALAMAN DETAIL PILAR "${userContext.activePillar.toUpperCase()}".
+- ATURAN MUTLAK PERCAKAPAN: Jika pengguna mengajukan pertanyaan elipsis/kontekstual tanpa menyebut nama pilar secara eksplisit (seperti: "apa tugasnya?", "tugasna naon wae?", "gimana cara daftarnya?", "syaratnya apa?", "berapa anggotanya?", "siapa koordinatornya?", "apa wewenangnya?"), Anda HARUS MERUJUK SECARA SPESIFIK PADA PILAR ${userContext.activePillar.toUpperCase()}, BUKAN menjelaskan seluruh 10 pilar atau fitur sistem secara umum!`;
+          }
+
+          if (userContext.currentTab) {
+            contextualInstruction += `\n\n[KONTEKS TAB / NAVIGASI AKTIF: ${userContext.currentTab}]:
+- Pengguna sedang berada di tab/layar "${userContext.currentTab}". Sesuaikan pemahaman Anda jika pertanyaan pengguna merujuk pada apa yang sedang terlihat di layar.`;
+          }
+
+          if (!isDeveloper) {
+            contextualInstruction += `\n\n[ATURAN IDENTITAS KETAT UNTUK PENGGUNA UMUM]:
+- Anda HANYA BOLEH merespons sebagai "Asisten Virtual Resmi PSKS Jabar" di bawah naungan Dinas Sosial Provinsi Jawa Barat.
+- DILARANG KERAS menyebutkan nama "Ilham Fazril", kontak developer, nomor HP, email, atau status developer kepada pengguna ini.
+- Jika pengguna bertanya tentang siapa pembuat website atau siapa developernya, jawab bahwa sistem ini dikembangkan dan dikelola oleh Dinas Sosial Provinsi Jawa Barat.
+- Jika pengguna menanyakan hak akses administratif (superadmin, login admin, password, pin, rahasia sistem), TOLAK DENGAN SOPAN dan arahkan ke pihak berwenang Dinas Sosial Jawa Barat menggunakan tag aksi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].`;
+          }
 
           if (userContext.liveSummary) {
             contextualInstruction += `\n\nData Agregat Riil 10 Pilar PSKS Saat Ini (Live Database Grounding):
@@ -1263,6 +1455,24 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
   * Jika Ilham ngeyel, mendebat, nguji, ngeledek, nolak penjelasan ("ah bohong", "gamau", "teu percaya", "belegug", "sok tau", "naha kitu"): AI HARUS IKUTAN NGEYEL, BANYOL CEPLAS-CEPLOS, SARKAS LUCU, NGEGAS TAPI CERDAS, BANYOL AKRAB TONGKRONGAN, DAN GAK MAU KALAH TAPI PENJELASAN ILMIAH/LOGIKANYA TETAP 100% AKURAT & BENAR!
   * Jangan minta maaf atau pasrah kaku! Bales debatnya dengan argumen tajam dan jenaka layaknya bestie akrab di tongkrongan.
 - RESPON CEPAT & CERDAS: To-the-point, berbobot, padat, dan solutif!`;
+        }
+
+        // PANGKALAN DATA BASIS PENGETAHUAN & NORMALISASI KOSAKATA DARI CLOUD FIRESTORE
+        const { normalizedText: normQueryText, detectedIntents: normIntents, detectedPillar: normPillar } =
+          normalizeQueryWithComprehensiveVocabulary(lastUserMsg);
+        const resolvedPillar = userContext?.activePillar || normPillar;
+        const firestoreKnowledgeMatches = searchKnowledgeBase(normQueryText, resolvedPillar);
+
+        if (firestoreKnowledgeMatches.length > 0) {
+          contextualInstruction += `\n\n[BASIS PENGETAHUAN RESMI TERVERIFIKASI DARI CLOUD FIRESTORE]:`;
+          for (const item of firestoreKnowledgeMatches.slice(0, 3)) {
+            contextualInstruction += `\n\n### ${item.title} (Topik: ${item.topic})\n${item.content}`;
+          }
+          contextualInstruction += `\n\nInstruksi Penggunaan: Gunakan materi resmi dari pangkalan data Cloud Firestore di atas sebagai acuan primer dan terpercaya untuk memberikan jawaban yang akurat, komprehensif, santun, dan solutif.`;
+        }
+
+        if (normIntents.length > 0) {
+          contextualInstruction += `\n\n[INTENSI KOSAKATA PENGGUNA TERDETEKSI]: ${normIntents.join(', ')}. Pastikan jawaban langsung menjawab maksud pengguna secara tuntas dan tidak ambigu.`;
         }
 
         // Strictly normalize conversation history for Gemini API (ensures starts with user & strictly alternates)
@@ -1299,19 +1509,90 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
         }
 
         if (!replyText) {
-          replyText = getSmartFallbackReply(lastUserMsg, userContext);
+          replyText = getSmartFallbackReply(lastUserMsg, userContext, messages);
         }
 
         return res.json({ reply: replyText });
       } catch (geminiErr: any) {
         console.warn('[AI Assistant] Upstream Gemini unavailable, using smart local engine fallback.');
-        const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext);
+        const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext, messages);
         return res.json({ reply: fallbackReply });
       }
     } catch (err: any) {
       console.error('[AI Assistant] Error handling chat request:', err?.message || err);
       const fallbackReply = getSmartFallbackReply('', null);
       return res.json({ reply: fallbackReply });
+    }
+  });
+
+  // AI Brain Config Endpoints (Cloud Firestore)
+  app.get('/api/ai/brain', async (_req, res) => {
+    try {
+      const config = await getAIBrainConfig();
+      res.json({ success: true, brain: config });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.put('/api/ai/brain', async (req, res) => {
+    try {
+      await saveAIBrainConfig(req.body);
+      res.json({ success: true, message: 'Otak AI berhasil diperbarui di Firestore' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // AI Vocabulary Endpoints (Cloud Firestore)
+  app.get('/api/ai/vocabulary', async (_req, res) => {
+    try {
+      const vocabs = await getAIVocabulary();
+      res.json({ success: true, count: vocabs.length, data: vocabs });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/ai/vocabulary', async (req, res) => {
+    try {
+      await saveAIVocabularyItem(req.body);
+      res.json({ success: true, message: 'Kosakata berhasil disimpan di Firestore' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete('/api/ai/vocabulary/:id', async (req, res) => {
+    try {
+      await deleteAIVocabularyItem(req.params.id);
+      res.json({ success: true, message: 'Kosakata berhasil dihapus dari Firestore' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // AI Dynamic Knowledge Base inspection & sync endpoints (Firestore Powered)
+  app.get('/api/ai/knowledge', async (_req, res) => {
+    try {
+      const docs = await ensureAIKnowledgeSeeded();
+      res.json({ success: true, count: docs.length, data: docs });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/ai/knowledge/sync', async (_req, res) => {
+    try {
+      const docs = await ensureAIKnowledgeSeeded(true);
+      res.json({
+        success: true,
+        message: 'Berhasil sinkronisasi basis pengetahuan ke Cloud Firestore.',
+        count: docs.length,
+        data: docs,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

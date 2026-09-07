@@ -37,6 +37,14 @@ import { QRCardScannerModal } from './QRCardScannerModal';
 import { PrintableQRCardModal } from './PrintableQRCardModal';
 import { PrivacyTermsModal } from './PrivacyTermsModal';
 import { RegisterSuccessModal } from './WelcomePopups';
+import {
+  getStableDeviceId,
+  detectClientIp,
+  subscribeToClientQuota,
+  recordAccountRegistration,
+  reconcileDeviceAndIpQuota,
+  QuotaInfo,
+} from '../services/ipRegistrationService';
 
 interface SmartGateModalProps {
   isOpen: boolean;
@@ -114,166 +122,76 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const captchaInputRef = useRef<HTMLInputElement>(null);
   const regUsernameRef = useRef<HTMLInputElement>(null);
 
-  // Client IP state detection
+  // Client IP and Stable Device ID detection
   const [detectedIp, setDetectedIp] = useState<string>(() => {
     return sessionStorage.getItem('simpsks_client_ip') || '';
   });
+  const [detectedDeviceId] = useState<string>(() => {
+    return getStableDeviceId();
+  });
 
+  // Realtime Quota Information state
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo>(() => {
+    const rawLocal = localStorage.getItem('simpsks_device_registered_accounts');
+    let localList: string[] = [];
+    if (rawLocal) {
+      try {
+        localList = JSON.parse(rawLocal);
+      } catch {}
+    }
+    return {
+      registeredAccounts: localList,
+      count: localList.length,
+      isQuotaFull: localList.length >= 3,
+      ip: '',
+      deviceId: getStableDeviceId(),
+      isRealtimeSynced: false,
+    };
+  });
+
+  // Detect IP dynamically using resilient fallback
   useEffect(() => {
     let isMounted = true;
-    const fetchClientIp = async () => {
-      try {
-        const res = await fetch('/api/client-ip');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.ip && isMounted) {
-            setDetectedIp(data.ip);
-            sessionStorage.setItem('simpsks_client_ip', data.ip);
-            return;
-          }
-        }
-      } catch {}
-
-      try {
-        const res2 = await fetch('https://api.ipify.org?format=json');
-        if (res2.ok) {
-          const data2 = await res2.json();
-          if (data2.ip && isMounted) {
-            setDetectedIp(data2.ip);
-            sessionStorage.setItem('simpsks_client_ip', data2.ip);
-          }
-        }
-      } catch {}
-    };
-
-    if (!detectedIp) {
-      fetchClientIp();
-    }
+    detectClientIp().then((ip) => {
+      if (isMounted && ip) {
+        setDetectedIp(ip);
+      }
+    });
     return () => {
       isMounted = false;
     };
-  }, [detectedIp]);
-
-  // State and Helper for device registered accounts: max 3 per IP / per device
-  const [deviceRegCountTrigger, setDeviceRegCountTrigger] = useState(0);
-
-  const getLocalDeviceId = (): string => {
-    try {
-      let dId = localStorage.getItem('simpsks_device_uuid');
-      if (!dId) {
-        dId = 'dev_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-        localStorage.setItem('simpsks_device_uuid', dId);
-      }
-      return dId;
-    } catch {
-      return 'dev_' + Date.now();
-    }
-  };
-
-  const isPrivateOrLocalIp = (ip: string) => {
-    if (!ip) return true;
-    const trimmed = ip.trim().toLowerCase();
-    return (
-      trimmed === '' ||
-      trimmed === '127.0.0.1' ||
-      trimmed === '::1' ||
-      trimmed === 'localhost' ||
-      trimmed.startsWith('10.') ||
-      trimmed.startsWith('192.168.') ||
-      trimmed.startsWith('172.16.') ||
-      trimmed === 'unknown'
-    );
-  };
-
-  const deviceRegisteredAccounts = useMemo(() => {
-    try {
-      const localDeviceId = getLocalDeviceId();
-
-      // 1. Akun yang didaftarkan dari perangkat lokal ini (localStorage)
-      const raw = localStorage.getItem('simpsks_device_registered_accounts');
-      let localList: string[] = [];
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          localList = parsed.map((uname) => String(uname || '').trim()).filter((u) => u.length > 0);
-        }
-      }
-
-      // 2. Akun yang terdaftar dari deviceId perangkat ini di database
-      const deviceIdAccounts: string[] = [];
-      if (localDeviceId && adminAccounts && adminAccounts.length > 0) {
-        adminAccounts.forEach((acc) => {
-          if (acc.role === 'user' && acc.deviceId && acc.deviceId === localDeviceId && acc.username) {
-            deviceIdAccounts.push(acc.username.trim());
-          }
-        });
-      }
-
-      // 3. Akun yang didaftarkan dari alamat IP publik yang sama (hanya jika IP publik valid & bukan loopback/lokal)
-      const ipAccounts: string[] = [];
-      const hasValidPublicIp = detectedIp && !isPrivateOrLocalIp(detectedIp);
-      if (hasValidPublicIp && adminAccounts && adminAccounts.length > 0) {
-        adminAccounts.forEach((acc) => {
-          if (acc.role === 'user' && acc.registeredIp && acc.registeredIp === detectedIp && acc.username) {
-            ipAccounts.push(acc.username.trim());
-          }
-        });
-      }
-
-      // Gabungkan akun yang berasal dari perangkat ini (local storage + deviceId) atau alamat IP publik ini
-      const combinedAccounts = Array.from(new Set([...localList, ...deviceIdAccounts, ...ipAccounts]));
-
-      // 4. Filter akun yang sudah dihapus oleh admin (di psks_deleted_admin_ids atau tidak ada di adminAccounts)
-      const rawDeleted = localStorage.getItem('psks_deleted_admin_ids');
-      let deletedList: string[] = [];
-      if (rawDeleted) {
-        try {
-          const parsed = JSON.parse(rawDeleted);
-          if (Array.isArray(parsed)) {
-            deletedList = parsed.map((s) => String(s || '').toLowerCase().trim());
-          }
-        } catch {}
-      }
-
-      const validAccounts = combinedAccounts.filter((uname) => {
-        const uLower = uname.toLowerCase();
-        if (deletedList.includes(uLower)) return false;
-        if (adminAccounts && adminAccounts.length > 0) {
-          return adminAccounts.some((a) => (a.username || '').toLowerCase().trim() === uLower);
-        }
-        return true;
-      });
-
-      // Update penyimpanan lokal dengan akun aktif pada perangkat ini
-      const updatedLocal = Array.from(new Set([...localList, ...deviceIdAccounts])).filter((u) =>
-        validAccounts.some((v) => v.toLowerCase() === u.toLowerCase())
-      );
-      try {
-        localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(updatedLocal));
-      } catch {}
-
-      return validAccounts;
-    } catch {}
-    return [];
-  }, [adminAccounts, regSuccess, deviceRegCountTrigger, isOpen, detectedIp]);
-
-  const getDeviceRegisteredAccounts = (): string[] => {
-    return deviceRegisteredAccounts;
-  };
-
-  useEffect(() => {
-    const handleSync = () => {
-      setDeviceRegCountTrigger((p) => p + 1);
-    };
-    window.addEventListener('storage', handleSync);
-    window.addEventListener('simpsks_device_accounts_changed', handleSync);
-    return () => {
-      window.removeEventListener('storage', handleSync);
-      window.removeEventListener('simpsks_device_accounts_changed', handleSync);
-    };
   }, []);
 
-  const isDeviceQuotaFull = deviceRegisteredAccounts.length >= 3;
+  // Reconcile and backfill initial creator accounts (IlhamFazril1, IlhamFazril2)
+  // so this creator device displays 2/3, while other devices/IPs strictly show their factual counts
+  useEffect(() => {
+    if (adminAccounts && adminAccounts.length > 0) {
+      reconcileDeviceAndIpQuota(detectedIp, detectedDeviceId, adminAccounts);
+    }
+  }, [detectedIp, detectedDeviceId, adminAccounts]);
+
+  // Subscribe to real-time Firestore quota updates for this client's IP and device
+  useEffect(() => {
+    const unsubscribe = subscribeToClientQuota(
+      detectedIp,
+      detectedDeviceId,
+      adminAccounts || [],
+      (info) => {
+        setQuotaInfo(info);
+      }
+    );
+    return () => {
+      unsubscribe();
+    };
+  }, [detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
+
+  const deviceRegisteredAccounts = quotaInfo.registeredAccounts;
+  const isDeviceQuotaFull = quotaInfo.count >= 3;
+
+  const getDeviceRegisteredAccounts = (): string[] => {
+    return quotaInfo.registeredAccounts;
+  };
+
 
   // Reset form inputs when modal opens
   useEffect(() => {
@@ -412,19 +330,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         statusKoneksi: 'OFFLINE',
         statusLayar: 'OFFLINE',
         registeredIp: detectedIp || undefined,
-        deviceId: getLocalDeviceId(),
+        deviceId: detectedDeviceId || getStableDeviceId(),
       };
 
       if (onRegisterAccount) {
         await onRegisterAccount(newAccountData);
       }
 
-      // Record this registration on the device
-      const updatedDeviceAccounts = [...currentDeviceAccounts, uTrim];
-      try {
-        localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(updatedDeviceAccounts));
-        window.dispatchEvent(new Event('simpsks_device_accounts_changed'));
-      } catch {}
+      // Record this registration on the device and in Firestore in real-time
+      await recordAccountRegistration(uTrim, detectedIp, detectedDeviceId || getStableDeviceId());
 
       setRegSuccess(true);
       setSuccessMessage('Pendaftaran Akun Berhasil! Silahkan Masukkan Akun nya!');
@@ -921,12 +835,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     }`}>
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <Laptop className="w-3.5 h-3.5 text-emerald-800 shrink-0" />
-                        <span className="whitespace-nowrap">Batas Pendaftaran Perangkat:</span>
+                        <span className="whitespace-nowrap">Batas Pendaftaran Perangkat & IP:</span>
                         {detectedIp && (
                           <span className="text-[8.5px] font-mono text-slate-600 bg-white/80 border border-slate-200 px-1.5 py-0.2 rounded shadow-2xs">
                             IP: {detectedIp}
                           </span>
                         )}
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[8px] bg-emerald-100 text-emerald-800 rounded font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Realtime
+                        </span>
                       </div>
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 shadow-xs ${
                         isDeviceQuotaFull

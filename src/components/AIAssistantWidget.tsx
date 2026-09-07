@@ -26,6 +26,7 @@ import {
   Mic,
   MicOff,
   Volume2,
+  Database,
 } from 'lucide-react';
 import { UserSession, UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from '../data/aiQuestions';
@@ -34,6 +35,7 @@ import {
   verifyAndTrackAnswerAccuracy,
   getSystemStateMetrics,
 } from '../data/aiKnowledge';
+import { ensureAIKnowledgeSeeded } from '../services/aiKnowledgeFirestoreService';
 import { PILLARS_CONFIG } from '../data/initialData';
 
 interface Message {
@@ -288,6 +290,13 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const liveMetrics = useMemo(() => {
     return getSystemStateMetrics(allPillarData);
   }, [allPillarData]);
+
+  // Ensure AI Knowledge Base is synchronized with Cloud Firestore
+  useEffect(() => {
+    ensureAIKnowledgeSeeded().catch((err) => {
+      console.warn('[AI Assistant] Knowledge base initial check notice:', err);
+    });
+  }, []);
 
   // Voice-to-Text handler using browser Web Speech API
   const handleToggleVoice = () => {
@@ -1039,7 +1048,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     </h3>
                     <span className="bg-emerald-500/20 text-emerald-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-emerald-500/40 font-mono font-bold shrink-0 flex items-center gap-0.5">
                       <Zap className="w-2.5 h-2.5 text-amber-400" />
-                      Gemini 3.7 Flash
+                      Gemini 3.8 Flash
+                    </span>
+                    <span className="hidden sm:inline-flex bg-amber-500/15 text-amber-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-amber-500/30 font-mono font-bold shrink-0 items-center gap-0.5" title="Otak dan Kamus Pengetahuan AI tersimpan dinamis di Cloud Firestore">
+                      <Database className="w-2.5 h-2.5 text-amber-400" />
+                      Firestore Brain
                     </span>
                   </div>
                   <p className="text-[9.5px] sm:text-[10px] text-emerald-300/80 font-medium truncate">

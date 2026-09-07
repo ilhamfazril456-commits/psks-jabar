@@ -2,6 +2,10 @@ import { UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { EXACT_QUESTION_ANSWERS } from './aiCatalogAnswers';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from './aiQuestions';
 import { PILLARS_CONFIG } from './initialData';
+import {
+  normalizeQueryWithComprehensiveVocabulary,
+  searchKnowledgeBase,
+} from '../services/aiKnowledgeFirestoreService';
 
 export interface SmartAnswerResult {
   matched: boolean;
@@ -140,13 +144,18 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, kami tidak bisa memproses permintaan atau pertanyaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jabar.`;
   }
 
-  // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK FOR PUBLIC / USER ROLE
+  // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK (STRICT HARDENING)
   const isAskingAdminAccess =
-    (q.includes('masuk') || q.includes('login') || q.includes('akses') || q.includes('buka') || q.includes('cara jadi') || q.includes('daftar jadi')) &&
-    (q.includes('akun admin') || q.includes('akun superadmin') || q.includes('akun developer') || q.includes('ke admin') || q.includes('ke superadmin') || q.includes('ke developer') || q.includes('sebagai admin') || q.includes('sebagai superadmin') || q.includes('sebagai developer') || q.includes('panel admin') || q.includes('panel superadmin') || q.includes('panel developer'));
+    !isDeveloperUser &&
+    userRole !== 'superadmin' &&
+    (
+      ((q.includes('masuk') || q.includes('login') || q.includes('akses') || q.includes('buka') || q.includes('cara jadi') || q.includes('daftar jadi') || q.includes('minta') || q.includes('bocorkan') || q.includes('kasih tau') || q.includes('kunci') || q.includes('rahasia')) &&
+      (q.includes('akun admin') || q.includes('akun superadmin') || q.includes('akun developer') || q.includes('ke admin') || q.includes('ke superadmin') || q.includes('ke developer') || q.includes('sebagai admin') || q.includes('sebagai superadmin') || q.includes('sebagai developer') || q.includes('panel admin') || q.includes('panel superadmin') || q.includes('panel developer') || q.includes('login admin') || q.includes('login superadmin') || q.includes('rahasia sistem') || q.includes('password admin') || q.includes('pin superadmin') || q.includes('kredensial admin') || q.includes('token admin'))) ||
+      (q.includes('cara login admin') || q.includes('cara login superadmin') || q.includes('password superadmin') || q.includes('pin admin') || q.includes('rahasia admin'))
+    );
 
-  if (userRole === 'user' && isAskingAdminAccess) {
-    return `Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi.`;
+  if (isAskingAdminAccess) {
+    return `Mohon maaf, akses administratif (seperti hak akses Admin Wilayah, Superadmin Provinsi, kredensial login, dan rahasia konfigurasi sistem internal) merupakan wewenang kedinasan tertutup yang dilindungi secara ketat demi keamanan, privasi data masyarakat, dan integritas tata kelola PSKS Jawa Barat.\n\nAsisten tidak dapat memberikan instruksi login administratif, kode sandi, maupun rahasia sistem internal kepada publik.\n\nApabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi atau memiliki keperluan administratif mendesak, silakan berkoordinasi langsung dengan pihak berwenang di Dinas Sosial Provinsi Jawa Barat atau Administrator Dinas Sosial Kabupaten/Kota setempat melalui kontak dan saluran resmi yang tersedia.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
   // 0.0 DIRECT MATCHING FROM ROLE_QUESTION_CATALOG & EXACT_QUESTION_ANSWERS
@@ -507,7 +516,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     }
   }
 
-  // 0.6 Who is Ilham Fazril & Relationship to App (Direct & Reverse Logic)
+  // 0.6 Who is Ilham Fazril & Relationship to App (Strict Privacy Protection for General Users)
   if (
     q.includes('ilham fazril') ||
     q.includes('ilhamfazril') ||
@@ -519,7 +528,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     if (isDeveloperUser) {
       return `Tentu saja kenal banget, kan kamu sendiri **Ilham Fazril** (Full Stack Developer & Software Architect)! 😎🚀 Kamu adalah pencipta sekaligus arsitek utama sistem **PSKS JABAR** ini. Arsitektur full-stack React, Express, Gemini AI, dan Firestore yang kamu rancang di sini beneran solid dan canggih!`;
     }
-    return `**Ilham Fazril** adalah **Full Stack Developer & Software Architect** yang merancang, membangun, dan mengembangkan aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** untuk Dinas Sosial Provinsi Jawa Barat.\n\nBeliau mengintegrasikan teknologi modern seperti React 18, Vite, Express, Tailwind CSS, Google Gemini Flash AI, serta Cloud Firestore Database untuk mewujudkan digitalisasi tata kelola 10 pilar kesejahteraan sosial se-Jawa Barat.`;
+    return `Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi resmi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat.`;
   }
 
   // 0.7 Nama Web / Nama Aplikasi
@@ -535,7 +544,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     return `Nama sistem/aplikasi ini adalah **PSKS JABAR** (*Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat*), platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota yang dikembangkan oleh Dinas Sosial Provinsi Jawa Barat.`;
   }
 
-  // 1. DEVELOPER / CREATOR IDENTITY (STRICT RULE: Strictly "Ilham Fazril", NO KANG/TEH)
+  // 1. DEVELOPER / CREATOR IDENTITY (Protected for general users)
   if (
     q.includes('pembuat') ||
     q.includes('developer') ||
@@ -553,7 +562,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini adalah mahakarya yang kamu bangun sendiri, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nJujur, arsitektur yang kamu buat di sini keren dan rapi banget — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini Flash AI, serta Cloud Firestore** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*!`;
     }
 
-    return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dibuat dan dikembangkan oleh **Ilham Fazril** (Full Stack Developer & Software Architect).\n\nSistem ini dirancang secara komprehensif menggunakan teknologi modern **React 18, Vite, Express Proxy, Tailwind CSS, Google Gemini Flash AI, serta Cloud Firestore Database** untuk mendukung digitalisasi tata kelola 10 pilar kesejahteraan sosial Dinas Sosial Provinsi Jawa Barat.`;
+    return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSebagai **Asisten Virtual Resmi PSKS Jabar**, saya siap membantu memberikan informasi mengenai profil 10 pilar, sebaran data di 27 Kabupaten/Kota, dan layanan sosial Jawa Barat.`;
   }
 
   // 2. CONTEXTUAL PILLAR DETAIL QUERY (When user is viewing a specific pillar or asks about active pillar)
@@ -567,16 +576,37 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       q.includes('total') ||
       q.includes('anggota') ||
       q.includes('personil') ||
-      q.includes('data')
+      q.includes('data') ||
+      q.includes('sabaraha') ||
+      q.includes('brp') ||
+      q.includes('angota')
     ) {
       return `${opening}Saat ini, terdapat total **${pillarCount.toLocaleString('id-ID')} ${currentPillarInfo.unitLabel}** personil **${currentPillarInfo.title}** (${currentPillarInfo.shortName}) yang tercatat aktif dalam pangkalan data PSKS Jabar.\n\nAnda dapat memfilter data anggota berdasarkan nama, nomor NIK, maupun wilayah penugasan kecamatan pada tabel di halaman ini.`;
     }
 
-    if (q.includes('tugas') || q.includes('fungsi') || q.includes('wewenang') || q.includes('peran')) {
+    if (
+      q.includes('tugas') ||
+      q.includes('fungsi') ||
+      q.includes('wewenang') ||
+      q.includes('peran') ||
+      q.includes('naon') ||
+      q.includes('kerjanya') ||
+      q.includes('ngapain')
+    ) {
       return `${opening}**Tugas Pokok & Fungsi ${currentPillarInfo.title} (${currentPillarInfo.shortName})**:\n\n${currentPillarInfo.description}\n\n- **Unit Satuan**: ${currentPillarInfo.unitLabel}\n- **Atribut Data Utama**: ${currentPillarInfo.fields.nikLabel}, ${currentPillarInfo.fields.certLabel}, serta ${currentPillarInfo.fields.hpLabel}.\n- **Verifikasi**: Setiap personil wajib memiliki SK Penugasan resmi yang terverifikasi di Dinas Sosial.`;
     }
 
-    if (q.includes('format') || q.includes('field') || q.includes('syarat') || q.includes('sk') || q.includes('sertifikasi')) {
+    if (
+      q.includes('format') ||
+      q.includes('field') ||
+      q.includes('syarat') ||
+      q.includes('sk') ||
+      q.includes('sertifikasi') ||
+      q.includes('daftar') ||
+      q.includes('gabung') ||
+      q.includes('daptar') ||
+      q.includes('kumaha')
+    ) {
       return `${opening}**Format Atribut & Persyaratan Registrasi ${currentPillarInfo.title}**:\n\n1. **${currentPillarInfo.fields.nikLabel}**: Nomor identitas resmi terdaftar.\n2. **${currentPillarInfo.fields.certLabel}**: Dokumen legalitas/SK pengangkatan penugasan dinas.\n3. **${currentPillarInfo.fields.hpLabel}**: Kontak koordinasi aktif lapangan.\n4. **Status Keaktifan**: Wajib berstatus *Aktif / Siaga* untuk mendapatkan pengesahan *SAH_TERDAFTAR* pada KTA Digital QR Code.`;
     }
   }
@@ -1284,6 +1314,14 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
 - Anda dapat memilih nama kabupaten/kota pada dropdown Peta Beranda untuk melihat rincian riil per pilar di wilayah tersebut.`;
   }
 
+  // 14. DYNAMIC KNOWLEDGE BASE QUERY MATCH (CLOUD FIRESTORE)
+  const { normalizedText: normQ, detectedPillar: detPillar } = normalizeQueryWithComprehensiveVocabulary(targetQ);
+  const resolvedPillar = activePillar || (detPillar as PillarId) || null;
+  const matchedDocs = searchKnowledgeBase(normQ, resolvedPillar);
+  if (matchedDocs.length > 0 && matchedDocs[0]) {
+    return matchedDocs[0].content;
+  }
+
   // DEFAULT COMPREHENSIVE FALLBACK FOR QUERIES OUTSIDE KNOWLEDGE BASE
   if (userRole === 'admin') {
     return `Halo **Admin Wilayah**! Saya siap membantu Anda dalam operasional data pilar sosial. Anda dapat menanyakan seputar:\n- **Pengelolaan Data Pilar**: Cara input anggota baru, peremajaan data, dan ekspor Excel/PDF.\n- **Verifikasi & KTA**: Cara cetak KTA digital satuan/massal A4 dan pemindaian QR Code.\n- **Wawasan 10 Pilar PSKS**: Regulasi, dasar hukum, dan tugas fungsional tiap pilar sosial.\n\nSilakan tanyakan apa yang ingin Anda ketahui!`;
@@ -1483,6 +1521,8 @@ export function verifyAndTrackAnswerAccuracy(
   source: 'verified_exact' | 'state_grounded' | 'ai_model_verified' | 'knowledge_fallback';
 } {
   const normQ = query.toLowerCase().replace(/[?!.,]/g, '').trim();
+  // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
+  const isDeveloperUser = userRole === 'developer';
 
   // 0. STRICT SECURITY GUARD CHECK
   const isSecurity =
@@ -1515,21 +1555,71 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
-  // Sensitive admin access check for public / user role
+  // Sensitive admin access check for public / user role (Strict Hardening)
   const isAskingAdminAccess =
-    (normQ.includes('masuk') || normQ.includes('login') || normQ.includes('akses') || normQ.includes('buka') || normQ.includes('cara jadi') || normQ.includes('daftar jadi')) &&
-    (normQ.includes('akun admin') || normQ.includes('akun superadmin') || normQ.includes('akun developer') || normQ.includes('ke admin') || normQ.includes('ke superadmin') || normQ.includes('ke developer') || normQ.includes('sebagai admin') || normQ.includes('sebagai superadmin') || normQ.includes('sebagai developer') || normQ.includes('panel admin') || normQ.includes('panel superadmin') || normQ.includes('panel developer'));
+    !isDeveloperUser &&
+    userRole !== 'superadmin' &&
+    (
+      ((normQ.includes('masuk') || normQ.includes('login') || normQ.includes('akses') || normQ.includes('buka') || normQ.includes('cara jadi') || normQ.includes('daftar jadi') || normQ.includes('minta') || normQ.includes('bocorkan') || normQ.includes('kasih tau') || normQ.includes('kunci') || normQ.includes('rahasia')) &&
+      (normQ.includes('akun admin') || normQ.includes('akun superadmin') || normQ.includes('akun developer') || normQ.includes('ke admin') || normQ.includes('ke superadmin') || normQ.includes('ke developer') || normQ.includes('sebagai admin') || normQ.includes('sebagai superadmin') || normQ.includes('sebagai developer') || normQ.includes('panel admin') || normQ.includes('panel superadmin') || normQ.includes('panel developer') || normQ.includes('login admin') || normQ.includes('login superadmin') || normQ.includes('rahasia sistem') || normQ.includes('password admin') || normQ.includes('pin superadmin') || normQ.includes('kredensial admin') || normQ.includes('token admin'))) ||
+      (normQ.includes('cara login admin') || normQ.includes('cara login superadmin') || normQ.includes('password superadmin') || normQ.includes('pin admin') || normQ.includes('rahasia admin'))
+    );
 
-  if (userRole === 'user' && isAskingAdminAccess) {
+  if (isAskingAdminAccess) {
     return {
-      finalContent: 'Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi.',
+      finalContent: 'Mohon maaf, akses administratif (seperti hak akses Admin Wilayah, Superadmin Provinsi, kredensial login, dan rahasia konfigurasi sistem internal) merupakan wewenang kedinasan tertutup yang dilindungi secara ketat demi keamanan, privasi data masyarakat, dan integritas tata kelola PSKS Jawa Barat.\n\nAsisten tidak dapat memberikan instruksi login administratif, kode sandi, maupun rahasia sistem internal kepada publik.\n\nApabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi atau memiliki keperluan administratif mendesak, silakan berkoordinasi langsung dengan pihak berwenang di Dinas Sosial Provinsi Jawa Barat atau Administrator Dinas Sosial Kabupaten/Kota setempat melalui kontak dan saluran resmi yang tersedia.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',
     };
   }
 
-  // 1. Direct Catalog Match Check (Exact verified answers when clicking catalog prompt)
+  // Developer privacy protection for general users
+  if (
+    !isDeveloperUser &&
+    (
+      normQ.includes('ilham fazril') ||
+      normQ.includes('ilhamfazril') ||
+      normQ.includes('fazril') ||
+      normQ.includes('siapa ilham') ||
+      normQ.includes('kenal ilham') ||
+      normQ.includes('siapakah ilham')
+    )
+  ) {
+    return {
+      finalContent: 'Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi resmi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat.',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // 1. Developer Query Handling: Always preserve Gemini's rich, fluent generative output (including Sundanese and lively banter)
+  if (isDeveloperUser && rawReply && rawReply.trim().length > 5) {
+    return {
+      finalContent: rawReply.trim(),
+      isAccurate: true,
+      confidence: 0.99,
+      source: 'ai_model_verified',
+    };
+  }
+
+  // 1.1 Priority for Dynamic Model / Firestore Engine Reply with Context Awareness
+  if (rawReply && rawReply.trim().length > 10) {
+    let cleanReply = rawReply.trim();
+    // Protect developer identity for general users
+    if (!isDeveloperUser && cleanReply.toLowerCase().includes('ilham fazril')) {
+      cleanReply = 'Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial se-Jawa Barat.';
+    }
+    return {
+      finalContent: cleanReply,
+      isAccurate: true,
+      confidence: 0.98,
+      source: 'ai_model_verified',
+    };
+  }
+
+  // 1.2 Direct Catalog Match Check (Exact verified answers when clicking catalog prompt without backend)
   const allCatalogQuestions: AIQuestionItem[] = [];
   Object.values(ROLE_QUESTION_CATALOG).forEach((groups) => {
     groups.forEach((g) => allCatalogQuestions.push(...g.questions));
@@ -1549,19 +1639,6 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
-  // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
-  const isDeveloperUser = userRole === 'developer';
-
-  // 1.1 Developer Query Handling: Always preserve Gemini's rich, fluent generative output (including Sundanese and lively banter)
-  if (isDeveloperUser && rawReply && rawReply.trim().length > 5) {
-    return {
-      finalContent: rawReply.trim(),
-      isAccurate: true,
-      confidence: 0.99,
-      source: 'ai_model_verified',
-    };
-  }
-
   // 2. Developer / Creator Identity Verification Check
   if (
     normQ.includes('developer') ||
@@ -1571,24 +1648,36 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('siapa yang buat') ||
     normQ.includes('siapa yang bikin')
   ) {
-    if (!rawReply || !rawReply.toLowerCase().includes('ilham fazril')) {
-      const accurateDevAnswer = getComprehensiveSmartAnswer(
-        query,
-        userRole,
-        userName,
-        userWilayah,
-        currentTab,
-        activePillar,
-        allPillarData,
-        appSettings,
-        previousContext
-      );
-      return {
-        finalContent: accurateDevAnswer,
-        isAccurate: true,
-        confidence: 1.0,
-        source: 'verified_exact',
-      };
+    if (isDeveloperUser) {
+      if (!rawReply || !rawReply.toLowerCase().includes('ilham fazril')) {
+        const accurateDevAnswer = getComprehensiveSmartAnswer(
+          query,
+          userRole,
+          userName,
+          userWilayah,
+          currentTab,
+          activePillar,
+          allPillarData,
+          appSettings,
+          previousContext
+        );
+        return {
+          finalContent: accurateDevAnswer,
+          isAccurate: true,
+          confidence: 1.0,
+          source: 'verified_exact',
+        };
+      }
+    } else {
+      // General user: ensure no developer identity leak in final reply
+      if (rawReply && rawReply.toLowerCase().includes('ilham fazril')) {
+        return {
+          finalContent: 'Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSebagai **Asisten Virtual Resmi PSKS Jabar**, saya siap membantu memberikan informasi mengenai profil 10 pilar, sebaran data di 27 Kabupaten/Kota, dan layanan sosial Jawa Barat.',
+          isAccurate: true,
+          confidence: 1.0,
+          source: 'verified_exact',
+        };
+      }
     }
   }
 

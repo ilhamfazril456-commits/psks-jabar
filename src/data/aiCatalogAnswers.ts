@@ -2,7 +2,7 @@ import { UserRole } from '../types';
 
 export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   // === USER QUESTIONS ===
-  'u-1': `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dibuat dan diarsiteki oleh **Ilham Fazril** (Full Stack Developer & Software Architect).\n\nAplikasi ini dibangun menggunakan arsitektur modern **React 18 SPA, Vite, Express Proxy, Tailwind CSS, Google Gemini Flash AI, serta Cloud Firestore Database** untuk mendukung digitalisasi tata kelola 10 pilar kesejahteraan sosial Dinas Sosial Provinsi Jawa Barat.`,
+  'u-1': `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSistem ini dirancang untuk mendukung digitalisasi tata kelola, keterbukaan informasi publik, koordinasi relawan, dan pelayanan kesejahteraan sosial yang transparan dan akuntabel.`,
 
   'u-2': `**Fungsi & Tujuan Utama Website PSKS Jabar**:
 1. **Pusat Satu Data PSKS**: Mengintegrasikan data personil dan kelembagaan 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota secara akurat dan real-time.
