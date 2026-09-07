@@ -60,7 +60,7 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
   const [customVercelDomain, setCustomVercelDomain] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('psks_custom_vercel_domain');
-      if (stored && stored !== 'https://web-psks-jabar.vercel.app') {
+      if (stored && !stored.includes('web-psks-jabar')) {
         return stored;
       }
       return DEFAULT_VERCEL_URL;
@@ -72,7 +72,7 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('psks_custom_vercel_domain');
-      if (stored === 'https://web-psks-jabar.vercel.app') {
+      if (stored && stored.includes('web-psks-jabar')) {
         localStorage.setItem('psks_custom_vercel_domain', DEFAULT_VERCEL_URL);
       }
     }

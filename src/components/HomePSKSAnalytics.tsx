@@ -402,8 +402,12 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
               <div
                 ref={donutContainerRef}
                 className="relative h-[270px] sm:h-[310px] w-full flex items-center justify-center select-none"
-                onClick={() => {
-                  if (activeDonutIndex !== null) {
+                onMouseLeave={(e) => {
+                  if (typeof window !== 'undefined' && window.innerWidth >= 640) {
+                    const related = e.relatedTarget as Node | null;
+                    if (desktopCardRef.current && related && desktopCardRef.current.contains(related)) {
+                      return;
+                    }
                     setActiveDonutIndex(null);
                   }
                 }}
@@ -412,11 +416,6 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                   <RePieChart
                     key={`piechart-${totalAllPillars}-${pillarDistributionData.length}`}
                     margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                    onMouseLeave={() => {
-                      if (typeof window !== 'undefined' && window.innerWidth >= 640) {
-                        setActiveDonutIndex(null);
-                      }
-                    }}
                   >
                     <Pie
                       data={pillarDistributionData}
@@ -428,15 +427,11 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       dataKey="count"
                       isAnimationActive={false}
                       onMouseEnter={(_, index) => {
-                        setActiveDonutIndex(index);
-                      }}
-                      onMouseLeave={() => {
                         if (typeof window !== 'undefined' && window.innerWidth >= 640) {
-                          setActiveDonutIndex(null);
+                          setActiveDonutIndex(index);
                         }
                       }}
-                      onClick={(_, index, e) => {
-                        if (e && (e as any).stopPropagation) (e as any).stopPropagation();
+                      onClick={(_, index) => {
                         setActiveDonutIndex((prev) => (prev === index ? null : index));
                       }}
                     >
@@ -452,13 +447,6 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                             style={{
                               filter: isHovered ? 'drop-shadow(0px 4px 10px rgba(0,0,0,0.28))' : 'none',
                               transformOrigin: 'center center',
-                            }}
-                            onMouseEnter={() => {
-                              setActiveDonutIndex(index);
-                            }}
-                            onClick={(e: any) => {
-                              if (e && e.stopPropagation) e.stopPropagation();
-                              setActiveDonutIndex((prev) => (prev === index ? null : index));
                             }}
                           />
                         );
@@ -507,8 +495,12 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       onMouseEnter={() => {
                         // Keep open when cursor is hovering over floating card
                       }}
-                      onMouseLeave={() => {
+                      onMouseLeave={(e) => {
                         if (typeof window !== 'undefined' && window.innerWidth >= 640) {
+                          const related = e.relatedTarget as Node | null;
+                          if (donutContainerRef.current && related && donutContainerRef.current.contains(related)) {
+                            return;
+                          }
                           setActiveDonutIndex(null);
                         }
                       }}

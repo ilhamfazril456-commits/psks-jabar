@@ -99,7 +99,8 @@ export function getComprehensiveSmartAnswer(
   const q = rawQ.toLowerCase();
   const roleTitle = userRole.toUpperCase();
   const wilayah = userWilayah || 'Jawa Barat';
-  const isDeveloperUser = userRole === 'developer' || (userName && userName.toLowerCase().includes('ilham'));
+  // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
+  const isDeveloperUser = userRole === 'developer';
   const { totalRecords, pillarCounts } = getSystemStateMetrics(allPillarData);
   const { coreQuery, isPureIntro, hasQuestion } = extractCoreQueryIntent(q);
   const targetQ = hasQuestion ? coreQuery : q;
@@ -139,6 +140,15 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, kami tidak bisa memproses permintaan atau pertanyaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jabar.`;
   }
 
+  // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK FOR PUBLIC / USER ROLE
+  const isAskingAdminAccess =
+    (q.includes('masuk') || q.includes('login') || q.includes('akses') || q.includes('buka') || q.includes('cara jadi') || q.includes('daftar jadi')) &&
+    (q.includes('akun admin') || q.includes('akun superadmin') || q.includes('akun developer') || q.includes('ke admin') || q.includes('ke superadmin') || q.includes('ke developer') || q.includes('sebagai admin') || q.includes('sebagai superadmin') || q.includes('sebagai developer') || q.includes('panel admin') || q.includes('panel superadmin') || q.includes('panel developer'));
+
+  if (userRole === 'user' && isAskingAdminAccess) {
+    return `Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi.`;
+  }
+
   // 0.0 DIRECT MATCHING FROM ROLE_QUESTION_CATALOG & EXACT_QUESTION_ANSWERS
   const allGroups = [
     ...(ROLE_QUESTION_CATALOG[userRole] || []),
@@ -156,8 +166,8 @@ export function getComprehensiveSmartAnswer(
 
       if (
         normRawQ === normCatQ ||
-        normRawQ.includes(normCatQ) ||
-        normCatQ.includes(normRawQ)
+        (normCatQ.length >= 10 && normRawQ.includes(normCatQ)) ||
+        (normRawQ.length >= 20 && normCatQ.includes(normRawQ))
       ) {
         if (EXACT_QUESTION_ANSWERS[qItem.id]) {
           return EXACT_QUESTION_ANSWERS[qItem.id];
@@ -257,6 +267,40 @@ export function getComprehensiveSmartAnswer(
     }
   }
 
+  // 0.14 ISLAMIC GREETINGS / SALAM CHECK (MUTLAK HARUS DIJAWAB DENGAN SALAM)
+  const isIslamicSalam = q.includes('assalam') || q.includes('as-salam');
+  const salamPrefix = isIslamicSalam ? "Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n" : "";
+
+  // 0.15 HANDLING USER CONFUSION / DISBELIEF / COMPLAINTS (ANTI-JUMPING TOPIC & ANTI-TAGANA LOOP)
+  if (
+    q === 'lah' ||
+    q.startsWith('lah ') ||
+    q === 'kok' ||
+    q.startsWith('kok ') ||
+    q.includes('kok tagana') ||
+    q.includes('kenapa tagana') ||
+    q.includes('naha tagana') ||
+    q.includes('kok malah tagana') ||
+    q.includes('kenapa jadi tagana') ||
+    q.includes('naha bet tagana') ||
+    q.includes('ga nyambung') ||
+    q.includes('gak nyambung') ||
+    q.includes('teu nyambung') ||
+    q.includes('maksudnya') ||
+    q.includes('kok aneh') ||
+    q.includes('kenapa gitu')
+  ) {
+    if (isDeveloperUser) {
+      return `Wkwkwk hampura pisan bre! Tadi sistem sempet rada salah paham nangkep kata kunci obrolan. Tenang, jalur logika AI udah di-sync deui. Kembali ka topik nu tadi keur dibahas ngeunaan akun admin atawa kodingan naon yeuh Ilham Fazril? Sok gas deui! 🚀⚡`;
+    }
+    return `Mohon maaf atas ketidaknyamanannya! Tadi sistem sempat keliru dalam mengenali kata kunci pertanyaan Anda.
+
+Terkait hal yang sedang Anda tanyakan sebelumnya mengenai **langkah-langkah menambah admin baru** atau pengelolaan akun sistem:
+- Anda dapat membukanya melalui menu **Pengaturan** > tab **Manajemen Akun** > tombol **+ Tambah Akun Baru**.
+
+Apakah ada bagian tertentu dari langkah tersebut yang ingin dipandu secara lebih rinci? Saya siap membantu Anda! 😊`;
+  }
+
   // 0.2 GREETINGS & WARM WELCOME (SAPAAN & SALAM DENGAN RAMAH & SOPAN)
   const isGreeting =
     q === 'halo' ||
@@ -271,15 +315,10 @@ export function getComprehensiveSmartAnswer(
     q === 'test' ||
     q === 'tes tes' ||
     q === 'sampurasun' ||
-    q === 'assalamualaikum' ||
-    q === 'assalamu\'alaikum' ||
-    q === 'assalammualaikum' ||
-    q === 'punten' ||
-    q === 'permisi' ||
+    isIslamicSalam ||
     q.startsWith('halo') ||
     q.startsWith('hai') ||
     q.startsWith('sampurasun') ||
-    q.startsWith('assalamualaikum') ||
     q.startsWith('selamat pagi') ||
     q.startsWith('selamat siang') ||
     q.startsWith('selamat sore') ||
@@ -293,20 +332,67 @@ export function getComprehensiveSmartAnswer(
 
   if (isGreeting) {
     if (isDeveloperUser) {
-      return `Sampurasun / Halo **Ilham Fazril**! 👋 Siap nih, kodingan arsitektur PSKS Jabar udah mantap dan sistem AI aktif penuh. Ada fitur, data, kodingan, atau hal apa yang mau kita bahas atau eksekusi hari ini? 😎⚡`;
+      return `${salamPrefix}Sampurasun / Halo **Ilham Fazril**! 👋 Siap nih, kodingan arsitektur PSKS Jabar udah mantap dan sistem AI aktif penuh. Ada fitur, data, kodingan, atau hal apa yang mau kita bahas atau eksekusi hari ini? 😎⚡`;
     }
 
     if (userRole === 'superadmin') {
-      return `Sampurasun / Selamat datang **Superadmin Provinsi Jawa Barat**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap mendampingi Anda dalam pengawasan data 10 Pilar PSKS se-Jawa Barat, audit kredensial 27 Kabupaten/Kota, dan tata kelola sistem. Apa yang perlu saya bantu atau informasi apa yang ingin Anda cari hari ini?`;
+      return `${salamPrefix}Sampurasun / Selamat datang **Superadmin Provinsi Jawa Barat**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap mendampingi Anda dalam pengawasan data 10 Pilar PSKS se-Jawa Barat, audit kredensial 27 Kabupaten/Kota, dan tata kelola sistem. Apa yang perlu saya bantu atau informasi apa yang ingin Anda cari hari ini?`;
     }
 
     if (userRole === 'admin') {
       const wilName = userWilayah || 'Kabupaten/Kota';
-      return `Sampurasun / Halo **Admin Wilayah ${wilName}**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap membantu Anda dalam pengelolaan data personil 10 pilar, verifikasi berkas anggota, dan rekapitulasi data wilayah Anda. Ada yang bisa saya bantu atau jelaskan untuk hari ini?`;
+      return `${salamPrefix}Sampurasun / Halo **Admin Wilayah ${wilName}**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap membantu Anda dalam pengelolaan data personil 10 pilar, verifikasi berkas anggota, dan rekapitulasi data wilayah Anda. Ada yang bisa saya bantu atau jelaskan untuk hari ini?`;
     }
 
     // Default User / Tamu Publik
-    return `Sampurasun / Halo! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Anda mencari informasi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda butuhkan?`;
+    return `${salamPrefix}Sampurasun / Halo! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Anda mencari informasi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda butuhkan?`;
+  }
+
+  // 0.25 MANAJEMEN AKUN & CARA MENAMBAH ADMIN (SUPERADMIN & PENGATURAN)
+  if (
+    q.includes('tambah admin') ||
+    q.includes('menambah admin') ||
+    q.includes('buat admin') ||
+    q.includes('bikin admin') ||
+    q.includes('tambah akun') ||
+    q.includes('buat akun') ||
+    q.includes('kelola admin') ||
+    q.includes('manajemen admin') ||
+    q.includes('manajemen user') ||
+    q.includes('manajemen akun') ||
+    q.includes('tambah pengguna')
+  ) {
+    return `${salamPrefix}Sampurasun! Sebagai **Superadmin**, Anda memiliki wewenang penuh untuk menambahkan akun Administrator baru (baik Admin Wilayah Kab/Kota maupun Superadmin) ke dalam sistem PSKS Jawa Barat.
+
+Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
+
+---
+
+### **Langkah-Langkah Menambahkan Admin Baru**:
+
+1. **Buka Menu Pengaturan (Control Panel)**
+   - Masuk ke tab **Pengaturan** di bilah menu navigasi utama.
+   - Pilih tab **Manajemen Akun / Pengguna**.
+
+2. **Klik Tombol "Tambah Akun" / "Tambah Admin"**
+   - Klik tombol **+ Tambah Akun Baru** yang terletak di bagian atas tabel daftar akun.
+
+3. **Lengkapi Formulir Data Akun**:
+   - **Nama Lengkap**: Masukkan nama lengkap petugas/pejabat yang ditugaskan.
+   - **Nomor Telepon / WhatsApp / Username**: Nomor HP atau username untuk identitas login.
+   - **Role / Hak Akses**:
+     * Pilih **Admin Wilayah / Daerah** (jika bertugas mengelola data 1 Kabupaten/Kota tertentu).
+     * Pilih **Superadmin** (jika bertugas mengelola seluruh data Provinsi Jawa Barat).
+   - **Wilayah Penugasan**: Tentukan salah satu dari 27 Kabupaten/Kota (otomatis mencakup Provinsi jika memilih Superadmin).
+   - **PIN / Kata Sandi**: Buat PIN keamanan awal untuk login (sistem menyimpannya dengan enkripsi *Bcrypt*).
+
+4. **Simpan dan Aktifkan Akun**
+   - Pastikan status akun diatur ke **ACTIVE**.
+   - Klik tombol **Simpan Data / Buat Akun**.
+
+5. **Selesai & Audit Trail**
+   - Akun admin baru langsung aktif dan dapat langsung digunakan untuk login.
+   - Aktivitas pembuatan akun ini otomatis dicatat pada **Audit Trail (Riwayat Aktivitas)** sistem demi transparansi dan akuntabilitas.`;
   }
 
   // 0.3 GENERAL CONVERSATIONAL INQUIRY / INTENT TO ASK (ONLY WHEN NO SUBSTANTIVE QUESTION FOLLOWS)
@@ -508,66 +594,167 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
   }
 
   // 4. PILAR SPECIFIC QUERIES
-  if (q.includes('tagana') || q.includes('bencana') || q.includes('taruna siaga')) {
-    return `${opening}**Taruna Siaga Bencana (TAGANA)** Jawa Barat:
-- **Peran Utama**: Relawan terlatih yang berada di garis depan dalam pra-bencana (mitigasi/sosialisasi), saat bencana (evakuasi, dapur umum, shelter darurat), dan pasca-bencana (psikososial & distribusi logistik).
-- **Koordinasi**: Terkoordinasi langsung di bawah Bidang Perlindungan dan Jaminan Sosial (Linjamsos) Dinas Sosial Jawa Barat.
-- **Fitur di PSKS JABAR**: Anda dapat melihat sebaran personil Tagana di 27 Kab/Kota serta mengecek status sertifikasi dan kartu tanda relawan digital.`;
+
+  // 4.1 PEKSOS / PKSP (Pekerja Sosial Profesional)
+  if (
+    q.includes('peksos') ||
+    q.includes('pksp') ||
+    (q.includes('pekerja sosial') && !q.includes('pekerja sosial masyarakat')) ||
+    q.includes('sipps') ||
+    q.includes('sertifikasi peksos') ||
+    q.includes('peksos pemerintah') ||
+    q.includes('peksos masyarakat') ||
+    q.includes('peksos ahli')
+  ) {
+    return `${opening}**Pekerja Sosial Profesional (PEKSOS / PKSP)**:
+- **Definisi Resmi**: Tenaga ahli yang memiliki kualifikasi keilmuan formal pekerjaan sosial (lulusan D-IV/S-1/S-2/Profesi Spesialis Kesejahteraan Sosial/Pekerjaan Sosial) yang telah lulus uji kompetensi profesi, mengantongi Sertifikat Kompetensi dari LSP/Kemensos RI, serta terdaftar memiliki Surat Izin Praktik Pekerja Sosial (SIPPS).
+- **Dasar Hukum Utama**:
+  * **Undang-Undang No. 14 Tahun 2019 tentang Pekerja Sosial**.
+  * **Undang-Undang No. 11 Tahun 2009 tentang Kesejahteraan Sosial**.
+  * Standar Kompetensi Kerja Nasional Indonesia (SKKNI) Bidang Pekerjaan Sosial.
+- **Klasifikasi di Sistem PSKS Jawa Barat**:
+  1. **Peksos Pemerintah (ASN / PPPK)**: Bertugas di lingkungan Dinas Sosial Provinsi Jawa Barat, Dinas Sosial Kabupaten/Kota, Balai/Sentra Rehabilitasi Sosial (UPTD), dan Rumah Perlindungan Sosial. Jenjang jabatan fungsional meliputi: *Peksos Ahli Pertama, Peksos Ahli Muda, Peksos Ahli Madya, dan Peksos Ahli Utama*.
+  2. **Peksos Masyarakat (Non-ASN / Praktik Mandiri)**: Bertugas di Lembaga Kesejahteraan Sosial (LKS/Panti Asuhan/Panti Jompo), organisasi kemanusiaan non-pemerintah (NGO/LSM), rumah sakit, atau membuka praktik mandiri berlisensi SIPPS.
+- **Tugas Pokok & Fungsi Layanan Klinis**:
+  * **Manajemen Kasus (Case Management)**: Bertindak sebagai penanggung jawab utama (*case manager*) dalam menyelesaikan masalah sosial klien secara utuh dari asesmen hingga terminasi.
+  * **Asesmen Biopsikososial Terstandar**: Menggali secara mendalam faktor psikologis, relasi keluarga, dan kondisi sosial lingkungan klien PPKS.
+  * **Intervensi Klinis & Rehabilitasi Sosial**: Memberikan konseling sosial intensif, terapi psikososial pemulihan trauma, dan mediasi sosial.
+  * **Pendampingan Hukum & Perlindungan Khusus**: Pendampingan bagi Anak yang Berhadapan dengan Hukum (ABH), korban Tindak Pidana Perdagangan Orang (TPPO), korban Kekerasan Dalam Rumah Tangga (KDRT), korban kekerasan seksual, penyandang disabilitas berat, dan lansia telantar.
+  * **Advokasi Sosial**: Memperjuangkan pemenuhan hak-hak sosial dasar klien di hadapan instansi pemerintah, pengadilan, dan masyarakat.
+- **Perbedaan Mendasar PEKSOS dengan Pilar Lain (seperti PSM)**:
+  * **PEKSOS**: Berlandaskan pendidikan akademik formal sarjana/spesialis, memiliki lisensi klinis resmi (SIPPS), menangani intervensi kasus kompleks.
+  * **PSM**: Berbasis kerelawanan warga masyarakat desa/kelurahan yang berfokus pada pendataan awal dan pendampingan sosial di akar rumput.`;
   }
 
+  // 4.2 PSM (Pekerja Sosial Masyarakat)
   if (q.includes('psm') || q.includes('pekerja sosial masyarakat')) {
     return `${opening}**Pekerja Sosial Masyarakat (PSM)**:
-- **Definisi**: Relawan sosial yang berakar dari masyarakat desa/kelurahan yang bekerja atas dasar sukarela dan pengabdian tanpa pamrih.
-- **Tugas Pokok**: Pendataan awal PPKS/PMKS, pendampingan lansia terlantar, anak yatim, disabilitas, dan menjembatani warga ke dinas sosial setempat.
-- **Landasan Hukum**: Permensos RI No. 10 Tahun 2019 tentang Pekerja Sosial Masyarakat.`;
+- **Definisi**: Warga masyarakat yang atas dasar rasa kesadaran dan tanggung jawab sosial serta didorong oleh rasa kebersamaan, kekeluargaan, dan kesetiakawanan sosial secara sukarela mengabdi di bidang penyelenggaraan kesejahteraan sosial di tingkat desa/kelurahan.
+- **Dasar Hukum**: **Permensos RI No. 10 Tahun 2019 tentang Pekerja Sosial Masyarakat**.
+- **Tugas Pokok & Peran Lapangan**:
+  * **Deteksi Dini & Pemetaan PPKS**: Menemukan dan mendata warga yang mengalami masalah kesejahteraan sosial (lansia telantar, disabilitas, anak yatim piatu, fakir miskin) di tingkat RT/RW.
+  * **Pendampingan Sosial Lapangan**: Memberikan motivasi, bimbingan sosial, dan membantu warga kurang mampu mendapatkan akses bantuan sosial (PKH, BPNT, KIS PBI).
+  * **Rujukan & Kemitraan**: Menghubungkan warga ke Sekretariat Puskesos Desa, TKSK Kecamatan, dan Dinas Sosial Kabupaten/Kota.
+  * **Penggerak Kesetiakawanan Sosial**: Memelopori gotong royong warga, jimpitan sosial, dan pengumpulan beras perelek (kearifan lokal Sunda).`;
   }
 
+  // 4.3 TAGANA (Taruna Siaga Bencana)
+  if (
+    (q.includes('tagana') || q.includes('taruna siaga') || q.includes('bencana')) &&
+    !q.includes('kok') &&
+    !q.includes('kenapa') &&
+    !q.includes('naha') &&
+    !q.includes('lah')
+  ) {
+    return `${opening}**Taruna Siaga Bencana (TAGANA)** Jawa Barat:
+- **Definisi**: Relawan sosial yang terlatih dan memiliki keahlian khusus dalam penanggulangan bencana alam dan bencana sosial pada bidang Perlindungan & Jaminan Sosial (Linjamsos) Dinas Sosial Jawa Barat.
+- **Dasar Hukum**: Permensos RI tentang Taruna Siaga Bencana.
+- **Tugas Pokok Berdasarkan Fase Bencana**:
+  * **Fase Pra-Bencana (Mitigasi & Kesiapsiagaan)**: Sosialisasi mitigasi bencana, simulasi Kampung Siaga Bencana (KSB), edukasi Tagana Masuk Sekolah (TMS), dan pemetaan jalur evakuasi di 27 Kab/Kota.
+  * **Fase Tanggap Darurat (Saat Terjadi Bencana)**: Respon cepat 1x24 jam, pencarian dan evakuasi dasar, pendirian tenda pengungsian (shelter), serta pengoperasian Mobil Dapur Umum Lapangan (DUMLAP) untuk memasok ribuan porsi makanan siap saji harian bagi pengungsi dan relawan.
+  * **Fase Pasca-Bencana (Pemulihan)**: Layanan Dukungan Psikososial (LDP/trauma healing) bagi anak-anak dan lansia korban bencana, pembersihan lingkungan pemukiman, dan pendistribusian santunan ahli waris.`;
+  }
+
+  // 4.4 TKSK (Tenaga Kesejahteraan Sosial Kecamatan)
   if (q.includes('tksk') || q.includes('tenaga kesejahteraan sosial kecamatan')) {
     return `${opening}**Tenaga Kesejahteraan Sosial Kecamatan (TKSK)**:
-- **Fungsi**: Ujung tombak Kementerian Sosial dan Dinsos Provinsi/Kabupaten di tingkat kecamatan (1 personil per kecamatan).
-- **Tugas Khusus**: Mengoordinasikan penyelenggaraan kesejahteraan sosial, sinkronisasi data bansos (DTKS/Pusdatin), serta pendampingan program sembako/PKH.
-- **Perbedaan dengan PSM**: TKSK bertugas 1 orang per kecamatan sebagai koordinator wilayah, sedangkan PSM tersebar di tiap desa/kelurahan.`;
+- **Definisi**: Seseorang yang diberi tugas, fungsi, dan kewenangan oleh Kementerian Sosial dan Dinas Sosial untuk membantu penyelenggaraan kesejahteraan sosial di tingkat kecamatan (**1 orang di setiap kecamatan**, total 627 personil se-Jawa Barat).
+- **Dasar Hukum**: **Permensos RI No. 28 Tahun 2018 tentang Tenaga Kesejahteraan Sosial Kecamatan**.
+- **Tugas Pokok & Peran**:
+  * **Koordinator Pilar Sosial Kecamatan**: Mengoordinasikan seluruh pilar sosial (PSM, Karang Taruna, LKS) di wilayah kecamatannya.
+  * **Verifikasi & Validasi Data Bansos**: Mengawal pemutakhiran data kemiskinan (DTKS / SIKS-NG) dan memantau penyaluran bantuan sosial (Bansos Sembako/BPNT, PKH, BLT).
+  * **Penanganan Kedaruratan Wilayah**: Merespon cepat laporan kedaruratan sosial warga di kecamatan dan memfasilitasi rujukan ke Dinas Sosial Kabupaten/Kota.`;
   }
 
+  // 4.5 LKS (Lembaga Kesejahteraan Sosial / Panti)
   if (q.includes('lks') || q.includes('lembaga kesejahteraan sosial') || q.includes('panti')) {
     return `${opening}**Lembaga Kesejahteraan Sosial (LKS)**:
-- **Fungsi**: Menyelenggarakan pelayanan sosial bagi anak, lansia, disabilitas, dan korban napza (baik di dalam panti maupun luar panti).
-- **Syarat Pendaftaran/Verifikasi**: Akta notaris berbadan hukum Kemenkumham, Tanda Daftar Yayasan (TDY), izin operasional Dinsos, dan akreditasi BAN-P2KS.
-- **Status di PSKS JABAR**: LKS yang terdaftar di sistem dapat mengunduh sertifikat registrasi dan memperbarui daya tampung penerima manfaat.`;
+- **Definisi**: Lembaga, yayasan, atau organisasi sosial kemasyarakatan berbadan hukum yang didirikan oleh masyarakat untuk melaksanakan pelayanan, rehabilitasi, dan santunan kesejahteraan sosial.
+- **Dasar Hukum**: **Permensos RI No. 184 Tahun 2011 tentang Lembaga Kesejahteraan Sosial**.
+- **Klasifikasi Bidang Pelayanan**:
+  * **LKS Anak (LKSA / Panti Asuhan Anak)**: Asuhan pengasuhan anak yatim, piatu, dan telantar.
+  * **LKS Lanjut Usia (LKS LU / Panti Jompo)**: Perawatan lansia telantar dan pemenuhan kebutuhan permakanan.
+  * **LKS Disabilitas (LKSPD)**: Rehabilitasi vokasional penyandang disabilitas fisik, netra, rungu, dan grahita.
+  * **LKS Napza & Korban Tindak Kekerasan**: Pemulihan medis dan rehabilitasi sosial korban adiksi narkoba dan kekerasan.
+- **Persyaratan Legalitas di PSKS Jabar**: Akta Notaris Kemenkumham, Tanda Daftar Yayasan (TDY), Izin Operasional Dinsos, dan Akreditasi Badan Akreditasi Lembaga Kesejahteraan Sosial (BALKS/Kemensos).`;
   }
 
-  if (q.includes('karang taruna') || q.includes('pemuda')) {
+  // 4.6 KARANG TARUNA (KT)
+  if (q.includes('karang taruna') || q.includes('katar') || (q.includes('pemuda') && !q.includes('pekerja'))) {
     return `${opening}**Karang Taruna (KT)**:
-- **Peran**: Wadah pengembangan generasi muda non-partisan yang tumbuh dari dan untuk masyarakat, berorientasi pada pemberdayaan sosial, olahraga, seni budaya, dan Usaha Ekonomi Produktif (UEP).
-- **Regulasi**: Permensos RI No. 25 Tahun 2019 tentang Karang Taruna.`;
+- **Definisi**: Organisasi kepemudaan non-partisan yang berkedudukan di tingkat desa/kelurahan sebagai wadah pengembangan potensi generasi muda yang tumbuh dari, oleh, dan untuk masyarakat.
+- **Dasar Hukum**: **Permensos RI No. 25 Tahun 2019 tentang Karang Taruna**.
+- **Fungsi Pokok**:
+  * **Pembinaan Pemuda Desa**: Wadah kreativitas pemuda usia 13–45 tahun di bidang keolahragaan, seni budaya, dan keagamaan.
+  * **Usaha Ekonomi Produktif (UEP)**: Pemberdayaan kewirausahaan pemuda desa untuk membuka lapangan kerja mandiri.
+  * **Pencegahan Patologi Sosial**: Membentengi generasi muda dari narkoba, geng motor, minuman keras, dan tawuran.
+  * **Kepeloporan Sosial**: Gotong royong kerja bakti lingkungan dan bantuan tanggap darurat warga.`;
   }
 
-  if (q.includes('slrt') || q.includes('puskesos') || q.includes('rujukan')) {
-    return `${opening}**SLRT & Puskesos (Pusat Kesejahteraan Sosial)**:
-- **Fungsi**: Layanan satu pintu (*one-stop social service*) di desa/kelurahan untuk mengidentifikasi keluhan warga miskin dan merujuknya ke program perlindungan sosial (KIS, KIP, PKH, BPNT, atau program Pemprov Jabar).`;
-  }
-
-  if (q.includes('lk3') || q.includes('konsultasi keluarga')) {
+  // 4.7 LK3 (Lembaga Konsultasi Kesejahteraan Keluarga)
+  if (q.includes('lk3') || q.includes('konsultasi keluarga') || q.includes('konseling keluarga')) {
     return `${opening}**Lembaga Konsultasi Kesejahteraan Keluarga (LK3)**:
-- **Fungsi**: Memberikan layanan konseling psikologis, mediasi hukum keluarga, pendampingan korban KDRT, dan penguatan ketahanan keluarga Jawa Barat Juara Lahir Batin.`;
+- **Definisi**: Lembaga rujukan sosial profesional berbadan hukum atau binaan Dinsos yang memberikan pelayanan konsultasi psikologis, mediasi hukum keluarga, dan penguatan ketahanan keluarga.
+- **Ruang Lingkup Layanan Utama**:
+  * **Konseling Keharmonisan Rumah Tangga**: Mengatasi konflik suami-istri, krisis komunikasi keluarga, dan pengasuhan anak (*parenting*).
+  * **Mediasi Krisis & Pendampingan KDRT**: Mediasi perselisihan rumah tangga serta pendampingan psikologis korban Kekerasan Dalam Rumah Tangga bekerja sama dengan Unit PPA Kepolisian dan Rumah Perlindungan Sosial.
+  * **Penguatan Ketahanan Keluarga**: Mencegah perceraian, edukasi kesiapan pranikah, dan advokasi hak perlindungan anak menuju keluarga Jawa Barat Juara Lahir Batin.`;
   }
 
-  if (q.includes('kube') || q.includes('badan usaha')) {
-    return `${opening}**Kelompok Usaha Bersama (KUBE) & Badan Usaha Sosial**:
-- **Fungsi**: Wadah ekonomi gotong royong beranggotakan 5-10 KK penerima manfaat bansos untuk mengelola modal usaha produktif hingga mandiri secara ekonomi.`;
-  }
-
+  // 4.8 PENSOS (Penyuluh Sosial)
   if (q.includes('pensos') || q.includes('penyuluh sosial')) {
-    return `${opening}**Penyuluh Sosial Masyarakat (PENSOS)**:
-- **Fungsi**: Tokoh masyarakat yang secara sukarela melakukan penyuluhan dan komunikasi perubahan perilaku di bidang penyelenggaraan kesejahteraan sosial kepada warga.`;
+    return `${opening}**Penyuluh Sosial (PENSOS)**:
+- **Definisi**: Baik Penyuluh Sosial ASN (Jabatan Fungsional) maupun Penyuluh Sosial Masyarakat (tokoh masyarakat sukarela tersertifikasi) yang bertugas menyampaikan komunikasi, informasi, edukasi, dan motivasi pembangunan kesejahteraan sosial.
+- **Dasar Hukum**: Permensos RI No. 10 Tahun 2014 tentang Penyuluh Sosial Masyarakat.
+- **Tugas Pokok**:
+  * **Komunikasi Informasi Edukasi (KIE)**: Menyosialisasikan program-program perlindungan sosial, bansos, dan layanan Dinsos Jabar ke masyarakat luas.
+  * **Penyuluhan Preventif**: Edukasi bahaya Tindak Pidana Perdagangan Orang (TPPO), pencegahan pernikahan usia anak, dan bahaya napza.
+  * **Advokasi Sosial Inklusif**: Menghapus stigma negatif terhadap penyandang disabilitas dan mantan warga binaan sosial, serta mengampanyekan kesetiakawanan sosial.`;
   }
 
-  if (q.includes('pksp') || q.includes('pekerja sosial profesional')) {
-    return `${opening}**Pekerja Sosial Profesional (PKSP)**:
-- **Definisi**: Seseorang yang memiliki keilmuan formal pekerjaan sosial (lulusan D-IV/S1 Kesejahteraan Sosial) dan telah memiliki Sertifikasi Kompetensi Resmi serta Surat Izin Praktik Pekerja Sosial (SIPPS).`;
+  // 4.9 KUBE & BADAN USAHA SOSIAL
+  if (q.includes('kube') || q.includes('badan usaha') || q.includes('kelompok usaha')) {
+    return `${opening}**Kelompok Usaha Bersama (KUBE) & Badan Usaha Sosial**:
+- **Definisi**: Wadah beranggotakan 5 hingga 10 Kepala Keluarga (KK) dari keluarga pra-sejahtera binaan terdaftar DTKS yang dibentuk untuk mengelola kegiatan usaha ekonomi produktif secara bersama-sama.
+- **Tujuan Utama**:
+  * **Bantuan Stimulan Modal Usaha**: Memanfaatkan modal stimulan Kemensos/Dinsos (seperti budidaya ternak, olahan pangan lokal, warung sembako, dan kerajinan tangan).
+  * **Pemberdayaan Gotong Royong**: Membangun kemandirian ekonomi keluarga pra-sejahtera melalui manajemen usaha bersama.
+  * **Graduasi Mandiri**: Membantu keluarga penerima manfaat keluar dari garis kemiskinan dan mandiri secara ekonomi tanpa bergantung lagi pada bansos tunai.`;
   }
 
-  // 5. KARTU ANGGOTA DIGITAL & QR CODE
+  // 4.10 SLRT / PUSKESOS (Sistem Layanan dan Rujukan Terpadu)
+  if (q.includes('slrt') || q.includes('puskesos') || q.includes('rujukan terpadu') || q.includes('satu pintu')) {
+    return `${opening}**SLRT & Puskesos (Pusat Kesejahteraan Sosial)**:
+- **Definisi**: Sistem Layanan dan Rujukan Terpadu (SLRT di tingkat kabupaten/kota) dan Pusat Kesejahteraan Sosial (Puskesos di tingkat desa/kelurahan).
+- **Dasar Hukum**: **Permensos RI No. 15 Tahun 2018 tentang Sistem Layanan dan Rujukan Terpadu**.
+- **Fungsi One-Stop Social Service (Layanan Terpadu Satu Pintu)**:
+  * **Pusat Pengaduan & Keluhan**: Menerima pendaftaran warga miskin dan rentan yang belum terakomodir bantuan sosial.
+  * **Pencatatan & Identifikasi Kebutuhan**: Menilai kebutuhan warga terkait jaminan kesehatan (BPJS PBI/KIS), pendidikan (KIP/beasiswa), PKH, atau perbaikan rumah tidak layak huni (Rutilahu).
+  * **Rujukan Terpadu Lintas Sektor**: Menghubungkan warga ke OPD/instansi terkait dengan pelacakan status penanganan secara transparan dan terukur.`;
+  }
+
+  // 4.11 PILAR & JEJARING SOSIAL LAINNYA (PKH, WKSBM, KSB, CSR)
+  if (
+    q.includes('pkh') ||
+    q.includes('pendamping pkh') ||
+    q.includes('wksbm') ||
+    q.includes('ksb') ||
+    q.includes('kampung siaga') ||
+    q.includes('pilar sosial lainnya') ||
+    q.includes('jejaring sosial')
+  ) {
+    return `${opening}**Pilar & Jejaring Kesejahteraan Sosial Terkait Lainnya di Jawa Barat**:
+1. **Pendamping PKH (Program Keluarga Harapan)**:
+   - Tenaga profesional lapangan yang mendampingi Keluarga Penerima Manfaat (KPM) bansos bersyarat, menyelenggarakan Pertemuan Peningkatan Kemampuan Keluarga (P2K2/FDS), serta memastikan komitmen akses kesehatan ibu hamil/balita dan pendidikan anak.
+2. **Wahana Kesejahteraan Sosial Berbasis Masyarakat (WKSBM)**:
+   - Sistem jejaring sosial swadaya masyarakat lokal di tingkat RT/RW/Dusun yang menghimpun dana jimpitan, beras perelek (kearifan lokal Jawa Barat), dan gotong royong untuk membantu warga tetangga yang sakit atau membutuhkan.
+3. **Kampung Siaga Bencana (KSB)**:
+   - Organisasi kesiapsiagaan bencana berbasis komunitas desa di kawasan rawan bencana, didukung lumbung sosial (*social buffer stock*) dan relawan Tagana.
+4. **Dunia Usaha / CSR Kemitraan Sosial**:
+   - Sektor swasta, BUMN, dan BUMD yang menyalurkan dana tanggung jawab sosial lingkungan untuk program penanggulangan kemiskinan dan pemberdayaan 10 Pilar PSKS Jawa Barat.`;
+  }
+
+  // 5. KARTU ANGGOTA DIGITAL & QR CODE (SMART ACCESS CARD)
   if (
     q.includes('kartu') ||
     q.includes('cetak') ||
@@ -575,34 +762,26 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
     q.includes('barcode') ||
     q.includes('scan') ||
     q.includes('pindai') ||
-    q.includes('kta')
+    q.includes('kta') ||
+    q.includes('smart access')
   ) {
-    // Role superadmin: redirect to developer Ilham Fazril
-    if (userRole === 'superadmin') {
-      return `Untuk hal itu silahkan bicarakan kembali dengan developer website yaitu Ilham Fazril.`;
-    }
+    return `${opening}**Panduan Modul Smart Access Card & KTA Digital PSKS Jabar**:
 
-    // Role developer
-    if (userRole === 'developer') {
-      return `${opening}**Panduan Manajemen Kartu Anggota Digital QR (${roleTitle})**:
+1. **Penerbitan & Keabsahan**:
+   - Kartu Tanda Anggota (KTA) Digital diterbitkan secara resmi untuk seluruh personil 10 pilar sosial yang telah tervalidasi dengan status **SAH_TERDAFTAR**.
+   - Setiap kartu memuat foto, nama lengkap, NIK/NIP, pilar sosial, wilayah tugas (Kabupaten/Kota), dan tanda tangan/stempel kedinasan.
 
-1. **Pencetakan Mandiri & Batch**:
-   - Buka menu **Pusat Akun / Panel Wilayah**.
-   - Masuk ke tab **Profil & Kartu Anggota**.
-   - Pilih opsi **Cetak Kartu Satuan** atau **Cetak Massal Format A4 (8 Kartu/Lembar)** siap potong.
-2. **Pemindai QR Code (QR Scanner)**:
-   - Gunakan fitur **Pemindai Kartu Pintar (Smart QR Scanner)** yang mendukung kamera gawai atau input kode alfanumerik.
-   - Hasil scan akan memvalidasi keaslian NIP/NIK, nama aparatur, pilar, dan status keaktifan (*SAH_TERDAFTAR*).
-3. **Penggantian Kartu Rusak/Hilang**:
-   - Admin dapat melakukan generate ulang QR Code dengan token terenkripsi baru tanpa mengubah NIP/NIK terdaftar.`;
-    }
+2. **Opsi Pencetakan Kartu**:
+   - **Cetak Satuan**: Mengunduh atau mencetak KTA digital perorangan beresolusi tinggi dengan bingkai resmi Dinas Sosial Provinsi Jawa Barat.
+   - **Cetak Massal Format A4 (8 Kartu per Lembar)**: Otomatis menata 8 kartu berukuran standar KTP/ID card per lembar kertas A4 siap potong dan laminasi, dilengkapi garis pembatas potong presisi.
 
-    // Role user & admin: Sembunyikan bahasan kartu anggota digital QR code / fallback
-    if (userRole === 'admin') {
-      return `Mohon maaf kami tidak memiliki informasi mengenai hal itu, silahkan hubungi Superadmin Provinsi Jawa barat untuk info lebih lanjut.`;
-    }
+3. **Verifikasi QR Code Kriptografis (Smart QR Scanner)**:
+   - Setiap kartu dilengkapi kode QR dengan hash kriptografi SHA-256 yang aman dari pemalsuan.
+   - Kamera gawai atau fitur **Smart QR Scanner** di portal dapat langsung memindai QR Code untuk memverifikasi keaslian personil ke pangkalan data Cloud Firestore secara real-time.
 
-    return `Mohon maaf kami tidak memiliki informasi mengenai hal itu.`;
+4. **Cara Mengakses**:
+   - Buka menu **Smart Access Card** di bilah navigasi atas (atau melalui menu Pengaturan).
+   - Filter berdasarkan Pilar Sosial dan Kabupaten/Kota, lalu klik tombol cetak satuan atau cetak massal A4.`;
   }
 
   // 6. MAINTENANCE MODE / SAKLAR PEMELIHARAAN
@@ -677,14 +856,19 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
 
   // 9. ROLE SPECIFIC KNOWLEDGE: SUPERADMIN
   if (userRole === 'superadmin' || currentTab === 'superadmin_settings') {
-    if (q.includes('reset') || q.includes('buka blokir') || q.includes('akun admin') || q.includes('kabupaten')) {
-      return `**Manajemen Akun 27 Kab/Kota (Super Admin Jabar)**:
+    if (q.includes('tambah') || q.includes('buat') || q.includes('reset') || q.includes('buka blokir') || q.includes('akun admin') || q.includes('kabupaten')) {
+      return `**Manajemen Akun & Kredensial (Super Admin Jabar)**:
 
-1. **Reset Kredensial Admin Daerah**:
+1. **Menambah Akun Admin Baru**:
+   - Buka menu **Pengaturan** > tab **Manajemen Akun / Pengguna**.
+   - Klik tombol **+ Tambah Akun Baru**.
+   - Isi Nama Petugas, Nomor HP/Username, Role (Admin Daerah / Superadmin), Wilayah Kab/Kota, dan PIN awal.
+   - Set status **ACTIVE** dan klik **Simpan**. Akun langsung aktif.
+2. **Reset Kredensial Admin Daerah**:
    - Buka menu **Manajemen Pengguna & Wilayah**.
    - Cari kabupaten/kota yang dimaksud (misal: Kab. Bandung, Kota Cirebon).
    - Klik tombol **Reset PIN / Buka Kunci**. Sistem akan mengenerate PIN sementara yang dapat diserahkan ke Kepala Bidang Dinsos bersangkutan.
-2. **Audit Log Aktivitas**:
+3. **Audit Log Aktivitas**:
    - Buka tab **Audit Trail**. Anda dapat melihat rekam jejak siapa yang mengubah data, jam berapa, dan dari IP address mana.`;
     }
 
@@ -856,11 +1040,11 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
 
   // DEFAULT COMPREHENSIVE FALLBACK FOR QUERIES OUTSIDE KNOWLEDGE BASE
   if (userRole === 'admin') {
-    return `Mohon maaf kami tidak memiliki informasi mengenai hal itu, silahkan hubungi Superadmin Provinsi Jawa barat untuk info lebih lanjut.`;
+    return `Halo **Admin Wilayah**! Saya siap membantu Anda dalam operasional data pilar sosial. Anda dapat menanyakan seputar:\n- **Pengelolaan Data Pilar**: Cara input anggota baru, peremajaan data, dan ekspor Excel/PDF.\n- **Verifikasi & KTA**: Cara cetak KTA digital satuan/massal A4 dan pemindaian QR Code.\n- **Wawasan 10 Pilar PSKS**: Regulasi, dasar hukum, dan tugas fungsional tiap pilar sosial.\n\nSilakan tanyakan apa yang ingin Anda ketahui!`;
   }
 
   if (userRole === 'superadmin') {
-    return `Maaf kami tidak memiliki informasi mengenai hal tersebut, silahkan hubungi developer ( Ilham Fazril ) di kontak dibawah ini :\n\n[WhatsApp: +6289602421065](https://wa.me/6289602421065)`;
+    return `Halo **Superadmin**! Saya siap membantu Anda mengelola sistem **PSKS Jabar**. Anda dapat menanyakan seputar:\n- **Panduan Pengelolaan**: Cara menambah akun admin baru, reset PIN, verifikasi berkas pendaftar 10 pilar, cetak KTA massal A4, dan pengaturan saklar maintenance.\n- **Data 10 Pilar PSKS**: Regulasi lengkap Peksos, PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, SLRT, dan sebaran 27 Kab/Kota.\n- **Bantuan Pengembang**: Hubungi developer aplikasi **Ilham Fazril** via [WhatsApp: +6289602421065](https://wa.me/6289602421065).\n\nAda fitur atau panduan yang ingin Anda ketahui lebih detail?`;
   }
 
   if (userRole === 'developer') {
@@ -868,7 +1052,7 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   }
 
   // Default user role fallback
-  return `Mohon maaf kami tidak memiliki informasi mengenai hal itu.`;
+  return `Halo! Selamat datang di Portal **PSKS JABAR**. Saya siap memberikan informasi seputar:\n- **10 Pilar Utama PSKS**: Penjelasan detail PKSP (Peksos), PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, dan SLRT/Puskesos.\n- **Layanan Dinsos Jabar**: Kontak pengaduan, alamat kantor dinas, profil pimpinan Ibu Noneng Komara Nengsih, S.E., M.A.P., dan integrasi data sosial di 27 Kab/Kota.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda cari?`;
 }
 
 
@@ -1085,6 +1269,20 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // Sensitive admin access check for public / user role
+  const isAskingAdminAccess =
+    (normQ.includes('masuk') || normQ.includes('login') || normQ.includes('akses') || normQ.includes('buka') || normQ.includes('cara jadi') || normQ.includes('daftar jadi')) &&
+    (normQ.includes('akun admin') || normQ.includes('akun superadmin') || normQ.includes('akun developer') || normQ.includes('ke admin') || normQ.includes('ke superadmin') || normQ.includes('ke developer') || normQ.includes('sebagai admin') || normQ.includes('sebagai superadmin') || normQ.includes('sebagai developer') || normQ.includes('panel admin') || normQ.includes('panel superadmin') || normQ.includes('panel developer'));
+
+  if (userRole === 'user' && isAskingAdminAccess) {
+    return {
+      finalContent: 'Mohon maaf, akses masuk ke akun Administrator Wilayah, Superadmin Provinsi, maupun Developer merupakan hak akses tertutup kedinasan yang khusus diperuntukkan bagi aparatur atau petugas resmi Dinas Sosial yang memiliki Surat Keputusan (SK) penugasan resmi. Pengguna publik maupun warga terdaftar tidak diperkenankan mengakses akun-akun tersebut demi menjaga keamanan sistem, integritas operasional, dan kerahasiaan data sosial Jawa Barat. Apabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi, silakan berkoordinasi langsung dengan Administrator Dinas Sosial Kabupaten/Kota setempat untuk prosedur perizinan kredensial resmi.',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
   // 1. Direct Catalog Match Check (Exact verified answers when clicking catalog prompt)
   const allCatalogQuestions: AIQuestionItem[] = [];
   Object.values(ROLE_QUESTION_CATALOG).forEach((groups) => {
@@ -1105,7 +1303,8 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
-  const isDeveloperUser = userRole === 'developer' || (userName && userName.toLowerCase().includes('ilham'));
+  // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
+  const isDeveloperUser = userRole === 'developer';
 
   // 1.1 Developer Query Handling: Always preserve Gemini's rich, fluent generative output (including Sundanese and lively banter)
   if (isDeveloperUser && rawReply && rawReply.trim().length > 5) {
@@ -1114,42 +1313,6 @@ export function verifyAndTrackAnswerAccuracy(
       isAccurate: true,
       confidence: 0.99,
       source: 'ai_model_verified',
-    };
-  }
-
-  // 1.5 Special Grounding: Kartu Anggota Digital & QR Code checks
-  const isQrCardQuery =
-    normQ.includes('kartu') ||
-    normQ.includes('cetak') ||
-    normQ.includes('qr') ||
-    normQ.includes('barcode') ||
-    normQ.includes('scan') ||
-    normQ.includes('pindai') ||
-    normQ.includes('kta');
-
-  if (isQrCardQuery && !isDeveloperUser) {
-    if (userRole === 'superadmin') {
-      return {
-        finalContent: 'Untuk hal itu silahkan bicarakan kembali dengan developer website yaitu Ilham Fazril.',
-        isAccurate: true,
-        confidence: 1.0,
-        source: 'verified_exact',
-      };
-    }
-    if (userRole === 'admin') {
-      return {
-        finalContent: 'Mohon maaf kami tidak memiliki informasi mengenai hal itu, silahkan hubungi Superadmin Provinsi Jawa barat untuk info lebih lanjut.',
-        isAccurate: true,
-        confidence: 1.0,
-        source: 'verified_exact',
-      };
-    }
-    // user role
-    return {
-      finalContent: 'Mohon maaf kami tidak memiliki informasi mengenai hal itu.',
-      isAccurate: true,
-      confidence: 1.0,
-      source: 'verified_exact',
     };
   }
 

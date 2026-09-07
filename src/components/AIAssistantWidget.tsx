@@ -225,7 +225,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   }, [isOpen]);
 
   const currentRole: UserRole = (session?.role as UserRole) || 'user';
-  const isDeveloperUser = currentRole === 'developer' || (session?.nama && session.nama.toLowerCase().includes('ilham'));
+  // STRICT RULE: Developer account is strictly role === 'developer' (only 1 developer account)
+  const isDeveloperUser = currentRole === 'developer';
 
   // LISTENER: Trigger recommendation updates and reset horizontal scroll whenever tab or active pillar changes
   useEffect(() => {
