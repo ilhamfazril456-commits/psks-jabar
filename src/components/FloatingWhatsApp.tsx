@@ -37,6 +37,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ appSettings,
         href={waUrl}
         target="_blank"
         rel="noreferrer"
+        aria-label="Hubungi Admin Dinsos Jawa Barat melalui WhatsApp"
         title="Hubungi Admin Dinsos Lewat WhatsApp"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -44,7 +45,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ appSettings,
         onTouchEnd={() => {
           setTimeout(() => setIsHovered(false), 2200);
         }}
-        className="relative z-10 flex items-center bg-gradient-to-r from-[#25d366] via-[#1ebd5a] to-[#128c7e] text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(37,211,102,0.4)] transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ring-2 ring-white/40 group"
+        className="relative z-10 flex items-center justify-center min-w-[48px] min-h-[48px] bg-gradient-to-r from-[#25d366] via-[#1ebd5a] to-[#128c7e] text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(37,211,102,0.4)] transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ring-2 ring-white/40 group"
       >
         {/* Ambient Subtle Glow */}
         <span

@@ -1,0 +1,18 @@
+# PSKS JABAR - Dinas Sosial Provinsi Jawa Barat
+
+> Sistem Pemantauan Terintegrasi dan Pengelolaan Data Pilar-Pilar Kesejahteraan Sosial Dinas Sosial Provinsi Jawa Barat.
+
+## Tentang Platform
+Platform resmi Dinas Sosial Provinsi Jawa Barat untuk integrasi pemantauan, verifikasi, dan digitalisasi data 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) di 27 Kabupaten dan Kota se-Jawa Barat.
+
+## Pilar-Pilar Kesejahteraan Sosial
+1. Karang Taruna
+2. Pekerja Sosial Masyarakat (PSM)
+3. Tenaga Kesejahteraan Sosial Kecamatan (TKSK)
+4. Lembaga Kesejahteraan Sosial (LKS)
+5. Wahana Kesejahteraan Sosial Berbasis Masyarakat (WKSBM)
+6. Taruna Siaga Bencana (TAGANA)
+7. Pendamping Program Keluarga Harapan (PKH)
+8. Pelopor Perdamaian
+9. Dunia Usaha (CSR Kesejahteraan Sosial)
+10. Penyuluh Sosial

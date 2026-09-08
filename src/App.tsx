@@ -502,87 +502,93 @@ export default function App() {
   });
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'psks_records'),
-      (snapshot) => {
-        // Run queue processing if connection restored
-        processSyncQueue();
+    let unsubscribe: (() => void) | null = null;
+    const timer = setTimeout(() => {
+      unsubscribe = onSnapshot(
+        collection(db, 'psks_records'),
+        (snapshot) => {
+          // Run queue processing if connection restored
+          processSyncQueue();
 
-        if (snapshot.empty) {
+          if (snapshot.empty) {
+            const fallback: Record<string, PSKSDataRecord[]> = {};
+            for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
+              fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
+            }
+            setAllPillarData(fallback);
+            try {
+              localStorage.setItem('psks_all_pillar_data', JSON.stringify(fallback));
+            } catch {}
+          } else {
+            const loaded: Record<string, PSKSDataRecord[]> = {};
+            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => (loaded[k] = []));
+
+            snapshot.docs.forEach((docSnap) => {
+              if (deletedIds.includes(docSnap.id)) return;
+
+              const data = docSnap.data() as PSKSDataRecord & { pillarId?: string };
+              const pKey = data.pillarId || 'peksos';
+              if (!loaded[pKey]) {
+                loaded[pKey] = [];
+              }
+              loaded[pKey].push({
+                ...data,
+                id: docSnap.id,
+                wilayah: data.wilayah || 'Kota Bandung',
+                kec: data.kec || 'Kecamatan Pusat',
+                nama: data.nama || '',
+                nik: data.nik || '',
+                sertifikasi: data.sertifikasi || 'CERT-2026',
+                hp: data.hp || '081234567890',
+                lembaga: data.lembaga || 'Lembaga Pemerintah',
+                status: data.status || 'Aktif',
+              });
+            });
+
+            // Fallback merge for features that have no docs in Firestore yet
+            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+              if (!loaded[k] || loaded[k].length === 0) {
+                const defaults = DEFAULT_PILLAR_DATA[k] || [];
+                loaded[k] = defaults.filter((r) => !deletedIds.includes(r.id));
+              }
+            });
+
+            setAllPillarData(loaded);
+            try {
+              localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
+            } catch {}
+          }
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'psks_records');
+          if (isQuotaError(error)) {
+            quotaExceededRef.current = true;
+            setIsQuotaExceeded(true);
+          }
+          try {
+            const cached = localStorage.getItem('psks_all_pillar_data');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === 'object') {
+                setAllPillarData(parsed);
+                return;
+              }
+            }
+          } catch {}
+
           const fallback: Record<string, PSKSDataRecord[]> = {};
           for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
             fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
           }
           setAllPillarData(fallback);
-          try {
-            localStorage.setItem('psks_all_pillar_data', JSON.stringify(fallback));
-          } catch {}
-        } else {
-          const loaded: Record<string, PSKSDataRecord[]> = {};
-          Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => (loaded[k] = []));
-
-          snapshot.docs.forEach((docSnap) => {
-            if (deletedIds.includes(docSnap.id)) return;
-
-            const data = docSnap.data() as PSKSDataRecord & { pillarId?: string };
-            const pKey = data.pillarId || 'peksos';
-            if (!loaded[pKey]) {
-              loaded[pKey] = [];
-            }
-            loaded[pKey].push({
-              ...data,
-              id: docSnap.id,
-              wilayah: data.wilayah || 'Kota Bandung',
-              kec: data.kec || 'Kecamatan Pusat',
-              nama: data.nama || '',
-              nik: data.nik || '',
-              sertifikasi: data.sertifikasi || 'CERT-2026',
-              hp: data.hp || '081234567890',
-              lembaga: data.lembaga || 'Lembaga Pemerintah',
-              status: data.status || 'Aktif',
-            });
-          });
-
-          // Fallback merge for features that have no docs in Firestore yet
-          Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
-            if (!loaded[k] || loaded[k].length === 0) {
-              const defaults = DEFAULT_PILLAR_DATA[k] || [];
-              loaded[k] = defaults.filter((r) => !deletedIds.includes(r.id));
-            }
-          });
-
-          setAllPillarData(loaded);
-          try {
-            localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
-          } catch {}
         }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'psks_records');
-        if (isQuotaError(error)) {
-          quotaExceededRef.current = true;
-          setIsQuotaExceeded(true);
-        }
-        try {
-          const cached = localStorage.getItem('psks_all_pillar_data');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed && typeof parsed === 'object') {
-              setAllPillarData(parsed);
-              return;
-            }
-          }
-        } catch {}
+      );
+    }, 400);
 
-        const fallback: Record<string, PSKSDataRecord[]> = {};
-        for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
-          fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
-        }
-        setAllPillarData(fallback);
-      }
-    );
-
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+    };
   }, [deletedIds]);
 
   // 3. Admin Accounts List with Firestore Real-time Sync
@@ -603,10 +609,12 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'admin_accounts'),
-      (snapshot) => {
-        const rawDeletedAdmin = localStorage.getItem('psks_deleted_admin_ids');
+    let unsubscribe: (() => void) | null = null;
+    const timer = setTimeout(() => {
+      unsubscribe = onSnapshot(
+        collection(db, 'admin_accounts'),
+        (snapshot) => {
+          const rawDeletedAdmin = localStorage.getItem('psks_deleted_admin_ids');
         let currentDeletedAdmins: string[] = [];
         try {
           if (rawDeletedAdmin) {
@@ -785,8 +793,12 @@ export default function App() {
         setAdminAccounts(DEFAULT_ADMIN_ACCOUNTS);
       }
     );
+    }, 600);
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // 3.2 Real-Time Presencing Heartbeat & Screen Visibility/Activity Tracking for Active Admin Sessions
@@ -961,6 +973,8 @@ export default function App() {
   const [isInboxOpen, setIsInboxOpen] = useState(false);
 
   useEffect(() => {
+    if (session.statusActive !== 'SAH_TERDAFTAR') return;
+
     const messagesRef = collection(db, 'admin_messages');
     const unsubscribe = onSnapshot(
       messagesRef,
@@ -998,7 +1012,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [session.statusActive]);
 
   // Compute unread messages count for active user (Superadmin & Dev see all, Admin Wilayah sees only theirs / broadcast)
   const unreadMessagesCount = adminMessages.filter((m) => {
@@ -1106,6 +1120,8 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (session.statusActive !== 'SAH_TERDAFTAR') return;
+
     const submissionsRef = collection(db, 'registration_submissions');
     const unsubscribe = onSnapshot(
       submissionsRef,
@@ -1143,7 +1159,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [session.statusActive]);
 
   // 3c. Task Items State (Manajemen Tugas Operasional Wilayah) with Real-time Firestore Listener
   const [taskItems, setTaskItems] = useState<TaskItem[]>(() => {
@@ -1158,6 +1174,8 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (session.statusActive !== 'SAH_TERDAFTAR') return;
+
     const tasksRef = collection(db, 'task_items');
     const unsubscribe = onSnapshot(
       tasksRef,
@@ -1199,7 +1217,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [session.statusActive]);
 
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');

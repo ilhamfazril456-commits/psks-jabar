@@ -43,8 +43,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   const bgMode = appSettings?.bgMode || (typeof window !== 'undefined' ? localStorage.getItem('dinsos_bg_mode') : null) || 'video';
   const showCustomPhoto = bgMode === 'photo' && !!customUserPhoto && customUserPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO';
 
+  // Smart deferral for mobile/desktop PageSpeed: render poster instantly, stream video on idle
+  const [shouldStreamVideo, setShouldStreamVideo] = useState(false);
+
   useEffect(() => {
-    if (!showCustomPhoto && videoRef.current) {
+    if (typeof window === 'undefined') return;
+
+    if ('requestIdleCallback' in window) {
+      const idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => number }).requestIdleCallback(() => {
+        setShouldStreamVideo(true);
+      }, { timeout: 1200 });
+      return () => {
+        if ('cancelIdleCallback' in window) {
+          (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
+        }
+      };
+    } else {
+      const timer = setTimeout(() => {
+        setShouldStreamVideo(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showCustomPhoto && videoRef.current && shouldStreamVideo) {
       const vid = videoRef.current;
       vid.defaultMuted = true;
       vid.muted = true;
@@ -57,7 +80,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
             .then(() => {
               setIsVideoReady(true);
             })
-            .catch((err) => {
+            .catch(() => {
               vid.muted = true;
               vid.play().then(() => setIsVideoReady(true)).catch(() => {});
             });
@@ -81,7 +104,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         window.removeEventListener('click', handleUserInteraction);
       };
     }
-  }, [showCustomPhoto, activeVideo]);
+  }, [showCustomPhoto, activeVideo, shouldStreamVideo]);
 
   const handleVideoError = () => {
     if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
@@ -104,18 +127,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         />
       )}
 
-      {/* Background Layer: Real Video by Default with smooth playback */}
+      {/* Background Layer: Real Video with instant WebP poster & deferred streaming */}
       {!showCustomPhoto && !videoError && (
         <video
           key={activeVideo}
           ref={videoRef}
-          src={activeVideo}
+          src={shouldStreamVideo ? activeVideo : undefined}
+          poster="/eco_office_poster.webp"
           autoPlay
           loop
           muted
           playsInline
           webkit-playsinline="true"
-          preload="metadata"
+          preload={shouldStreamVideo ? 'metadata' : 'none'}
           disablePictureInPicture
           onError={handleVideoError}
           onCanPlay={() => setIsVideoReady(true)}
@@ -166,6 +190,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         <div className="flex items-center justify-center">
           <button
             onClick={onScrollToGrid}
+            aria-label="Lihat Data Dashboard Pilar PSKS Jawa Barat"
             className="group inline-flex items-center gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#043e2e] font-extrabold text-xs sm:text-base px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl shadow-2xl hover:shadow-2xl transition-all transform hover:-translate-y-1 active:scale-95 cursor-pointer"
           >
             <span>Lihat Data Dashboard</span>
