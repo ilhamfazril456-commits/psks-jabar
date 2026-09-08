@@ -375,8 +375,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   }, [isOpen]);
 
   const currentRole: UserRole = (session?.role as UserRole) || 'user';
-  // STRICT RULE: Developer account is strictly role === 'developer' (only 1 developer account)
-  const isDeveloperUser = currentRole === 'developer';
+  // Developer identification: Checks role, session flag, or developer name (Ilham Fazril)
+  const isDeveloperUser =
+    currentRole === 'developer' ||
+    session?.isDeveloper === true ||
+    session?.nama?.toLowerCase().includes('ilham') === true;
 
   // LISTENER: Trigger recommendation updates and reset horizontal scroll whenever tab or active pillar changes
   useEffect(() => {
@@ -749,15 +752,38 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         content: m.content,
       }));
 
+      const lowerText = textToSend.toLowerCase();
+      const isSelfDevMention =
+        lowerText.includes('saya ilham') ||
+        lowerText.includes('aku ilham') ||
+        lowerText.includes('aing ilham') ||
+        lowerText.includes('gw ilham') ||
+        lowerText.includes('gue ilham') ||
+        lowerText.includes('saya developer') ||
+        lowerText.includes('saya developermu') ||
+        lowerText.includes('aku developer') ||
+        lowerText.includes('aku developermu') ||
+        lowerText.includes('aing developer') ||
+        lowerText.includes('kenal saya') ||
+        lowerText.includes('kenal aing') ||
+        lowerText.includes('siapa saya') ||
+        lowerText.includes('tau siapa saya') ||
+        lowerText.includes('tahu siapa saya') ||
+        lowerText.includes('kamu kenal saya');
+
+      const effectiveDev = isDeveloperUser || isSelfDevMention;
+      const roleForContext: UserRole = effectiveDev ? 'developer' : currentRole;
+      const nameForContext = effectiveDev ? (session?.nama || 'Ilham Fazril') : (session?.nama || 'Tamu');
+
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: historyPayload,
           userContext: {
-            nama: session?.nama || (isDeveloperUser ? 'Ilham Fazril' : 'Tamu'),
+            nama: nameForContext,
             wilayah: session?.wilayah || 'Jawa Barat',
-            role: currentRole,
+            role: roleForContext,
             currentTab,
             activePillar,
             liveSummary: {
@@ -781,8 +807,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
         rawContent,
-        currentRole,
-        session?.nama,
+        roleForContext,
+        nameForContext,
         session?.wilayah,
         currentTab,
         activePillar,
@@ -812,11 +838,34 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
       const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
 
+      const lowerText = textToSend.toLowerCase();
+      const isSelfDevMention =
+        lowerText.includes('saya ilham') ||
+        lowerText.includes('aku ilham') ||
+        lowerText.includes('aing ilham') ||
+        lowerText.includes('gw ilham') ||
+        lowerText.includes('gue ilham') ||
+        lowerText.includes('saya developer') ||
+        lowerText.includes('saya developermu') ||
+        lowerText.includes('aku developer') ||
+        lowerText.includes('aku developermu') ||
+        lowerText.includes('aing developer') ||
+        lowerText.includes('kenal saya') ||
+        lowerText.includes('kenal aing') ||
+        lowerText.includes('siapa saya') ||
+        lowerText.includes('tau siapa saya') ||
+        lowerText.includes('tahu siapa saya') ||
+        lowerText.includes('kamu kenal saya');
+
+      const effectiveDev = isDeveloperUser || isSelfDevMention;
+      const roleForContext: UserRole = effectiveDev ? 'developer' : currentRole;
+      const nameForContext = effectiveDev ? (session?.nama || 'Ilham Fazril') : (session?.nama || 'Tamu');
+
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
         '',
-        currentRole,
-        session?.nama,
+        roleForContext,
+        nameForContext,
         session?.wilayah,
         currentTab,
         activePillar,

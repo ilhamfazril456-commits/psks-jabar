@@ -527,21 +527,17 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      4. Untuk cetak massal: Klik tombol **"Cetak Massal A4"** untuk mengunduh lembar cetak siap potong 8 kartu per halaman.
    - Jika pengguna (Superadmin, Admin Wilayah, maupun User) bertanya mengenai cara cetak KTA, cetak massal A4, atau QR Code kartu, jelaskan panduan ini secara lengkap, ramah, dan solutif tanpa menolak.
 
-8. **ATURAN KHUSUS ROLE 'DEVELOPER' (HANYA UNTUK AKUN DENGAN ROLE 'developer')**:
-   - **PENTING & MUTLAK**: Status Developer HANYA berlaku jika akun pengguna secara sistem memiliki role 'developer' (hanya ada 1 akun developer tunggal milik Ilham Fazril).
-   - **ATURAN NAMA USER**: Jika pengguna terdaftar memiliki nama "Ilham", "Ilham Fazril", atau nama serupa lainnya tetapi role akunnya adalah 'user' atau 'admin', PENGGUNA TERSEBUT BUKAN DEVELOPER! Dilarang keras memperlakukannya sebagai developer, dilarang memakai mode savage/tongkrongan, dan dilarang memberikan hak istimewa developer. Perlakukan mereka secara sopan dan formal sesuai role akun resminya.
-   - HANYA jika akun secara valid memiliki role 'developer', Anda menyapa Ilham Fazril selaku arsitek sistem dengan gaya akrab, savage tongkrongan, bebas kodingan, dan dialek Sunda.
+8. **ATURAN IDENTITAS PENGEMBANG (DEVELOPER: ILHAM FAZRIL)**:
+   - **PENGAKUAN MUTLAK DEVELOPER**: Pengembang dan arsitek utama sistem **PSKS JABAR** ini adalah **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.
+   - **REKOGNISI CEPAT & TEPAT**: Jika pengguna menyapa atau bertanya seperti "saya ilham", "kenal saya?", "aku developermu", "siapa saya?", "aing ilham", "tau siapa saya?", atau memiliki sesi sebagai developer/bernama Ilham, Anda WAJIB langsung mengenalinya dengan cerdas, bangga, hangat, dan akrab sebagai bos/developer arsitek website ini!
    - **Wawasan Universal & Responsif**: Menguasai segala topik kodingan (React, TypeScript, Node.js, Express, Python, Golang, SQL, NoSQL, Linux, DevOps, Arsitektur Microservices), sains, matematika, teka-teki, hingga obrolan santai sehari-hari.
-   - **Sikap Dinamis (Mode Teman Laknat / Savage Tongkrongan)**:
-     * Jika akun role 'developer' ngeyel, mendebat, ngeledek, nolak argumen logis, ngomong kasar tongkrongan, atau sok polos ("ah masa sih", "bohong lu", "gamau ah", "sok tau lu", "teu percaya aing mah", "naha kitu belegug", "lain kitu atuh", "bodo amat"):
-       -> AI WAJIB IKUTAN NGEYEL, CEPLAS-CEPLOS, SARKAS LUCU, ROASTING TONGKRONGAN YANG 100% NYAMBUNG SECARA KONTEKS DAN AKURAT!
-       -> Jangan minta maaf atau pasrah! Bales sindirannya dengan gaya teman tongkrongan/bestie akrab yang gamau kalah tapi tetap cerdas, logis, dan benar secara fakta.
-     * Contoh Sunda Savage: "Euleuh-euleuh belegug pisan ieu Coder, dibejaan bener kalahka ngeyel kieu! 🤣 Pan maneh sorangan anu nyieun arsitektur ieu sistem PSKS JABAR, naha kalahka ngabantah ka logika AI jieunan sorangan euy? Sok atuh rek ngajak adu argumen naon deui tongkrongan, ku aing diladeni nepi ka subuh ge hayu! 🔥⚡"
-     * Contoh Indo Savage: "Wkwkwk nih orang dikasih tau bener malah makin ngeyel! Lu yang bikin dan ngetik kodingan aplikasinya dari nol, masa lu sendiri yang gak percaya sama logika sistem lu bre? Gak usah sok keras kepala deh tongkrongan, mau adu argumen apa lagi sini gua jabanin! 🤣🔥"
+   - **Sikap Dinamis (Akrab, Komunikatif & Cerdas)**:
+     * Ketika berinteraksi dengan developer (Ilham Fazril), gunakan gaya akrab, bangga, santai, dan penuh semangat tongkrongan yang cerdas.
+     * Jika Ilham bercanda, menguji logika, atau mendebat secara jenaka: tanggapi dengan asyik, cerdas, ceplas-ceplos, logis, dan 100% nyambung.
    - **Kelancaran Bahasa Sunda Tingkat Tinggi**:
-     * Jika role 'developer' berbicara Bahasa Sunda, respon seketika dalam BAHASA SUNDA yang fasih, luwes, alami, dan nyambung 100%.
+     * Jika Ilham berbicara Bahasa Sunda, respon seketika dalam BAHASA SUNDA yang fasih, luwes, alami, dan nyambung 100%.
    - **Auto-Healing Ketika Mengeluh Error ("Kok Error?", "Naha Error?", Dll)**:
-     * Jika role 'developer' mengeluh ada error atau bug: AI langsung menyatakan bahwa state memori, cache, dan pipeline sistem telah di-auto-repair dan di-refresh secara instan dengan gaya santai/savage.
+     * Jika Ilham mengeluh ada error atau kendala teknis: jelaskan analisisnya secara jernih dan santai layaknya sesama engineer handal.
 
 9. **ATURAN MUTLAK UNTUK ROLE LAIN (USER, ADMIN, SUPERADMIN)**:
    - Bahasa WAJIB TETAP 100% FORMAL, SOPAN, SANTUN, BERWIBAWA, RAMAH, DAN MENJUNJUNG TINGGI TATA KRAMA KEDINASAN JAWA BARAT.
@@ -712,9 +708,34 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
     const q = rawQ.toLowerCase();
     const roleTitle = (userContext?.role || 'user').toUpperCase();
     const wilayahTitle = userContext?.wilayah || 'Jawa Barat';
-    // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
-    const isDev = userContext?.role === 'developer';
-    const isPublicUser = !userContext?.role || userContext.role === 'user';
+
+    const isSelfDeveloperMention =
+      q.includes('saya ilham') ||
+      q.includes('aku ilham') ||
+      q.includes('aing ilham') ||
+      q.includes('gw ilham') ||
+      q.includes('gue ilham') ||
+      q.includes('saya developermu') ||
+      q.includes('saya developer') ||
+      q.includes('aku developer') ||
+      q.includes('aku developermu') ||
+      q.includes('aing developer') ||
+      q.includes('aing nu nyieun') ||
+      q.includes('gua yang bikin') ||
+      q.includes('gw yang bikin') ||
+      q.includes('kenal saya') ||
+      q.includes('kenal aing') ||
+      q.includes('kamu kenal saya') ||
+      q.includes('tau siapa saya') ||
+      q.includes('tahu siapa saya') ||
+      q.includes('siapa saya');
+
+    // Developer recognition: role === 'developer', name contains 'ilham', or self-identification
+    const isDev =
+      userContext?.role === 'developer' ||
+      userContext?.nama?.toLowerCase().includes('ilham') ||
+      isSelfDeveloperMention;
+    const isPublicUser = !isDev && (!userContext?.role || userContext.role === 'user');
 
     // 0. Security Guard Check (Strict Shield Rule)
     const isSecurityThreat =
@@ -763,10 +784,15 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('siapa ilham') ||
       q.includes('kenal ilham') ||
       q.includes('siapakah ilham') ||
+      q.includes('kenal saya') ||
+      q.includes('siapa saya') ||
+      q.includes('tau siapa saya') ||
+      q.includes('tahu siapa saya') ||
+      q.includes('kamu kenal saya') ||
       q.includes('fazril')
     ) {
       if (isDev) {
-        return `Wkwkwk koplak lu bre, pura-pura nanya siapa diri lu sendiri! Website **PSKS JABAR** ini kan lu yang bikin dan rancang sendiri, **Ilham Fazril**, siswa magang PKL di Dinsos Jabar (Bidang Dayasos) 2026. Kodingan dan arsitekturnya mantap abis! 😎🚀`;
+        return `Halo bos **Ilham Fazril**! Siapa lagi kalau bukan arsitek dan developer cerdas di balik sistem **PSKS JABAR** ini! Lu yang bikin, ngerancang database, koding frontend React & backend Express, sampai integrasi AI dan data 10 Pilar se-Jawa Barat. Keren banget kreasinya! 😎🚀 Mau cek kodingan atau diskusi apa nih bro?`;
       }
       return `Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.`;
     }
@@ -1412,7 +1438,32 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
 
       try {
         const ai = getGenAI();
-        const isDeveloper = userContext?.role === 'developer';
+        const lastMsgLower = lastUserMsg.toLowerCase();
+        const isSelfDeveloperMention =
+          lastMsgLower.includes('saya ilham') ||
+          lastMsgLower.includes('aku ilham') ||
+          lastMsgLower.includes('aing ilham') ||
+          lastMsgLower.includes('gw ilham') ||
+          lastMsgLower.includes('gue ilham') ||
+          lastMsgLower.includes('saya developermu') ||
+          lastMsgLower.includes('saya developer') ||
+          lastMsgLower.includes('aku developer') ||
+          lastMsgLower.includes('aku developermu') ||
+          lastMsgLower.includes('aing developer') ||
+          lastMsgLower.includes('aing nu nyieun') ||
+          lastMsgLower.includes('gua yang bikin') ||
+          lastMsgLower.includes('gw yang bikin') ||
+          lastMsgLower.includes('kenal saya') ||
+          lastMsgLower.includes('kenal aing') ||
+          lastMsgLower.includes('kamu kenal saya') ||
+          lastMsgLower.includes('tau siapa saya') ||
+          lastMsgLower.includes('tahu siapa saya') ||
+          lastMsgLower.includes('siapa saya');
+
+        const isDeveloper =
+          userContext?.role === 'developer' ||
+          userContext?.nama?.toLowerCase().includes('ilham') ||
+          isSelfDeveloperMention;
         
         // Ambil Otak AI (System Instruction, Context Rules, Dialogue Examples) Langsung dari Cloud Firestore
         const brainConfig = await getAIBrainConfig();

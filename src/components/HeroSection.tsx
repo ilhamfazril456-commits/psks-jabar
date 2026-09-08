@@ -43,55 +43,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   const bgMode = appSettings?.bgMode || (typeof window !== 'undefined' ? localStorage.getItem('dinsos_bg_mode') : null) || 'video';
   const showCustomPhoto = bgMode === 'photo' && !!customUserPhoto && customUserPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO';
 
-  // Smart deferral for mobile/desktop PageSpeed: render poster instantly, stream video on interaction/desktop
-  const [shouldStreamVideo, setShouldStreamVideo] = useState(false);
-
+  // Direct video play for official Dinsos background video
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Check data-saver or slow connection
-    const nav = navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } };
-    if (nav.connection?.saveData || nav.connection?.effectiveType === '2g' || nav.connection?.effectiveType === 'slow-2g') {
-      return; // Keep high-res poster image for data saver mode
-    }
-
-    let triggered = false;
-    const startStreaming = () => {
-      if (triggered) return;
-      triggered = true;
-      setShouldStreamVideo(true);
-      cleanup();
-    };
-
-    const cleanup = () => {
-      window.removeEventListener('scroll', startStreaming);
-      window.removeEventListener('touchstart', startStreaming);
-      window.removeEventListener('mousemove', startStreaming);
-      window.removeEventListener('click', startStreaming);
-    };
-
-    // Trigger immediately on first user interaction (scroll, touch, mouse move, click)
-    window.addEventListener('scroll', startStreaming, { passive: true, once: true });
-    window.addEventListener('touchstart', startStreaming, { passive: true, once: true });
-    window.addEventListener('mousemove', startStreaming, { passive: true, once: true });
-    window.addEventListener('click', startStreaming, { passive: true, once: true });
-
-    // Fallback: On desktop screens (width >= 1024px) stream after 4.5s
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
-    const fallbackTimer = setTimeout(() => {
-      if (isDesktop) {
-        startStreaming();
-      }
-    }, 4500);
-
-    return () => {
-      cleanup();
-      clearTimeout(fallbackTimer);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!showCustomPhoto && videoRef.current && shouldStreamVideo) {
+    if (!showCustomPhoto && videoRef.current) {
       const vid = videoRef.current;
       vid.defaultMuted = true;
       vid.muted = true;
@@ -113,7 +67,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
 
       tryPlay();
 
-      // Ensure autoplay succeeds on first user touch/scroll if browser paused it
       const handleUserInteraction = () => {
         if (vid.paused) {
           vid.play().then(() => setIsVideoReady(true)).catch(() => {});
@@ -128,7 +81,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         window.removeEventListener('click', handleUserInteraction);
       };
     }
-  }, [showCustomPhoto, activeVideo, shouldStreamVideo]);
+  }, [showCustomPhoto, activeVideo]);
 
   const handleVideoError = () => {
     if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
@@ -151,31 +104,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         />
       )}
 
-      {/* Background Layer: Instant WebP Poster Image for immediate LCP paint */}
-      {!showCustomPhoto && (
-        <img
-          src="/eco_office_poster.webp"
-          alt="Eco Office Dinas Sosial Provinsi Jawa Barat"
-          className="absolute inset-0 w-full h-full object-cover z-0 brightness-[1.08] contrast-[1.10] saturate-[1.12]"
-          fetchPriority="high"
-          loading="eager"
-          decoding="sync"
-        />
-      )}
-
-      {/* Background Layer: Real Video with deferred streaming that fades in seamlessly */}
+      {/* Background Layer: Real Video Dinsos Jabar */}
       {!showCustomPhoto && !videoError && (
         <video
           key={activeVideo}
           ref={videoRef}
-          src={shouldStreamVideo ? activeVideo : undefined}
-          poster="/eco_office_poster.webp"
+          src={activeVideo}
           autoPlay
           loop
           muted
           playsInline
           webkit-playsinline="true"
-          preload={shouldStreamVideo ? 'metadata' : 'none'}
+          preload="auto"
           disablePictureInPicture
           onError={handleVideoError}
           onCanPlay={() => setIsVideoReady(true)}
@@ -186,8 +126,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
               videoRef.current.play().catch(() => {});
             }
           }}
-          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.08] contrast-[1.10] saturate-[1.12] ${
-            isVideoReady ? 'opacity-100' : 'opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.05] contrast-[1.08] saturate-[1.10] ${
+            isVideoReady ? 'opacity-100' : 'opacity-90'
           }`}
           style={{
             willChange: 'transform, opacity',

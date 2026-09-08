@@ -2461,6 +2461,32 @@ export default function App() {
     }
   };
 
+  // Strict User Flow: When gateModalOpen is true (new visitor or logging in),
+  // render ONLY SmartGateModal so zero main content, hero, navbar, or background flashes
+  if (gateModalOpen) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-[#01140e] overflow-hidden z-[9999]">
+        <SmartGateModal
+          isOpen={true}
+          onClose={() => setGateModalOpen(false)}
+          targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
+          onConfirmGuestRegion={handleConfirmGuestRegion}
+          onPerformLogin={handleLogin}
+          adminAccounts={adminAccounts}
+          onRegisterAccount={handleAddAdminAccount}
+          logoUrl={appSettings?.logoUrl}
+        />
+        <LoginSuccessModal
+          isOpen={!!loginSuccessData}
+          onClose={handleCloseLoginSuccess}
+          role={loginSuccessData?.role || 'user'}
+          nama={loginSuccessData?.nama || ''}
+          wilayah={loginSuccessData?.wilayah || ''}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-[#d4af37] selection:text-[#043e2e]">
       {/* Maintenance Global Blocking Overlay */}
@@ -2867,17 +2893,6 @@ export default function App() {
           adminAccounts={adminAccounts}
           adminMessages={adminMessages}
           session={session}
-        />
-
-        <SmartGateModal
-          isOpen={gateModalOpen}
-          onClose={() => setGateModalOpen(false)}
-          targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
-          onConfirmGuestRegion={handleConfirmGuestRegion}
-          onPerformLogin={handleLogin}
-          adminAccounts={adminAccounts}
-          onRegisterAccount={handleAddAdminAccount}
-          logoUrl={appSettings?.logoUrl}
         />
       </React.Suspense>
 

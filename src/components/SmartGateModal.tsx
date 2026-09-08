@@ -29,7 +29,8 @@ import {
   Laptop,
   Wifi,
   CreditCard,
-  Radio
+  Radio,
+  X
 } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
 import { CaptchaWidget } from './CaptchaWidget';
@@ -518,9 +519,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
   };
 
+  const hasPreviouslyEntered = typeof window !== 'undefined' && sessionStorage.getItem('has_entered_gate') === 'true';
+
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#021811] via-[#04281e] to-[#01140e] w-screen h-screen h-[100dvh] overflow-hidden flex flex-col justify-between select-none font-sans text-slate-800 p-2 sm:p-3 md:p-4">
       
+      {/* Top Close Button (Only visible if the user has previously entered the application) */}
+      {hasPreviouslyEntered && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 p-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full border border-white/20 transition-all cursor-pointer shadow-lg active:scale-95 flex items-center justify-center"
+          aria-label="Tutup dan Kembali ke Halaman Utama"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Dynamic Aesthetic Ambient Glow Canvas */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[15%] -left-[10%] w-[700px] h-[700px] bg-emerald-500/20 rounded-full blur-[140px]" />
