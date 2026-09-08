@@ -370,7 +370,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 - PIN/Password disimpan dalam bentuk hash irreversible menggunakan **Bcrypt dengan Salt Work Factor 10**.
 - Sesi login diverifikasi menggunakan state aman dengan timestamp expiry dan proteksi lockout otomatis jika terjadi kesalahan berturut-turut.`,
 
-  'd-4': `**Mekanisme Server Proxy Gemini 3.7 Flash AI**:
+  'd-4': `**Mekanisme Server Proxy Gemini 3.8 Flash AI**:
 - Frontend mengirim payload percakapan ke endpoint \`/api/ai/chat\` di Express server.
 - Server menyuntikkan \`SYSTEM_INSTRUCTION\` resmi, konteks sesi (Role, Wilayah, Pilar Aktif), lalu memanggil Google GenAI SDK di sisi server.
 - Kunci \`GEMINI_API_KEY\` tersimpan aman di server-side dan tidak pernah terekspos ke browser klien.`,
@@ -413,7 +413,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 - Build pipeline menjalankan \`npm run build\` yang mencakup \`vite build\` untuk frontend dist dan \`esbuild\` untuk bundling backend \`dist/server.cjs\` dengan opsi \`--bundle --platform=node --format=cjs --packages=external\`.`,
 
   'd-18': `**Arsitektur Failover Multi-Model Gemini**:
-- Cascade fallback: \`gemini-3.7-flash\` -> \`gemini-2.5-flash\` -> \`gemini-2.5-flash-lite\` -> Mesin AI Cerdas Lokal Terintegrasi. Menjamin AI 100% selalu online dan merespon instan tanpa pernah error.`,
+- Cascade fallback: \`gemini-3.8-flash\` -> \`gemini-3.1-flash-lite\` -> \`gemini-flash-latest\` -> Mesin AI Cerdas Lokal Terintegrasi. Menjamin AI 100% selalu online dan merespon instan tanpa pernah error.`,
 
   'd-19': `**Sistem Anti-Jailbreak & Sanitasi Prompt AI**:
 - Sistem dilengkapi filter pencegah manipulasi prompt, penolakan permintaan bocor kode rahasia, serta proteksi identitas developer resmi (**Ilham Fazril**).`,

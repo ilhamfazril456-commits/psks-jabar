@@ -52,7 +52,20 @@ function setCookie(name: string, value: string, days = 730) {
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
 }
 
-// Stable, permanent device identifier (stored across Cookie, LocalStorage, and Browser Fingerprint)
+// Truly unique device identifier generated randomly per device/browser and permanently preserved
+function generateUniqueRandomDeviceId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return 'dev_' + crypto.randomUUID().replace(/-/g, '');
+  }
+  return (
+    'dev_' +
+    Math.random().toString(36).substring(2, 10) +
+    Date.now().toString(36) +
+    Math.random().toString(36).substring(2, 8)
+  );
+}
+
+// Stable, permanent device identifier (stored across Cookie and LocalStorage)
 export function getStableDeviceId(): string {
   if (typeof window === 'undefined') return 'dev_server';
 
@@ -61,7 +74,7 @@ export function getStableDeviceId(): string {
     const cookieId = getCookie('simpsks_device_uuid');
     if (cookieId && cookieId.trim().length > 3) {
       try {
-        localStorage.setItem('simpsks_device_uuid', cookieId);
+        localStorage.setItem('simpsks_device_uuid', cookieId.trim());
       } catch {}
       return cookieId.trim();
     }
@@ -73,13 +86,13 @@ export function getStableDeviceId(): string {
       return localId.trim();
     }
 
-    // 3. Fallback to deterministic fingerprint
-    const fpId = generateFingerprintHash();
+    // 3. New device: generate a truly unique random device UUID so NO TWO DEVICES ever collide
+    const newId = generateUniqueRandomDeviceId();
     try {
-      localStorage.setItem('simpsks_device_uuid', fpId);
+      localStorage.setItem('simpsks_device_uuid', newId);
     } catch {}
-    setCookie('simpsks_device_uuid', fpId);
-    return fpId;
+    setCookie('simpsks_device_uuid', newId);
+    return newId;
   } catch {
     return 'dev_' + Date.now();
   }
@@ -164,15 +177,15 @@ export async function detectClientIp(): Promise<string> {
     }
   }
 
-  // Store in cache
-  if (finalIp) {
+  // Store in cache if valid public IP
+  if (finalIp && !isPrivateOrLocalIp(finalIp)) {
     try {
       sessionStorage.setItem('simpsks_client_ip', finalIp);
       localStorage.setItem('simpsks_last_known_ip', finalIp);
     } catch {}
   } else {
-    // Ultimate fallback to last known
-    finalIp = localStorage.getItem('simpsks_last_known_ip') || '127.0.0.1';
+    // If private or loopback, do not populate fallback to 127.0.0.1 to avoid pooling users together
+    finalIp = '';
   }
 
   return finalIp;
@@ -191,6 +204,7 @@ export function getSafeDeviceDocId(deviceId: string): string {
 
 /**
  * Record a new account registration atomically in Firestore and local storage.
+ * Strictly registers against this specific deviceId and this specific public IP.
  */
 export async function recordAccountRegistration(
   username: string,
@@ -202,6 +216,7 @@ export async function recordAccountRegistration(
   if (!uname) return;
 
   const nowIso = new Date().toISOString();
+  const hasValidPublicIp = Boolean(ip && !isPrivateOrLocalIp(ip));
 
   // 1. Update local storage device tracking
   try {
@@ -213,8 +228,37 @@ export async function recordAccountRegistration(
     }
   } catch {}
 
-  // 2. Persist to Firestore: IP document
-  if (ip) {
+  // 2. Persist to Firestore: Device document (dev_${cleanDeviceId})
+  if (deviceId) {
+    try {
+      const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
+      const devSnap = await getDoc(devDocRef);
+      let existingList: string[] = [];
+      if (devSnap.exists()) {
+        existingList = devSnap.data().registeredAccounts || [];
+      }
+      if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
+        existingList.push(uname);
+      }
+      await setDoc(
+        devDocRef,
+        {
+          identifier: deviceId,
+          type: 'device',
+          registeredAccounts: existingList,
+          count: existingList.length,
+          lastRegisteredAt: nowIso,
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('[Device Registration] Error updating Device doc in Firestore:', err);
+    }
+  }
+
+  // 3. Persist to Firestore: IP document ONLY IF this is a genuine public IP
+  if (hasValidPublicIp) {
     try {
       const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
       const ipSnap = await getDoc(ipDocRef);
@@ -242,35 +286,6 @@ export async function recordAccountRegistration(
     }
   }
 
-  // 3. Persist to Firestore: Device document
-  if (deviceId) {
-    try {
-      const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
-      const devSnap = await getDoc(devDocRef);
-      let existingList: string[] = [];
-      if (devSnap.exists()) {
-        existingList = devSnap.data().registeredAccounts || [];
-      }
-      if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
-        existingList.push(uname);
-      }
-      await setDoc(
-        devDocRef,
-        {
-          identifier: deviceId,
-          type: 'device',
-          registeredAccounts: existingList,
-          count: existingList.length,
-          lastRegisteredAt: nowIso,
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      );
-    } catch (err) {
-      console.warn('[IP Registration] Error updating Device doc in Firestore:', err);
-    }
-  }
-
   // 4. Ensure admin_accounts record has registeredIp and deviceId
   if (adminId) {
     try {
@@ -278,7 +293,7 @@ export async function recordAccountRegistration(
       await setDoc(
         accRef,
         {
-          registeredIp: ip || undefined,
+          registeredIp: hasValidPublicIp ? ip : undefined,
           deviceId: deviceId || undefined,
         },
         { merge: true }
@@ -303,6 +318,8 @@ export async function removeAccountFromQuota(
   const uname = username.trim().toLowerCase();
   if (!uname) return;
 
+  const hasValidPublicIp = Boolean(ip && !isPrivateOrLocalIp(ip));
+
   // 1. Update localStorage
   try {
     const raw = localStorage.getItem('simpsks_device_registered_accounts');
@@ -313,28 +330,7 @@ export async function removeAccountFromQuota(
     }
   } catch {}
 
-  // 2. Remove from Firestore IP doc
-  if (ip) {
-    try {
-      const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
-      const ipSnap = await getDoc(ipDocRef);
-      if (ipSnap.exists()) {
-        const existing: string[] = ipSnap.data().registeredAccounts || [];
-        const filtered = existing.filter((u) => u.toLowerCase() !== uname);
-        await setDoc(
-          ipDocRef,
-          {
-            registeredAccounts: filtered,
-            count: filtered.length,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-      }
-    } catch {}
-  }
-
-  // 3. Remove from Firestore Device doc
+  // 2. Remove from Firestore Device doc
   if (deviceId) {
     try {
       const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
@@ -355,82 +351,56 @@ export async function removeAccountFromQuota(
     } catch {}
   }
 
+  // 3. Remove from Firestore IP doc ONLY IF valid public IP
+  if (hasValidPublicIp && ip) {
+    try {
+      const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
+      const ipSnap = await getDoc(ipDocRef);
+      if (ipSnap.exists()) {
+        const existing: string[] = ipSnap.data().registeredAccounts || [];
+        const filtered = existing.filter((u) => u.toLowerCase() !== uname);
+        await setDoc(
+          ipDocRef,
+          {
+            registeredAccounts: filtered,
+            count: filtered.length,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+    } catch {}
+  }
+
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('simpsks_device_accounts_changed'));
   }
 }
 
 /**
- * Initialize / synchronize existing user accounts (IlhamFazril1, IlhamFazril2)
- * onto this author/creator device and IP so they display 2/3 accurately on this device,
- * while other devices and other IPs strictly evaluate to their own facts (0/3 for new visitors).
+ * Reconcile helper: kept as a safe no-op to ensure backward compatibility with any external callers.
+ * No accounts are forcibly injected into any user's quota.
  */
 export async function reconcileDeviceAndIpQuota(
-  detectedIp: string,
-  deviceId: string,
-  adminAccounts: AdminAccount[]
+  _detectedIp?: string,
+  _deviceId?: string,
+  _adminAccounts?: AdminAccount[]
 ): Promise<void> {
-  if (!deviceId || !adminAccounts || adminAccounts.length === 0) return;
-
-  try {
-    // Check if this device is the author/creator device that registered IlhamFazril1 & IlhamFazril2
-    const raw = localStorage.getItem('simpsks_device_registered_accounts');
-    const localList: string[] = raw ? JSON.parse(raw) : [];
-
-    // User accounts that currently exist in the database
-    const existingUserAccounts = adminAccounts.filter((a) => a.role === 'user');
-    const ilhamAccounts = existingUserAccounts.filter((a) => {
-      const u = (a.username || '').toLowerCase().trim();
-      return u === 'ilhamfazril1' || u === 'ilhamfazril2';
-    });
-
-    // If IlhamFazril1/2 exist and local device is either already tracking them or is in creator session
-    const hasLocalIlham = localList.some((u) => {
-      const lower = u.toLowerCase();
-      return lower === 'ilhamfazril1' || lower === 'ilhamfazril2';
-    });
-
-    // Check if any Ilham account is missing registeredIp or deviceId
-    const needsBackfill = ilhamAccounts.some((a) => !a.registeredIp || !a.deviceId);
-
-    // If local device already had them OR if this is the environment where they were created:
-    if (ilhamAccounts.length > 0 && (hasLocalIlham || localList.length === 0)) {
-      // Synchronize local storage
-      const mergedLocal = Array.from(
-        new Set([...localList, ...ilhamAccounts.map((a) => a.username.trim())])
-      );
-      localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(mergedLocal));
-
-      // Persist to Firestore for this device and IP
-      if (detectedIp && !isPrivateOrLocalIp(detectedIp)) {
-        await recordAccountRegistration('IlhamFazril1', detectedIp, deviceId, ilhamAccounts[0]?.id);
-        if (ilhamAccounts[1]) {
-          await recordAccountRegistration('IlhamFazril2', detectedIp, deviceId, ilhamAccounts[1]?.id);
-        }
-      } else {
-        await recordAccountRegistration('IlhamFazril1', detectedIp || '127.0.0.1', deviceId, ilhamAccounts[0]?.id);
-        if (ilhamAccounts[1]) {
-          await recordAccountRegistration('IlhamFazril2', detectedIp || '127.0.0.1', deviceId, ilhamAccounts[1]?.id);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[IP Registration Service] Reconcile error:', err);
-  }
+  // Deprecated: No-op. Quota is strictly calculated per-device and per-public-IP.
 }
 
 /**
  * Real-time Quota Subscription
- * Listens to Firestore ip_registrations documents for the client's current IP and Device.
+ * Listens to Firestore ip_registrations documents for THIS client's current IP and Device ONLY.
  * Cross-references with active user accounts in adminAccounts.
+ * Other users / devices NEVER share quota unless they are literally on the exact same device or public IP.
  */
 export function subscribeToClientQuota(
-  ip: string,
+  _ip: string,
   deviceId: string,
   adminAccounts: AdminAccount[],
   callback: (info: QuotaInfo) => void
 ): () => void {
-  let ipRegisteredAccounts: string[] = [];
   let deviceRegisteredAccounts: string[] = [];
   let isSubscribed = true;
 
@@ -442,59 +412,97 @@ export function subscribeToClientQuota(
     try {
       const raw = localStorage.getItem('simpsks_device_registered_accounts');
       if (raw) {
-        localList = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          localList = parsed;
+        }
       }
     } catch {}
 
-    // 2. Database accounts matching IP
-    const dbIpAccounts: string[] = [];
-    if (ip && adminAccounts && adminAccounts.length > 0) {
-      adminAccounts.forEach((acc) => {
-        if (acc.role === 'user' && acc.registeredIp && acc.registeredIp === ip && acc.username) {
-          dbIpAccounts.push(acc.username.trim());
+    // Map: normalized lowercase username -> canonical display username
+    const normalizedMap = new Map<string, string>();
+    const cleanLocalList: string[] = [];
+    let localModified = false;
+
+    // Filter local storage: purge accounts that belong to a different device or were deleted in DB
+    if (adminAccounts && adminAccounts.length > 0) {
+      localList.forEach((rawUname) => {
+        const cleanLower = String(rawUname || '').toLowerCase().trim();
+        if (!cleanLower) return;
+
+        const match = adminAccounts.find(
+          (a) => a.role === 'user' && (a.username || '').toLowerCase().trim() === cleanLower
+        );
+
+        if (match) {
+          // If the account in DB explicitly belongs to a DIFFERENT deviceId, purge it from this device
+          if (match.deviceId && deviceId && match.deviceId !== deviceId) {
+            localModified = true;
+            return;
+          }
+          cleanLocalList.push(match.username.trim());
+          normalizedMap.set(cleanLower, match.username.trim());
+        } else {
+          // Account was deleted in DB
+          localModified = true;
+        }
+      });
+
+      if (localModified) {
+        try {
+          localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(cleanLocalList));
+        } catch {}
+      }
+    } else {
+      localList.forEach((rawUname) => {
+        const cleanLower = String(rawUname || '').toLowerCase().trim();
+        if (cleanLower) {
+          normalizedMap.set(cleanLower, String(rawUname).trim());
         }
       });
     }
 
-    // 3. Database accounts matching DeviceId
-    const dbDeviceAccounts: string[] = [];
+    // 2. Firestore device doc accounts for THIS specific device (dev_${deviceId})
+    deviceRegisteredAccounts.forEach((rawUname) => {
+      const cleanLower = String(rawUname || '').toLowerCase().trim();
+      if (!cleanLower || normalizedMap.has(cleanLower)) return;
+
+      if (adminAccounts && adminAccounts.length > 0) {
+        const match = adminAccounts.find(
+          (a) => a.role === 'user' && (a.username || '').toLowerCase().trim() === cleanLower
+        );
+        // STRICT: Only include if account still exists in DB and belongs to THIS device
+        if (match) {
+          if (match.deviceId && deviceId && match.deviceId !== deviceId) {
+            return; // Belongs to another device
+          }
+          normalizedMap.set(cleanLower, match.username.trim());
+        }
+      } else {
+        normalizedMap.set(cleanLower, String(rawUname).trim());
+      }
+    });
+
+    // 3. Database accounts explicitly tagged with THIS deviceId
     if (deviceId && adminAccounts && adminAccounts.length > 0) {
       adminAccounts.forEach((acc) => {
         if (acc.role === 'user' && acc.deviceId && acc.deviceId === deviceId && acc.username) {
-          dbDeviceAccounts.push(acc.username.trim());
+          const cleanLower = acc.username.toLowerCase().trim();
+          if (cleanLower && !normalizedMap.has(cleanLower)) {
+            normalizedMap.set(cleanLower, acc.username.trim());
+          }
         }
       });
     }
 
-    // Combine all potential registered accounts for THIS client
-    const candidates = Array.from(
-      new Set([
-        ...localList,
-        ...ipRegisteredAccounts,
-        ...deviceRegisteredAccounts,
-        ...dbIpAccounts,
-        ...dbDeviceAccounts,
-      ])
-    );
-
-    // Cross-reference with valid active user accounts currently in adminAccounts
-    // (Ensure deleted accounts do not consume quota)
-    const validAccounts = candidates.filter((u) => {
-      const cleanU = u.toLowerCase().trim();
-      return adminAccounts.some((acc) => {
-        return (
-          acc.role === 'user' &&
-          (acc.username || '').toLowerCase().trim() === cleanU
-        );
-      });
-    });
-
+    const validAccounts = Array.from(normalizedMap.values()).slice(0, 3);
     const count = validAccounts.length;
+
     callback({
       registeredAccounts: validAccounts,
       count,
       isQuotaFull: count >= 3,
-      ip,
+      ip: '',
       deviceId,
       isRealtimeSynced: true,
     });
@@ -503,30 +511,7 @@ export function subscribeToClientQuota(
   // Initial evaluation
   evaluate();
 
-  // Subscribe to IP document in Firestore
-  let unsubIp: (() => void) | null = null;
-  if (ip) {
-    try {
-      const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
-      unsubIp = onSnapshot(
-        ipDocRef,
-        (snap) => {
-          if (snap.exists()) {
-            ipRegisteredAccounts = snap.data().registeredAccounts || [];
-          } else {
-            ipRegisteredAccounts = [];
-          }
-          evaluate();
-        },
-        () => {
-          // Fallback gracefully on permission/quota
-          evaluate();
-        }
-      );
-    } catch {}
-  }
-
-  // Subscribe to Device document in Firestore
+  // Subscribe to THIS Device document in Firestore
   let unsubDev: (() => void) | null = null;
   if (deviceId) {
     try {
@@ -559,7 +544,6 @@ export function subscribeToClientQuota(
 
   return () => {
     isSubscribed = false;
-    if (unsubIp) unsubIp();
     if (unsubDev) unsubDev();
     if (typeof window !== 'undefined') {
       window.removeEventListener('simpsks_device_accounts_changed', handleLocalChange);

@@ -42,7 +42,6 @@ import {
   detectClientIp,
   subscribeToClientQuota,
   recordAccountRegistration,
-  reconcileDeviceAndIpQuota,
   QuotaInfo,
 } from '../services/ipRegistrationService';
 
@@ -162,13 +161,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, []);
 
-  // Reconcile and backfill initial creator accounts (IlhamFazril1, IlhamFazril2)
-  // so this creator device displays 2/3, while other devices/IPs strictly show their factual counts
-  useEffect(() => {
-    if (adminAccounts && adminAccounts.length > 0) {
-      reconcileDeviceAndIpQuota(detectedIp, detectedDeviceId, adminAccounts);
-    }
-  }, [detectedIp, detectedDeviceId, adminAccounts]);
 
   // Subscribe to real-time Firestore quota updates for this client's IP and device
   useEffect(() => {
@@ -835,15 +827,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     }`}>
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <Laptop className="w-3.5 h-3.5 text-emerald-800 shrink-0" />
-                        <span className="whitespace-nowrap">Batas Pendaftaran Perangkat & IP:</span>
-                        {detectedIp && (
-                          <span className="text-[8.5px] font-mono text-slate-600 bg-white/80 border border-slate-200 px-1.5 py-0.2 rounded shadow-2xs">
-                            IP: {detectedIp}
-                          </span>
-                        )}
+                        <span className="whitespace-nowrap">Batas Pendaftaran Perangkat Ini:</span>
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[8px] bg-emerald-100 text-emerald-800 rounded font-semibold">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                          Realtime
+                          Perangkat Mandiri
                         </span>
                       </div>
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 shadow-xs ${
@@ -851,7 +838,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           ? 'bg-rose-600 text-white'
                           : 'bg-emerald-700 text-white'
                       }`}>
-                        {deviceRegisteredAccounts.length}/3 Akun
+                        {deviceRegisteredAccounts.length}/3 Akun {isDeviceQuotaFull ? '(Maksimal)' : `(Tersedia ${3 - deviceRegisteredAccounts.length})`}
                       </span>
                     </div>
 

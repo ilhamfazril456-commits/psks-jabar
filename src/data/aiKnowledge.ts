@@ -276,8 +276,8 @@ export function getComprehensiveSmartAnswer(
     }
   }
 
-  // 0.14 ISLAMIC GREETINGS / SALAM CHECK (MUTLAK HARUS DIJAWAB DENGAN SALAM)
-  const isIslamicSalam = q.includes('assalam') || q.includes('as-salam');
+  // 0.14 ISLAMIC GREETINGS / SALAM CHECK (MUTLAK ANTI-BLUNDER: HANYA JIKA PENGGUNA UCAPKAN ASSALAMUALAIKUM)
+  const isIslamicSalam = /\b(assalamu?['’]?alaikum|as-salamu?['’]?alaikum|assalam|as-salam)\b/i.test(q);
   const salamPrefix = isIslamicSalam ? "Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n" : "";
 
   // 0.15 HANDLING USER CONFUSION / DISBELIEF / COMPLAINTS (ANTI-JUMPING TOPIC & NEVER LEAK ADMIN)
@@ -1106,7 +1106,7 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
       return `${opening}**Spesifikasi Arsitektur Sistem PSKS JABAR**:
 
 - **Frontend Core**: React 18 SPA, TypeScript 5+, Tailwind CSS 4, Motion (Framer Motion) animations, Lucide Icons.
-- **Backend & Proxy**: Express.js server (\`server.ts\`) bertindak sebagai proxy aman API Gemini @google/genai (model \`gemini-3.7-flash\` dengan fallback cascade ke \`gemini-2.5-flash\` & \`gemini-3.1-flash-lite\`), lazy SDK init, dan reverse proxy handling.
+- **Backend & Proxy**: Express.js server (\`server.ts\`) bertindak sebagai proxy aman API Gemini @google/genai (model \`gemini-3.8-flash\` dengan fallback cascade ke \`gemini-3.1-flash-lite\` & \`gemini-flash-latest\`), lazy SDK init, dan reverse proxy handling.
 - **Database & Persistence**: Google Cloud Firestore NoSQL dengan offline-first capability & local cache synchronization.
 - **Kriptografi & Auth**: Bcrypt Salt 10 hashing untuk PIN/Password, Role-Based Access Control (RBAC), dan Session Lockout Engine.
 - **Container Environment**: Di-deploy pada Cloud Run sandbox dengan binding port 3000 (0.0.0.0:3000) dan reverse proxy Nginx.
@@ -1605,7 +1605,7 @@ export function verifyAndTrackAnswerAccuracy(
   }
 
   // 1.1 Priority for Dynamic Model / Firestore Engine Reply with Context Awareness
-  if (rawReply && rawReply.trim().length > 10) {
+  if (rawReply && rawReply.trim().length > 0) {
     let cleanReply = rawReply.trim();
     // Protect developer identity for general users
     if (!isDeveloperUser && cleanReply.toLowerCase().includes('ilham fazril')) {

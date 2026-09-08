@@ -598,8 +598,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
         };
       case 'ai_assistant':
         return {
-          title: 'Informasi Asisten AI Gemini 3.7 Flash',
-          desc: 'Modul Asisten Kecerdasan Buatan Google Gemini 3.7 Flash terintegrasi server proxy.',
+          title: 'Informasi Asisten AI Gemini 3.8 Flash',
+          desc: 'Modul Asisten Kecerdasan Buatan Google Gemini 3.8 Flash terintegrasi server proxy.',
           badge: 'INFORMASI WEBSITE 6/8',
         };
       case 'team':
@@ -1155,11 +1155,11 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                           Asisten AI
                         </h4>
                         <span className="text-[8.5px] sm:text-[10px] font-black bg-purple-100 text-purple-900 px-2 sm:px-2.5 py-0.5 rounded-md border border-purple-300 whitespace-nowrap">
-                          GEMINI 3.7
+                          GEMINI 3.8
                         </span>
                       </div>
                       <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
-                        Informasi modul Asisten AI Google Gemini 3.7 Flash terintegrasi.
+                        Informasi modul Asisten AI Google Gemini 3.8 Flash terintegrasi.
                       </p>
                     </div>
                   </div>
@@ -1960,7 +1960,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       icon: Sparkles,
                       iconColor: 'text-purple-600',
                       accentBox: 'bg-purple-950/90 border-purple-500/50 text-purple-100',
-                      desc: 'Pembatasan frekuensi pertanyaan pada asisten AI Gemini 3.7 Flash guna mencegah spamming bot, eksploitasi kuota API, dan serangan denial of service.',
+                      desc: 'Pembatasan frekuensi pertanyaan pada asisten AI Gemini 3.8 Flash guna mencegah spamming bot, eksploitasi kuota API, dan serangan denial of service.',
                       details: [
                         'Server Rate Limiter: Maksimal 30 permintaan per menit per IP address pada endpoint /api/ai/chat.',
                         'Respons ramah pengguna (HTTP 429) dengan pesan jeda pemulihan kuota saat terdeteksi spamming.',
@@ -2574,7 +2574,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       version: 'v3.6.0',
                       purpose: 'Integrasi Asisten AI Gemini Server-side Proxy',
                       cmd: 'npm i @google/genai',
-                      features: ['10 Pilar PSKS Knowledge Prompt', 'Model Alias gemini-3.7-flash', 'Express Proxy Integration', 'Structured Responses'],
+                      features: ['10 Pilar PSKS Knowledge Prompt', 'Model Alias gemini-3.8-flash', 'Express Proxy Integration', 'Structured Responses'],
                     },
                     {
                       id: 'leaflet',
@@ -2821,13 +2821,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
                     <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
                       <span className="text-[10px] font-bold text-amber-300/80 uppercase tracking-wider block">
-                        Project ID Firebase
+                        Project ID GCP / Firebase
                       </span>
-                      <span className="text-xs font-mono font-black text-white truncate block">
-                        ai-studio-sisteminformasip
+                      <span className="text-xs font-mono font-black text-white truncate block" title="gen-lang-client-0671610320">
+                        gen-lang-client-0671610320
                       </span>
-                      <span className="text-[9px] font-medium text-slate-400 block">
-                        Region: asia-southeast1 (Jakarta)
+                      <span className="text-[9px] font-mono text-emerald-300/90 truncate block" title="ai-studio-sisteminformasip-5ccd2c2a-19e7-46db-ae5d-63189556c2fb">
+                        DB: ai-studio-sisteminformasip...
                       </span>
                     </div>
 
@@ -3274,7 +3274,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     </div>
                     <div>
                       <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
-                        ASISTEN KECERDASAN BUATAN GOOGLE GEMINI 3.7 FLASH
+                        ASISTEN KECERDASAN BUATAN GOOGLE GEMINI 3.8 FLASH
                       </h3>
                       <p className="text-xs text-slate-500 font-medium mt-0.5">
                         Modul AI Generatif Cerdas Terintegrasi Server Proxy untuk Konsultasi Data &amp; Layanan Sosial Jawa Barat.
@@ -3284,12 +3284,12 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   <div className="flex items-center gap-2 self-start sm:self-center">
                     <span className="text-[10px] font-black bg-purple-100 text-purple-900 px-3 py-1.5 rounded-xl border border-purple-300 shadow-2xs flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                      <span>GEMINI 3.7 FLASH ENGINE</span>
+                      <span>GEMINI 3.8 FLASH ENGINE</span>
                     </span>
                   </div>
                 </div>
 
-                {/* HERO BANNER: GEMINI 3.7 FLASH SPECIFICATION */}
+                {/* HERO BANNER: GEMINI 3.8 FLASH SPECIFICATION */}
                 <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-950 via-purple-950 to-[#043e2e] border-2 border-purple-500/60 text-white shadow-xl space-y-6 relative overflow-hidden">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5 relative z-10">
                     <div className="flex items-center gap-4">
@@ -3299,7 +3299,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-lg font-black tracking-wide text-white">
-                            Google Gemini 3.7 Flash
+                            Google Gemini 3.8 Flash
                           </h4>
                           <span className="text-[10px] font-extrabold bg-gradient-to-r from-purple-500 to-amber-400 text-slate-950 px-2.5 py-0.5 rounded-md uppercase font-mono shadow-sm">
                             NEXT-GEN AI MODEL
@@ -3331,7 +3331,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         Versi Model AI
                       </span>
                       <span className="text-xs font-mono font-black text-white block">
-                        Gemini 3.7 Flash
+                        Gemini 3.8 Flash
                       </span>
                       <span className="text-[9px] font-medium text-slate-300 block">
                         Google GenAI SDK Engine
@@ -3420,10 +3420,10 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-purple-900 uppercase tracking-wider flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span>Fitur Unggulan Asisten AI Gemini 3.7 Flash PSKS JABAR:</span>
+                      <span>Fitur Unggulan Asisten AI Gemini 3.8 Flash PSKS JABAR:</span>
                     </span>
                     <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md">
-                      Gemini 3.7 Flash
+                      Gemini 3.8 Flash
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium text-slate-700">
@@ -3718,7 +3718,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                           Ilham Fazril
                         </h2>
                         <p className="text-xs text-emerald-200/90 font-semibold max-w-lg">
-                          FULL STACK DEVELOPER — Perancang Arsitektur Kode, Keamanan Siber, Integrasi NoSQL Realtime, Asisten AI Gemini 3.7 Flash, dan Pengembang Antarmuka PSKS Jabar.
+                          FULL STACK DEVELOPER — Perancang Arsitektur Kode, Keamanan Siber, Integrasi NoSQL Realtime, Asisten AI Gemini 3.8 Flash, dan Pengembang Antarmuka PSKS Jabar.
                         </p>
 
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3.5 text-xs text-slate-300 font-medium pt-1">
@@ -3924,9 +3924,9 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         iconColor: 'text-purple-400 bg-purple-950 border-purple-500/40',
                         items: [
                           {
-                            title: 'Asisten Pintar Google Gemini 3.7 Flash AI',
-                            desc: 'Integrasi modul asisten kecerdasan buatan Gemini 3.7 Flash untuk membantu pengguna memahami informasi PSKS & panduan sosial secara cerdas & cepat.',
-                            tag: 'Gemini 3.7 Flash',
+                            title: 'Asisten Pintar Google Gemini 3.8 Flash AI',
+                            desc: 'Integrasi modul asisten kecerdasan buatan Gemini 3.8 Flash untuk membantu pengguna memahami informasi PSKS & panduan sosial secara cerdas & cepat.',
+                            tag: 'Gemini 3.8 Flash',
                           },
                           {
                             title: 'Single Bundle ESBuild Server Engine',

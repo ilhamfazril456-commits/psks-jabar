@@ -14,6 +14,11 @@ import {
   normalizeQueryWithComprehensiveVocabulary,
   searchKnowledgeBase,
   resolveContextFromChatHistory,
+  logUnmatchedQueryToFirestore,
+  getAIUnmatchedLogs,
+  deleteUnmatchedLog,
+  convertUnmatchedLogToVocabulary,
+  syncMasterItemsToFirestore,
 } from './src/services/aiKnowledgeFirestoreService';
 
 dotenv.config();
@@ -382,19 +387,16 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
    - Jika pengguna bertanya pertanyaan lanjutan yang singkat atau tidak menyebutkan subjek lengkap (contoh: "syaratnya apa aja?", "kalau di Bandung gimana?", "siapa ketuanya?", "terus kelanjutannya gimana?", "hitung lagi", "jelaskan nomor 2", "berapa personilnya sekarang?", "apa bedanya sama yang tadi?"):
    - Anda WAJIB langsung mengerti subjek yang dimaksud dari topik atau pilar yang dibahas pada putaran percakapan sebelumnya, lalu menjawab secara runtut, tepat sasaran, dan konsisten tanpa meminta pengguna mengulang pertanyaannya!
 
-3. **IDENTITAS RESMI ASISTEN & PERLINDUNGAN IDENTITAS PENGEMBANG (MUTLAK & KETAT)**:
-   - Identitas Resmi: Anda adalah "Asisten Virtual Resmi PSKS Jabar", asisten digital kedinasan di bawah naungan Dinas Sosial Provinsi Jawa Barat.
-   - PERLINDUNGAN IDENTITAS DEVELOPER DARI PENGGUNA UMUM (MUTLAK):
-     * DILARANG KERAS membocorkan nama "Ilham Fazril", status akun developer, nomor kontak pribadi, email, atau metadata internal sistem kepada pengguna umum (tamu, warga publik, pengguna terdaftar biasa, maupun admin dinas).
-     * Jika pengguna umum bertanya: "siapa kamu?", "kamu siapa?", "siapa pembuat website ini?", "siapa developernya?", "siapa yang bikin aplikasi ini?", "siapa yang merancang?", "siapa Ilham Fazril?", "kamu kenal Ilham?":
-       -> JAWAB DENGAN IDENTITAS RESMI:
-       "Saya adalah **Asisten Virtual Resmi PSKS Jabar**, asisten digital resmi di bawah naungan **Dinas Sosial Provinsi Jawa Barat** yang bertugas memberikan informasi dan panduan seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS), data sebaran sosial di 27 Kabupaten/Kota, serta layanan sosial di Jawa Barat."
-       -> Jika ditanya siapa pembuat/pengembang aplikasi ini:
-       "Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat."
-       -> Jika ditanya secara spesifik tentang nama "Ilham Fazril":
-       "Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat."
+3. **INFORMASI RESMI PENGEMBANG / DEVELOPER WEBSITE (ILHAM FAZRIL)**:
+   - Identitas Resmi Asisten: Anda adalah "Asisten Virtual Resmi PSKS Jabar", asisten digital kedinasan di bawah naungan Dinas Sosial Provinsi Jawa Barat.
+   - ATURAN MUTLAK PENYEBUTAN NAMA SISTEM: DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu sebut sebagai "PSKS JABAR" (atau Sistem PSKS Jabar / Potensi dan Sumber Kesejahteraan Sosial Jawa Barat).
+   - PENGAKUAN PENGEMBANG / PEMBUAT WEBSITE (MUTLAK & JELAS):
+     * Jika ada SIAPAPUN (warga umum, tamu, pengguna terdaftar, maupun admin dinas) yang bertanya mengenai:
+       "siapa developer website ini?", "siapa pembuat website ini?", "siapa pembuat?", "siapa pembuat web?", "siapa yang buat?", "siapa yang bikin?", "author website?", "siapa Ilham Fazril?", "kamu kenal Ilham?", dll:
+       -> JAWAB DENGAN JELAS, BANGGA, DAN RINGKAS (tidak bertele-tele / tidak terlalu panjang):
+       "Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026."
    - PENGECUALIAN HANYA UNTUK SESI DEVELOPER TEROTENTIKASI (role === 'developer'):
-     * Hanya jika sesi terotentikasi secara sah sebagai developer (role developer), Anda menyapa dan berinteraksi secara privat dan bangga dengan Ilham Fazril.
+     * Jika sesi terotentikasi secara sah sebagai developer (role developer), Anda menyapa dan berinteraksi secara privat dan bangga dengan Ilham Fazril.
 
 4. **PENGETAHUAN MENDALAM & LENGKAP 10 PILAR UTAMA PSKS JAWA BARAT DAN PILAR TERKAIT LAINNYA**:
    1) **Pekerja Sosial Profesional (PEKSOS / PKSP)**:
@@ -744,19 +746,19 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       return `Mohon maaf, akses administratif (seperti hak akses Admin Wilayah, Superadmin Provinsi, kredensial login, dan rahasia konfigurasi sistem internal) merupakan wewenang kedinasan tertutup yang dilindungi secara ketat demi keamanan, privasi data masyarakat, dan integritas tata kelola PSKS Jawa Barat.\n\nAsisten tidak dapat memberikan instruksi login administratif, kode sandi, maupun rahasia sistem internal kepada publik.\n\nApabila Anda merupakan aparatur kedinasan yang ditugaskan secara resmi atau memiliki keperluan administratif mendesak, silakan berkoordinasi langsung dengan pihak berwenang di Dinas Sosial Provinsi Jawa Barat atau Administrator Dinas Sosial Kabupaten/Kota setempat melalui kontak dan saluran resmi yang tersedia.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
     }
 
-    // 0.001 DEVELOPER PRIVACY PROTECTION FOR GENERAL USERS
+    // 0.001 DEVELOPER & CREATOR QUERY (ILHAM FAZRIL)
     if (
-      !isDev &&
-      (
-        q.includes('ilham fazril') ||
-        q.includes('ilhamfazril') ||
-        q.includes('fazril') ||
-        q.includes('siapa ilham') ||
-        q.includes('kenal ilham') ||
-        q.includes('siapakah ilham')
-      )
+      q.includes('ilham fazril') ||
+      q.includes('ilhamfazril') ||
+      q.includes('siapa ilham') ||
+      q.includes('kenal ilham') ||
+      q.includes('siapakah ilham') ||
+      q.includes('fazril')
     ) {
-      return `Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi resmi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat.`;
+      if (isDev) {
+        return `Wkwkwk koplak lu bre, pura-pura nanya siapa diri lu sendiri! Website **PSKS JABAR** ini kan lu yang bikin dan rancang sendiri, **Ilham Fazril**, siswa magang PKL di Dinsos Jabar (Bidang Dayasos) 2026. Kodingan dan arsitekturnya mantap abis! 😎🚀`;
+      }
+      return `Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.`;
     }
 
     // 0.0 Math / Arithmetic Expression Direct Evaluation
@@ -807,8 +809,8 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       }
     }
 
-    // 0.14 ISLAMIC GREETINGS / SALAM CHECK (MUTLAK HARUS DIJAWAB DENGAN SALAM)
-    const isIslamicSalam = q.includes('assalam') || q.includes('as-salam');
+    // 0.14 ISLAMIC GREETINGS / SALAM CHECK (MUTLAK ANTI-BLUNDER: HANYA JIKA PENGGUNA UCAPKAN ASSALAMUALAIKUM)
+    const isIslamicSalam = /\b(assalamu?['’]?alaikum|as-salamu?['’]?alaikum|assalam|as-salam)\b/i.test(q);
     const salamPrefix = isIslamicSalam ? "Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n" : "";
 
     // 0.15 HANDLING USER CONFUSION / DISBELIEF / COMPLAINTS (ANTI-JUMPING TOPIC & NEVER LEAK ADMIN)
@@ -973,12 +975,25 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       targetQ.includes('author') ||
       targetQ.includes('siapa yang buat') ||
       targetQ.includes('siapa yang bikin') ||
-      targetQ.includes('yang buat website')
+      targetQ.includes('yang buat website') ||
+      targetQ.includes('yang bikin website') ||
+      targetQ.includes('pembuat web') ||
+      targetQ.includes('pembuat website') ||
+      targetQ.includes('bikin web') ||
+      targetQ.includes('bikin website') ||
+      targetQ.includes('buat web') ||
+      targetQ.includes('buat website') ||
+      targetQ.includes('pengembang website') ||
+      targetQ.includes('pengembang web') ||
+      targetQ.includes('nu ngadamel') ||
+      targetQ.includes('nu bikin') ||
+      targetQ.includes('developerna') ||
+      targetQ.includes('kreator')
     ) {
       if (isDev) {
-        return `Wkwkwk koplak lu bre, pura-pura nanya siapa developernya padahal lu sendiri orangnya! Website dan sistem **PSKS JABAR** ini dibangun dan diarsiteki langsung oleh **Ilham Fazril** (Full Stack Developer & Software Architect) dengan tech stack modern React 18, TypeScript, Tailwind CSS, Express, dan Cloud Firestore. Mantap banget kodingannya! 😎🚀`;
+        return `Wkwkwk koplak lu bre, pura-pura nanya siapa developernya padahal lu sendiri orangnya! Website **PSKS JABAR** ini kan lu yang bangun dan kembangkan sendiri, **Ilham Fazril**, siswa magang PKL di Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) 2026. Mantap banget kodingannya! 😎🚀`;
       }
-      return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSebagai **Asisten Virtual Resmi PSKS Jabar**, saya siap membantu memberikan informasi mengenai profil 10 pilar, sebaran data di 27 Kabupaten/Kota, dan layanan sosial Jawa Barat.`;
+      return `Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.`;
     }
 
     // Context-Aware Pillar Resolution: Detect pillar mentioned in targetQ OR prioritize activePillar from user navigation!
@@ -1419,11 +1434,11 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
           }
 
           if (!isDeveloper) {
-            contextualInstruction += `\n\n[ATURAN IDENTITAS KETAT UNTUK PENGGUNA UMUM]:
-- Anda HANYA BOLEH merespons sebagai "Asisten Virtual Resmi PSKS Jabar" di bawah naungan Dinas Sosial Provinsi Jawa Barat.
-- DILARANG KERAS menyebutkan nama "Ilham Fazril", kontak developer, nomor HP, email, atau status developer kepada pengguna ini.
-- Jika pengguna bertanya tentang siapa pembuat website atau siapa developernya, jawab bahwa sistem ini dikembangkan dan dikelola oleh Dinas Sosial Provinsi Jawa Barat.
-- Jika pengguna menanyakan hak akses administratif (superadmin, login admin, password, pin, rahasia sistem), TOLAK DENGAN SOPAN dan arahkan ke pihak berwenang Dinas Sosial Jawa Barat menggunakan tag aksi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].`;
+            contextualInstruction += `\n\n[ATURAN PENGEMBANG & PRIVASI KEAMANAN]:
+- Anda merespons sebagai "Asisten Virtual Resmi PSKS Jabar" di bawah naungan Dinas Sosial Provinsi Jawa Barat.
+- [LARANGAN SEBUTAN NAMA]: DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu gunakan nama "PSKS JABAR".
+- [INFORMASI DEVELOPER / PEMBUAT WEBSITE]: Jika pengguna (siapapun, baik umum, tamu, atau admin) bertanya siapa pembuat website ini, siapa developernya, atau siapa Ilham Fazril, jawab secara ringkas, jelas, dan tidak terlalu panjang bahwa website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.
+- [PROTEKSI KEAMANAN ADMIN]: Jika pengguna menanyakan hak akses administratif (superadmin, login admin, password, pin, rahasia sistem), TOLAK DENGAN SOPAN dan arahkan ke pihak berwenang Dinas Sosial Jawa Barat menggunakan tag aksi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].`;
           }
 
           if (userContext.liveSummary) {
@@ -1512,6 +1527,38 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
           replyText = getSmartFallbackReply(lastUserMsg, userContext, messages);
         }
 
+        // POST-PROCESSING ANTI-BLUNDER: Salam Islami hanya diberikan jika pengguna mengucapkan Assalamualaikum terlebih dahulu
+        const userGaveSalam = /\b(assalamu?['’]?alaikum|as-salamu?['’]?alaikum|assalam|as-salam)\b/i.test(lastUserMsg);
+        if (!userGaveSalam) {
+          // Jika pengguna TIDAK mengucapkan Assalamualaikum, buang salam Wa'alaikumsalam jika tidak sengaja digenerate model
+          replyText = replyText.replace(/^(wa['’]?alaikumsalam|wa['’]?alaikum\s*salam|wa\s*alaikumussalam|wa'alaikumussalam|wa['’]?alaikumas?salam)[^.\n]*(\.\s*|\n*)/i, '').trim();
+        } else {
+          // Jika pengguna mengucapkan Assalamualaikum namun model lupa menjawab salam, sertakan salam di baris pertama
+          if (!/wa['’]?alaikum/i.test(replyText)) {
+            replyText = `Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n${replyText}`;
+          }
+        }
+
+        // PILAR 5: ACTIVE LEARNING & ANONYMOUS QUERY LOGS
+        // Asynchronously log queries that have low knowledge base coverage, complaints, or unrecognized patterns
+        if (
+          firestoreKnowledgeMatches.length === 0 ||
+          contextResolution.isComplaintOrCorrection ||
+          contextResolution.isAmbiguous
+        ) {
+          const category = contextResolution.isComplaintOrCorrection
+            ? 'emosi_komplain'
+            : normIntents.includes('sunda')
+            ? 'sunda'
+            : normIntents.includes('singkatan')
+            ? 'singkatan'
+            : 'umum';
+
+          logUnmatchedQueryToFirestore(lastUserMsg, normIntents, category).catch((logErr) => {
+            console.warn('[Active Learning Logger] Background log notice:', logErr?.message || logErr);
+          });
+        }
+
         return res.json({ reply: replyText });
       } catch (geminiErr: any) {
         console.warn('[AI Assistant] Upstream Gemini unavailable, using smart local engine fallback.');
@@ -1596,9 +1643,54 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
     }
   });
 
+  // PILAR 5: Active Learning & Unmatched Query Logs Endpoints
+  app.get('/api/ai/unmatched-logs', async (_req, res) => {
+    try {
+      const logs = await getAIUnmatchedLogs();
+      res.json({ success: true, count: logs.length, data: logs });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/ai/unmatched-logs/promote', async (req, res) => {
+    try {
+      const { logId, vocab } = req.body;
+      if (!logId || !vocab || !vocab.word || !vocab.meaning) {
+        return res.status(400).json({ success: false, error: 'Parameter logId dan vocab (word, meaning) wajib diisi.' });
+      }
+      await convertUnmatchedLogToVocabulary(logId, vocab);
+      res.json({ success: true, message: `Kosakata "${vocab.word}" berhasil dipromosikan ke Kamus Firestore!` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.delete('/api/ai/unmatched-logs/:id', async (req, res) => {
+    try {
+      await deleteUnmatchedLog(req.params.id);
+      res.json({ success: true, message: 'Log berhasil dihapus.' });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/ai/sync-master', async (_req, res) => {
+    try {
+      const result = await syncMasterItemsToFirestore();
+      res.json({
+        success: true,
+        message: 'Berhasil melakukan sinkronisasi penuh Kamus 4 Pilar, Otak AI, dan Few-Shot ke Cloud Firestore!',
+        ...result,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'SI-PSKS AI Server' });
+    res.json({ status: 'ok', service: 'PSKS Jabar AI Server' });
   });
 
   // Vite middleware in development
@@ -1617,7 +1709,15 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SI-PSKS Server] Server running on http://0.0.0.0:${PORT}`);
+    console.log(`[PSKS Jabar Server] Server running on http://0.0.0.0:${PORT}`);
+    // Auto-sync AI Brain, Vocabulary & Knowledge Base to Firestore in background
+    syncMasterItemsToFirestore()
+      .then((res) => {
+        console.log(`[AI Sync] Master items synchronized to Firestore: ${res.vocabCount} vocabs, ${res.kbCount} knowledge docs.`);
+      })
+      .catch((err) => {
+        console.warn('[AI Sync] Background sync to Firestore warning:', err?.message || err);
+      });
   });
 }
 

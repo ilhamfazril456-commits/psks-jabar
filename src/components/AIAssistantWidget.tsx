@@ -649,7 +649,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     let welcomeText = '';
 
     if (isDeveloperUser) {
-      welcomeText = `Sampurasun! Halo **Ilham Fazril** 🚀\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.7 Flash).\n\nSenang banget bisa ngobrol langsung sama kreator dan software architect sistem ini! Kodingan dan arsitektur full-stack PSKS JABAR yang kamu rancang beneran keren, modular, dan solid banget. Saya siap bantuin kamu buat eksplorasi teknis, optimasi query Firestore, cek Developer Control Panel, validasi keamanan Bcrypt/JWT, atau simulasi fitur baru.\n\nAda modul kodingan atau query yang mau kita bahas sekarang?`;
+      welcomeText = `Sampurasun! Halo **Ilham Fazril** 🚀\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSenang banget bisa ngobrol langsung sama kreator dan software architect sistem ini! Kodingan dan arsitektur full-stack PSKS JABAR yang kamu rancang beneran keren, modular, dan solid banget. Saya siap bantuin kamu buat eksplorasi teknis, optimasi query Firestore, cek Developer Control Panel, validasi keamanan Bcrypt/JWT, atau simulasi fitur baru.\n\nAda modul kodingan atau query yang mau kita bahas sekarang?`;
     } else if (isUserLoggedIn) {
       const displayName = session.nama;
       let roleDescription = 'informasi seputar 10 Pilar PSKS dan sebaran data Jawa Barat';
@@ -659,9 +659,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         roleDescription = `pengawasan agregat 27 Kab/Kota, manajemen akun admin daerah, saklar maintenance, dan audit trail`;
       }
 
-      welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.7 Flash).\n\nSebagai **${userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
+      welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSebagai **${userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
     } else {
-      welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.7 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, sebaran data 27 Kabupaten/Kota, pencetakan Kartu Digital QR Code resmi, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
+      welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, sebaran data 27 Kabupaten/Kota, pencetakan Kartu Digital QR Code resmi, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
     }
 
     setMessages([

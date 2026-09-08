@@ -589,7 +589,7 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           id: 'd-4',
           category: 'Arsitektur & Panel',
           role: 'developer',
-          question: 'Bagaimana mekanisme server proxy Gemini 3.7 Flash AI pada backend Express?',
+          question: 'Bagaimana mekanisme server proxy Gemini 3.8 Flash AI pada backend Express?',
           hint: 'Arsitektur Gemini Proxy',
         },
         {
@@ -673,7 +673,7 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           id: 'd-18',
           category: 'Keamanan & Kualitas',
           role: 'developer',
-          question: 'Bagaimana arsitektur failover multi-model Gemini (3.7-flash -> 2.5-flash -> 2.5-flash-lite) saat terjadi throttling?',
+          question: 'Bagaimana arsitektur failover multi-model Gemini (3.8-flash -> 3.1-flash-lite -> gemini-flash-latest) saat terjadi throttling?',
           hint: 'Multi-Model Fallback Cascade',
         },
         {

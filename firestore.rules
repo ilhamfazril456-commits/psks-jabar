@@ -103,6 +103,13 @@ service cloud.firestore {
       allow write: if true;
       allow delete: if true;
     }
+
+    // Collection: ai_unmatched_logs (Log Percakapan Anonim & Kosakata Baru untuk Active Learning)
+    match /ai_unmatched_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
   }
 }
 
