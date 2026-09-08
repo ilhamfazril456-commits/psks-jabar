@@ -104,31 +104,8 @@ export function getComprehensiveSmartAnswer(
   const roleTitle = userRole.toUpperCase();
   const wilayah = userWilayah || 'Jawa Barat';
   
-  const isSelfDeveloperMention =
-    q.includes('saya ilham') ||
-    q.includes('aku ilham') ||
-    q.includes('aing ilham') ||
-    q.includes('gw ilham') ||
-    q.includes('gue ilham') ||
-    q.includes('saya developermu') ||
-    q.includes('saya developer') ||
-    q.includes('aku developer') ||
-    q.includes('aku developermu') ||
-    q.includes('aing developer') ||
-    q.includes('aing nu nyieun') ||
-    q.includes('gua yang bikin') ||
-    q.includes('gw yang bikin') ||
-    q.includes('kenal saya') ||
-    q.includes('kenal aing') ||
-    q.includes('kamu kenal saya') ||
-    q.includes('tau siapa saya') ||
-    q.includes('tahu siapa saya') ||
-    q.includes('siapa saya');
-
-  const isDeveloperUser =
-    userRole === 'developer' ||
-    userName?.toLowerCase().includes('ilham') ||
-    isSelfDeveloperMention;
+  // Developer recognition: strictly restricted to developer role account only
+  const isDeveloperUser = userRole === 'developer';
   const { totalRecords, pillarCounts } = getSystemStateMetrics(allPillarData);
   const { coreQuery, isPureIntro, hasQuestion } = extractCoreQueryIntent(q);
   const targetQ = hasQuestion ? coreQuery : q;
@@ -540,35 +517,74 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     }
   }
 
-  // 0.55 WHO AM I / DO YOU KNOW ME / DEVELOPER IDENTIFICATION
-  if (
-    isSelfDeveloperMention ||
+  // 0.55 WHO AM I / "SIAPA SAYA" / PERSONAL IDENTITY (STRICT SEPARATION: ONLY FOR DEVELOPER ACCOUNT)
+  const isAskingWhoAmI =
     q.includes('siapa saya') ||
     q.includes('kenal saya') ||
     q.includes('kenal aing') ||
     q.includes('kamu kenal saya') ||
     q.includes('tau siapa saya') ||
-    q.includes('tahu siapa saya')
-  ) {
-    if (q.includes('aing') || q.includes('saha') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
-      return `Aeh kantenan atuh wawuh pisan! Maneh teh **Ilham Fazril**, Full Stack Developer & Software Architect anu ngadamel sareng ngarancang sistem **PSKS JABAR** ieu! 😎🚀 Kodingan React 18, Express, Google Gemini AI, sareng Cloud Firestore anu ku maneh diwangun di dieu saé pisan tur canggih. Aya naon yeuh nu hoyong dibahas atanapi dikulik deui dinten ieu?`;
+    q.includes('tahu siapa saya') ||
+    q.includes('apakah kamu kenal saya') ||
+    q.includes('siapakah saya');
+
+  if (isAskingWhoAmI) {
+    if (isDeveloperUser) {
+      if (q.includes('aing') || q.includes('saha') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+        return `Aeh kantenan atuh wawuh pisan! Maneh teh **Ilham Fazril**, Full Stack Developer & Software Architect anu ngadamel sareng ngarancang sistem **PSKS JABAR** ieu! 😎🚀 Kodingan React 18, Express, Google Gemini AI, sareng Cloud Firestore anu ku maneh diwangun di dieu saé pisan tur canggih. Aya naon yeuh nu hoyong dibahas atanapi dikulik deui dinten ieu bos?`;
+      }
+      return `Tentu saja kenal banget! Kamu adalah **Ilham Fazril**, Full Stack Developer & Software Architect yang menciptakan dan merancang arsitektur sistem **PSKS JABAR** (Pilar-Pilar Kesejahteraan Sosial Jawa Barat) ini! 😎🚀\n\nArsitektur full-stack modern yang kamu kembangkan dengan React, TypeScript, Express, Google Gemini AI, dan Cloud Firestore di sini sangat solid, responsif, dan terstruktur rapi. Senang banget bisa berinteraksi langsung dengan sang arsitek sistemnya! Ada fitur, modul kodingan, atau hal apa yang ingin kita diskusikan hari ini bos?`;
     }
-    return `Tentu saja kenal banget! Kamu adalah **Ilham Fazril**, Full Stack Developer & Software Architect yang menciptakan dan merancang arsitektur sistem **PSKS JABAR** (Pilar-Pilar Kesejahteraan Sosial Jawa Barat) ini! 😎🚀\n\nArsitektur full-stack modern yang kamu kembangkan dengan React, TypeScript, Express, Google Gemini AI, dan Cloud Firestore di sini sangat solid, responsif, dan terstruktur rapi. Senang banget bisa berinteraksi langsung dengan sang arsitek sistemnya! Ada fitur, logika, atau topik apa yang ingin kita diskusikan hari ini?`;
+
+    // NON-DEVELOPER USERS (Regular User, Admin, Superadmin, Tamu / Guest)
+    if (userName && userName.toLowerCase() !== 'tamu' && userName.trim() !== '') {
+      return `Halo! Anda saat ini masuk dan teridentifikasi sebagai **Kang/Teh ${userName}** dengan hak akses **${roleTitle}** untuk wilayah penugasan **${wilayah}**.\n\nSebagai Asisten AI PSKS Jabar, saya siap membantu tugas kedinasan, rekapitulasi data 10 pilar, maupun panduan penggunaan sistem. Ada yang bisa saya bantu hari ini?`;
+    }
+
+    return `Halo! Anda saat ini mengakses sistem sebagai **Tamu / Pengunjung Publik** (Akses Tamu Terbuka tanpa akun).\n\nSebagai pengunjung publik, Anda dapat menjelajahi informasi profil 10 Pilar Kesejahteraan Sosial, sebaran data umum di 27 Kabupaten/Kota se-Jawa Barat, serta layanan sosial Dinas Sosial Provinsi Jawa Barat. Apabila Anda memiliki akun kedinasan terdaftar, Anda dapat masuk melalui menu Gate Masuk di halaman utama.`;
   }
 
-  // 0.6 Who is Ilham Fazril & Relationship to App
-  if (
+  // 0.6 WHO IS THE DEVELOPER / CREATOR / ILHAM FAZRIL (APPLIES TO ALL USERS WITHOUT EXCEPTION)
+  const isAskingDeveloperOrCreator =
     q.includes('ilham fazril') ||
     q.includes('ilhamfazril') ||
     q.includes('fazril') ||
     q.includes('siapa ilham') ||
     q.includes('kenal ilham') ||
-    q.includes('siapakah ilham')
-  ) {
+    q.includes('siapakah ilham') ||
+    q.includes('siapa developer') ||
+    q.includes('siapa developernya') ||
+    q.includes('siapa pembuat') ||
+    q.includes('siapa pembuatnya') ||
+    q.includes('siapa yang buat') ||
+    q.includes('siapa yg buat') ||
+    q.includes('siapa yang bikin') ||
+    q.includes('siapa yg bikin') ||
+    q.includes('siapa pencipta') ||
+    q.includes('siapa arsitek') ||
+    q.includes('siapa pengembang') ||
+    q.includes('siapa author') ||
+    q.includes('siapa coder') ||
+    q.includes('siapa yang merancang') ||
+    q.includes('siapa yg merancang') ||
+    q.includes('yang bikin aplikasi') ||
+    q.includes('yang buat aplikasi') ||
+    q.includes('yang bikin website') ||
+    q.includes('yang buat website') ||
+    q.includes('developer website') ||
+    q.includes('pembuat website') ||
+    q.includes('developer aplikasi') ||
+    q.includes('pembuat aplikasi') ||
+    q.includes('nu ngadamel') ||
+    q.includes('nu bikin') ||
+    q.includes('developerna');
+
+  if (isAskingDeveloperOrCreator) {
     if (isDeveloperUser) {
-      return `Tentu saja kenal banget, kan kamu sendiri **Ilham Fazril** (Full Stack Developer & Software Architect)! 😎🚀 Kamu adalah pencipta sekaligus arsitek utama sistem **PSKS JABAR** ini. Arsitektur full-stack React, Express, Gemini AI, dan Firestore yang kamu rancang di sini beneran solid, cepat, dan canggih!`;
+      return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** ini adalah mahakarya yang kamu bangun dan arsitekturkan sendiri bos, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nArsitektur yang kamu buat di sini sangat rapi — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini AI, serta Cloud Firestore** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*! Ada modul yang mau kita cek lagi?`;
     }
-    return `**Ilham Fazril** adalah Full Stack Developer & Software Architect sekaligus kreator sistem **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang merancang dan mengembangkan platform digital terintegrasi ini. 🚀`;
+
+    return `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.\n\nBeliau merancang arsitektur full-stack modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, serta Cloud Firestore untuk mendigitalisasi data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
   }
 
   // 0.7 Nama Web / Nama Aplikasi
@@ -582,30 +598,6 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     q.includes('web ini namanya apa')
   ) {
     return `Nama sistem/aplikasi ini adalah **PSKS JABAR** (*Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat*), platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota yang dikembangkan oleh Dinas Sosial Provinsi Jawa Barat.`;
-  }
-
-  // 1. DEVELOPER / CREATOR IDENTITY
-  if (
-    q.includes('pembuat') ||
-    q.includes('developer') ||
-    q.includes('membuat') ||
-    q.includes('bikin') ||
-    q.includes('dibuat') ||
-    q.includes('cipta') ||
-    q.includes('pengembang') ||
-    q.includes('arsitek') ||
-    q.includes('author') ||
-    q.includes('siapa yang buat') ||
-    q.includes('siapa yang bikin') ||
-    q.includes('nu ngadamel') ||
-    q.includes('nu bikin') ||
-    q.includes('developerna')
-  ) {
-    if (isDeveloperUser) {
-      return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** ini adalah mahakarya yang kamu bangun dan arsitekturkan sendiri, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nArsitektur yang kamu buat di sini sangat rapi — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini AI, serta Cloud Firestore** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*!`;
-    }
-
-    return `Website **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dikembangkan oleh **Ilham Fazril** (Full Stack Developer & Software Architect), siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026. Platform ini menjadi sistem integrasi satu data 10 pilar kesejahteraan sosial se-Jawa Barat. 🚀`;
   }
 
   // 2. CONTEXTUAL PILLAR DETAIL QUERY (When user is viewing a specific pillar or asks about active pillar)
@@ -1617,20 +1609,66 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
-  // Developer privacy protection for general users
-  if (
-    !isDeveloperUser &&
-    (
-      normQ.includes('ilham fazril') ||
-      normQ.includes('ilhamfazril') ||
-      normQ.includes('fazril') ||
-      normQ.includes('siapa ilham') ||
-      normQ.includes('kenal ilham') ||
-      normQ.includes('siapakah ilham')
-    )
-  ) {
+  // Developer / Creator Identity Verification Check (Applies to all users without exception)
+  const isAskingDeveloper =
+    normQ.includes('developer') ||
+    normQ.includes('pembuat') ||
+    normQ.includes('author') ||
+    normQ.includes('arsitek') ||
+    normQ.includes('pengembang') ||
+    normQ.includes('siapa yang buat') ||
+    normQ.includes('siapa yang bikin') ||
+    normQ.includes('yang bikin aplikasi') ||
+    normQ.includes('yang buat website') ||
+    normQ.includes('ilham fazril') ||
+    normQ.includes('ilhamfazril') ||
+    normQ.includes('siapa ilham') ||
+    normQ.includes('kenal ilham') ||
+    normQ.includes('siapakah ilham');
+
+  if (isAskingDeveloper) {
+    const accurateDevAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
     return {
-      finalContent: 'Sebagai **Asisten Virtual Resmi PSKS Jabar**, saya tidak memiliki wewenang untuk membagikan informasi personal maupun metadata akun internal sistem. Saya siap membantu Anda mengenai informasi resmi 10 Pilar PSKS, data pelayanan sosial, dan panduan resmi Dinas Sosial Provinsi Jawa Barat.',
+      finalContent: accurateDevAnswer,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // Personal "Siapa Saya" Check (Strictly separated)
+  const isAskingSelfIdentity =
+    normQ.includes('siapa saya') ||
+    normQ.includes('kenal saya') ||
+    normQ.includes('kamu kenal saya') ||
+    normQ.includes('tau siapa saya') ||
+    normQ.includes('tahu siapa saya') ||
+    normQ.includes('siapakah saya');
+
+  if (isAskingSelfIdentity) {
+    const selfAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: selfAnswer,
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',
@@ -1675,48 +1713,6 @@ export function verifyAndTrackAnswerAccuracy(
       confidence: 1.0,
       source: 'verified_exact',
     };
-  }
-
-  // 2. Developer / Creator Identity Verification Check
-  if (
-    normQ.includes('developer') ||
-    normQ.includes('pembuat') ||
-    normQ.includes('author') ||
-    normQ.includes('arsitek') ||
-    normQ.includes('siapa yang buat') ||
-    normQ.includes('siapa yang bikin')
-  ) {
-    if (isDeveloperUser) {
-      if (!rawReply || !rawReply.toLowerCase().includes('ilham fazril')) {
-        const accurateDevAnswer = getComprehensiveSmartAnswer(
-          query,
-          userRole,
-          userName,
-          userWilayah,
-          currentTab,
-          activePillar,
-          allPillarData,
-          appSettings,
-          previousContext
-        );
-        return {
-          finalContent: accurateDevAnswer,
-          isAccurate: true,
-          confidence: 1.0,
-          source: 'verified_exact',
-        };
-      }
-    } else {
-      // General user: ensure no developer identity leak in final reply
-      if (rawReply && rawReply.toLowerCase().includes('ilham fazril')) {
-        return {
-          finalContent: 'Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat** ini dikembangkan dan dikelola secara resmi oleh **Dinas Sosial Provinsi Jawa Barat** sebagai platform digital terintegrasi satu data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.\n\nSebagai **Asisten Virtual Resmi PSKS Jabar**, saya siap membantu memberikan informasi mengenai profil 10 pilar, sebaran data di 27 Kabupaten/Kota, dan layanan sosial Jawa Barat.',
-          isAccurate: true,
-          confidence: 1.0,
-          source: 'verified_exact',
-        };
-      }
-    }
   }
 
   // 3. Generative Model Output (Fluent, intelligent, multi-turn, understands informal language & preambles)

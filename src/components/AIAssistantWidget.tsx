@@ -752,26 +752,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         content: m.content,
       }));
 
-      const lowerText = textToSend.toLowerCase();
-      const isSelfDevMention =
-        lowerText.includes('saya ilham') ||
-        lowerText.includes('aku ilham') ||
-        lowerText.includes('aing ilham') ||
-        lowerText.includes('gw ilham') ||
-        lowerText.includes('gue ilham') ||
-        lowerText.includes('saya developer') ||
-        lowerText.includes('saya developermu') ||
-        lowerText.includes('aku developer') ||
-        lowerText.includes('aku developermu') ||
-        lowerText.includes('aing developer') ||
-        lowerText.includes('kenal saya') ||
-        lowerText.includes('kenal aing') ||
-        lowerText.includes('siapa saya') ||
-        lowerText.includes('tau siapa saya') ||
-        lowerText.includes('tahu siapa saya') ||
-        lowerText.includes('kamu kenal saya');
-
-      const effectiveDev = isDeveloperUser || isSelfDevMention;
+      // Developer privileges and custom persona strictly restricted to developer account
+      const effectiveDev = isDeveloperUser;
       const roleForContext: UserRole = effectiveDev ? 'developer' : currentRole;
       const nameForContext = effectiveDev ? (session?.nama || 'Ilham Fazril') : (session?.nama || 'Tamu');
 

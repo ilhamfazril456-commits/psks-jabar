@@ -349,13 +349,42 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
   const [isLoadingGeoJson, setIsLoadingGeoJson] = useState<boolean>(true);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapSectionRef = useRef<HTMLElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const polygonLayersRef = useRef<{ [key: string]: L.Polygon }>({});
   const markerLayersRef = useRef<{ [key: string]: L.Marker }>({});
+  const [shouldLoadGeoJson, setShouldLoadGeoJson] = useState(false);
+
+  // Defer fetching heavy 619KB GeoJSON until user scrolls near the map section
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setShouldLoadGeoJson(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setShouldLoadGeoJson(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '350px' }
+    );
+
+    if (mapSectionRef.current) {
+      observer.observe(mapSectionRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Fetch official administrative boundary GeoJSON for Jawa Barat (Code 32)
   useEffect(() => {
+    if (!shouldLoadGeoJson) return;
     let isMounted = true;
     setIsLoadingGeoJson(true);
 
@@ -375,7 +404,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [shouldLoadGeoJson]);
 
   // Calculate live count per region across pillars
   const regionalStats = useMemo(() => {
@@ -889,7 +918,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
   };
 
   return (
-    <section className="py-8 sm:py-12 bg-slate-950 text-white relative overflow-hidden border-y border-slate-800">
+    <section ref={mapSectionRef} className="py-8 sm:py-12 bg-slate-950 text-white relative overflow-hidden border-y border-slate-800">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         

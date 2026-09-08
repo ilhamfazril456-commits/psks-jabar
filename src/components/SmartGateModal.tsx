@@ -571,7 +571,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   <span className="text-sm font-black tracking-widest text-emerald-100 uppercase">
                     PSKS JABAR
                   </span>
-                  <span className="text-[10px] text-emerald-300 font-semibold mt-0.5">
+                  <span className="text-[10px] text-emerald-200 font-semibold mt-0.5">
                     Pilar Sosial Jawa Barat
                   </span>
                 </div>
@@ -581,7 +581,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight mb-2">
                     Welcome Back!
                   </h2>
-                  <p className="text-xs sm:text-[12.5px] text-emerald-100/90 font-medium leading-relaxed max-w-xs mx-auto mb-6">
+                  <p className="text-xs sm:text-[12.5px] text-emerald-100 font-medium leading-relaxed max-w-xs mx-auto mb-6">
                     Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.
                   </p>
 
@@ -594,7 +594,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       setErrorMessage('');
                       setMobileIntroStarted(true);
                     }}
-                    className="inline-flex items-center justify-center gap-2 border-2 border-emerald-400/80 hover:border-white bg-[#02281d]/90 hover:bg-[#033627] text-white font-black text-xs sm:text-sm px-8 py-3 rounded-full transition-all duration-300 shadow-xl shadow-black/40 cursor-pointer backdrop-blur-md ring-2 ring-emerald-500/20 active:scale-95"
+                    className="inline-flex items-center justify-center gap-2 border-2 border-emerald-400 hover:border-white bg-[#02281d] hover:bg-[#033627] text-white font-black text-xs sm:text-sm px-8 py-3 rounded-full transition-all duration-300 shadow-xl shadow-black/40 cursor-pointer backdrop-blur-md ring-2 ring-emerald-500/20 active:scale-95"
                   >
                     <UserPlus className="w-4 h-4 text-[#d4af37]" />
                     <span className="tracking-wider">MULAI</span>
@@ -603,7 +603,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                 {/* Bottom Sub-Links */}
                 <div className="relative z-10 pt-2 border-t border-emerald-700/40 text-center pb-1">
-                  <p className="text-[9px] sm:text-[9.5px] text-emerald-300/80 font-bold tracking-widest uppercase">
+                  <p className="text-[9px] sm:text-[9.5px] text-emerald-200 font-bold tracking-widest uppercase">
                     DINAS SOSIAL PROVINSI JAWA BARAT
                   </p>
                 </div>
@@ -625,7 +625,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               <span className="text-xs font-black tracking-widest text-emerald-200 uppercase">
                 PSKS JABAR
               </span>
-              <span className="text-[9.5px] text-emerald-300/80 font-medium">
+              <span className="text-[9.5px] text-emerald-200 font-medium">
                 Pilar Sosial Jawa Barat
               </span>
             </div>
@@ -635,7 +635,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               <h2 className="text-lg lg:text-xl font-black text-white tracking-tight leading-tight mb-1">
                 Welcome Back!
               </h2>
-              <p className="text-[10.5px] lg:text-[11px] text-emerald-100/90 font-medium leading-relaxed max-w-xs mx-auto mb-3">
+              <p className="text-[10.5px] lg:text-[11px] text-emerald-100 font-medium leading-relaxed max-w-xs mx-auto mb-3">
                 Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.
               </p>
 
@@ -704,7 +704,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               <h3 className="text-lg sm:text-xl font-black text-[#0c5942] tracking-tight">
                 Welcome
               </h3>
-              <p className="text-[10.5px] sm:text-xs text-slate-500 font-semibold mt-0.5">
+              <p className="text-[10.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
                 {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
                 {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
                 {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
@@ -785,7 +785,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             Login
                           </span>
                         </div>
-                        <p className="text-[10.5px] sm:text-[11px] text-emerald-100/90 font-medium leading-tight mt-0.5">
+                        <p className="text-[10.5px] sm:text-[11px] text-emerald-100 font-medium leading-tight mt-0.5">
                           Login/Masuk ke akun yang sudah terdaftar
                         </p>
                       </div>
@@ -793,11 +793,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                     {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
                     <div className="relative flex items-center justify-center py-0.5 sm:py-1">
-                      <div className="flex-grow border-t border-slate-200/80"></div>
-                      <div className="flex-shrink mx-3 flex items-center gap-1 bg-slate-100/90 text-slate-500 font-black text-[9.5px] sm:text-[10px] uppercase tracking-widest px-3 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+                      <div className="flex-grow border-t border-slate-300"></div>
+                      <div className="flex-shrink mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[9.5px] sm:text-[10px] uppercase tracking-widest px-3 py-0.5 rounded-full border border-slate-300 shadow-2xs">
                         <span>ATAU</span>
                       </div>
-                      <div className="flex-grow border-t border-slate-200/80"></div>
+                      <div className="flex-grow border-t border-slate-300"></div>
                     </div>
 
                     {/* JALUR 3: TOMBOL LANJUTKAN SEBAGAI TAMU */}
@@ -823,7 +823,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             Tanpa Login
                           </span>
                         </div>
-                        <p className="text-[10.5px] sm:text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
+                        <p className="text-[10.5px] sm:text-[11px] text-slate-700 font-medium leading-tight mt-0.5">
                           Akses publik instan untuk membaca grafik & data PSKS tanpa password.
                         </p>
                       </div>
@@ -981,22 +981,22 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     {/* Compact Password Criteria Indicators */}
                     <div className="grid grid-cols-4 gap-1 pt-0.5 text-[7.5px] font-black leading-none">
                       <div className={`p-1 rounded-md text-center border ${
-                        regPassword.length >= 8 ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-200'
+                        regPassword.length >= 8 ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'
                       }`}>
                         {regPassword.length >= 8 ? '✓' : '•'} 8+ Huruf
                       </div>
                       <div className={`p-1 rounded-md text-center border ${
-                        /[A-Z]/.test(regPassword) ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-200'
+                        /[A-Z]/.test(regPassword) ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'
                       }`}>
                         {/[A-Z]/.test(regPassword) ? '✓' : '•'} Huruf Besar
                       </div>
                       <div className={`p-1 rounded-md text-center border ${
-                        /[a-z]/.test(regPassword) ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-200'
+                        /[a-z]/.test(regPassword) ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'
                       }`}>
                         {/[a-z]/.test(regPassword) ? '✓' : '•'} Huruf Kecil
                       </div>
                       <div className={`p-1 rounded-md text-center border ${
-                        /[0-9]/.test(regPassword) ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-200'
+                        /[0-9]/.test(regPassword) ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'
                       }`}>
                         {/[0-9]/.test(regPassword) ? '✓' : '•'} Angka 0-9
                       </div>
@@ -1018,7 +1018,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           }}
                           className={`w-full bg-[#e6f4ea] focus:bg-white border rounded-full px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none transition-all cursor-pointer appearance-none disabled:opacity-60 ${
                             selectedRegisterRegion === ''
-                              ? 'border-emerald-400 text-slate-500'
+                              ? 'border-emerald-500 text-slate-700'
                               : 'border-[#0c5942] text-[#043e2e] font-black'
                           }`}
                         >
@@ -1044,7 +1044,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         disabled={isDeviceQuotaFull || isRegistering}
                         className={`w-full py-1.5 font-black rounded-full text-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
                           isDeviceQuotaFull
-                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed border border-slate-300'
+                            ? 'bg-slate-300 text-slate-700 cursor-not-allowed border border-slate-300'
                             : 'bg-[#0c5942] hover:bg-[#094735] text-white shadow-emerald-950/20 cursor-pointer'
                         }`}
                       >
@@ -1587,7 +1587,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           }}
                           className={`w-full bg-[#e6f4ea] focus:bg-white border rounded-full px-3 py-2 text-xs font-black focus:outline-none transition-all cursor-pointer appearance-none shadow-xs ${
                             selectedGuestRegion === ''
-                              ? 'border-amber-400 text-slate-500'
+                              ? 'border-amber-500 text-slate-700'
                               : 'border-emerald-600 text-[#043e2e]'
                           }`}
                         >
@@ -1644,7 +1644,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Form Footer Links */}
-            <div className="relative z-10 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9.5px] text-slate-400 font-medium shrink-0">
+            <div className="relative z-10 pt-1.5 border-t border-slate-200 flex items-center justify-between text-[9.5px] text-slate-600 font-semibold shrink-0">
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"

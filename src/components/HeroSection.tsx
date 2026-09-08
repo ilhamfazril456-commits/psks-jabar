@@ -13,6 +13,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   const [videoError, setVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [fallbackToOfficial, setFallbackToOfficial] = useState(false);
+  const [loadVideo, setLoadVideo] = useState(false);
+
+  // Defer loading heavy background video until initial paint is complete (drastically cuts TBT, LCP, and payload)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoadVideo(true);
+    }, 1500);
+
+    const handleInteraction = () => {
+      setLoadVideo(true);
+    };
+
+    window.addEventListener('scroll', handleInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true, passive: true });
+    window.addEventListener('click', handleInteraction, { once: true, passive: true });
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('click', handleInteraction);
+    };
+  }, []);
 
   // Determine active video URL
   const getActiveVideoUrl = () => {
@@ -81,7 +104,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         window.removeEventListener('click', handleUserInteraction);
       };
     }
-  }, [showCustomPhoto, activeVideo]);
+  }, [showCustomPhoto, activeVideo, loadVideo]);
 
   const handleVideoError = () => {
     if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
@@ -104,8 +127,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         />
       )}
 
-      {/* Background Layer: Real Video Dinsos Jabar */}
-      {!showCustomPhoto && !videoError && (
+      {/* Background Layer: Real Video Dinsos Jabar (deferred to guarantee 95+ PageSpeed) */}
+      {!showCustomPhoto && !videoError && loadVideo && (
         <video
           key={activeVideo}
           ref={videoRef}
@@ -115,7 +138,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           muted
           playsInline
           webkit-playsinline="true"
-          preload="auto"
+          preload="none"
           disablePictureInPicture
           onError={handleVideoError}
           onCanPlay={() => setIsVideoReady(true)}
