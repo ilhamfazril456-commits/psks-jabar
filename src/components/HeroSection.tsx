@@ -43,27 +43,51 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
   const bgMode = appSettings?.bgMode || (typeof window !== 'undefined' ? localStorage.getItem('dinsos_bg_mode') : null) || 'video';
   const showCustomPhoto = bgMode === 'photo' && !!customUserPhoto && customUserPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO';
 
-  // Smart deferral for mobile/desktop PageSpeed: render poster instantly, stream video on idle
+  // Smart deferral for mobile/desktop PageSpeed: render poster instantly, stream video on interaction/desktop
   const [shouldStreamVideo, setShouldStreamVideo] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if ('requestIdleCallback' in window) {
-      const idleId = (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => number }).requestIdleCallback(() => {
-        setShouldStreamVideo(true);
-      }, { timeout: 1200 });
-      return () => {
-        if ('cancelIdleCallback' in window) {
-          (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId);
-        }
-      };
-    } else {
-      const timer = setTimeout(() => {
-        setShouldStreamVideo(true);
-      }, 800);
-      return () => clearTimeout(timer);
+    // Check data-saver or slow connection
+    const nav = navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } };
+    if (nav.connection?.saveData || nav.connection?.effectiveType === '2g' || nav.connection?.effectiveType === 'slow-2g') {
+      return; // Keep high-res poster image for data saver mode
     }
+
+    let triggered = false;
+    const startStreaming = () => {
+      if (triggered) return;
+      triggered = true;
+      setShouldStreamVideo(true);
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('scroll', startStreaming);
+      window.removeEventListener('touchstart', startStreaming);
+      window.removeEventListener('mousemove', startStreaming);
+      window.removeEventListener('click', startStreaming);
+    };
+
+    // Trigger immediately on first user interaction (scroll, touch, mouse move, click)
+    window.addEventListener('scroll', startStreaming, { passive: true, once: true });
+    window.addEventListener('touchstart', startStreaming, { passive: true, once: true });
+    window.addEventListener('mousemove', startStreaming, { passive: true, once: true });
+    window.addEventListener('click', startStreaming, { passive: true, once: true });
+
+    // Fallback: On desktop screens (width >= 1024px) stream after 4.5s
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+    const fallbackTimer = setTimeout(() => {
+      if (isDesktop) {
+        startStreaming();
+      }
+    }, 4500);
+
+    return () => {
+      cleanup();
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   useEffect(() => {

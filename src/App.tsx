@@ -26,10 +26,8 @@ import { DEFAULT_ANNOUNCEMENT_CONFIG } from './data/defaultAnnouncement';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { AboutSection } from './components/AboutSection';
-import { HomePSKSAnalytics } from './components/HomePSKSAnalytics';
 import { BannerBadge } from './components/BannerBadge';
 import { PillarsGrid } from './components/PillarsGrid';
-import { Section11Admin } from './components/Section11Admin';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { Footer } from './components/Footer';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
@@ -38,7 +36,9 @@ import { BackToHomeButton } from './components/BackToHomeButton';
 
 import { SmartGateModal } from './components/SmartGateModal';
 
-// Code-split heavy subpages and modals to optimize initial PageSpeed bundle
+// Code-split heavy subpages, analytics, and admin panels to optimize PageSpeed and initial load
+const HomePSKSAnalytics = React.lazy(() => import('./components/HomePSKSAnalytics').then(m => ({ default: m.HomePSKSAnalytics })));
+const Section11Admin = React.lazy(() => import('./components/Section11Admin').then(m => ({ default: m.Section11Admin })));
 const JabarRegionalMap = React.lazy(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
 const AdminRegistrationManager = React.lazy(() => import('./components/AdminRegistrationManager').then(m => ({ default: m.AdminRegistrationManager })));
 const PillarDetailView = React.lazy(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
@@ -2524,12 +2524,14 @@ export default function App() {
           <>
             <HeroSection onScrollToGrid={handleScrollToGrid} appSettings={appSettings} />
             <AboutSection />
-            <HomePSKSAnalytics
-              allPillarData={allPillarData}
-              session={session}
-              onSelectPillar={handleSelectPillar}
-              onScrollToGrid={handleScrollToGrid}
-            />
+            <React.Suspense fallback={<div className="h-64 flex items-center justify-center"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+              <HomePSKSAnalytics
+                allPillarData={allPillarData}
+                session={session}
+                onSelectPillar={handleSelectPillar}
+                onScrollToGrid={handleScrollToGrid}
+              />
+            </React.Suspense>
             <BannerBadge session={session} />
             <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} />
 
@@ -2616,17 +2618,19 @@ export default function App() {
               <JabarRegionalMap allPillarData={allPillarData} />
             </React.Suspense>
 
-            <Section11Admin
-              session={session}
-              onOpenAccountConsole={handleOpenAccountConsole}
-              onOpenMonitoringConsole={handleOpenMonitoringConsole}
-              onOpenActivityLogConsole={handleOpenActivityLogConsole}
-              onOpenMaintenanceConsole={handleOpenMaintenanceConsole}
-              onOpenUserAccountConsole={handleOpenUserAccountConsole}
-              onOpenTaskManagerConsole={handleOpenTaskManagerConsole}
-              onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
-              onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
-            />
+            <React.Suspense fallback={null}>
+              <Section11Admin
+                session={session}
+                onOpenAccountConsole={handleOpenAccountConsole}
+                onOpenMonitoringConsole={handleOpenMonitoringConsole}
+                onOpenActivityLogConsole={handleOpenActivityLogConsole}
+                onOpenMaintenanceConsole={handleOpenMaintenanceConsole}
+                onOpenUserAccountConsole={handleOpenUserAccountConsole}
+                onOpenTaskManagerConsole={handleOpenTaskManagerConsole}
+                onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
+                onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
+              />
+            </React.Suspense>
           </>
         )}
 

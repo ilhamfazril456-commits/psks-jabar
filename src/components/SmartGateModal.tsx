@@ -913,6 +913,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           type="button"
                           tabIndex={-1}
                           onClick={() => setShowRegPassword(!showRegPassword)}
+                          aria-label={showRegPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-700/60 hover:text-emerald-900 cursor-pointer"
                           title={showRegPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                         >
@@ -953,6 +954,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           type="button"
                           tabIndex={-1}
                           onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                          aria-label={showRegConfirmPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-700/60 hover:text-emerald-900 cursor-pointer"
                           title={showRegConfirmPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                         >
@@ -1351,6 +1353,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           type="button"
                           disabled={lockoutRemaining > 0}
                           onClick={() => setShowLoginPassword(!showLoginPassword)}
+                          aria-label={showLoginPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-700/60 hover:text-emerald-900 cursor-pointer"
                           title={showLoginPassword ? 'Sembunyikan Kata Sandi' : 'Tampilkan Kata Sandi'}
                         >

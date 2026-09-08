@@ -277,6 +277,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive === 'SAH_TERDAFTAR' && session.role !== 'user' && onOpenInbox && (
             <button
               onClick={onOpenInbox}
+              aria-label="Kotak Masuk Admin"
               className="relative flex items-center gap-1.5 bg-[#022a1f] hover:bg-[#033c2d] text-amber-200 text-xs font-bold px-2.5 lg:px-3 py-1.5 rounded-lg border border-[#d4af37]/40 transition-all cursor-pointer shadow-sm shrink-0"
               title="Buka Inbox Pesan & Notifikasi Admin"
             >
