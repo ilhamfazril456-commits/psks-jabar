@@ -40,9 +40,14 @@ async function startServer() {
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(self), payment=()');
     res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    const isProd = process.env.NODE_ENV === 'production';
+    const scriptSrc = isProd
+      ? "script-src 'self' https://apis.google.com https://www.gstatic.com;"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com;";
+
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: *.tile.openstreetmap.org *.openstreetmap.org https://server.arcgisonline.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://api64.ipify.org https://server.arcgisonline.com; frame-src 'self' https://maps.google.com https://www.google.com; media-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://*.run.app https://*.google.com https://ai.studio https://*.vercel.app; object-src 'none'; base-uri 'self';"
+      `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: *.tile.openstreetmap.org *.openstreetmap.org https://server.arcgisonline.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://api64.ipify.org https://server.arcgisonline.com; frame-src 'self' https://maps.google.com https://www.google.com; media-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://*.run.app https://*.google.com https://ai.studio https://*.vercel.app; object-src 'none'; base-uri 'self';`
     );
     next();
   });

@@ -163,8 +163,8 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
 
         {/* Bottom copyright & policy links */}
         <div className="pt-6 flex flex-col items-center justify-center gap-3 text-xs text-slate-300 font-medium border-t border-white/5 mt-4 text-center">
-          <div className="text-center">
-            &copy; 2026 Dinas Sosial Provinsi Jawa Barat. Hak Cipta Dilindungi Oleh Undang-Undang.
+          <div className="text-center leading-relaxed max-w-2xl px-2">
+            &copy; 2026 Dinas Sosial Provinsi Jawa Barat ( Developed by Ilham Fazril ). Hak Cipta Dilindungi Oleh Undang-Undang.
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 text-emerald-200/80">
             <button
