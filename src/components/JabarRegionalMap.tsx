@@ -960,6 +960,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
             <select
               value={pillarFilter}
               onChange={(e) => setPillarFilter(e.target.value)}
+              aria-label="Pilih Filter Pilar PSKS"
               className="w-full bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none cursor-pointer font-medium"
             >
               <option value="ALL">🔍 Semua 10 Pilar PSKS</option>
@@ -982,6 +983,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                   onSelectRegion(e.target.value);
                 }
               }}
+              aria-label="Pilih Wilayah Kabupaten atau Kota Jawa Barat"
               className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-emerald-200 focus:outline-none cursor-pointer font-bold"
             >
               <option value="Semua Kabupaten/Kota">🌐 Semua Kabupaten / Kota (Jawa Barat)</option>
@@ -1041,6 +1043,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                 <button
                   type="button"
                   onClick={handleResetZoom}
+                  aria-label="Reset Tampilan Peta Jawa Barat"
                   className="w-7 h-7 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 text-slate-800 font-black rounded-lg shadow-xl flex items-center justify-center text-xs cursor-pointer transition-transform active:scale-95 border border-slate-300"
                   title="Reset Tampilan Jabar"
                 >
@@ -1058,6 +1061,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                       onSelectRegion(e.target.value);
                     }
                   }}
+                  aria-label="Pilih Cepat Kabupaten atau Kota"
                   className="bg-white text-slate-900 border-2 border-emerald-600 rounded-xl px-2 py-1 sm:px-3.5 sm:py-2 text-[10px] sm:text-xs font-black shadow-2xl focus:outline-none cursor-pointer w-full truncate"
                 >
                   <option value="Semua Kabupaten/Kota">Semua Kabupaten/Kota</option>

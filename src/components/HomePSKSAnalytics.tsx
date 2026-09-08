@@ -741,6 +741,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                     <select
                       value={selectedPillarFilter}
                       onChange={(e) => setSelectedPillarFilter(e.target.value)}
+                      aria-label="Filter berdasarkan pilar spesifik"
                       className="text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-3 pr-7 rounded-xl border border-slate-300 focus:outline-none focus:border-[#043e2e] cursor-pointer transition-colors"
                       title="Filter berdasarkan pilar spesifik"
                     >

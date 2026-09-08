@@ -1,0 +1,5 @@
+# robots.txt for PSKS JABAR - Dinas Sosial Provinsi Jawa Barat
+User-agent: *
+Allow: /
+
+Sitemap: https://psks-jabar.vercel.app/sitemap.xml

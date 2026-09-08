@@ -294,6 +294,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive !== 'SAH_TERDAFTAR' && (
             <button
               onClick={() => setShowLoginConfirmModal(true)}
+              aria-label="Masuk ke Akun"
               className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black px-3.5 lg:px-4 py-1.5 rounded-xl border border-emerald-400/60 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/30 transition-all duration-200 cursor-pointer active:scale-95 shrink-0 ring-1 ring-emerald-300/30"
               title="Masuk / Login ke Akun"
             >
@@ -306,6 +307,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive === 'SAH_TERDAFTAR' && (
             <button
               onClick={onLogout}
+              aria-label="Keluar dari Akun"
               className="flex items-center gap-1.5 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white text-xs font-black px-3 lg:px-3.5 py-1.5 rounded-xl border border-rose-400/60 shadow-lg shadow-rose-950/40 hover:shadow-rose-600/30 transition-all duration-200 cursor-pointer active:scale-95 shrink-0"
               title="Keluar dari akun Anda"
             >
@@ -320,6 +322,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive === 'SAH_TERDAFTAR' && session.role !== 'user' && onOpenInbox && (
             <button
               onClick={onOpenInbox}
+              aria-label="Kotak Masuk"
               className="relative p-1.5 sm:p-2 bg-[#022a1f] text-amber-200 rounded-lg border border-[#d4af37]/40 shrink-0"
               title="Kotak Masuk"
             >
@@ -336,6 +339,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive !== 'SAH_TERDAFTAR' && (
             <button
               onClick={() => setShowLoginConfirmModal(true)}
+              aria-label="Masuk ke Akun"
               className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[11px] font-black px-2.5 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm active:scale-95 transition-all shrink-0"
               title="Masuk / Login"
             >
@@ -348,6 +352,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {session.statusActive === 'SAH_TERDAFTAR' && (
             <button
               onClick={onLogout}
+              aria-label="Keluar dari Akun"
               className="flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-700 text-white text-[11px] sm:text-xs font-black px-2.5 py-1.5 rounded-lg border border-rose-400/50 shadow active:scale-95 transition-all shrink-0"
               title="Keluar Akun"
             >

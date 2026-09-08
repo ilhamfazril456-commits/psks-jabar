@@ -2,7 +2,7 @@ import { AppSettings } from '../types';
 import { OFFICIAL_KADINAS_PHOTO } from '../assets/officialKadinasPhoto';
 import { OFFICIAL_ECOOFFICE_VIDEO } from '../assets/officialEcoOfficeVideo';
 import { DEFAULT_ANNOUNCEMENT_CONFIG } from './defaultAnnouncement';
-import psksLogoAsset from '../assets/images/official_psks_jabar_logo_transparent.png';
+import psksLogoAsset from '../assets/images/official_psks_jabar_logo_transparent.webp';
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   logoUrl: psksLogoAsset,

@@ -29,33 +29,35 @@ import { AboutSection } from './components/AboutSection';
 import { HomePSKSAnalytics } from './components/HomePSKSAnalytics';
 import { BannerBadge } from './components/BannerBadge';
 import { PillarsGrid } from './components/PillarsGrid';
-import { JabarRegionalMap } from './components/JabarRegionalMap';
 import { Section11Admin } from './components/Section11Admin';
-import { AdminRegistrationManager } from './components/AdminRegistrationManager';
-import { SmartGateModal } from './components/SmartGateModal';
-import { PillarDetailView } from './components/PillarDetailView';
-import { ProfilePage } from './components/ProfilePage';
-import { ContactPage } from './components/ContactPage';
-import { AccountPage } from './components/AccountPage';
-import { AdminManagementPage } from './components/AdminManagementPage';
-import { AdminMonitoringPage } from './components/AdminMonitoringPage';
-import { SuperadminSettingsPage } from './components/SuperadminSettingsPage';
-import { InboxModal } from './components/InboxModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
-import { AIAssistantWidget } from './components/AIAssistantWidget';
 import { Footer } from './components/Footer';
-import { DeveloperControlPanel } from './components/DeveloperControlPanel';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
-import { MaintenanceManagementPage } from './components/MaintenanceManagementPage';
-import { ActivityLogPage } from './components/ActivityLogPage';
-import { UserManagementPage } from './components/UserManagementPage';
-import { TaskManagerPage } from './components/TaskManagerPage';
-import { AnnouncementManagementPage } from './components/AnnouncementManagementPage';
-import { AnnouncementDetailPage } from './components/AnnouncementDetailPage';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
-import { FloatingWaManagerPage } from './components/FloatingWaManagerPage';
-import { UserRegistrationHistoryPage } from './components/UserRegistrationHistoryPage';
 import { BackToHomeButton } from './components/BackToHomeButton';
+
+// Code-split heavy subpages and modals to optimize initial PageSpeed bundle
+const JabarRegionalMap = React.lazy(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
+const AdminRegistrationManager = React.lazy(() => import('./components/AdminRegistrationManager').then(m => ({ default: m.AdminRegistrationManager })));
+const SmartGateModal = React.lazy(() => import('./components/SmartGateModal').then(m => ({ default: m.SmartGateModal })));
+const PillarDetailView = React.lazy(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
+const ProfilePage = React.lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const ContactPage = React.lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
+const AccountPage = React.lazy(() => import('./components/AccountPage').then(m => ({ default: m.AccountPage })));
+const AdminManagementPage = React.lazy(() => import('./components/AdminManagementPage').then(m => ({ default: m.AdminManagementPage })));
+const AdminMonitoringPage = React.lazy(() => import('./components/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
+const SuperadminSettingsPage = React.lazy(() => import('./components/SuperadminSettingsPage').then(m => ({ default: m.SuperadminSettingsPage })));
+const InboxModal = React.lazy(() => import('./components/InboxModal').then(m => ({ default: m.InboxModal })));
+const AIAssistantWidget = React.lazy(() => import('./components/AIAssistantWidget').then(m => ({ default: m.AIAssistantWidget })));
+const DeveloperControlPanel = React.lazy(() => import('./components/DeveloperControlPanel').then(m => ({ default: m.DeveloperControlPanel })));
+const MaintenanceManagementPage = React.lazy(() => import('./components/MaintenanceManagementPage').then(m => ({ default: m.MaintenanceManagementPage })));
+const ActivityLogPage = React.lazy(() => import('./components/ActivityLogPage').then(m => ({ default: m.ActivityLogPage })));
+const UserManagementPage = React.lazy(() => import('./components/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const TaskManagerPage = React.lazy(() => import('./components/TaskManagerPage').then(m => ({ default: m.TaskManagerPage })));
+const AnnouncementManagementPage = React.lazy(() => import('./components/AnnouncementManagementPage').then(m => ({ default: m.AnnouncementManagementPage })));
+const AnnouncementDetailPage = React.lazy(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
+const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
+const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
 import { Inbox, ArrowRight, ClipboardList } from 'lucide-react';
 import {
   LoginSuccessModal,
@@ -2584,7 +2586,16 @@ export default function App() {
               </section>
             )}
 
-            <JabarRegionalMap allPillarData={allPillarData} />
+            <React.Suspense
+              fallback={
+                <div className="w-full max-w-7xl mx-auto my-8 h-80 rounded-3xl bg-slate-900/60 border border-slate-800 animate-pulse flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs font-semibold tracking-wider uppercase text-slate-300">Memuat Peta Sebaran Wilayah Jawa Barat...</span>
+                </div>
+              }
+            >
+              <JabarRegionalMap allPillarData={allPillarData} />
+            </React.Suspense>
 
             <Section11Admin
               session={session}
@@ -2600,7 +2611,15 @@ export default function App() {
           </>
         )}
 
-        {currentTab === 'terima_pendaftaran' && (
+        <React.Suspense
+          fallback={
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 py-24">
+              <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Memuat Halaman PSKS JABAR...</span>
+            </div>
+          }
+        >
+          {currentTab === 'terima_pendaftaran' && (
           <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <BackToHomeButton onClick={handleBackToHome} id="btn-back-top-terima-pendaftaran" />
@@ -2770,6 +2789,7 @@ export default function App() {
             }}
           />
         )}
+        </React.Suspense>
       </main>
 
       {/* Floating Announcement Modal - 15s Timer Realtime on Entry */}
@@ -2782,58 +2802,61 @@ export default function App() {
 
       {/* Floating Elements & Modals */}
       <FloatingWhatsApp appSettings={appSettings} session={session} />
-      <AIAssistantWidget
-        session={session}
-        currentTab={currentTab}
-        activePillar={activePillar}
-        allPillarData={allPillarData}
-        appSettings={appSettings}
-        onNavigateTab={(tab: string) => {
-          if (tab === 'beranda') {
-            handleBackToHome();
-          } else {
-            if (currentTab === 'beranda') {
-              dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
+      
+      <React.Suspense fallback={null}>
+        <AIAssistantWidget
+          session={session}
+          currentTab={currentTab}
+          activePillar={activePillar}
+          allPillarData={allPillarData}
+          appSettings={appSettings}
+          onNavigateTab={(tab: string) => {
+            if (tab === 'beranda') {
+              handleBackToHome();
+            } else {
+              if (currentTab === 'beranda') {
+                dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
+              }
+              setCurrentTab(tab);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-            setCurrentTab(tab);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        }}
-        onSelectPillar={(pillarId: PillarId) => {
-          handleSelectPillar(pillarId);
-        }}
-      />
+          }}
+          onSelectPillar={(pillarId: PillarId) => {
+            handleSelectPillar(pillarId);
+          }}
+        />
 
-      <InboxModal
-        isOpen={isInboxOpen}
-        onClose={() => setIsInboxOpen(false)}
-        session={session}
-        messages={adminMessages}
-        onSendMessage={handleSendMessage}
-        onMarkAsRead={handleMarkMessageAsRead}
-      />
+        <InboxModal
+          isOpen={isInboxOpen}
+          onClose={() => setIsInboxOpen(false)}
+          session={session}
+          messages={adminMessages}
+          onSendMessage={handleSendMessage}
+          onMarkAsRead={handleMarkMessageAsRead}
+        />
 
-      <DeveloperControlPanel
-        isOpen={isDeveloperPanelOpen && session.role === 'developer'}
-        onClose={() => setIsDeveloperPanelOpen(false)}
-        appSettings={appSettings}
-        onSaveSettings={handleSaveAppSettings}
-        allPillarData={allPillarData}
-        adminAccounts={adminAccounts}
-        adminMessages={adminMessages}
-        session={session}
-      />
+        <DeveloperControlPanel
+          isOpen={isDeveloperPanelOpen && session.role === 'developer'}
+          onClose={() => setIsDeveloperPanelOpen(false)}
+          appSettings={appSettings}
+          onSaveSettings={handleSaveAppSettings}
+          allPillarData={allPillarData}
+          adminAccounts={adminAccounts}
+          adminMessages={adminMessages}
+          session={session}
+        />
 
-      <SmartGateModal
-        isOpen={gateModalOpen}
-        onClose={() => setGateModalOpen(false)}
-        targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
-        onConfirmGuestRegion={handleConfirmGuestRegion}
-        onPerformLogin={handleLogin}
-        adminAccounts={adminAccounts}
-        onRegisterAccount={handleAddAdminAccount}
-        logoUrl={appSettings?.logoUrl}
-      />
+        <SmartGateModal
+          isOpen={gateModalOpen}
+          onClose={() => setGateModalOpen(false)}
+          targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
+          onConfirmGuestRegion={handleConfirmGuestRegion}
+          onPerformLogin={handleLogin}
+          adminAccounts={adminAccounts}
+          onRegisterAccount={handleAddAdminAccount}
+          logoUrl={appSettings?.logoUrl}
+        />
+      </React.Suspense>
 
       {/* Login Success Popup Toast with Animated Checkmark */}
       <LoginSuccessModal

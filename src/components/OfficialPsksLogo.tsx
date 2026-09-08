@@ -1,5 +1,5 @@
 import React from 'react';
-import officialLogoImg from '../assets/images/official_psks_jabar_logo_transparent.png';
+import officialLogoImg from '../assets/images/official_psks_jabar_logo_transparent.webp';
 
 interface OfficialPsksLogoProps {
   className?: string;
