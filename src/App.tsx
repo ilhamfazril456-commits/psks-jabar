@@ -36,10 +36,11 @@ import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 import { BackToHomeButton } from './components/BackToHomeButton';
 
+import { SmartGateModal } from './components/SmartGateModal';
+
 // Code-split heavy subpages and modals to optimize initial PageSpeed bundle
 const JabarRegionalMap = React.lazy(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
 const AdminRegistrationManager = React.lazy(() => import('./components/AdminRegistrationManager').then(m => ({ default: m.AdminRegistrationManager })));
-const SmartGateModal = React.lazy(() => import('./components/SmartGateModal').then(m => ({ default: m.SmartGateModal })));
 const PillarDetailView = React.lazy(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
 const ProfilePage = React.lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ContactPage = React.lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));

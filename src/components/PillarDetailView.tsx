@@ -6,8 +6,6 @@ import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
 import { sortRecordsByJabarRegion } from '../utils/regionSort';
 import { BackToHomeButton } from './BackToHomeButton';
-import { exportPillarToPDF } from '../utils/pdfExport';
-import { exportPillarToExcel } from '../utils/excelExport';
 
 interface AnimatedCounterProps {
   end: number;
@@ -949,8 +947,9 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
+      const { exportPillarToExcel } = await import('../utils/excelExport');
       exportPillarToExcel({
         pillarId,
         pillar,
@@ -972,8 +971,9 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
+      const { exportPillarToPDF } = await import('../utils/pdfExport');
       exportPillarToPDF({
         pillarId,
         pillar,

@@ -127,7 +127,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         />
       )}
 
-      {/* Background Layer: Real Video with instant WebP poster & deferred streaming */}
+      {/* Background Layer: Instant WebP Poster Image for immediate LCP paint */}
+      {!showCustomPhoto && (
+        <img
+          src="/eco_office_poster.webp"
+          alt="Eco Office Dinas Sosial Provinsi Jawa Barat"
+          className="absolute inset-0 w-full h-full object-cover z-0 brightness-[1.08] contrast-[1.10] saturate-[1.12]"
+          fetchPriority="high"
+          loading="eager"
+          decoding="sync"
+        />
+      )}
+
+      {/* Background Layer: Real Video with deferred streaming that fades in seamlessly */}
       {!showCustomPhoto && !videoError && (
         <video
           key={activeVideo}
@@ -151,7 +163,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
             }
           }}
           className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.08] contrast-[1.10] saturate-[1.12] ${
-            isVideoReady ? 'opacity-100' : 'opacity-90'
+            isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             willChange: 'transform, opacity',

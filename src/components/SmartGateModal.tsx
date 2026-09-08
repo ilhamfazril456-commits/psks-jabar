@@ -33,10 +33,11 @@ import {
 } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
 import { CaptchaWidget } from './CaptchaWidget';
-import { QRCardScannerModal } from './QRCardScannerModal';
-import { PrintableQRCardModal } from './PrintableQRCardModal';
 import { PrivacyTermsModal } from './PrivacyTermsModal';
 import { RegisterSuccessModal } from './WelcomePopups';
+
+const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
+const PrintableQRCardModal = React.lazy(() => import('./PrintableQRCardModal').then(m => ({ default: m.PrintableQRCardModal })));
 import {
   getStableDeviceId,
   detectClientIp,
@@ -1681,22 +1682,30 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       />
 
       {/* Modals Pemindai QR & Cetak Kartu Akses (Hardware Handler) */}
-      <QRCardScannerModal
-        isOpen={isQrScannerOpen}
-        defaultTab={scannerDefaultTab}
-        onClose={() => setIsQrScannerOpen(false)}
-        onSuccessLogin={(role, nama, wilayah) => {
-          onClose();
-          onPerformLogin(role, nama, wilayah);
-        }}
-        onOpenPrintCards={() => setIsPrintCardsOpen(true)}
-      />
+      {isQrScannerOpen && (
+        <React.Suspense fallback={null}>
+          <QRCardScannerModal
+            isOpen={isQrScannerOpen}
+            defaultTab={scannerDefaultTab}
+            onClose={() => setIsQrScannerOpen(false)}
+            onSuccessLogin={(role, nama, wilayah) => {
+              onClose();
+              onPerformLogin(role, nama, wilayah);
+            }}
+            onOpenPrintCards={() => setIsPrintCardsOpen(true)}
+          />
+        </React.Suspense>
+      )}
 
-      <PrintableQRCardModal
-        isOpen={isPrintCardsOpen}
-        onClose={() => setIsPrintCardsOpen(false)}
-        onOpenScanner={() => setIsQrScannerOpen(true)}
-      />
+      {isPrintCardsOpen && (
+        <React.Suspense fallback={null}>
+          <PrintableQRCardModal
+            isOpen={isPrintCardsOpen}
+            onClose={() => setIsPrintCardsOpen(false)}
+            onOpenScanner={() => setIsQrScannerOpen(true)}
+          />
+        </React.Suspense>
+      )}
 
       {/* Pop-up Centang Hijau 1 Detik Setelah Registrasi Berhasil */}
       <RegisterSuccessModal
