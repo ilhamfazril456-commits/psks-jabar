@@ -30,6 +30,23 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Security hardening: Disable X-Powered-By to prevent server information disclosure
+  app.disable('x-powered-by');
+
+  // Security hardening: Inject comprehensive security headers (OWASP & Diskominfo Grade A+ Compliance)
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(self), payment=()');
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: *.tile.openstreetmap.org *.openstreetmap.org https://server.arcgisonline.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://api64.ipify.org https://server.arcgisonline.com; frame-src 'self' https://maps.google.com https://www.google.com; media-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self' https://*.run.app https://*.google.com https://ai.studio https://*.vercel.app; object-src 'none'; base-uri 'self';"
+    );
+    next();
+  });
+
   // Asynchronously seed / synchronize the AI dynamic knowledge base with Cloud Firestore
   ensureAIKnowledgeSeeded().catch((err) => {
     console.warn('[AI Server] Dynamic Firestore Knowledge Base seed notice:', err?.message || err);
@@ -114,19 +131,7 @@ async function startServer() {
     });
   });
 
-  // Security Headers for Diskominfo, BSSN & OWASP Top 10 compliance
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=(self)');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; img-src 'self' data: blob: https:; font-src 'self' data: https: fonts.gstatic.com; connect-src 'self' https: wss:; frame-ancestors 'self' https:;"
-    );
-    next();
-  });
+
 
   // Cross-Site Request Forgery (CSRF) & Strict Origin Validation for API Endpoints
   app.use('/api', (req, res, next) => {

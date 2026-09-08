@@ -332,6 +332,17 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       // Record this registration on the device and in Firestore in real-time
       await recordAccountRegistration(uTrim, detectedIp, detectedDeviceId || getStableDeviceId());
 
+      // Update quota info immediately in local state
+      const updatedAccounts = Array.from(new Set([...deviceRegisteredAccounts, uTrim])).slice(0, 3);
+      setQuotaInfo({
+        registeredAccounts: updatedAccounts,
+        count: updatedAccounts.length,
+        isQuotaFull: updatedAccounts.length >= 3,
+        ip: detectedIp,
+        deviceId: detectedDeviceId || getStableDeviceId(),
+        isRealtimeSynced: true,
+      });
+
       setRegSuccess(true);
       setSuccessMessage('Pendaftaran Akun Berhasil! Silahkan Masukkan Akun nya!');
       

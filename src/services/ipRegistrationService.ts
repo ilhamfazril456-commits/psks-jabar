@@ -391,9 +391,13 @@ export async function reconcileDeviceAndIpQuota(
 
 /**
  * Real-time Quota Subscription
- * Listens to Firestore ip_registrations documents for THIS client's current IP and Device ONLY.
- * Cross-references with active user accounts in adminAccounts.
- * Other users / devices NEVER share quota unless they are literally on the exact same device or public IP.
+ * Listens to Firestore ip_registrations documents for THIS client's specific Device ONLY.
+ * Ensures strict device-level quota isolation:
+ * - Device with 2 accounts shows 2/3 (Tersedia 1)
+ * - Device with 1 account shows 1/3 (Tersedia 2)
+ * - Device with 0 accounts shows 0/3 (Tersedia 3)
+ * - Device with 3 accounts shows 3/3 (Maksimal)
+ * Completely prevents race condition wiping and cross-device quota leakage.
  */
 export function subscribeToClientQuota(
   _ip: string,
@@ -407,96 +411,65 @@ export function subscribeToClientQuota(
   const evaluate = () => {
     if (!isSubscribed) return;
 
-    // 1. Local device storage
+    // 1. Read deleted accounts list so deleted accounts don't consume quota
+    let deletedList: string[] = [];
+    try {
+      const rawDeleted = localStorage.getItem('psks_deleted_admin_ids');
+      if (rawDeleted) {
+        const parsed = JSON.parse(rawDeleted);
+        if (Array.isArray(parsed)) {
+          deletedList = parsed.map((s) => String(s || '').toLowerCase().trim());
+        }
+      }
+    } catch {}
+
+    // 2. Local device storage for this device
     let localList: string[] = [];
     try {
       const raw = localStorage.getItem('simpsks_device_registered_accounts');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          localList = parsed;
+          localList = parsed.map((s) => String(s || '').trim()).filter(Boolean);
         }
       }
     } catch {}
 
-    // Map: normalized lowercase username -> canonical display username
+    // Map: normalized lowercase username -> display username
     const normalizedMap = new Map<string, string>();
-    const cleanLocalList: string[] = [];
-    let localModified = false;
 
-    // Filter local storage: purge accounts that belong to a different device or were deleted in DB
-    if (adminAccounts && adminAccounts.length > 0) {
-      localList.forEach((rawUname) => {
-        const cleanLower = String(rawUname || '').toLowerCase().trim();
-        if (!cleanLower) return;
-
-        const match = adminAccounts.find(
-          (a) => a.role === 'user' && (a.username || '').toLowerCase().trim() === cleanLower
-        );
-
-        if (match) {
-          // If the account in DB explicitly belongs to a DIFFERENT deviceId, purge it from this device
-          if (match.deviceId && deviceId && match.deviceId !== deviceId) {
-            localModified = true;
-            return;
-          }
-          cleanLocalList.push(match.username.trim());
-          normalizedMap.set(cleanLower, match.username.trim());
-        } else {
-          // Account was deleted in DB
-          localModified = true;
-        }
-      });
-
-      if (localModified) {
-        try {
-          localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(cleanLocalList));
-        } catch {}
+    const tryAddAccount = (rawName: string) => {
+      const clean = String(rawName || '').trim();
+      const lower = clean.toLowerCase();
+      if (!lower) return;
+      if (deletedList.includes(lower)) return; // Exclude deleted accounts
+      if (!normalizedMap.has(lower)) {
+        normalizedMap.set(lower, clean);
       }
-    } else {
-      localList.forEach((rawUname) => {
-        const cleanLower = String(rawUname || '').toLowerCase().trim();
-        if (cleanLower) {
-          normalizedMap.set(cleanLower, String(rawUname).trim());
-        }
-      });
-    }
+    };
 
-    // 2. Firestore device doc accounts for THIS specific device (dev_${deviceId})
-    deviceRegisteredAccounts.forEach((rawUname) => {
-      const cleanLower = String(rawUname || '').toLowerCase().trim();
-      if (!cleanLower || normalizedMap.has(cleanLower)) return;
+    // Add local accounts from this device
+    localList.forEach(tryAddAccount);
 
-      if (adminAccounts && adminAccounts.length > 0) {
-        const match = adminAccounts.find(
-          (a) => a.role === 'user' && (a.username || '').toLowerCase().trim() === cleanLower
-        );
-        // STRICT: Only include if account still exists in DB and belongs to THIS device
-        if (match) {
-          if (match.deviceId && deviceId && match.deviceId !== deviceId) {
-            return; // Belongs to another device
-          }
-          normalizedMap.set(cleanLower, match.username.trim());
-        }
-      } else {
-        normalizedMap.set(cleanLower, String(rawUname).trim());
-      }
-    });
+    // Add Firestore device accounts for THIS specific device doc (dev_${deviceId})
+    deviceRegisteredAccounts.forEach(tryAddAccount);
 
-    // 3. Database accounts explicitly tagged with THIS deviceId
+    // Add DB accounts explicitly tagged with THIS deviceId
     if (deviceId && adminAccounts && adminAccounts.length > 0) {
       adminAccounts.forEach((acc) => {
-        if (acc.role === 'user' && acc.deviceId && acc.deviceId === deviceId && acc.username) {
-          const cleanLower = acc.username.toLowerCase().trim();
-          if (cleanLower && !normalizedMap.has(cleanLower)) {
-            normalizedMap.set(cleanLower, acc.username.trim());
-          }
+        if (acc.deviceId && acc.deviceId === deviceId && acc.username) {
+          tryAddAccount(acc.username);
         }
       });
     }
 
     const validAccounts = Array.from(normalizedMap.values()).slice(0, 3);
     const count = validAccounts.length;
+
+    // Keep localStorage in sync with active valid accounts
+    try {
+      localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(validAccounts));
+    } catch {}
 
     callback({
       registeredAccounts: validAccounts,
