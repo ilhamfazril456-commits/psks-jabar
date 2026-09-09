@@ -25,7 +25,9 @@ export default defineConfig(() => {
               !dep.includes('vendor-pdf') &&
               !dep.includes('vendor-xlsx') &&
               !dep.includes('vendor-recharts') &&
-              !dep.includes('vendor-leaflet')
+              !dep.includes('vendor-leaflet') &&
+              !dep.includes('vendor-firebase') &&
+              !dep.includes('vendor-motion')
           );
         },
       },

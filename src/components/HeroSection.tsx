@@ -110,6 +110,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           key={activeVideo}
           ref={videoRef}
           src={activeVideo}
+          poster="/eco_office_poster.webp"
           autoPlay
           loop
           muted
