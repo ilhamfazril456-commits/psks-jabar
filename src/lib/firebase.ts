@@ -43,7 +43,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   } else if (isOffline) {
     console.warn(`[Firestore Offline Mode] Backend temporarily unavailable for operation '${operationType}' on '${path || 'unknown'}'. App is operating in Offline Cache Mode.`);
   } else {
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    console.warn('Firestore Notice: ', JSON.stringify(errInfo));
   }
   return errInfo;
 }

@@ -60,15 +60,15 @@ const AnnouncementDetailPage = React.lazy(() => import('./components/Announcemen
 const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
 const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
 import { Inbox, ArrowRight, ClipboardList } from 'lucide-react';
-import {
-  LoginSuccessModal,
-  LogoutConfirmModal,
-  LogoutSuccessModal,
-  AccountDeletedRemoteModal,
-  AccountEditedRemoteModal,
-  AccountFrozenRemoteModal,
-  MultipleSessionWarningModal,
-} from './components/WelcomePopups';
+
+const LoginSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
+const LogoutConfirmModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
+const LogoutSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutSuccessModal })));
+const AccountDeletedRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountDeletedRemoteModal })));
+const AccountEditedRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountEditedRemoteModal })));
+const AccountFrozenRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountFrozenRemoteModal })));
+const MultipleSessionWarningModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.MultipleSessionWarningModal })));
+
 import { db, handleFirestoreError, isQuotaError, OperationType } from './lib/firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
 import { recordSystemActivity } from './lib/activityLogger';
@@ -246,6 +246,17 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Smart cache: public visitors use cached settings if fresh (< 30 minutes)
+    const isPublicGuest = session.statusActive !== 'SAH_TERDAFTAR';
+    if (isPublicGuest && gateModalOpen) {
+      return;
+    }
+    const lastFetch = Number(localStorage.getItem('dinsos_settings_cache_time') || '0');
+    const hasCachedSettings = !!localStorage.getItem('dinsos_logo_url');
+    if (isPublicGuest && hasCachedSettings && Date.now() - lastFetch < 30 * 60 * 1000) {
+      return;
+    }
+
     const settingsRef = doc(db, 'app_settings', 'global');
     const unsubscribe = onSnapshot(
       settingsRef,
@@ -284,9 +295,17 @@ export default function App() {
               setIsFloatingAnnouncementOpen(false);
             }
           }
+          try {
+            localStorage.setItem('dinsos_settings_cache_time', String(Date.now()));
+          } catch {}
           setAppSettings(data);
         } else {
           setAppSettings(DEFAULT_APP_SETTINGS);
+        }
+
+        // For public guests, disconnect listener after 1 initial fetch to avoid persistent stream
+        if (isPublicGuest && unsubscribe) {
+          unsubscribe();
         }
       },
       (error) => {
@@ -299,10 +318,12 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [session.statusActive]);
 
-  // Realtime Sync Video Background across all connected devices
+  // Realtime Sync Video Background across all connected devices (Gated to Admin sessions only)
   useEffect(() => {
+    // Only subscribe to video chunks if logged in as Admin or Developer
+    if (session.statusActive !== 'SAH_TERDAFTAR' && session.role !== 'developer') return;
     const unsubVideo = subscribeToRealtimeVideo((videoBase64) => {
       setAppSettings((prev) => ({
         ...prev,
@@ -311,7 +332,7 @@ export default function App() {
       }));
     });
     return () => unsubVideo();
-  }, []);
+  }, [session.statusActive, session.role]);
 
   // Instant Smart Card NFC 13.56 MHz Auto-Login Handler on URL Tap
   useEffect(() => {
@@ -503,6 +524,20 @@ export default function App() {
   });
 
   useEffect(() => {
+    // SMART CACHE & SUMMARY PATTERN FOR WEST JAVA PUBLIC TRAFFIC
+    // Public visitors use cached/aggregated data (valid 30 mins) to prevent burning reads.
+    const isPublicGuest = session.statusActive !== 'SAH_TERDAFTAR';
+    if (isPublicGuest && gateModalOpen) {
+      return;
+    }
+    const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+    const lastFetch = Number(localStorage.getItem('psks_cache_timestamp') || '0');
+    const hasCachedData = !!localStorage.getItem('psks_all_pillar_data');
+
+    if (isPublicGuest && hasCachedData && Date.now() - lastFetch < CACHE_TTL_MS) {
+      return;
+    }
+
     let unsubscribe: (() => void) | null = null;
     const timer = setTimeout(() => {
       unsubscribe = onSnapshot(
@@ -519,6 +554,7 @@ export default function App() {
             setAllPillarData(fallback);
             try {
               localStorage.setItem('psks_all_pillar_data', JSON.stringify(fallback));
+              localStorage.setItem('psks_cache_timestamp', String(Date.now()));
             } catch {}
           } else {
             const loaded: Record<string, PSKSDataRecord[]> = {};
@@ -557,7 +593,13 @@ export default function App() {
             setAllPillarData(loaded);
             try {
               localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
+              localStorage.setItem('psks_cache_timestamp', String(Date.now()));
             } catch {}
+          }
+
+          // For public guests, disconnect listener after 1 initial fetch so we don't hold open streams
+          if (isPublicGuest && unsubscribe) {
+            unsubscribe();
           }
         },
         (error) => {
@@ -590,7 +632,16 @@ export default function App() {
       clearTimeout(timer);
       if (unsubscribe) unsubscribe();
     };
-  }, [deletedIds]);
+  }, [deletedIds, session.statusActive]);
+
+  // 5. Smart Gate Modal & Login Modal State (Direct new visitors to initial gate automatically on arrival)
+  const [gateModalOpen, setGateModalOpen] = useState<boolean>(() => {
+    const entered = sessionStorage.getItem('has_entered_gate');
+    const statusActive = sessionStorage.getItem('statusLoginActive');
+    return !entered && statusActive !== 'SAH_TERDAFTAR';
+  });
+  const [pendingPillarId, setPendingPillarId] = useState<PillarId | null>(null);
+  const [openLoginModalOnAkun, setOpenLoginModalOnAkun] = useState(false);
 
   // 3. Admin Accounts List with Firestore Real-time Sync
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
@@ -610,7 +661,13 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
+    // Only subscribe to admin_accounts if the user is an active admin or actively attempting login
+    if (session.statusActive !== 'SAH_TERDAFTAR' && !gateModalOpen) {
+      return;
+    }
+
     let unsubscribe: (() => void) | null = null;
+    const delay = session.statusActive === 'SAH_TERDAFTAR' ? 100 : 2500;
     const timer = setTimeout(() => {
       unsubscribe = onSnapshot(
         collection(db, 'admin_accounts'),
@@ -707,12 +764,6 @@ export default function App() {
                 passwordHash: def.passwordHash || hashPassword(def.passwordPolos || ''),
               };
               loadedMap.set(def.id, enriched);
-
-              if (!quotaExceededRef.current && !isQuotaExceeded) {
-                try {
-                  setDoc(doc(db, 'admin_accounts', def.id), enriched, { merge: true });
-                } catch {}
-              }
             } else {
               const existingName = existing.namaAdmin || '';
               const hasPersonalName = /aep|dedi|rina|saepulloh|herdiana|setyowati/i.test(existingName);
@@ -743,13 +794,6 @@ export default function App() {
                   passwordHash: updatedHash,
                 };
                 loadedMap.set(existing.id, sanitized);
-
-                // Update database to persist new password and remove old password
-                if (isOldRegionalPass && !quotaExceededRef.current && !isQuotaExceeded) {
-                  try {
-                    setDoc(doc(db, 'admin_accounts', existing.id), sanitized, { merge: true });
-                  } catch {}
-                }
               }
             }
           }
@@ -794,13 +838,13 @@ export default function App() {
         setAdminAccounts(DEFAULT_ADMIN_ACCOUNTS);
       }
     );
-    }, 600);
+    }, delay);
 
     return () => {
       clearTimeout(timer);
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [session.statusActive, gateModalOpen]);
 
   // 3.2 Real-Time Presencing Heartbeat & Screen Visibility/Activity Tracking for Active Admin Sessions
   useEffect(() => {
@@ -1236,15 +1280,6 @@ export default function App() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [currentTab]);
-
-  // 5. Smart Gate Modal & Login Modal State (Direct new visitors to initial gate automatically on arrival)
-  const [gateModalOpen, setGateModalOpen] = useState<boolean>(() => {
-    const entered = sessionStorage.getItem('has_entered_gate');
-    const statusActive = sessionStorage.getItem('statusLoginActive');
-    return !entered && statusActive !== 'SAH_TERDAFTAR';
-  });
-  const [pendingPillarId, setPendingPillarId] = useState<PillarId | null>(null);
-  const [openLoginModalOnAkun, setOpenLoginModalOnAkun] = useState(false);
 
   // Popups State
   const [loginSuccessData, setLoginSuccessData] = useState<{
@@ -2476,13 +2511,17 @@ export default function App() {
           onRegisterAccount={handleAddAdminAccount}
           logoUrl={appSettings?.logoUrl}
         />
-        <LoginSuccessModal
-          isOpen={!!loginSuccessData}
-          onClose={handleCloseLoginSuccess}
-          role={loginSuccessData?.role || 'user'}
-          nama={loginSuccessData?.nama || ''}
-          wilayah={loginSuccessData?.wilayah || ''}
-        />
+        {!!loginSuccessData && (
+          <React.Suspense fallback={null}>
+            <LoginSuccessModal
+              isOpen={!!loginSuccessData}
+              onClose={handleCloseLoginSuccess}
+              role={loginSuccessData?.role || 'user'}
+              nama={loginSuccessData?.nama || ''}
+              wilayah={loginSuccessData?.wilayah || ''}
+            />
+          </React.Suspense>
+        )}
       </div>
     );
   }
@@ -2496,11 +2535,11 @@ export default function App() {
         onDeveloperLogin={(role, nama, wilayah) => handleLogin(role, nama, wilayah)}
       />
 
-      {/* Quota Exceeded Cache Mode Banner */}
-      {isQuotaExceeded && (
+      {/* Quota Exceeded Cache Mode Banner (Visible only to authorized operators/admins who need offline queue info) */}
+      {isQuotaExceeded && (session.statusActive === 'SAH_TERDAFTAR' || session.role === 'superadmin' || session.role === 'admin' || session.role === 'developer') && (
         <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-amber-950 border-b border-amber-500/40 text-amber-200 text-xs py-2 px-4 text-center font-medium shadow-md flex flex-wrap items-center justify-center gap-2 z-50">
           <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">
-            MODE CACHE LOKAL
+            MODE CACHE LOKAL (OPERATOR)
           </span>
           <span>
             Batas kuota harian Firestore tercapai. Perubahan data tersimpan aman di Cache Lokal & Antrean Offline.
@@ -2906,50 +2945,74 @@ export default function App() {
       />
 
       {/* Logout Confirmation Modal */}
-      <LogoutConfirmModal
-        isOpen={showLogoutConfirm}
-        onConfirm={handleConfirmLogout}
-        onCancel={() => setShowLogoutConfirm(false)}
-      />
+      {showLogoutConfirm && (
+        <React.Suspense fallback={null}>
+          <LogoutConfirmModal
+            isOpen={showLogoutConfirm}
+            onConfirm={handleConfirmLogout}
+            onCancel={() => setShowLogoutConfirm(false)}
+          />
+        </React.Suspense>
+      )}
 
       {/* Logout Success Notification Modal */}
-      <LogoutSuccessModal
-        isOpen={showLogoutSuccess}
-        onClose={handleCompleteLogout}
-      />
+      {showLogoutSuccess && (
+        <React.Suspense fallback={null}>
+          <LogoutSuccessModal
+            isOpen={showLogoutSuccess}
+            onClose={handleCompleteLogout}
+          />
+        </React.Suspense>
+      )}
 
       {/* Real-time Account Remote Action Modals (Deleted, Edited, Multiple Session Kick-out) */}
-      <AccountDeletedRemoteModal
-        isOpen={showAccountDeletedModal}
-        onClose={() => {
-          setShowAccountDeletedModal(false);
-          handleForceLogout('Akun telah dihapus oleh pengelola pusat');
-        }}
-      />
+      {showAccountDeletedModal && (
+        <React.Suspense fallback={null}>
+          <AccountDeletedRemoteModal
+            isOpen={showAccountDeletedModal}
+            onClose={() => {
+              setShowAccountDeletedModal(false);
+              handleForceLogout('Akun telah dihapus oleh pengelola pusat');
+            }}
+          />
+        </React.Suspense>
+      )}
 
-      <AccountEditedRemoteModal
-        isOpen={showAccountEditedModal}
-        onClose={() => {
-          setShowAccountEditedModal(false);
-          handleForceLogout('Akun telah diedit oleh pengelola pusat');
-        }}
-      />
+      {showAccountEditedModal && (
+        <React.Suspense fallback={null}>
+          <AccountEditedRemoteModal
+            isOpen={showAccountEditedModal}
+            onClose={() => {
+              setShowAccountEditedModal(false);
+              handleForceLogout('Akun telah diedit oleh pengelola pusat');
+            }}
+          />
+        </React.Suspense>
+      )}
 
-      <AccountFrozenRemoteModal
-        isOpen={showAccountFrozenModal}
-        onClose={() => {
-          setShowAccountFrozenModal(false);
-          handleForceLogout('Akses akun telah dibekukan sementara');
-        }}
-      />
+      {showAccountFrozenModal && (
+        <React.Suspense fallback={null}>
+          <AccountFrozenRemoteModal
+            isOpen={showAccountFrozenModal}
+            onClose={() => {
+              setShowAccountFrozenModal(false);
+              handleForceLogout('Akses akun telah dibekukan sementara');
+            }}
+          />
+        </React.Suspense>
+      )}
 
-      <MultipleSessionWarningModal
-        isOpen={showMultipleSessionModal}
-        onClose={() => {
-          setShowMultipleSessionModal(false);
-          handleForceLogout('Diloginkan di perangkat lain');
-        }}
-      />
+      {showMultipleSessionModal && (
+        <React.Suspense fallback={null}>
+          <MultipleSessionWarningModal
+            isOpen={showMultipleSessionModal}
+            onClose={() => {
+              setShowMultipleSessionModal(false);
+              handleForceLogout('Diloginkan di perangkat lain');
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {/* Footer */}
       <Footer logoUrl={appSettings?.logoUrl} />

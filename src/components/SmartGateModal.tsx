@@ -34,9 +34,9 @@ import {
 } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
 import { CaptchaWidget } from './CaptchaWidget';
-import { PrivacyTermsModal } from './PrivacyTermsModal';
-import { RegisterSuccessModal } from './WelcomePopups';
 
+const PrivacyTermsModal = React.lazy(() => import('./PrivacyTermsModal').then(m => ({ default: m.PrivacyTermsModal })));
+const RegisterSuccessModal = React.lazy(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
 const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
 const PrintableQRCardModal = React.lazy(() => import('./PrintableQRCardModal').then(m => ({ default: m.PrintableQRCardModal })));
 import {
@@ -150,8 +150,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   });
 
-  // Detect IP dynamically using resilient fallback
+  // Detect IP dynamically only when registration view is actively accessed
   useEffect(() => {
+    if (view !== 'register') return;
     let isMounted = true;
     detectClientIp().then((ip) => {
       if (isMounted && ip) {
@@ -161,11 +162,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [view]);
 
-
-  // Subscribe to real-time Firestore quota updates for this client's IP and device
+  // Subscribe to real-time Firestore quota updates for this client's IP and device only in register view
   useEffect(() => {
+    if (view !== 'register') return;
     const unsubscribe = subscribeToClientQuota(
       detectedIp,
       detectedDeviceId,
@@ -177,7 +178,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return () => {
       unsubscribe();
     };
-  }, [detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
+  }, [view, detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
 
   const deviceRegisteredAccounts = quotaInfo.registeredAccounts;
   const isDeviceQuotaFull = quotaInfo.count >= 3;
@@ -1693,11 +1694,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       </footer>
 
       {/* Modal Kebijakan Privasi & Syarat Ketentuan */}
-      <PrivacyTermsModal
-        isOpen={isPrivacyTermsOpen}
-        onClose={() => setIsPrivacyTermsOpen(false)}
-        initialTab={privacyTermsInitialTab}
-      />
+      {isPrivacyTermsOpen && (
+        <React.Suspense fallback={null}>
+          <PrivacyTermsModal
+            isOpen={isPrivacyTermsOpen}
+            onClose={() => setIsPrivacyTermsOpen(false)}
+            initialTab={privacyTermsInitialTab}
+          />
+        </React.Suspense>
+      )}
 
       {/* Modals Pemindai QR & Cetak Kartu Akses (Hardware Handler) */}
       {isQrScannerOpen && (
@@ -1726,12 +1731,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       )}
 
       {/* Pop-up Centang Hijau 1 Detik Setelah Registrasi Berhasil */}
-      <RegisterSuccessModal
-        isOpen={!!registeredUserData}
-        onClose={handleCloseRegisterSuccess}
-        username={registeredUserData?.username || ''}
-        wilayah={registeredUserData?.wilayah || ''}
-      />
+      {!!registeredUserData && (
+        <React.Suspense fallback={null}>
+          <RegisterSuccessModal
+            isOpen={!!registeredUserData}
+            onClose={handleCloseRegisterSuccess}
+            username={registeredUserData?.username || ''}
+            wilayah={registeredUserData?.wilayah || ''}
+          />
+        </React.Suspense>
+      )}
 
     </div>
   );

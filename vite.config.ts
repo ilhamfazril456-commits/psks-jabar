@@ -27,7 +27,8 @@ export default defineConfig(() => {
               !dep.includes('vendor-recharts') &&
               !dep.includes('vendor-leaflet') &&
               !dep.includes('vendor-firebase') &&
-              !dep.includes('vendor-motion')
+              !dep.includes('vendor-motion') &&
+              !dep.includes('vendor-crypto')
           );
         },
       },
@@ -38,11 +39,21 @@ export default defineConfig(() => {
               if (id.includes('firebase')) {
                 return 'vendor-firebase';
               }
-              if (id.includes('react') || id.includes('scheduler')) {
-                return 'vendor-react';
+              if (id.includes('motion') || id.includes('framer-motion')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('bcryptjs')) {
+                return 'vendor-crypto';
               }
               if (id.includes('lucide-react')) {
                 return 'vendor-icons';
+              }
+              if (
+                id.includes('node_modules/react/') ||
+                id.includes('node_modules/react-dom/') ||
+                id.includes('node_modules/scheduler/')
+              ) {
+                return 'vendor-react';
               }
             }
           },

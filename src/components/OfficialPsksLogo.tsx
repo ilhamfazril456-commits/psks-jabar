@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DEFAULT_OPTIMIZED_LOGO = '/official_logo_128.webp';
+const DEFAULT_OPTIMIZED_LOGO = '/official_logo_64.webp';
 
 interface OfficialPsksLogoProps {
   className?: string;
@@ -38,7 +38,7 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
     >
       <img
         src={activeLogo}
-        srcSet={!isCustomLogo ? '/official_logo_128.webp 1x, /official_logo_160.webp 2x' : undefined}
+        srcSet={!isCustomLogo ? '/official_logo_64.webp 1x, /official_logo_128.webp 2x' : undefined}
         alt="Logo Resmi PSKS Jawa Barat - Dinas Sosial Provinsi Jawa Barat"
         className="w-full h-full aspect-square rounded-full object-contain object-center scale-100 transition-transform duration-300 group-hover:scale-105"
         loading="eager"
