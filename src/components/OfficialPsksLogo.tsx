@@ -16,7 +16,12 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
   logoUrl,
 }) => {
   const isCustomLogo =
-    logoUrl && logoUrl.trim() !== '' && logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' && !logoUrl.endsWith('.svg');
+    logoUrl &&
+    logoUrl.trim() !== '' &&
+    logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' &&
+    !logoUrl.includes('official_psks_jabar_logo_transparent') &&
+    !logoUrl.includes('official_logo') &&
+    !logoUrl.endsWith('.svg');
   const activeLogo = isCustomLogo ? logoUrl : DEFAULT_OPTIMIZED_LOGO;
 
   return (

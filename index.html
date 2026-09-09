@@ -21,11 +21,24 @@
   </head>
   <body>
     <div id="root">
-      <div style="min-height:100vh;height:100dvh;background:linear-gradient(135deg, #021811 0%, #04281e 50%, #01140e 100%);color:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:16px;">
-        <div style="width:56px;height:56px;border:3px solid rgba(212,175,55,0.3);border-top-color:#d4af37;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
-        <div style="font-size:18px;font-weight:900;letter-spacing:2px;color:#f3e5ab;text-transform:uppercase;margin-bottom:4px;">PSKS JABAR</div>
-        <div style="font-size:12px;color:#6ee7b7;font-weight:500;">Pilar-Pilar Kesejahteraan Sosial Jawa Barat</div>
-        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      <div style="position:fixed;inset:0;width:100%;height:100%;background:linear-gradient(135deg, #0c5942 0%, #043e2e 50%, #011c15 100%);color:#ffffff;display:flex;flex-direction:column;justify-content:space-between;padding:24px 20px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;box-sizing:border-box;overflow:hidden;user-select:none;">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:8px;">
+          <div style="width:56px;height:56px;border-radius:50%;border:2px solid #d4af37;box-shadow:0 4px 6px -1px rgba(0,0,0,0.4);overflow:hidden;margin-bottom:8px;background:transparent;display:flex;align-items:center;justify-content:center;">
+            <img src="/official_logo_128.webp" alt="Logo Resmi PSKS Jawa Barat - Dinas Sosial Provinsi Jawa Barat" width="56" height="56" style="width:100%;height:100%;object-fit:contain;border-radius:50%;" fetchpriority="high" decoding="async" />
+          </div>
+          <span style="font-size:14px;font-weight:900;letter-spacing:2px;color:#d1fae5;text-transform:uppercase;">PSKS JABAR</span>
+          <span style="font-size:10px;color:#a7f3d0;font-weight:600;margin-top:2px;">Pilar Sosial Jawa Barat</span>
+        </div>
+        <div style="text-align:center;display:flex;flex-direction:column;align-items:center;margin:auto 0;padding:8px 0;">
+          <h2 style="font-size:26px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;line-height:1.2;margin:0 0 8px 0;">Welcome Back!</h2>
+          <p style="font-size:12.5px;color:#d1fae5;font-weight:500;line-height:1.5;max-width:300px;margin:0 auto 24px auto;">Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.</p>
+          <div style="display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #34d399;background:#02281d;color:#ffffff;font-weight:900;font-size:13px;padding:12px 32px;border-radius:9999px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.4);letter-spacing:1px;">
+            MULAI
+          </div>
+        </div>
+        <div style="padding-top:8px;border-top:1px solid rgba(4,120,87,0.4);text-align:center;padding-bottom:4px;">
+          <p style="font-size:9.5px;color:#a7f3d0;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0;">DINAS SOSIAL PROVINSI JAWA BARAT</p>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

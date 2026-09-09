@@ -5,7 +5,7 @@ import { DEFAULT_ANNOUNCEMENT_CONFIG } from './defaultAnnouncement';
 import psksLogoAsset from '../assets/images/official_psks_jabar_logo_transparent.webp';
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-  logoUrl: psksLogoAsset,
+  logoUrl: '/official_logo_128.webp',
   bgMode: 'video',
   bgVideoUrl: OFFICIAL_ECOOFFICE_VIDEO,
   kadinasPhotoUrl: OFFICIAL_KADINAS_PHOTO,
