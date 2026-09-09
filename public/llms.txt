@@ -1,18 +1,19 @@
-# PSKS JABAR - Dinas Sosial Provinsi Jawa Barat
+# PSKS JABAR
 
 > Sistem Pemantauan Terintegrasi dan Pengelolaan Data Pilar-Pilar Kesejahteraan Sosial Dinas Sosial Provinsi Jawa Barat.
 
-## Tentang Platform
-Platform resmi Dinas Sosial Provinsi Jawa Barat untuk integrasi pemantauan, verifikasi, dan digitalisasi data 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) di 27 Kabupaten dan Kota se-Jawa Barat.
+Sistem digital resmi Dinas Sosial Provinsi Jawa Barat untuk integrasi pemantauan, verifikasi, dan digitalisasi data 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) di 27 Kabupaten dan Kota se-Jawa Barat.
 
-## Pilar-Pilar Kesejahteraan Sosial
-1. Karang Taruna
-2. Pekerja Sosial Masyarakat (PSM)
-3. Tenaga Kesejahteraan Sosial Kecamatan (TKSK)
-4. Lembaga Kesejahteraan Sosial (LKS)
-5. Wahana Kesejahteraan Sosial Berbasis Masyarakat (WKSBM)
-6. Taruna Siaga Bencana (TAGANA)
-7. Pendamping Program Keluarga Harapan (PKH)
-8. Pelopor Perdamaian
-9. Dunia Usaha (CSR Kesejahteraan Sosial)
-10. Penyuluh Sosial
+## Documentation
+
+- [Portal PSKS Jabar](https://psks-jabar.vercel.app/): Portal sistem informasi manajemen dan pemantauan pilar sosial
+- [Dinas Sosial Jawa Barat](https://dinsos.jabarprov.go.id/): Situs resmi Dinas Sosial Pemerintah Provinsi Jawa Barat
+
+## Pilar Sosial Terdaftar
+
+- [Karang Taruna](https://psks-jabar.vercel.app/): Organisasi kepemudaan pembinaan sosial kemasyarakatan desa dan kelurahan
+- [Pekerja Sosial Masyarakat (PSM)](https://psks-jabar.vercel.app/): Warga relawan sosial bertugas di desa dan kelurahan
+- [Tenaga Kesejahteraan Sosial Kecamatan (TKSK)](https://psks-jabar.vercel.app/): Personil pendamping sosial tingkat kecamatan se-Jabar
+- [Lembaga Kesejahteraan Sosial (LKS)](https://psks-jabar.vercel.app/): Organisasi dan yayasan penyelenggara kesejahteraan sosial
+- [Taruna Siaga Bencana (TAGANA)](https://psks-jabar.vercel.app/): Relawan penanggulangan bencana alam dan perlindungan sosial
+

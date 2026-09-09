@@ -11,8 +11,24 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    esbuild: {
+      legalComments: 'none',
+    },
     build: {
+      target: 'es2020',
+      cssCodeSplit: true,
       chunkSizeWarningLimit: 800,
+      modulePreload: {
+        resolveDependencies(filename, deps) {
+          return deps.filter(
+            (dep) =>
+              !dep.includes('vendor-pdf') &&
+              !dep.includes('vendor-xlsx') &&
+              !dep.includes('vendor-recharts') &&
+              !dep.includes('vendor-leaflet')
+          );
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {

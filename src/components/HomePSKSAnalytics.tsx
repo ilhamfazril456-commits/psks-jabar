@@ -846,19 +846,13 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                     />
                     <Bar
                       dataKey="count"
+                      fill="#043e2e"
                       radius={[4, 4, 0, 0]}
                       isAnimationActive={false}
                     >
-                      {regionalData.map((entry) => {
-                        // Highlight user's region or top region
-                        let barColor = '#043e2e'; // default deep emerald
-                        if (entry.isUserRegion) {
-                          barColor = '#d4af37'; // gold highlight for logged-in admin's region
-                        } else if (sortBy === 'COUNT' && entry.count === statsOverview.topRegion.count && entry.count > 0) {
-                          barColor = '#059669'; // bright emerald for #1 region
-                        }
-                        return <Cell key={`bar-${entry.wilayah}`} fill={barColor} />;
-                      })}
+                      {regionalData.map((entry) => (
+                        <Cell key={`bar-${entry.wilayah}`} fill="#043e2e" />
+                      ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>

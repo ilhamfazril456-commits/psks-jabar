@@ -1,5 +1,6 @@
 import React from 'react';
-import officialLogoImg from '../assets/images/official_psks_jabar_logo_transparent.webp';
+
+const DEFAULT_OPTIMIZED_LOGO = '/official_logo_128.webp';
 
 interface OfficialPsksLogoProps {
   className?: string;
@@ -14,10 +15,9 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
   showRing = true,
   logoUrl,
 }) => {
-  const activeLogo =
-    logoUrl && logoUrl.trim() !== '' && logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' && !logoUrl.endsWith('.svg')
-      ? logoUrl
-      : officialLogoImg;
+  const isCustomLogo =
+    logoUrl && logoUrl.trim() !== '' && logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' && !logoUrl.endsWith('.svg');
+  const activeLogo = isCustomLogo ? logoUrl : DEFAULT_OPTIMIZED_LOGO;
 
   return (
     <div
@@ -33,14 +33,16 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
     >
       <img
         src={activeLogo}
+        srcSet={!isCustomLogo ? '/official_logo_128.webp 1x, /official_logo_160.webp 2x' : undefined}
         alt="Logo Resmi PSKS Jawa Barat - Dinas Sosial Provinsi Jawa Barat"
         className="w-full h-full aspect-square rounded-full object-contain object-center scale-100 transition-transform duration-300 group-hover:scale-105"
         loading="eager"
+        fetchPriority="high"
         decoding="async"
         onError={(e) => {
           const target = e.currentTarget;
-          if (target.src !== officialLogoImg) {
-            target.src = officialLogoImg;
+          if (target.src !== DEFAULT_OPTIMIZED_LOGO) {
+            target.src = DEFAULT_OPTIMIZED_LOGO;
           }
         }}
         style={{
