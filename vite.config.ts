@@ -28,7 +28,8 @@ export default defineConfig(() => {
               !dep.includes('vendor-leaflet') &&
               !dep.includes('vendor-firebase') &&
               !dep.includes('vendor-motion') &&
-              !dep.includes('vendor-crypto')
+              !dep.includes('vendor-crypto') &&
+              !dep.includes('vendor-qrcode')
           );
         },
       },
@@ -44,6 +45,9 @@ export default defineConfig(() => {
               }
               if (id.includes('bcryptjs')) {
                 return 'vendor-crypto';
+              }
+              if (id.includes('qrcode') || id.includes('jsqr') || id.includes('html5-qrcode')) {
+                return 'vendor-qrcode';
               }
               if (id.includes('lucide-react')) {
                 return 'vendor-icons';

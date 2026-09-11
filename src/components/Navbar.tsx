@@ -73,18 +73,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [currentTab]);
 
   const scrollToTarget = (elementId?: string, fallbackTop = 0, offset = 90) => {
-    setTimeout(() => {
-      if (elementId) {
-        const el = document.getElementById(elementId);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const targetY = window.pageYOffset + rect.top - offset;
-          window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-          return;
-        }
+    if (elementId) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const targetY = window.pageYOffset + rect.top - offset;
+        window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
+        return;
       }
-      window.scrollTo({ top: fallbackTop, behavior: 'smooth' });
-    }, 60);
+    }
+    window.scrollTo({ top: fallbackTop, behavior: 'instant' });
   };
 
   const handleNav = (tab: string) => {
@@ -104,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     ) {
       scrollToTarget(undefined, 100);
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 

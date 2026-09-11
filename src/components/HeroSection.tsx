@@ -145,7 +145,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           muted
           playsInline
           webkit-playsinline="true"
-          preload="auto"
+          preload="none"
           disablePictureInPicture
           onError={handleVideoError}
           onCanPlay={() => {
