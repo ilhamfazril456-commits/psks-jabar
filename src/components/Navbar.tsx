@@ -24,6 +24,7 @@ import {
 interface NavbarProps {
   currentTab: string;
   onNavigate: (tab: string) => void;
+  onPrefetch?: (tab: string) => void;
   session: UserSession;
   onLogout: () => void;
   onOpenGateModal?: () => void;
@@ -36,6 +37,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentTab,
   onNavigate,
+  onPrefetch,
   session,
   onLogout,
   onOpenGateModal,
@@ -168,6 +170,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => handleNav('profil')}
+              onMouseEnter={() => onPrefetch?.('profil')}
+              onTouchStart={() => onPrefetch?.('profil')}
               className={`relative flex items-center gap-1.5 lg:gap-2 text-sm lg:text-[15px] xl:text-base font-extrabold px-2.5 lg:px-3.5 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap cursor-pointer ${
                 currentTab === 'profil'
                   ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
@@ -183,6 +187,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => handleNav('contact')}
+              onMouseEnter={() => onPrefetch?.('contact')}
+              onTouchStart={() => onPrefetch?.('contact')}
               className={`relative flex items-center gap-1.5 lg:gap-2 text-sm lg:text-[15px] xl:text-base font-extrabold px-2.5 lg:px-3.5 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap cursor-pointer ${
                 currentTab === 'contact'
                   ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
@@ -198,6 +204,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => handleNav('akun')}
+              onMouseEnter={() => onPrefetch?.('akun')}
+              onTouchStart={() => onPrefetch?.('akun')}
               className={`relative flex items-center gap-1.5 lg:gap-2 text-sm lg:text-[15px] xl:text-base font-extrabold px-2.5 lg:px-3.5 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap cursor-pointer ${
                 currentTab === 'akun'
                   ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
@@ -214,6 +222,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
               <button
                 onClick={() => handleNav('terima_pendaftaran')}
+                onMouseEnter={() => onPrefetch?.('terima_pendaftaran')}
+                onTouchStart={() => onPrefetch?.('terima_pendaftaran')}
                 className={`relative flex items-center gap-1.5 lg:gap-2 text-sm lg:text-[15px] xl:text-base font-extrabold px-2.5 lg:px-3.5 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap cursor-pointer ${
                   currentTab === 'terima_pendaftaran'
                     ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
@@ -437,6 +447,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* 2. Profil */}
             <button
               onClick={() => handleNav('profil')}
+              onTouchStart={() => onPrefetch?.('profil')}
+              onMouseEnter={() => onPrefetch?.('profil')}
               className={`flex items-center justify-between w-full text-left p-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentTab === 'profil'
                   ? 'bg-gradient-to-r from-[#f7e096] via-[#d4af37] to-[#b8860b] text-[#03291e] font-black shadow-lg shadow-amber-500/20 border border-amber-200/90'
@@ -460,6 +472,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* 3. Kontak */}
             <button
               onClick={() => handleNav('contact')}
+              onTouchStart={() => onPrefetch?.('contact')}
+              onMouseEnter={() => onPrefetch?.('contact')}
               className={`flex items-center justify-between w-full text-left p-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentTab === 'contact'
                   ? 'bg-gradient-to-r from-[#f7e096] via-[#d4af37] to-[#b8860b] text-[#03291e] font-black shadow-lg shadow-amber-500/20 border border-amber-200/90'
@@ -483,6 +497,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* 4. Pusat Akun */}
             <button
               onClick={() => handleNav('akun')}
+              onTouchStart={() => onPrefetch?.('akun')}
+              onMouseEnter={() => onPrefetch?.('akun')}
               className={`flex items-center justify-between w-full text-left p-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 currentTab === 'akun'
                   ? 'bg-gradient-to-r from-[#f7e096] via-[#d4af37] to-[#b8860b] text-[#03291e] font-black shadow-lg shadow-amber-500/20 border border-amber-200/90'
@@ -507,6 +523,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
               <button
                 onClick={() => handleNav('terima_pendaftaran')}
+                onTouchStart={() => onPrefetch?.('terima_pendaftaran')}
+                onMouseEnter={() => onPrefetch?.('terima_pendaftaran')}
                 className={`flex items-center justify-between w-full text-left p-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   currentTab === 'terima_pendaftaran'
                     ? 'bg-gradient-to-r from-[#f7e096] via-[#d4af37] to-[#b8860b] text-[#03291e] font-black shadow-lg shadow-amber-500/20 border border-amber-200/90'

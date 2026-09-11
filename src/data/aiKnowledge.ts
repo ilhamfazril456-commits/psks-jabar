@@ -106,6 +106,7 @@ export function getComprehensiveSmartAnswer(
   
   // Developer recognition: strictly restricted to developer role account only
   const isDeveloperUser = userRole === 'developer';
+  const isSuperAdmin = userRole === 'superadmin' || isDeveloperUser;
   const { totalRecords, pillarCounts } = getSystemStateMetrics(allPillarData);
   const { coreQuery, isPureIntro, hasQuestion } = extractCoreQueryIntent(q);
   const targetQ = hasQuestion ? coreQuery : q;
@@ -311,7 +312,7 @@ export function getComprehensiveSmartAnswer(
 
 Boleh tolong sampaikan kembali apa yang sedang ingin Anda ketahui atau butuhkan?
 - Apakah mengenai **panduan pendaftaran relawan sosial** (seperti cara daftar TAGANA, PSM, Karang Taruna)?
-- Pengecekan data anggota atau status **KTA Digital**?
+- Pengecekan data anggota atau status pendaftaran resmi (**SAH_TERDAFTAR**)?
 - Atau informasi seputar program bantuan sosial dan layanan di Jawa Barat?
 
 Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang Anda butuhkan. 😊`;
@@ -642,7 +643,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       q.includes('daptar') ||
       q.includes('kumaha')
     ) {
-      return `${opening}**Format Atribut & Persyaratan Registrasi ${currentPillarInfo.title}**:\n\n1. **${currentPillarInfo.fields.nikLabel}**: Nomor identitas resmi terdaftar.\n2. **${currentPillarInfo.fields.certLabel}**: Dokumen legalitas/SK pengangkatan penugasan dinas.\n3. **${currentPillarInfo.fields.hpLabel}**: Kontak koordinasi aktif lapangan.\n4. **Status Keaktifan**: Wajib berstatus *Aktif / Siaga* untuk mendapatkan pengesahan *SAH_TERDAFTAR* pada KTA Digital QR Code.`;
+      return `${opening}**Format Atribut & Persyaratan Registrasi ${currentPillarInfo.title}**:\n\n1. **${currentPillarInfo.fields.nikLabel}**: Nomor identitas resmi terdaftar.\n2. **${currentPillarInfo.fields.certLabel}**: Dokumen legalitas/SK pengangkatan penugasan dinas.\n3. **${currentPillarInfo.fields.hpLabel}**: Kontak koordinasi aktif lapangan.\n4. **Status Keaktifan**: Wajib berstatus *Aktif / Siaga* untuk mendapatkan pengesahan *SAH_TERDAFTAR* pada pangkalan data terintegrasi Dinas Sosial Jawa Barat.`;
     }
   }
 
@@ -718,10 +719,9 @@ Bagi Anda yang ingin mengabdi dan bergabung menjadi bagian dari korps relawan **
 3. **Pendidikan & Pelatihan Dasar (DIKLATSAR TAGANA)**:
    - Calon yang lolos seleksi wajib mengikuti pelatihan terpadu (biasanya 3–5 hari) yang diselenggarakan oleh Dinas Sosial Provinsi Jawa Barat / Kemensos RI.
    - Materi pelatihan meliputi: *Manajemen Shelter & Pengungsian, Logistik & Pengoperasian Dapur Umum Lapangan (DUMLAP), First Aid (PPGD) & Water/Vertical Rescue dasar, Komunikasi Radio Kebencanaan, serta Layanan Dukungan Psikososial (LDP)*.
-4. **Pelantikan, Nomor Registrasi (NRT), & KTA Digital**:
+4. **Pelantikan, Nomor Registrasi (NRT), & Pengesahan Status Anggota**:
    - Setelah lulus Diklatsar, anggota baru resmi dilantik dan mendapatkan Surat Keputusan (SK) Pengesahan serta Nomor Registrasi Tagana (NRT).
-   - Data personil otomatis diinput ke dalam sistem **PSKS JABAR** dengan status **\`SAH_TERDAFTAR\`**.
-   - Kartu Tanda Anggota (KTA) Digital ber-QR Code resmi langsung aktif dan dapat dicetak mandiri di menu **Smart Access Card**.`;
+   - Data personil otomatis diinput ke dalam sistem **PSKS JABAR** dengan status resmi **\`SAH_TERDAFTAR\`**.`;
     }
 
     // 2. CARA DAFTAR PSM (Pekerja Sosial Masyarakat)
@@ -746,8 +746,8 @@ Pekerja Sosial Masyarakat (PSM) adalah pilar relawan sosial berbasis desa/kelura
    - Kepala Desa/Lurah mengusulkan nama calon PSM ke Dinas Sosial Kabupaten/Kota.
 3. **Bimbingan Teknis (Bimtek Dasar PSM)**:
    - Mengikuti pelatihan dan Bimtek Dasar Penyelenggaraan Kesejahteraan Sosial dari Dinsos.
-4. **Pengukuhan & Penerbitan KTA Digital**:
-   - Terbit Surat Keputusan (SK) Pengangkatan resmi, data diinput ke portal **PSKS Jabar**, dan KTA Digital QR Code resmi dapat langsung diterbitkan.`;
+4. **Pengukuhan & Pengesahan Status Terdaftar**:
+   - Terbit Surat Keputusan (SK) Pengangkatan resmi, dan data diverifikasi dalam portal **PSKS Jabar** dengan status resmi **SAH_TERDAFTAR**.`;
     }
 
     // 3. CARA DAFTAR KARANG TARUNA
@@ -766,7 +766,7 @@ Karang Taruna adalah organisasi kepemudaan resmi yang berada di tingkat RT, RW, 
 1. Hubungi pengurus **Karang Taruna Unit RT/RW** atau **Karang Taruna Desa/Kelurahan** di tempat tinggal Anda.
 2. Ikuti kegiatan kerja bakti, bakti sosial, maupun forum musyawarah pemuda (Temu Karya Karang Taruna).
 3. Bagi pengurus yang terpilih, susunan kepengurusan disahkan melalui **Surat Keputusan (SK) Kepala Desa/Lurah** dan dicatatkan di Seksi Kesra Kecamatan serta Dinas Sosial.
-4. Pengurus dan anggota aktif didata dalam portal **PSKS Jabar** untuk akses KTA Digital resmi.`;
+4. Pengurus dan anggota aktif didata dalam portal **PSKS Jabar** dengan status resmi **SAH_TERDAFTAR**.`;
     }
 
     // 4. CARA MENJADI PEKSOS / PKSP (Pekerja Sosial Profesional)
@@ -838,9 +838,9 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
 2. **Prosedur Pendaftaran**:
    - Datang langsung ke **Kantor Dinas Sosial Kabupaten/Kota tempat domisili Anda** (Bagian Pelayanan / Bidang Terkait) atau melalui Kantor Desa/Kelurahan setempat.
    - Bawa dokumen identitas (KTP, KK, Surat Keterangan Sehat, pasfoto).
-3. **Pelatihan & Penerbitan KTA**:
+3. **Pelatihan & Pengesahan Status Anggota**:
    - Ikuti bimbingan teknis / diklatsar resmi dari dinas.
-   - Setelah SK penugasan terbit, data Anda akan diverifikasi pada portal **PSKS JABAR** dan kartu KTA Digital QR Code resmi langsung aktif.`;
+   - Setelah SK penugasan terbit, data Anda akan diverifikasi pada portal **PSKS JABAR** dengan status resmi **"SAH_TERDAFTAR"** dalam pangkalan data terintegrasi Dinas Sosial Jawa Barat.`;
   }
 
   // 4. PILAR SPECIFIC QUERIES
@@ -1004,7 +1004,7 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
    - Sektor swasta, BUMN, dan BUMD yang menyalurkan dana tanggung jawab sosial lingkungan untuk program penanggulangan kemiskinan dan pemberdayaan 10 Pilar PSKS Jawa Barat.`;
   }
 
-  // 5. KARTU ANGGOTA DIGITAL & QR CODE (SMART ACCESS CARD)
+  // 5. KARTU ANGGOTA DIGITAL & QR CODE (SMART ACCESS CARD - KHUSUS SUPERADMIN)
   if (
     q.includes('kartu') ||
     q.includes('cetak') ||
@@ -1015,15 +1015,22 @@ Dinas Sosial Provinsi Jawa Barat menaungi 10 Pilar Potensi dan Sumber Kesejahter
     q.includes('kta') ||
     q.includes('smart access')
   ) {
-    return `${opening}**Panduan Modul Smart Access Card & KTA Digital PSKS Jabar**:
+    if (!isSuperAdmin && !isDeveloperUser) {
+      return `${opening}Mohon maaf, fasilitas dan pengelolaan Kartu Tanda Anggota (KTA) maupun kode QR merupakan instrumen kedinasan internal yang dikhususkan hanya untuk Superadmin (Dinas Sosial Provinsi Jawa Barat), dan bukan fasilitas untuk umum/publik.
+
+Bagi personil relawan maupun pengguna umum, bukti keabsahan keanggotaan pilar sosial ditunjukkan secara sah melalui status terdaftar resmi (**SAH_TERDAFTAR**) dalam sistem pangkalan data terintegrasi PSKS Jawa Barat serta Surat Keputusan (SK) Pengesahan kedinasan dari instansi terkait.
+
+[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+    return `${opening}**Panduan Modul Smart Access Card & Penerbitan Kartu Anggota (Khusus Superadmin)**:
 
 1. **Penerbitan & Keabsahan**:
-   - Kartu Tanda Anggota (KTA) Digital diterbitkan secara resmi untuk seluruh personil 10 pilar sosial yang telah tervalidasi dengan status **SAH_TERDAFTAR**.
+   - Kartu Anggota diterbitkan secara resmi untuk seluruh personil 10 pilar sosial yang telah tervalidasi dengan status **SAH_TERDAFTAR**.
    - Setiap kartu memuat foto, nama lengkap, NIK/NIP, pilar sosial, wilayah tugas (Kabupaten/Kota), dan tanda tangan/stempel kedinasan.
 
 2. **Opsi Pencetakan Kartu**:
-   - **Cetak Satuan**: Mengunduh atau mencetak KTA digital perorangan beresolusi tinggi dengan bingkai resmi Dinas Sosial Provinsi Jawa Barat.
-   - **Cetak Massal Format A4 (8 Kartu per Lembar)**: Otomatis menata 8 kartu berukuran standar KTP/ID card per lembar kertas A4 siap potong dan laminasi, dilengkapi garis pembatas potong presisi.
+   - **Cetak Satuan**: Mengunduh atau mencetak kartu perorangan beresolusi tinggi dengan atribut resmi Dinas Sosial Provinsi Jawa Barat.
+   - **Cetak Massal Format A4 (8 Kartu per Lembar)**: Otomatis menata 8 kartu berukuran standar per lembar kertas A4 siap potong dan laminasi, dilengkapi garis pembatas potong presisi.
 
 3. **Verifikasi QR Code Kriptografis (Smart QR Scanner)**:
    - Setiap kartu dilengkapi kode QR dengan hash kriptografi SHA-256 yang aman dari pemalsuan.
@@ -1205,6 +1212,9 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
 
   // 11.3 Halaman Pengaturan (Settings & Developer Control Panel)
   if (q.includes('pengaturan') || q.includes('settings') || q.includes('panel kontrol') || q.includes('background') || q.includes('video background') || q.includes('foto kadinas') || q.includes('teks sambutan') || q.includes('kelola pengumuman')) {
+    if (!isSuperAdmin && !isDeveloperUser) {
+      return `${opening}Mohon maaf, menu Pengaturan Sistem merupakan area kerja administratif internal. Untuk keperluan akun Anda atau koordinasi kedinasan, silakan hubungi administrator dinas atau Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Bantuan Resmi]]`;
+    }
     return `${opening}**Halaman Pengaturan (Developer & Super Admin Control Panel)**:
 - **Pengaturan Background**: Pilihan mode Latar Belakang Foto atau Video MP4 berulang serta kustomisasi URL media dinamis.
 - **Pengaturan Foto & Nama Kadinas**: Unggah foto resmi Ibu Noneng Komara Nengsih, S.E., M.A.P. dan sub-judul profil.
@@ -1212,9 +1222,9 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
 - **Pengaturan Medsos & WA**: Kelola nomor WhatsApp layanan cepat dan tautan 6 kanal medsos resmi.
 - **Pengaturan Saklar Maintenance Cerdas**: Saklar 3 level (Global, Per-Role, Granular 27 Wilayah) dan teks banner peringatan pemeliharaan.
 - **Pengaturan Keamanan & Enkripsi**: Kriptografi Bcrypt Salt 10-rounds, auto lockout 30 detik (3x salah PIN), dan audit log trail.
-- **Pengaturan Smart Card**: Konfigurasi KTA QR Code digital, cetak satuan, dan cetak massal format A4 (8 kartu siap potong).
+- **Pengaturan Smart Card**: Konfigurasi kartu akses digital internal, cetak satuan, dan cetak massal format A4 (8 kartu siap potong).
 - **Manajemen Akun Admin**: Hak khusus pemilik akun pusat untuk mengelola 27 akun admin wilayah, otorisasi, dan reset credential.
-- **Task Manager & Verifikasi**: Tinjau berkas pendaftar baru, tombol *Terima Pendaftaran* (\`SAH_TERDAFTAR\` + KTA QR) dan *Tolak Pendaftaran*.
+- **Task Manager & Verifikasi**: Tinjau berkas pendaftar baru, tombol *Terima Pendaftaran* (\`SAH_TERDAFTAR\`) dan *Tolak Pendaftaran*.
 - **Pengaturan Pengumuman**: Publikasi maklumat siaga, modal popup di Beranda, running text, dan arsip publikasi dinas.
 - **Floating WA Manager**: Konfigurasi nomor WA dan template pesan tombol melayang.`;
   }
@@ -1222,6 +1232,9 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   // 12. FITUR SISTEM SPESIFIK LAINNYA
   // 12.1 Manajemen Akun Admin
   if (q.includes('manajemen akun') || q.includes('kelola akun') || q.includes('reset pin') || q.includes('bekukan') || q.includes('freeze')) {
+    if (!isSuperAdmin && !isDeveloperUser) {
+      return `${opening}Mohon maaf, fitur manajemen dan pengelolaan akun admin merupakan kewenangan khusus Superadmin dan Developer sistem. Pengguna umum/tamu tidak memiliki otorisasi untuk mengakses konfigurasi akun administratif.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
     return `${opening}**Fitur Manajemen Akun Admin (Super Admin & Developer)**:
 - **Kontrol Hak Akses**: Pengelolaan penuh akun admin wilayah (27 Kab/Kota) dan Superadmin.
 - **Status Akun**: Tombol cepat untuk mengaktifkan atau membekukan akun (\`ACTIVE\` / \`FROZEN\`).
@@ -1232,7 +1245,7 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   // 12.2 Akun User & Visualisasi Analitik
   if (q.includes('akun user') || q.includes('grafik akun') || q.includes('analitik akun') || q.includes('status registrasi')) {
     return `${opening}**Fitur Akun User & Visualisasi Analitik**:
-- **Portal Profil Mandiri**: Pendaftar 10 pilar dapat memantau proses verifikasi berkas (\`MENUNGGU\`, \`SAH_TERDAFTAR\`, \`DITOLAK\`), memperbarui data profil, dan mengunduh KTA Digital QR.
+- **Portal Profil Mandiri**: Pendaftar 10 pilar dapat memantau proses verifikasi berkas (\`MENUNGGU\`, \`SAH_TERDAFTAR\`, \`DITOLAK\`), dan memperbarui data profil.
 - **Grafik Analitik Real-Time**: Dilengkapi grafik analitik visual yang menyajikan tren pendaftaran akun user, perbandingan status verifikasi, dan sebaran pendaftar di 27 Kab/Kota se-Jawa Barat.`;
   }
 
@@ -1256,7 +1269,7 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   if (q.includes('verifikasi') || q.includes('terima pendaftaran') || q.includes('tolak pendaftaran') || q.includes('validasi pendaftaran')) {
     return `${opening}**Fitur Verifikasi & Penerimaan Pendaftaran**:
 - **Pemeriksaan Berkas**: Admin Wilayah dan Superadmin meninjau kelengkapan berkas pemohon baru, kesesuaian NIK, nomor SK, dan foto bukti legalitas.
-- **Tombol Terima Pendaftaran**: Mengesahkan status calon anggota menjadi \`SAH_TERDAFTAR\` seketika dan mengaktifkan KTA Digital QR Code.
+- **Tombol Terima Pendaftaran**: Mengesahkan status calon anggota menjadi \`SAH_TERDAFTAR\` seketika dalam pangkalan data terintegrasi Jawa Barat.
 - **Tombol Tolak Pendaftaran**: Menolak permohonan yang tidak memenuhi persyaratan disertai catatan perbaikan resmi untuk pendaftar.`;
   }
 
@@ -1289,22 +1302,28 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
 1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat riwayat pengabdian dan nomor registrasi keanggotaan.
 2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.
 3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui domisili penugasan anggota ke lokasi baru tanpa menghapus NIK atau riwayat pelatihan yang telah diraih.
-4. **KTA Otomatis Terbarui**: KTA Digital QR Code langsung otomatis menyesuaikan wilayah tugas baru berstatus \`SAH_TERDAFTAR\`.
+4. **Pembaruan Wilayah Tugas**: Data penugasan personil otomatis disesuaikan dengan wilayah tugas baru berstatus \`SAH_TERDAFTAR\` di pangkalan data Dinas Sosial Jawa Barat.
 
-[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:akun:Cek Status Akun & KTA]]`;
+[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]]`;
   }
 
   // 12.10 SOP KASUS LAPANGAN: KTA RUSAK ATAU HILANG DI LAPANGAN (RE-PRINT)
   if (q.includes('kta rusak') || q.includes('kta hilang') || q.includes('hilang kta') || q.includes('kartu hilang') || q.includes('kartu rusak')) {
-    return `${opening}**SOP Penanganan KTA Digital Rusak atau Hilang di Lapangan**:
-1. **Tidak Perlu Registrasi Ulang**: Data keanggotaan Anda tetap aman dan terenkripsi di cloud database sistem PSKS Jabar.
-2. **Verifikasi NIK KTP**: Laporkan kepada Koordinator Pilar Kecamatan atau Admin Wilayah Dinsos dengan menunjukkan NIK KTP Anda.
-3. **Cetak Ulang Mandiri / Admin (Re-Print)**:
-   - Jika Anda memiliki akun terdaftar: Masuk ke menu **Akun & Verifikasi**, pilih **Cetak Kartu Akses** untuk mengunduh KTA Digital QR Code baru seketika.
-   - Melalui Admin: Admin Wilayah atau Superadmin dapat langsung mencetak ulang kartu Anda melalui modul **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).
+    if (!isSuperAdmin && !isDeveloperUser) {
+      return `${opening}**SOP Penanganan Status Keabsahan Personil Jika Dokumen Lapangan Hilang atau Rusak**:
+1. **Data Tetap Aman**: Status keanggotaan Anda tetap tersimpan dan terlindungi secara aman di pangkalan data resmi Dinas Sosial Jawa Barat dengan status **SAH_TERDAFTAR**.
+2. **Koordinasi Wilayah**: Silakan melapor kepada Koordinator Pilar Kecamatan atau Dinas Sosial Kabupaten/Kota setempat dengan menunjukkan NIK KTP Anda untuk verifikasi status pengesahan kedinasan.
+3. **Cek Riwayat Mandiri**: Anda dapat mengecek status keabsahan akun dan pendaftaran melalui tab Riwayat Pengajuan Pendaftaran di portal.
+
+[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Bantuan Resmi]]`;
+    }
+    return `${opening}**SOP Penanganan Kartu Anggota Rusak atau Hilang di Lapangan (Superadmin)**:
+1. **Tidak Perlu Registrasi Ulang**: Data keanggotaan tetap aman dan terenkripsi di cloud database sistem PSKS Jabar.
+2. **Verifikasi NIK KTP**: Periksa NIK personil di pangkalan data PSKS Jabar.
+3. **Cetak Ulang Kartu (Re-Print)**: Superadmin dapat langsung mencetak ulang kartu personil melalui modul **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).
 4. Kartu yang baru dicetak langsung aktif dengan tanda validasi hash QR Code resmi.
 
-[[action:tab:akun:Buka Halaman Akun & KTA]] [[action:tab:contact:Hubungi Bantuan Resmi]]`;
+[[action:tab:admin_manage:Kelola Data Anggota]] [[action:tab:contact:Hubungi Bantuan Resmi]]`;
   }
 
   // 12.11 SOP KASUS LAPANGAN: TALI ASIH & BPJS KETENAGAKERJAAN RELAWAN
@@ -1359,7 +1378,7 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
 
   // DEFAULT COMPREHENSIVE FALLBACK FOR QUERIES OUTSIDE KNOWLEDGE BASE
   if (userRole === 'admin') {
-    return `Halo **Admin Wilayah**! Saya siap membantu Anda dalam operasional data pilar sosial. Anda dapat menanyakan seputar:\n- **Pengelolaan Data Pilar**: Cara input anggota baru, peremajaan data, dan ekspor Excel/PDF.\n- **Verifikasi & KTA**: Cara cetak KTA digital satuan/massal A4 dan pemindaian QR Code.\n- **Wawasan 10 Pilar PSKS**: Regulasi, dasar hukum, dan tugas fungsional tiap pilar sosial.\n\nSilakan tanyakan apa yang ingin Anda ketahui!`;
+    return `Halo **Admin Wilayah**! Saya siap membantu Anda dalam operasional data pilar sosial. Anda dapat menanyakan seputar:\n- **Pengelolaan Data Pilar**: Cara input anggota baru, peremajaan data, dan ekspor Excel/PDF.\n- **Verifikasi Berkas**: Validasi pengajuan pendaftaran mandiri dan pengesahan status anggota terdaftar di wilayah Anda.\n- **Wawasan 10 Pilar PSKS**: Regulasi, dasar hukum, dan tugas fungsional tiap pilar sosial.\n\nSilakan tanyakan apa yang ingin Anda ketahui!`;
   }
 
   if (userRole === 'superadmin') {

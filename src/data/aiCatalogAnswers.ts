@@ -164,13 +164,13 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 1. Buka tab **Kelola Data Pilar** pada Dashboard Admin Daerah Anda.
 2. Klik tombol **+ Tambah Personil / Lembaga**.
 3. Isi data wajib: Nama Lengkap, NIK/NIP, Pilar Sosial, Kecamatan/Desa, No. SK Penugasan, dan upload pasfoto/dokumen SK.
-4. Klik **Simpan Data**. Data seketika tersinkronisasi ke server provinsi dan kartu digital QR langsung siap diterbitkan.`,
+4. Klik **Simpan Data**. Data seketika tersinkronisasi ke server provinsi dan status personil langsung resmi terdaftar.`,
 
   'a-2': `**Cara Memutasi Personil Antar Kecamatan di Daerah Anda**:
 1. Pada tabel data pilar, cari nama personil yang akan dimutasi.
 2. Klik tombol **Edit / Ubah**.
 3. Ubah dropdown Kecamatan dan Desa tujuan penugasan yang baru.
-4. Perbarui Nomor SK Mutasi, lalu klik **Simpan Perubahan**. Sistem secara otomatis memperbarui metadata wilayah pada QR Code personil tersebut.`,
+4. Perbarui Nomor SK Mutasi, lalu klik **Simpan Perubahan**. Sistem secara otomatis memperbarui data penugasan personil tersebut di sistem.`,
 
   'a-3': `**Pencegahan Duplikasi NIK/NIP oleh Sistem**:
 - Saat Admin mengetikkan NIK (16 digit), sistem secara otomatis melakukan query validasi ke koleksi database.
@@ -180,7 +180,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 1. Buka data personil yang bersangkutan.
 2. Ubah status keaktifan dari **Aktif** menjadi **Purna Tugas / Non-Aktif / Wafat**.
 3. Isi catatan alasan penonaktifan dan unggah surat keterangan bila ada.
-4. Klik Simpan. QR Code personil tersebut otomatis berstatus *TIDAK AKTIF* jika dipindai.`,
+4. Klik Simpan. Status personil tersebut otomatis berstatus *TIDAK AKTIF* di sistem.`,
 
   'a-5': `**Bukti Legalitas Wajib Registrasi LKS**:
 1. Akta Notaris Pendirian & SK Kemenkumham RI.
@@ -208,7 +208,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 - Saat tombol **Terima Pendaftaran** diklik:
   1. Status pendaftar berubah menjadi **Disetujui (SAH_TERDAFTAR)**.
   2. Data otomatis masuk ke database pilar resmi wilayah Anda.
-  3. KTA Digital & QR Code anggota langsung diterbitkan dan aktif.
+  3. Status personil langsung disahkan menjadi SAH_TERDAFTAR dalam pangkalan data terintegrasi.
   4. Pengguna menerima konfirmasi status bahwa pendaftarannya telah disetujui.`,
 
   'a-verif-3': `**Cara Melihat Riwayat Pendaftaran Calon Relawan**:
@@ -423,19 +423,16 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat rekam jejak pengabdian dan nomor registrasi anggota.
 2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.
 3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui data penugasan anggota ke domisili baru tanpa menghapus NIK atau riwayat sertifikasi yang telah diraih.
-4. **KTA Otomatis Terbarui**: KTA Digital QR Code langsung otomatis menyesuaikan wilayah tugas baru dengan status \`SAH_TERDAFTAR\`.
+4. **Pembaruan Wilayah Tugas**: Data penugasan personil otomatis disesuaikan dengan wilayah tugas baru berstatus \`SAH_TERDAFTAR\` di pangkalan data Dinas Sosial Jawa Barat.
 
-[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:akun:Cek Status Akun & KTA]]`,
+[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]]`,
 
-  'u-sop-2': `**SOP Penanganan KTA Digital Rusak atau Hilang di Lapangan**:
-1. **Tidak Perlu Daftar Ulang**: Data keanggotaan Anda tetap tersimpan aman dan terenkripsi di cloud database sistem PSKS Jabar.
-2. **Verifikasi NIK KTP**: Laporkan kepada Koordinator Pilar Kecamatan atau Admin Wilayah Dinsos dengan menunjukkan NIK KTP Anda.
-3. **Cetak Ulang Mandiri / Admin (Re-Print)**:
-   - Jika Anda memiliki akun: Masuk ke menu **Akun & Verifikasi**, pilih **Cetak Kartu Akses** untuk mengunduh KTA Digital QR Code baru seketika.
-   - Melalui Admin: Admin Wilayah atau Superadmin dapat langsung mencetak ulang kartu Anda melalui menu **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).
-4. Kartu yang baru dicetak langsung aktif dengan kode hash validasi resmi.
+  'u-sop-2': `**SOP Penanganan Status Keabsahan Personil Jika Dokumen Lapangan Hilang atau Rusak**:
+1. **Data Tetap Aman**: Status keanggotaan Anda tetap tersimpan aman dan terenkripsi di cloud database sistem PSKS Jabar dengan status **SAH_TERDAFTAR**.
+2. **Koordinasi Wilayah**: Silakan melapor kepada Koordinator Pilar Kecamatan atau Dinas Sosial Kabupaten/Kota setempat dengan menunjukkan NIK KTP Anda untuk verifikasi status pengesahan kedinasan.
+3. **Cek Riwayat Mandiri**: Anda dapat mengecek status keabsahan akun dan pendaftaran melalui tab Riwayat Pengajuan Pendaftaran di portal.
 
-[[action:tab:akun:Buka Halaman Akun & KTA]] [[action:tab:contact:Hubungi Bantuan Resmi]]`,
+[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Bantuan Resmi]]`,
 
   'u-sop-3': `**Informasi Jaminan Sosial & Tali Asih Relawan PSKS Jawa Barat**:
 1. **Perlindungan BPJS Ketenagakerjaan**: Pemprov Jawa Barat bersama Kementerian Sosial RI secara bertahap memfasilitasi relawan pilar sosial (seperti Tagana dan personil aktif) dalam program perlindungan Jaminan Kecelakaan Kerja (JKK) dan Jaminan Kematian (JKM) untuk menjamin keselamatan saat bertugas di medan risiko tinggi.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   UserSession,
   PillarId,
@@ -36,15 +36,22 @@ import { BackToHomeButton } from './components/BackToHomeButton';
 
 import { SmartGateModal } from './components/SmartGateModal';
 
+// Dynamic module loaders with non-blocking prefetching capability
+export const loadHomePSKSAnalytics = () => import('./components/HomePSKSAnalytics');
+export const loadProfilePage = () => import('./components/ProfilePage');
+export const loadContactPage = () => import('./components/ContactPage');
+export const loadAccountPage = () => import('./components/AccountPage');
+export const loadAdminRegistrationManager = () => import('./components/AdminRegistrationManager');
+
 // Code-split heavy subpages, analytics, and admin panels to optimize PageSpeed and initial load
-const HomePSKSAnalytics = React.lazy(() => import('./components/HomePSKSAnalytics').then(m => ({ default: m.HomePSKSAnalytics })));
+const HomePSKSAnalytics = React.lazy(() => loadHomePSKSAnalytics().then(m => ({ default: m.HomePSKSAnalytics })));
 const Section11Admin = React.lazy(() => import('./components/Section11Admin').then(m => ({ default: m.Section11Admin })));
 const JabarRegionalMap = React.lazy(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
-const AdminRegistrationManager = React.lazy(() => import('./components/AdminRegistrationManager').then(m => ({ default: m.AdminRegistrationManager })));
+const AdminRegistrationManager = React.lazy(() => loadAdminRegistrationManager().then(m => ({ default: m.AdminRegistrationManager })));
 const PillarDetailView = React.lazy(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
-const ProfilePage = React.lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const ContactPage = React.lazy(() => import('./components/ContactPage').then(m => ({ default: m.ContactPage })));
-const AccountPage = React.lazy(() => import('./components/AccountPage').then(m => ({ default: m.AccountPage })));
+const ProfilePage = React.lazy(() => loadProfilePage().then(m => ({ default: m.ProfilePage })));
+const ContactPage = React.lazy(() => loadContactPage().then(m => ({ default: m.ContactPage })));
+const AccountPage = React.lazy(() => loadAccountPage().then(m => ({ default: m.AccountPage })));
 const AdminManagementPage = React.lazy(() => import('./components/AdminManagementPage').then(m => ({ default: m.AdminManagementPage })));
 const AdminMonitoringPage = React.lazy(() => import('./components/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
 const SuperadminSettingsPage = React.lazy(() => import('./components/SuperadminSettingsPage').then(m => ({ default: m.SuperadminSettingsPage })));
@@ -108,11 +115,21 @@ export default function App() {
       const localKadinas = localStorage.getItem('dinsos_kadinas_photo_url');
       if (localKadinas && localKadinas !== 'LOCAL_STORAGE_SAVED_PHOTO') initial.kadinasPhotoUrl = localKadinas;
       const localBgPhoto = localStorage.getItem('dinsos_bg_photo_url');
-      if (localBgPhoto && localBgPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO') initial.bgPhotoUrl = localBgPhoto;
+      const isAiOfficePhoto = (u: string | null) => u && (u.includes('eco_office_') || u.includes('dinsos_jabar_building') || u.includes('facade') || u.includes('poster'));
+      if (localBgPhoto && isAiOfficePhoto(localBgPhoto)) {
+        localStorage.removeItem('dinsos_bg_photo_url');
+      } else if (localBgPhoto && localBgPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO') {
+        initial.bgPhotoUrl = localBgPhoto;
+      }
       const localBgVideo = localStorage.getItem('dinsos_bg_video_url');
       if (localBgVideo && localBgVideo !== 'LOCAL_STORAGE_SAVED_VIDEO') initial.bgVideoUrl = localBgVideo;
       const localBgMode = localStorage.getItem('dinsos_bg_mode') as 'photo' | 'video' | null;
-      if (localBgMode) initial.bgMode = localBgMode;
+      if (localBgMode === 'photo' && !initial.bgPhotoUrl) {
+        initial.bgMode = 'video';
+        localStorage.setItem('dinsos_bg_mode', 'video');
+      } else if (localBgMode) {
+        initial.bgMode = localBgMode;
+      }
       const localContact = localStorage.getItem('dinsos_contact_links');
       if (localContact) {
         try {
@@ -276,6 +293,10 @@ export default function App() {
             const local = localStorage.getItem('dinsos_bg_photo_url');
             if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') data.bgPhotoUrl = local;
           }
+          if (data.bgPhotoUrl && (data.bgPhotoUrl.includes('eco_office_') || data.bgPhotoUrl.includes('dinsos_jabar_building') || data.bgPhotoUrl.includes('poster'))) {
+            data.bgPhotoUrl = '';
+            data.bgMode = 'video';
+          }
           if (data.bgVideoUrl === 'LOCAL_STORAGE_SAVED_VIDEO' || !data.bgVideoUrl) {
             const local = localStorage.getItem('dinsos_bg_video_url');
             if (local && local !== 'LOCAL_STORAGE_SAVED_VIDEO') {
@@ -402,6 +423,79 @@ export default function App() {
     } catch (e) {
       console.warn('Smart Card NFC auto-login error:', e);
     }
+  }, []);
+
+  // User intent-based prefetching for instant, zero-latency transitions
+  const handlePrefetchTab = useCallback((tab: string) => {
+    try {
+      if (tab === 'profil') {
+        loadProfilePage();
+      } else if (tab === 'contact') {
+        loadContactPage();
+      } else if (tab === 'akun') {
+        loadAccountPage();
+      } else if (tab === 'terima_pendaftaran') {
+        loadAdminRegistrationManager();
+      }
+    } catch (_) {}
+  }, []);
+
+  // Background prefetching for primary subpages (Profile, Contact)
+  // Strictly scheduled with requestIdleCallback + 4000ms delay after window load
+  // to guarantee ZERO impact on PageSpeed / Core Web Vitals (FCP, LCP, TBT)
+  useEffect(() => {
+    // Respect user's Data Saver mode or slow connections
+    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+    if (nav?.connection?.saveData || nav?.connection?.effectiveType === '2g') {
+      return;
+    }
+
+    const scheduleSilentPrefetch = () => {
+      const runIdle = (cb: () => void) => {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(cb, { timeout: 8000 });
+        } else {
+          setTimeout(cb, 200);
+        }
+      };
+
+      // 1. Prefetch ProfilePage first during browser idle
+      runIdle(() => {
+        loadProfilePage().catch(() => {});
+      });
+
+      // 2. Prefetch ContactPage staggered after Profile
+      runIdle(() => {
+        setTimeout(() => {
+          loadContactPage().catch(() => {});
+        }, 1500);
+      });
+
+      // 3. Prefetch AccountPage staggered after Contact
+      runIdle(() => {
+        setTimeout(() => {
+          loadAccountPage().catch(() => {});
+        }, 3000);
+      });
+    };
+
+    let timer: any;
+    if (document.readyState === 'complete') {
+      timer = setTimeout(scheduleSilentPrefetch, 4000);
+    } else {
+      const onWindowLoaded = () => {
+        timer = setTimeout(scheduleSilentPrefetch, 4000);
+      };
+      window.addEventListener('load', onWindowLoaded, { once: true });
+      return () => {
+        window.removeEventListener('load', onWindowLoaded);
+        clearTimeout(timer);
+      };
+    }
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleSaveAppSettings = async (newSettings: AppSettings) => {
@@ -2570,6 +2664,7 @@ export default function App() {
           setCurrentTab(tab);
           setActivePillar(null);
         }}
+        onPrefetch={handlePrefetchTab}
         session={session}
         onLogout={handleLogout}
         onOpenGateModal={() => setGateModalOpen(true)}
@@ -2585,11 +2680,23 @@ export default function App() {
 
       {/* Main View Router */}
       <main className="flex-1">
-        {currentTab === 'beranda' && (
-          <>
-            <HeroSection onScrollToGrid={handleScrollToGrid} appSettings={appSettings} />
-            <AboutSection />
-            <React.Suspense fallback={<div className="h-64 flex items-center justify-center"><div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+        <div className={currentTab === 'beranda' ? 'block' : 'hidden'}>
+          <HeroSection
+            onScrollToGrid={handleScrollToGrid}
+            appSettings={appSettings}
+            isTabActive={currentTab === 'beranda'}
+          />
+          <AboutSection />
+            <React.Suspense
+              fallback={
+                <div className="max-w-7xl mx-auto px-4 my-8">
+                  <div className="h-64 rounded-3xl bg-gradient-to-br from-[#022319]/80 via-[#033022]/60 to-[#011a12]/80 border border-emerald-700/30 flex flex-col items-center justify-center gap-3 p-6 text-emerald-200 animate-pulse shadow-inner">
+                    <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs font-bold tracking-wider uppercase text-emerald-300">Memuat Visual Analitik PSKS Jawa Barat...</span>
+                  </div>
+                </div>
+              }
+            >
               <HomePSKSAnalytics
                 allPillarData={allPillarData}
                 session={session}
@@ -2696,14 +2803,18 @@ export default function App() {
                 onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
               />
             </React.Suspense>
-          </>
-        )}
+        </div>
 
         <React.Suspense
           fallback={
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 py-24">
-              <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Memuat Halaman PSKS JABAR...</span>
+            <div className="max-w-7xl mx-auto px-4 py-16 min-h-[50vh] flex flex-col items-center justify-center">
+              <div className="w-full max-w-xl bg-slate-900/40 border border-emerald-800/30 rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center gap-4 text-center animate-pulse">
+                <div className="w-9 h-9 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="space-y-1">
+                  <span className="text-xs font-black text-amber-300 uppercase tracking-wider block">Dinas Sosial Provinsi Jawa Barat</span>
+                  <span className="text-xs font-semibold text-slate-400 block">Menyiapkan Navigasi Halaman...</span>
+                </div>
+              </div>
             </div>
           }
         >

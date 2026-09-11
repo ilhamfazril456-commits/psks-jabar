@@ -6,9 +6,10 @@ import { OFFICIAL_ECOOFFICE_VIDEO } from '../assets/officialEcoOfficeVideo';
 interface HeroSectionProps {
   onScrollToGrid: () => void;
   appSettings?: AppSettings;
+  isTabActive?: boolean;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSettings }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSettings, isTabActive = true }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoError, setVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -35,13 +36,41 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
 
   const activeVideo = getActiveVideoUrl();
 
-  // If user explicitly uploads their own custom photo in settings, use it. Otherwise, strictly NO AI photo.
-  const customUserPhoto = appSettings?.bgPhotoUrl && appSettings.bgPhotoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' 
+  // Filter out any AI-generated photos or legacy office posters
+  const isAiOfficePhoto = (url?: string | null) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return (
+      lower.includes('eco_office_poster') || 
+      lower.includes('eco_office_') || 
+      lower.includes('dinsos_jabar_building') || 
+      lower.includes('facade') || 
+      lower.includes('poster')
+    );
+  };
+
+  const rawCustomPhoto = appSettings?.bgPhotoUrl && appSettings.bgPhotoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' 
     ? appSettings.bgPhotoUrl 
     : (typeof window !== 'undefined' ? localStorage.getItem('dinsos_bg_photo_url') : null);
 
+  const customUserPhoto = isAiOfficePhoto(rawCustomPhoto) ? null : rawCustomPhoto;
+
   const bgMode = appSettings?.bgMode || (typeof window !== 'undefined' ? localStorage.getItem('dinsos_bg_mode') : null) || 'video';
   const showCustomPhoto = bgMode === 'photo' && !!customUserPhoto && customUserPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO';
+
+  // Manage video pause/play based on active tab state
+  useEffect(() => {
+    if (!showCustomPhoto && videoRef.current) {
+      if (!isTabActive) {
+        videoRef.current.pause();
+      } else {
+        const vid = videoRef.current;
+        if (vid.paused) {
+          vid.play().catch(() => {});
+        }
+      }
+    }
+  }, [isTabActive, showCustomPhoto]);
 
   // Direct video play for official Dinsos background video across all devices
   useEffect(() => {
@@ -52,6 +81,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
       vid.playbackRate = 1.0;
       
       const tryPlay = () => {
+        if (!isTabActive) return;
         const playPromise = vid.play();
         if (playPromise !== undefined) {
           playPromise
@@ -68,7 +98,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
       tryPlay();
 
       const handleUserInteraction = () => {
-        if (vid.paused) {
+        if (vid.paused && isTabActive) {
           vid.play().then(() => setIsVideoReady(true)).catch(() => {});
         }
       };
@@ -81,7 +111,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
         window.removeEventListener('click', handleUserInteraction);
       };
     }
-  }, [showCustomPhoto, activeVideo]);
+  }, [showCustomPhoto, activeVideo, isTabActive]);
 
   const handleVideoError = () => {
     if (!fallbackToOfficial && activeVideo !== OFFICIAL_ECOOFFICE_VIDEO) {
@@ -110,25 +140,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           key={activeVideo}
           ref={videoRef}
           src={activeVideo}
-          poster="/eco_office_poster.webp"
           autoPlay
           loop
           muted
           playsInline
           webkit-playsinline="true"
-          preload="metadata"
+          preload="auto"
           disablePictureInPicture
           onError={handleVideoError}
-          onCanPlay={() => setIsVideoReady(true)}
-          onPlaying={() => setIsVideoReady(true)}
-          onLoadedData={() => {
+          onCanPlay={() => {
             setIsVideoReady(true);
-            if (videoRef.current) {
+            if (videoRef.current && videoRef.current.paused && isTabActive) {
               videoRef.current.play().catch(() => {});
             }
           }}
-          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 brightness-[1.05] contrast-[1.08] saturate-[1.10] ${
-            isVideoReady ? 'opacity-100' : 'opacity-90'
+          onPlaying={() => setIsVideoReady(true)}
+          onLoadedData={() => {
+            setIsVideoReady(true);
+            if (videoRef.current && videoRef.current.paused && isTabActive) {
+              videoRef.current.play().catch(() => {});
+            }
+          }}
+          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-300 brightness-[1.05] contrast-[1.08] saturate-[1.10] ${
+            isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
             willChange: 'transform, opacity',

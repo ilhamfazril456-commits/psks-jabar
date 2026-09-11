@@ -455,13 +455,19 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
           question: `Bagaimana format data dan syarat sertifikasi/SK untuk ${pInfo.shortName}?`,
           hint: `Atribut data & verifikasi`,
         },
-        {
+        ...(currentRole === 'superadmin' ? [{
           id: `dyn-pillar-kta-${activePillar}`,
           category: pInfo.title,
           role: currentRole,
           question: `Bagaimana cara mencetak KTA Digital QR Code untuk anggota ${pInfo.title}?`,
           hint: `Cetak kartu anggota resmi`,
-        }
+        }] : [{
+          id: `dyn-pillar-reg-${activePillar}`,
+          category: pInfo.title,
+          role: currentRole,
+          question: `Bagaimana alur pendaftaran dan syarat menjadi anggota ${pInfo.title}?`,
+          hint: `Alur pendaftaran & syarat`,
+        }])
       );
     }
 
@@ -657,14 +663,14 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       const displayName = session.nama;
       let roleDescription = 'informasi seputar 10 Pilar PSKS dan sebaran data Jawa Barat';
       if (currentRole === 'admin') {
-        roleDescription = `tata kelola dan rekapitulasi data pilar di wilayah **${userRegion}**, ekspor laporan, dan cetak kartu massal`;
+        roleDescription = `tata kelola dan rekapitulasi data pilar di wilayah **${userRegion}**, verifikasi berkas pendaftaran, dan ekspor laporan`;
       } else if (currentRole === 'superadmin') {
         roleDescription = `pengawasan agregat 27 Kab/Kota, manajemen akun admin daerah, saklar maintenance, dan audit trail`;
       }
 
       welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSebagai **${userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
     } else {
-      welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, sebaran data 27 Kabupaten/Kota, pencetakan Kartu Digital QR Code resmi, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
+      welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, alur pendaftaran relawan, sebaran data 27 Kabupaten/Kota, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
     }
 
     setMessages([

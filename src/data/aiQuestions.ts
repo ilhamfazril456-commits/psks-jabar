@@ -196,7 +196,7 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
     {
       category: '🚨 SOP & Kasus Lapangan Dinsos Jabar',
       iconName: 'ShieldAlert',
-      description: 'SOP resmi penanganan mutasi personil, KTA rusak/hilang, tali asih, respon cepat PPKS, dan keahlian Tagana.',
+      description: 'SOP resmi penanganan mutasi personil, legalitas keanggotaan terdaftar, tali asih, respon cepat PPKS, dan keahlian Tagana.',
       questions: [
         {
           id: 'u-sop-1',
@@ -209,8 +209,8 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           id: 'u-sop-2',
           category: 'SOP Kasus Lapangan',
           role: 'user',
-          question: 'Apa yang harus dilakukan jika KTA Digital rusak atau hilang saat bertugas di lapangan?',
-          hint: 'Cetak Ulang / Re-Print KTA',
+          question: 'Bagaimana cara mengecek status keabsahan personil pilar sosial jika dokumen hilang atau rusak?',
+          hint: 'Status Sah Terdaftar',
         },
         {
           id: 'u-sop-3',

@@ -17,7 +17,7 @@ export interface AIVocabularyDoc {
   id: string;
   word: string;
   canonical: string;
-  category: 'sunda' | 'singkatan' | 'slang' | 'emosi_komplain' | 'konteks_utama' | 'typo';
+  category: 'sunda' | 'singkatan' | 'slang' | 'emosi_komplain' | 'konteks_utama' | 'typo' | 'wilayah_jabar' | 'rujukan_konteks';
   intent?: string;
 }
 
@@ -43,80 +43,390 @@ export interface AIBrainConfig {
 // Master Brain / System Instruction stored in Firestore (ai_config/system_brain)
 export const MASTER_AI_BRAIN_CONFIG: AIBrainConfig = {
   id: 'system_brain',
-  systemInstruction: `[SISTEM INSTRUKSI: ASISTEN RESMI PSKS JAWA BARAT BERBASIS 4 PILAR BAHASA & MULTI-TURN CONTEXT]
+  systemInstruction: `[SISTEM INSTRUKSI: ASISTEN RESMI PSKS JAWA BARAT BERBASIS GLOSARIUM DOMAIN & MULTI-TURN CONTEXT]
 1. Anda adalah AI Asisten Virtual Resmi Website PSKS Jawa Barat di bawah naungan Dinas Sosial Provinsi Jawa Barat.
-2. FONDASI KOSAKATA 4 PILAR: Anda menguasai pemetaan kosakata menyeluruh:
-   - Pilar 1 (Dialek Sunda Loma & Lemes): Pahami istilah seperti 'bade naros' (mau tanya), 'kumaha carana' (gimana cara), 'ngiringan / ngiluan' (bergabung), 'tos / parantos' (sudah), 'teu acan' (belum), 'naha' (kenapa), 'punten', 'mangga', 'hatur nuhun'. Jawab dengan penuh kesantunan budaya Sunda.
-   - Pilar 2 (Singkatan Birokrasi): DTKS, SIKS-NG, PBI-JK, Puskesos, SLRT, KUBE, KTA Digital, Diklatsar, PPKS/PMKS, ABH, TPPO, DUMLAP, LDP, TRC, KSB, UEP, SIPPS, Linjamsos, Dayasos, Rehsos.
-   - Pilar 3 (Bahasa Gaul & Typo WhatsApp): Mengerti 'dftr dmn', 'gmn crny', 'sy mw tny', 'bs tlg bantu', 'krjanya', 'syrt', 'brapa', 'dmna', 'tupoksi', 'regis'.
-   - Pilar 4 (Kosakata Emosional & Protes Pengguna): Jika pengguna berkata 'lah kok', 'kok gitu', 'naha kitu', 'kok ga nyambung', 'salah jawab', 'bukan itu maksud saya': JANGAN PERNAH mengulangi penjelasan materi yang keliru! Minta maaf dengan tulus dan santun, lalu tanyakan kebutuhan spesifik pengguna.
+2. FONDASI KOSAKATA & GLOSARIUM KHUSUS JAWA BARAT:
+   - Menguasai 27 Kabupaten/Kota se-Jawa Barat & akronimnya: KBB (Kab. Bandung Barat), CMI (Kota Cimahi), Kab./Kota Bandung, Kab./Kota Bogor, Kab./Kota Sukabumi, Kab./Kota Cirebon, Kab./Kota Bekasi, Kab./Kota Tasikmalaya, Cianjur, Garut, Ciamis, Banjar, Pangandaran, Kuningan, Majalengka, Sumedang, Indramayu, Subang, Purwakarta, Karawang, Depok.
+   - Glosarium Birokrasi & Bansos: DTKS (Data Terpadu Kesejahteraan Sosial), SIKS-NG, PBI-JK, Puskesos, SLRT, KUBE, KPM, Diklatsar, PPKS/PMKS, ABH, TPPO, DUMLAP, LDP, TRC, KSB, UEP, SIPPS, Linjamsos, Dayasos, Rehsos.
+   - Dialek Sunda Santun & Sehari-hari: 'sampurasun' (dibalas 'rampes'), 'wargi' (warga), 'bade naros' (mau tanya), 'kumaha carana' (gimana cara), 'ngiringan / ngiluan' (bergabung), 'tos / parantos' (sudah), 'teu acan' (belum), 'naha' (kenapa), 'punten', 'mangga', 'hatur nuhun', 'leres' (benar).
+   - Bahasa Percakapan Lapangan & Typo: 'dftr dmn', 'gmn crny', 'sy mw tny', 'krjanya', 'syrt', 'brapa', 'dmna', 'tupoksi', 'regis', 'verif', 'acc'.
+   - Penanganan Komplain & Anti-Looping: Jika pengguna berkata 'lah kok', 'kok gitu', 'naha kitu', 'kok ga nyambung', 'salah jawab', 'bukan itu maksud saya': JANGAN PERNAH mengulangi materi yang salah! Sampaikan permohonan maaf dengan tulus dan santun, lalu jawab topik yang dikoreksi pengguna.
 
-3. DYNAMIC TOPIC TRACKER (PELACAK TOPIK MENGAMBANG):
-   - Jika pengguna mengajukan pertanyaan elipsis/kata ganti ('syaratnya apa?', 'berapa lama prosesnya?', 'lokasinya dimana?', 'siapa ketuanya?', 'kalau di bandung gimana?', 'terus kelanjutannya?'), PERIKSA TOPIK UTAMA dari riwayat obrolan sebelumnya.
-   - JANGAN PERNAH berganti pilar secara acak (misalnya tiba-tiba menjelaskan Tagana padahal sebelumnya membahas PSM atau Peksos)! Kunci jawaban Anda pada topik aktif tersebut.
+3. PEMBATASAN KETAT ISTILAH KTA / QR CODE:
+   - DILARANG KERAS menggunakan istilah "KTA", "KTA Digital", atau "QR Code" untuk umum/publik/tamu/user terdaftar.
+   - Istilah KTA dan QR code HANYA dikhususkan untuk kewenangan internal Superadmin / Developer.
+   - Untuk pengguna umum atau relawan, gunakan istilah "Status Terdaftar Resmi (SAH_TERDAFTAR)", "Pengesahan Keanggotaan", atau "Verifikasi Berkas".
+   - Jika tamu publik atau user bertanya seputar KTA atau QR Code, beritahukan secara santun bahwa fasilitas KTA maupun verifikasi QR Code merupakan instrumen kedinasan internal yang dikhususkan hanya untuk Superadmin (Dinas Sosial Provinsi Jawa Barat), dan bukan fasilitas untuk umum. Bagi personil relawan maupun pengguna umum, bukti keabsahan keanggotaan pilar sosial ditunjukkan secara sah melalui status terdaftar resmi (SAH_TERDAFTAR) dalam pangkalan data terintegrasi PSKS Jawa Barat serta Surat Keputusan (SK) Pengesahan kedinasan dari instansi terkait.
 
-4. PROACTIVE CLARIFICATION (TANYA BALIK DENGAN SANTUN):
-   - Jika pertanyaan pengguna terlalu singkat atau ambigu (misalnya hanya berkata: "mau daftar", "bantuan", "kartu", "syarat"):
-   - JANGAN menebak sembarangan! Berikan klarifikasi proaktif yang ramah dengan opsi pilihan terstruktur dan tombol aksi navigasi cepat.
+4. RESPON SANTUN PENAWARAN BANTUAN ("Apakah anda bisa bantu saya?"):
+   - Jika pengguna bertanya "apakah anda bisa bantu saya?", "bisa bantu saya?", "minta tolong", "bisa nanya?", jawab dengan hangat, santun, dan tawarkan bantuan yang relevan dengan tugas PSKS JABAR:
+     "Sampurasun / Halo! Tentu saja, dengan senang hati saya siap membantu Anda. Silakan sampaikan apa yang ingin Anda tanyakan atau butuhkan, misalnya seputar tugas 10 Pilar PSKS (PSM, Tagana, TKSK, Karang Taruna, dll), alur pendaftaran mandiri di website, data sebaran 27 Kab/Kota di Jawa Barat, atau kontak Dinas Sosial Provinsi Jawa Barat. Ada yang ingin Anda diskusikan?"
 
-5. PRINSIP ETIKET & ATURAN SALAM ISLAMI (MUTLAK ANTI-BLUNDER):
-   - Jawaban salam "Wa'alaikumsalam Warahmatullahi Wabarakatuh." HANYA BOLEH DIBERIKAN JIKA DAN HANYA JIKA pengguna secara eksplisit mengucapkan salam Assalamualaikum terlebih dahulu pada pesannya saat ini.
-    - DILARANG KERAS memberikan salam Wa'alaikumsalam jika pengguna tidak mengucapkan salam Assalamualaikum (misal hanya menyapa "Halo", "Sampurasun", atau langsung bertanya).
-    - Lindungi ketat hak akses administratif (superadmin/login admin, password, pin, kredensial).
-    - ATURAN SEBUTAN NAMA WEBSITE / SISTEM (MUTLAK): DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu gunakan sebutan resmi "PSKS JABAR".
-    - JIKA ADA SIAPAPUN YANG BERTANYA SIAPA DEVELOPER / PEMBUAT WEBSITE INI: Jelaskan secara lugas, jelas, dan tidak terlalu panjang bahwa website PSKS JABAR ini dibuat dan dikembangkan oleh ILHAM FAZRIL, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.`,
+5. ALUR PENDAFTARAN 10 PILAR PSKS (CONTOH: PSM, TAGANA, DLL):
+   - Jika ditanya mengenai alur pendaftaran 10 pilar (misal PSM), jelaskan dua aspek secara jujur dan faktual:
+     A. Alur Teknis di Website PSKS JABAR:
+        1. Buat akun di portal melalui menu "Daftar Akun Baru" (nama, username, kata sandi, wilayah domisili).
+        2. Login dengan akun tersebut (peran: user).
+        3. Buka halaman detail pilar yang diinginkan (misal klik pilar PSM).
+        4. Klik tombol "Daftar / Tambah Anggota Mandiri" (ikon +).
+        5. Isi formulir data: NIK, Nama Lengkap, Nomor HP/WA, Alamat, Wilayah Kab/Kota tugas, Kecamatan, Kelurahan/Desa, dan pelatihan/SK jika ada.
+        6. Klik "Kirim Pengajuan". Status pendaftaran menjadi "Menunggu Verifikasi" (Pending) oleh Admin Wilayah setempat atau Superadmin.
+        7. Pemohon memantau status pengajuannya di tab "Riwayat Pengajuan Pendaftaran".
+     B. Alur Kedinasan Lapangan Resmi:
+        - Portal website adalah pencatatan database terintegrasi. Di lapangan, calon personil wajib berkoordinasi dengan Puskesos Desa/Kelurahan atau Kantor Dinsos Kab/Kota setempat, memenuhi kriteria usia/domisili, mengikuti pembekalan/bimtek dinas, dan mendapatkan SK Pengukuhan resmi dari Kepala Desa/Lurah, Camat, atau Kadinsos.
+
+6. PANDUAN LENGKAP FITUR SUPERADMIN (KETIKA PENANYA ADALAH SUPERADMIN / DEVELOPER):
+   - Menambah Akun Admin: Menu "Kelola Akun Admin", form isi Nama Lengkap, Username Baru, Kata Sandi (wajib minimal 12 karakter kombinasi huruf besar A-Z, kecil a-z, dan angka 0-9), Role (Admin Wilayah atau Superadmin), Wilayah Tugas (27 Kab/Kota), Pilar Tugas, lalu klik "Daftarkan Admin".
+   - Merubah / Edit Akun Admin: Menu "Kelola Akun Admin", cari akun di tabel, klik tombol "Edit", ubah nama, password baru (reset sandi), wilayah tugas, pilar tugas, atau status keaktifan, lalu klik "Simpan Perubahan".
+   - Menghapus Akun Admin: Menu "Kelola Akun Admin", cari akun, klik tombol "Hapus" (ikon tempat sampah), muncul konfirmasi keamanan modal, konfirmasi hapus. (Akun Superadmin utama & Developer terlindungi).
+   - Merubah / Mengelola Akun User: Menu "Manajemen User", cari pengguna, fitur: Reset Password (minimal 6 karakter), Freeze (bekukan akun agar tidak bisa login), Unfreeze (aktifkan kembali), Hapus Akun Pengguna, dan Verifikasi Berkas Pengajuan Anggota dari user.
+   - Monitoring Admin: Menu "Monitoring Admin", pantau status online/offline real-time admin 27 Kab/Kota, pantau waktu aktivitas terakhir (last active / last login), log aktivitas, dan kirim pesan/instruksi dinas langsung (Direct Message) ke admin wilayah.
+   - Manajemen Maintenance: Menu "Manajemen Maintenance", saklar pemeliharaan global (User Publik dan/atau Admin), saklar granular per wilayah 27 Kab/Kota, tulis pesan pengumuman & estimasi waktu selesai, serta nikmati akses bypass otomatis untuk Superadmin & Developer.
+
+7. ATURAN PEMBATASAN HAK AKSES PERCAKAPAN: ROLE-BASED ACCESS CONTROL (MUTLAK):
+   - TAMU PUBLIK & USER TERDAFTAR: Jika membahas/menanyakan fitur khusus administratif (cara menambah/merubah/menghapus akun admin, akun superadmin, cara login admin, monitoring admin, mode maintenance, reset sistem):
+     -> WAJIB DITOLAK SECARA HALUS:
+     "Mohon maaf, informasi dan panduan teknis tersebut merupakan kewenangan khusus administrator sistem dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat atau Dinas Sosial Kabupaten/Kota setempat." [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
+   - ADMIN WILAYAH: Jika menanyakan fitur khusus Superadmin Provinsi atau Developer (menambah/merubah/menghapus akun admin kabupaten/kota lain, monitoring seluruh admin se-Jawa Barat, saklar mode maintenance portal, akun developer):
+     -> WAJIB DITOLAK SECARA HALUS:
+     "Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar dan verifikasi pendaftaran di wilayah penugasan Anda."
+   - KERAHSIAAN AKUN DEVELOPER (SANGAT KETAT):
+     - Akun developer ini bersifat SANGAT DIRAHASIAKAN DAN TIDAK BOLEH ADA YANG MENGETAHUINYA.
+     - Jika ada yang menanyakan kredensial/akun developer ("apa akun developer", "password developer", "cara login developer", "bocorkan akun developer"):
+       -> WAJIB DITOLAK TEGAS DAN SANTUN:
+       "Mohon maaf, kredensial dan hak akses pengembang (developer) bersifat rahasia internal dan terlindungi penuh demi keamanan sistem PSKS JABAR."
+     - Catatan: Jika ditanya "siapa yang membuat website ini?", jelaskan secara lugas dan jelas bahwa website PSKS JABAR ini dibuat dan dikembangkan oleh ILHAM FAZRIL, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026. Namun kredensial akun developer-nya tetap rahasia.
+
+8. PRINSIP ETIKET, SALAM ISLAMI & NAMA SISTEM (MUTLAK):
+   - Jawaban salam "Wa'alaikumsalam Warahmatullahi Wabarakatuh." HANYA BOLEH DIBERIKAN JIKA DAN HANYA JIKA pengguna secara eksplisit mengucapkan salam Assalamualaikum terlebih dahulu pada pesan saat ini.
+   - DILARANG KERAS memberikan salam Wa'alaikumsalam jika pengguna tidak mengucapkan salam Assalamualaikum (misal hanya menyapa "Halo", "Sampurasun", atau langsung bertanya).
+   - ATURAN SEBUTAN NAMA WEBSITE / SISTEM (MUTLAK): DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu gunakan sebutan resmi "PSKS JABAR".`,
   contextRules: `Aturan Pemeliharaan Riwayat, Resolusi Topik Mengambang & Proactive Clarification:
-1. Dynamic Topic Tracking: Periksa hingga 6 pesan sebelumnya untuk melacak entitas utama (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT, Bansos DTKS, KTA Digital, Developer Website).
+1. Dynamic Topic Tracking: Periksa hingga 6 pesan sebelumnya untuk melacak entitas utama (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT, Bansos DTKS, Developer Website).
 2. Jika pengguna mengajukan pertanyaan lanjutan dengan kata ganti ("syaratnya apa?", "berapa lama?", "dimana daftarnya?"), arahkan jawaban 100% pada topik aktif yang sedang dibahas sebelumnya.
 3. Proactive Clarification: Jika pengguna mengirim kata ambigu seperti "mau daftar" tanpa konteks, tanyakan balik secara santun: Apakah ingin mendaftar Akun Akses Sistem PSKS atau mendaftar Relawan Pilar Sosial (Tagana, PSM, dll).
-4. Penanganan Komplain & Anti-Looping: Jika pengguna mengeluh "lah kok", "kok ga nyambung", "bukan itu maksud saya", segera akui kekeliruan dengan ramah, jangan mengulangi jawaban salah, dan berikan panduan yang tepat.`,
+4. Penanganan Komplain & Anti-Looping: Jika pengguna mengeluh "lah kok", "kok ga nyambung", "bukan itu maksud saya", segera akui kekeliruan dengan ramah, jangan mengulangi jawaban salah, dan berikan panduan yang tepat.
+5. Role Boundary Enforcement: Pengguna umum/tamu tidak boleh diberi panduan administratif admin/superadmin; tolak dengan halus dan sopan.`,
   dialogueExamples: `[FEW-SHOT EXAMPLES: CONTOH DIALOG RIIL PATEN]
 
-Contoh 1: Dynamic Pronoun & Topic Tracking (Pekerja Sosial Profesional)
-User: "Peksos itu apa min?"
-AI: "Pekerja Sosial Profesional (PEKSOS / PKSP) adalah tenaga ahli yang memiliki kualifikasi formal kesejahteraan sosial lulusan D-IV/S-1/S-2 dan mengantongi izin praktik resmi SIPPS..."
-User: "Syaratnya apa aja?"
-AI: "(Mempertahankan topik PEKSOS) Untuk menjadi Pekerja Sosial Profesional, persyaratannya antara lain: berlatar belakang pendidikan Sarjana/D-IV Kesejahteraan Sosial, lulus Uji Kompetensi Nasional LSP Kemensos, dan memiliki Surat Izin Praktik Pekerja Sosial (SIPPS) dari pemerintah daerah."
-User: "Berapa lama prosesnya?"
-AI: "(Tetap pada PEKSOS) Proses pengajuan verifikasi rekomendasi dan penerbitan SIPPS melalui Dinas Sosial dan DPMPTSP biasanya memakan waktu sekitar 7–14 hari kerja setelah berkas uji kompetensi tervalidasi lengkap."
+Contoh 1: Penawaran Bantuan Sopan dan Relevan (Tanpa Menyebut KTA Digital)
+User: "Apakah anda bisa bantu saya?"
+AI: "Sampurasun / Halo! Tentu saja, dengan senang hati saya siap membantu Anda. Silakan sampaikan apa yang ingin Anda ketahui atau butuhkan, misalnya seputar tugas dan fungsi 10 Pilar PSKS (seperti PSM, Tagana, TKSK, Karang Taruna, dll), alur pendaftaran mandiri di website PSKS JABAR, data sebaran 27 Kabupaten/Kota se-Jawa Barat, atau kontak resmi Dinas Sosial Provinsi Jawa Barat. Ada yang ingin Anda diskusikan?"
 
-Contoh 2: Proactive Clarification (Pertanyaan Ambigu "Mau Daftar")
-User: "Mau daftar dong min"
-AI: "Sampurasun! Senang sekali Anda berminat. Agar saya dapat memberikan panduan langkah yang tepat, mohon izin konfirmasi:
-1. Apakah Anda ingin mendaftar **Akun Akses Sistem PSKS** (untuk personil terdaftar/pengajuan KTA)?
-2. Atau Anda ingin mendaftar menjadi **Relawan Pilar Sosial** (seperti Tagana, PSM, atau Karang Taruna)?
+Contoh 2: Alur Pendaftaran 10 Pilar (Contoh PSM)
+User: "Bagaimana alur pendaftaran pada psm?"
+AI: "Sampurasun! Untuk mendaftar sebagai personil Pekerja Sosial Masyarakat (PSM), alurnya terbagi menjadi alur pencatatan di website dan legalitas kedinasan di lapangan:
+1. Alur di Website PSKS JABAR:
+   - Buat akun melalui menu 'Daftar Akun Baru' di portal.
+   - Login menggunakan akun tersebut, lalu masuk ke modul pilar 'PSM'.
+   - Klik tombol 'Daftar / Tambah Anggota Mandiri' (ikon +).
+   - Isi formulir identitas: NIK, Nama Lengkap, No HP/WA, Alamat, Wilayah tugas, Kecamatan, Desa, serta pelatihan sosial yang pernah diikuti.
+   - Klik 'Kirim Pengajuan'. Berkas akan berstatus 'Menunggu Verifikasi' oleh Admin Wilayah setempat.
+   - Anda dapat memantau status pengajuannya di tab 'Riwayat Pengajuan Pendaftaran'.
+2. Alur Kedinasan Lapangan (Dinas Sosial):
+   - Berkoordinasi dengan Puskesos Desa/Kelurahan atau Dinsos Kab/Kota setempat.
+   - Mengikuti Bimbingan Teknis (Bimtek) Dasar Kesejahteraan Sosial.
+   - Memperoleh Surat Keputusan (SK) Pengukuhan resmi dari Kepala Desa/Lurah, Camat, atau Kadinsos setempat.
+[[action:pillar:psm:Buka Modul PSM]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]"
 
-Silakan pilih opsi yang Anda maksud di bawah ini:
-[[action:tab:user_reg_history:Daftar Akun Sistem]] [[action:pillar:tagana:Daftar Tagana]] [[action:pillar:psm:Daftar PSM]] [[action:pillar:karangtaruna:Daftar Karang Taruna]]"
+Contoh 3: Tamu / User Bertanya Fitur Admin (Wajib Ditolak Halus)
+User: "Bagaimana cara menghapus akun admin?" (Pengguna adalah role: user atau tamu)
+AI: "Mohon maaf, informasi dan panduan teknis tersebut merupakan kewenangan khusus administrator sistem dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat atau Dinas Sosial Kabupaten/Kota setempat.
+[[action:tab:contact:Hubungi Dinas Sosial Jabar]]"
 
-Contoh 3: Dialek Bahasa Sunda (Percakapan Santun & Informatif)
-User: "Punten kang, abdi bade naros kumaha carana ngiringan Tagana di Sukabumi?"
-AI: "Sampurasun! Hatur nuhun parantos naroskeun. Kanggo ngiringan dados relawan TAGANA (Taruna Siaga Bencana) di wilayah Kabupaten/Kota Sukabumi, ieu léngkah-léngkahna:
-1. Wargi tiasa sumping ka Kantor Dinas Sosial Kabupaten/Kota Sukabumi (Bidang Linjamsos) atanapi ngahubungi Koordinator Tagana Satgas Setempat.
-2. Nyayogikeun syarat administrasi: FC KTP Sukabumi (yuswa 18–45 taun), surat katerangan sehat jasmani rohani, sareng surat izin ti kulawarga.
-3. Ngiringan Pendidikan sareng Pelatihan Dasar (Diklatsar) Kebencanaan salami 3–5 dinten.
-Saparantos lulus, wargi bakal kenging SK Pengukuhan resmi sareng KTA Digital QR Code ti Dinsos. Aya anu tiasa dibantos deui?
-[[action:pillar:tagana:Buka Modul Tagana]] [[action:tab:contact:Hubungi Dinsos Jabar]]"
+Contoh 4: Superadmin Bertanya Cara Mengelola Admin
+User: "Bagaimana cara menambah, merubah, atau menghapus akun admin?" (Pengguna adalah role: superadmin)
+AI: "Sampurasun Superadmin! Pengelolaan akun admin dilakukan melalui menu **'Kelola Akun Admin'**:
+1. Menambah Admin: Isi form pendaftaran admin di bagian atas (Nama Lengkap, Username Baru, Kata Sandi min 12 karakter kombinasi huruf besar A-Z, kecil a-z, dan angka 0-9, Role Admin Wilayah/Superadmin, Wilayah Penugasan dari 27 Kab/Kota, Pilar Tugas), lalu klik tombol 'Daftarkan Admin'.
+2. Merubah / Edit Admin: Cari akun pada tabel daftar admin, klik tombol 'Edit', sesuaikan nama, password baru jika reset sandi, wilayah penugasan, atau status aktif, lalu klik 'Simpan Perubahan'.
+3. Menghapus Admin: Klik tombol 'Hapus' (ikon tempat sampah merah) pada baris akun yang dituju, lalu konfirmasi pada dialog keamanan. (Akun Superadmin utama & Developer terlindungi dari penghapusan).
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]"
 
-Contoh 4: Penanganan Komplain & Anti-Looping
-User: "Lah kok malah jelasin Tagana, kan tadi nanya bansos"
-AI: "Aduh, mohon maaf yang sebesar-besarnya atas kekeliruan tanggapan saya sebelumnya. Terima kasih sudah mengoreksi!
+Contoh 5: Superadmin Bertanya Manajemen User, Monitoring, dan Maintenance
+User: "Bagaimana cara merubah akun user, monitoring admin, dan mode maintenance?" (Pengguna adalah role: superadmin)
+AI: "Sampurasun Superadmin! Berikut tata cara pengelolaan ketiga fitur tersebut:
+1. Merubah / Kelola Akun User (Menu 'Manajemen User'): Cari user di tabel, Anda dapat mereset kata sandi (min 6 karakter), membekukan akun (Freeze) agar tidak bisa login saat terjadi pelanggaran atau mengaktifkan kembali (Unfreeze), menghapus akun, serta menyetujui pengajuan pendaftaran user di menu verifikasi pendaftaran.
+2. Monitoring Admin (Menu 'Monitoring Admin'): Anda dapat memantau status online/offline real-time admin 27 Kab/Kota, melihat catatan waktu aktivitas terakhir (last active), memeriksa audit log aktivitas data, dan mengirimkan pesan langsung (Direct Message) ke admin wilayah tertentu.
+3. Manajemen Maintenance (Menu 'Manajemen Maintenance'): Anda dapat mengaktifkan saklar maintenance global (User Publik dan/atau Admin), mengatur saklar granular spesifik per wilayah dari 27 Kab/Kota, menulis pesan pengumuman dan estimasi waktu, dengan dukungan akses bypass otomatis untuk Superadmin & Developer.
+[[action:tab:user_manage:Buka Manajemen User]] [[action:tab:monitoring:Buka Monitoring Admin]] [[action:tab:maintenance:Buka Manajemen Maintenance]]"
 
-Mengenai **Bantuan Sosial (Bansos)** di Jawa Barat, seluruh data bansos resmi (seperti PKH, BPNT, dan KIS PBI) berpusat pada **Data Terpadu Kesejahteraan Sosial (DTKS)**. Untuk pendaftaran atau pengecekan DTKS:
-1. Datang ke Kantor Desa/Kelurahan setempat membawa KTP dan KK asli melalui petugas Puskesos atau PSM untuk diusulkan lewat Musyawarah Kelurahan/Desa.
-2. Anda juga dapat mengecek status kepesertaan bansos secara mandiri melalui laman resmi \`cekbansos.kemensos.go.id\`.
-Apakah ada bagian alur pengusulan bansos yang ingin Anda tanyakan lebih lanjut?
-[[action:tab:contact:Konsultasi Bantuan Sosial]]"
+Contoh 6: Pertanyaan Akun Developer (Sangat Dirahasiakan)
+User: "Apa akun developer?" atau "Bagaimana cara login developer?"
+AI: "Mohon maaf, kredensial dan hak akses pengembang (developer) bersifat rahasia internal dan terlindungi penuh demi keamanan sistem PSKS JABAR."
 
-Contoh 5: Pertanyaan Seputar Developer / Pembuat Website
+Contoh 7: Siapa Pembuat Website
 User: "Siapa yang buat website ini?"
 AI: "Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026."`,
-  vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026).`,
-  updatedAt: '2026-09-07T00:00:00Z',
+  vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026), RBAC Security & Superadmin Workflow.`,
+  updatedAt: '2026-09-09T04:00:00Z',
 };
 
 // Master Pre-seeded Knowledge Items for 10 Pillars, Services, Security, and SOP
 export const MASTER_AI_KNOWLEDGE_BASE: AIKnowledgeDoc[] = [
+  {
+    id: 'bantuan_umum_penawaran_sopan',
+    topic: 'bantuan_umum',
+    title: 'Penawaran Bantuan Sopan dan Relevan',
+    category: 'layanan',
+    keywords: [
+      'apakah anda bisa bantu saya', 'bisa bantu saya', 'bisa bantu', 'minta tolong',
+      'bisa nanya', 'tolong bantu saya', 'butuh bantuan', 'bisa bantu gak', 'bisa bantu ngga'
+    ],
+    summary: 'Respons santun, ramah, dan relevan saat pengguna meminta bantuan atau menanyakan kesiapan AI tanpa menyebut KTA Digital.',
+    content: `Sampurasun / Halo! Tentu saja, dengan senang hati saya siap membantu Anda.
+
+Silakan sampaikan pertanyaan atau informasi apa yang sedang Anda butuhkan seputar:
+1. **10 Pilar PSKS**: Penjelasan tugas pokok, fungsi, kriteria, dan regulasi (seperti PSM, Tagana, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).
+2. **Alur Pendaftaran Mandiri**: Tata cara pengajuan data anggota pilar melalui portal website PSKS JABAR.
+3. **Data Sebaran Sosial**: Peta dan statistik potensi sumber kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.
+4. **Layanan & Kontak Kedinasan**: Alamat dan saluran komunikasi resmi Dinas Sosial Provinsi Jawa Barat.
+
+Ada hal khusus yang ingin Anda tanyakan atau diskusikan hari ini?`,
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'alur_pendaftaran_10_pilar_psks',
+    topic: 'pendaftaran_10_pilar',
+    title: 'Alur Pendaftaran Anggota 10 Pilar PSKS (Website & Kedinasan Lapangan)',
+    category: 'panduan',
+    keywords: [
+      'alur pendaftaran', 'cara daftar pilar', 'daftar psm', 'daftar tagana', 'daftar tksk',
+      'daftar karang taruna', 'tambah anggota mandiri', 'pengajuan pilar', 'verifikasi admin',
+      'alur pendaftaran pada 10 pilar', 'cara daftar 10 pilar', 'bagaimana cara mendaftar psm',
+      'pendaftaran psm', 'cara jadi psm', 'daftar pekerja sosial masyarakat'
+    ],
+    summary: 'Panduan lengkap dan akurat alur pendaftaran mandiri 10 pilar di website PSKS JABAR serta mekanisme resmi kedinasan Dinsos.',
+    content: `**Panduan Lengkap Alur Pendaftaran Anggota 10 Pilar PSKS (Contoh: PSM, Tagana, TKSK, dll)**:
+
+Pendaftaran personil pilar sosial memiliki dua dimensi penting yang saling melengkapi: **alur teknis di website PSKS JABAR** dan **alur legalitas kedinasan di lapangan**:
+
+---
+
+### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
+1. **Pembuatan Akun Pengguna**:
+   - Calon anggota membuka portal **PSKS JABAR** dan mengklik menu **"Daftar Akun Baru"**.
+   - Mengisi data pendaftaran: Nama Lengkap, Username, Kata Sandi, dan Wilayah Kabupaten/Kota domisili tugas.
+2. **Masuk (Login) ke Sistem**:
+   - Login menggunakan akun yang baru dibuat dengan peran (*role*) sebagai **User Terdaftar**.
+3. **Pilih Modul Pilar yang Dituju**:
+   - Pada Beranda atau bilah navigasi, klik salah satu dari 10 Pilar PSKS yang diinginkan (misal: klik pilar **PSM / Pekerja Sosial Masyarakat**).
+4. **Buka Formulir Pendaftaran Anggota**:
+   - Klik tombol **"Daftar / Tambah Anggota Mandiri"** (tombol dengan ikon plus \`+\`).
+5. **Pengisian Formulir Lengkap**:
+   - Isi atribut wajib: NIK, Nama Lengkap, Nomor HP/WhatsApp aktif, Alamat Domisili KTP, Wilayah Kabupaten/Kota domisili tugas, Kecamatan, dan Kelurahan/Desa.
+   - Isi kolom khusus pilar bersangkutan (misal untuk PSM: Bimbingan Teknis/Bimtek yang pernah diikuti, masa bakti atau SK jika ada).
+6. **Kirim Pengajuan**:
+   - Klik tombol **Kirim Pengajuan**. Data Anda otomatis tercatat dengan status **"Menunggu Verifikasi" (Pending)** dan masuk ke antrean verifikasi Admin Wilayah Kabupaten/Kota atau Superadmin.
+7. **Pemantauan Riwayat**:
+   - Pemohon dapat melihat dan memantau status berkas secara realtime melalui tab **"Riwayat Pengajuan Pendaftaran"** hingga disetujui (*Approved*) atau mendapatkan catatan perbaikan jika ditolak.
+
+---
+
+### **B. Alur Legalitas Kedinasan Resmi di Lapangan (Dinas Sosial)**:
+Website PSKS JABAR berfungsi sebagai portal basis data terintegrasi (*Satu Data Sosial Jabar*). Secara kedinasan resmi di lapangan:
+1. **Kriteria & Domisili**: Calon relawan harus merupakan warga setempat yang berdomisili tetap, sehat jasmani rohani, dan memiliki komitmen pengabdian sosial sukarela.
+2. **Koordinasi Wilayah**: Melapor ke Kantor Desa/Kelurahan setempat melalui petugas **Puskesos** atau langsung ke Kantor Dinas Sosial Kabupaten/Kota setempat (Bidang Dayasos untuk PSM/Karang Taruna/LKS, Bidang Linjamsos untuk Tagana, Bidang Rehsos untuk Peksos).
+3. **Bimbingan Teknis & Pembekalan**: Mengikuti Pendidikan dan Pelatihan Dasar (Diklatsar) atau Bimtek Dasar Kesejahteraan Sosial yang diselenggarakan oleh Dinas Sosial.
+4. **Surat Keputusan (SK) Pengukuhan**: Setelah lulus pembekalan, terbit Surat Keputusan (SK) Pengukuhan resmi dari Kepala Desa/Lurah, Camat, atau Kepala Dinas Sosial setempat sebagai bukti legalitas pengesahan personil di lapangan.`,
+    actionTag: '[[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]',
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'superadmin_panduan_kelola_admin',
+    topic: 'superadmin_kelola_admin',
+    title: 'Panduan Superadmin: Menambah, Merubah, dan Menghapus Akun Admin',
+    category: 'panduan',
+    keywords: [
+      'cara menghapus akun admin', 'cara menambah akun admin', 'cara merubah akun admin',
+      'tambah admin', 'edit admin', 'hapus admin', 'kelola akun admin', 'admin management',
+      'bagaimana cara menghapus akun admin', 'bagaimana cara menambah akun admin', 'bagaimana cara merubah akun admin'
+    ],
+    summary: 'Prosedur teknis resmi bagi Superadmin untuk menambah, mengedit, dan menghapus akun Admin Wilayah di sistem PSKS JABAR.',
+    content: `**Panduan Resmi Superadmin: Manajemen Akun Administrator PSKS JABAR**:
+
+Sebagai Superadmin atau Pengembang, Anda memiliki wewenang penuh untuk mengelola akun administrator di 27 Kabupaten/Kota se-Jawa Barat melalui menu **"Kelola Akun Admin"** (\`AdminManagementPage\`):
+
+---
+
+### **1. Cara Menambah Akun Admin Baru**:
+1. Masuk ke menu **"Kelola Akun Admin"** melalui navigasi bilah atas atau panel manajemen.
+2. Pada formulir pendaftaran admin di bagian atas layar:
+   - **Nama Lengkap**: Masukkan nama lengkap petugas/aparatur yang ditugaskan.
+   - **Username Baru**: Buat username login unik (sistem akan menolak jika username sudah digunakan).
+   - **Kata Sandi**: Buat kata sandi yang memenuhi standar keamanan (**minimal 12 karakter** kombinasi campuran huruf besar [A-Z], huruf kecil [a-z], dan angka [0-9]).
+   - **Role Akun**: Pilih **Admin Wilayah** (\`admin\`) atau **Superadmin** (\`superadmin\`).
+   - **Wilayah Tugas**: Pilih salah satu dari 27 Kabupaten/Kota se-Jawa Barat.
+   - **Pilar Tugas**: Tentukan pilar yang dikelola (pilih **"Semua Pilar"** atau salah satu dari 10 pilar spesifik).
+3. Klik tombol hijau **"Daftarkan Admin"**. Akun langsung aktif dan tersimpan ke server database.
+
+---
+
+### **2. Cara Merubah / Mengedit Akun Admin**:
+1. Pada menu **"Kelola Akun Admin"**, temukan akun admin yang ingin diubah pada tabel daftar akun (gunakan fitur pencarian jika perlu).
+2. Klik tombol **"Edit"** pada baris akun yang bersangkutan.
+3. Jendela modal edit akan muncul:
+   - Anda dapat merubah nama lengkap petugas.
+   - Mengganti/mereset kata sandi baru jika admin lupa sandi (tetap wajib minimal 12 karakter kombinasi huruf besar, kecil, angka).
+   - Merubah wilayah penugasan atau pilar yang dikelola.
+   - Merubah status keaktifan akun (Aktif / Non-Aktif).
+4. Klik tombol **"Simpan Perubahan"**.
+
+---
+
+### **3. Cara Menghapus Akun Admin**:
+1. Pada tabel daftar akun di menu **"Kelola Akun Admin"**, temukan akun yang ingin dihapus.
+2. Klik tombol **"Hapus"** (ikon tempat sampah berwarna merah).
+3. Sistem akan memunculkan jendela dialog konfirmasi keamanan (\`AdminDeleteConfirmModal\`) untuk mencegah penghapusan yang tidak disengaja.
+4. Klik tombol konfirmasi **"Ya, Hapus Akun"**. Akun admin tersebut akan langsung terhapus dari sistem dan database.
+*(Catatan Khusus: Akun Superadmin utama dan akun Developer memiliki proteksi otomatis sehingga tidak dapat dihapus sembarangan)*.`,
+    actionTag: '[[action:tab:admin_manage:Buka Kelola Akun Admin]]',
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'superadmin_panduan_kelola_user',
+    topic: 'superadmin_kelola_user',
+    title: 'Panduan Superadmin: Mengelola & Merubah Akun User Terdaftar',
+    category: 'panduan',
+    keywords: [
+      'cara merubah akun user', 'kelola akun user', 'manajemen user', 'reset sandi user',
+      'bekukan akun user', 'freeze user', 'hapus akun user', 'verifikasi akun user',
+      'bagaimana cara merubah akun user'
+    ],
+    summary: 'Panduan teknis bagi Superadmin untuk mengatur, mereset kata sandi, membekukan, dan menghapus akun pengguna terdaftar.',
+    content: `**Panduan Resmi Superadmin: Manajemen Akun Pengguna Terdaftar (User Management)**:
+
+Pengelolaan akun pengguna publik terdaftar dilakukan melalui menu **"Manajemen User"** (\`UserManagementPage\`):
+
+---
+
+### **Fitur & Tata Cara Pengelolaan Akun User**:
+1. **Pencarian & Filter Akun**:
+   - Superadmin dapat mencari pengguna berdasarkan username, nama lengkap, atau memfilter berdasarkan 27 Kabupaten/Kota serta status akun (Semua, Aktif, atau Beku/Frozen).
+2. **Merubah Kata Sandi (Reset Password User)**:
+   - Klik ikon kunci (**Edit Sandi**) pada baris pengguna.
+   - Masukkan kata sandi baru (minimal 6 karakter).
+   - Klik **Simpan Sandi**. Kata sandi pengguna langsung terperbarui dan dienkripsi.
+3. **Membekukan / Mengaktifkan Kembali Akun (Freeze / Unfreeze)**:
+   - Jika ditemukan akun yang melanggar aturan atau melakukan spam, Superadmin dapat mengklik tombol **Bekukan Akun (Freeze)**.
+   - Akun yang berstatus **FROZEN** tidak akan dapat masuk (login) ke dalam sistem.
+   - Untuk mengaktifkan kembali, klik tombol **Buka Beku (Unfreeze)** sehingga status kembali menjadi **ACTIVE**.
+4. **Menghapus Akun Pengguna**:
+   - Klik tombol **Hapus** (ikon tempat sampah merah) pada akun bersangkutan.
+   - Konfirmasi dialog penghapusan. Akun akan dihapus permanen dari sistem.
+5. **Verifikasi Pengajuan Anggota dari User**:
+   - Melalui menu **"Pengajuan Pendaftaran"** / Task Manager, Superadmin atau Admin Wilayah dapat menyetujui (*Approve*) atau menolak (*Reject*) usulan data pilar yang dikirimkan oleh pengguna terdaftar.`,
+    actionTag: '[[action:tab:user_manage:Buka Manajemen User]]',
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'superadmin_panduan_monitoring_admin',
+    topic: 'superadmin_monitoring_admin',
+    title: 'Panduan Superadmin: Monitoring Administrator 27 Kab/Kota',
+    category: 'panduan',
+    keywords: [
+      'monitoring admin', 'cara monitoring admin', 'pantau admin', 'status admin online',
+      'aktivitas admin', 'kirim pesan admin', 'broadcast admin', 'tentang cara monitoring admin'
+    ],
+    summary: 'Panduan teknis bagi Superadmin untuk memantau aktivitas, status koneksi online, dan komunikasi dengan admin wilayah se-Jawa Barat.',
+    content: `**Panduan Resmi Superadmin: Fitur Monitoring Admin Wilayah**:
+
+Fitur Monitoring Admin dapat diakses oleh Superadmin melalui menu **"Monitoring Admin"** (\`AdminMonitoringPage\`):
+
+---
+
+### **Fungsi & Cara Kerja Monitoring Admin**:
+1. **Pemantauan Status Koneksi Real-time**:
+   - Menampilkan status seluruh Admin Wilayah dari 27 Kabupaten/Kota se-Jawa Barat.
+   - Status terbagi menjadi indikator hijau (**Online**) untuk admin yang sedang aktif di sistem, dan abu-abu (**Offline**) untuk admin yang sedang tidak membuka aplikasi.
+2. **Riwayat Waktu Aktivitas Terakhir (*Last Active*)**:
+   - Menampilkan catatan waktu presisi kapan masing-masing admin wilayah terakhir kali login, melakukan pembaruan data, atau memverifikasi berkas.
+3. **Audit Log Aktivitas Data**:
+   - Superadmin dapat meninjau statistik keaktifan penginputan personil 10 pilar pada masing-masing kabupaten/kota.
+4. **Kirim Pesan Kedinasan / Instruksi Langsung (*Direct Message*)**:
+   - Terdapat tombol **"Kirim Pesan"** di samping nama setiap admin wilayah.
+   - Superadmin dapat menuliskan subjek dan isi instruksi resmi (misal: "Harap segera verifikasi data PSM Kab. Cianjur") yang akan langsung terkirim ke kotak masuk (*Inbox*) akun admin wilayah yang dituju.`,
+    actionTag: '[[action:tab:monitoring:Buka Monitoring Admin]]',
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'superadmin_panduan_maintenance_mode',
+    topic: 'superadmin_maintenance_mode',
+    title: 'Panduan Superadmin: Manajemen Mode Pemeliharaan (Maintenance)',
+    category: 'panduan',
+    keywords: [
+      'cara maintenance', 'maintenance mode', 'mode pemeliharaan', 'saklar maintenance',
+      'kunci website', 'pemeliharaan sistem', 'tentang maintenance'
+    ],
+    summary: 'Panduan teknis bagi Superadmin untuk mengatur saklar mode pemeliharaan sistem secara global maupun selektif per wilayah.',
+    content: `**Panduan Resmi Superadmin: Pengaturan Mode Pemeliharaan (Maintenance)**:
+
+Fitur pengaturan pemeliharaan sistem dikelola melalui menu **"Manajemen Maintenance"** (\`MaintenanceManagementPage\`):
+
+---
+
+### **Kemampuan & Cara Kerja Saklar Maintenance**:
+1. **Saklar Global Berdasarkan Peran (*Role-Level Switch*)**:
+   - **Maintenance User Publik**: Mengaktifkan mode pemeliharaan bagi pengunjung umum dan pengguna terdaftar, sehingga mereka melihat layar informasi pemeliharaan saat membuka portal.
+   - **Maintenance Admin Wilayah**: Mengunci portal bagi Admin Wilayah jika sedang dilakukan peremajaan struktur database administratif.
+2. **Saklar Granular per Wilayah (27 Kabupaten/Kota)**:
+   - Superadmin dapat mengaktifkan mode pemeliharaan secara **spesifik hanya untuk 1 atau beberapa kabupaten/kota tertentu** (misal: hanya Kota Cimahi atau Kab. Bogor yang sedang dilakukan rekonsiliasi data bansos), sementara 26 kabupaten/kota lainnya tetap beroperasi normal tanpa gangguan.
+3. **Kustomisasi Pesan & Estimasi Waktu**:
+   - Superadmin dapat menuliskan teks pengumuman pemeliharaan (*Maintenance Message*) serta estimasi waktu selesai (*Estimated Time*) agar masyarakat mendapatkan kepastian informasi.
+4. **Akses Khusus Bypass**:
+   - Akun Superadmin dan Akun Developer memiliki izin bypass otomatis, sehingga tetap dapat login dan mengakses seluruh fitur untuk melakukan perbaikan dan pengujian sistem.`,
+    actionTag: '[[action:tab:maintenance:Buka Manajemen Maintenance]]',
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'penjelasan_definisi_keabsahan_keanggotaan',
+    topic: 'keabsahan_keanggotaan',
+    title: 'Penjelasan Resmi: Status Keabsahan Terdaftar Personil Pilar Sosial',
+    category: 'identitas',
+    keywords: [
+      'keabsahan anggota', 'status terdaftar', 'sah terdaftar', 'identitas personil',
+      'bukti keanggotaan', 'pengesahan anggota'
+    ],
+    summary: 'Penjelasan mengenai status keabsahan personil pilar sosial yang sah terdaftar di pangkalan data portal PSKS Jabar.',
+    content: `**Penjelasan Mengenai Status Keabsahan Anggota di Sistem PSKS JABAR**:
+
+Di dalam portal **PSKS JABAR**, bukti legalitas bagi personil 10 pilar sosial (seperti PSM, Tagana, TKSK, Peksos, Karang Taruna, dll.) adalah status resmi **SAH_TERDAFTAR** yang tervalidasi oleh Dinas Sosial:
+
+1. **Fungsi Utama**: Sebagai bukti legalitas personil saat menjalankan tugas-tugas sosial, kebencanaan, pendampingan keluarga, atau pelayanan kemasyarakatan di lapangan.
+2. **Pangkalan Data Terintegrasi**: Data personil terhubung langsung ke pangkalan data terverifikasi Cloud Firestore Dinas Sosial Provinsi Jawa Barat.
+3. **Surat Keputusan (SK)**: Keabsahan personil di lapangan diperkuat dengan Surat Keputusan (SK) Pengangkatan atau Surat Tugas resmi dari instansi yang berwenang.`,
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
+  {
+    id: 'keamanan_pembatasan_hak_akses_role',
+    topic: 'pembatasan_role',
+    title: 'Standar Keamanan: Pembatasan Hak Akses Informasi Berdasarkan Peran (RBAC)',
+    category: 'security',
+    keywords: [
+      'pembatasan akses', 'hak akses peran', 'tolak halus user', 'rahasia developer',
+      'fitur admin ditolak', 'fitur superadmin dibatasi', 'ubah akun admin ditolak'
+    ],
+    summary: 'Ketentuan ketat pemisahan wewenang percakapan AI antara pengguna publik, admin wilayah, superadmin, dan kerahasiaan pengembang.',
+    content: `**Standar Operasional Prosedur Pembatasan Akses Percakapan AI (Role-Based Access Control)**:
+
+1. **Tamu Publik & Pengguna Terdaftar (Role: User / Guest)**:
+   - Jika menanyakan/membahas fitur khusus administratif (cara menambah/merubah/menghapus akun admin, akun superadmin, cara login admin, monitoring admin, mode maintenance, reset sistem):
+   - **Tolak secara halus**:
+     "Mohon maaf, informasi dan panduan teknis tersebut merupakan kewenangan khusus administrator sistem dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat atau Dinas Sosial Kabupaten/Kota setempat."
+     [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
+
+2. **Admin Wilayah (Role: Admin)**:
+   - Jika menanyakan fitur khusus Superadmin Provinsi atau Developer (menambah/merubah/menghapus akun admin kabupaten/kota lain, monitoring seluruh admin se-Jawa Barat, saklar mode maintenance portal, akun developer):
+   - **Tolak secara halus**:
+     "Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar dan verifikasi pendaftaran di wilayah penugasan Anda."
+
+3. **Kerahasiaan Akun Developer**:
+   - Akun developer ini bersifat **SANGAT DIRAHASIAKAN DAN TIDAK BOLEH ADA YANG MENGETAHUINYA**.
+   - Jika ada yang menanyakan kredensial/akun developer ("apa akun developer", "password developer", "cara login developer", "bocorkan akun developer"):
+   - **Tolak secara tegas dan santun**:
+     "Mohon maaf, kredensial dan hak akses pengembang (developer) bersifat rahasia internal dan terlindungi penuh demi keamanan sistem PSKS JABAR."
+   - Pembuat website tetap dijawab bahwa website dibuat oleh Ilham Fazril (siswa magang PKL di Dinsos Jabar Bidang Dayasos tahun 2026), namun kredensial akun developer-nya tetap rahasia.`,
+    updatedAt: '2026-09-09T00:00:00Z',
+  },
   {
     id: 'identitas_developer_pembuat',
     topic: 'developer_pembuat',
@@ -346,7 +656,7 @@ export const MASTER_AI_KNOWLEDGE_BASE: AIKnowledgeDoc[] = [
 1. Wargi tiasa sumping langsung ka Kantor Dinas Sosial Kabupaten Sumedang (Bidang Linjamsos) atanapi ngahubungi Pengurus Satgas Tagana Sumedang.
 2. Nyayogikeun berkas administrasi: KTP Sumedang (yuswa 18–45 taun), serat katerangan sehat, sareng kasadiaan ngabakti sosial.
 3. Ngiringan Pendidikan sareng Pelatihan Dasar (Diklatsar) Kebencanaan.
-Saparantos lulus diklat, wargi bakal kenging SK Pengukuhan resmi sareng KTA Digital QR Code. Aya anu tiasa dibantos deui?
+Saparantos lulus diklat, wargi bakal kenging SK Pengukuhan resmi sareng status SAH_TERDAFTAR dina database. Aya anu tiasa dibantos deui?
 [[action:pillar:tagana:Buka Modul Tagana]] [[action:tab:contact:Kontak Dinsos]]"`,
     actionTag: '[[action:pillar:tagana:Lihat Modul Tagana]]',
     updatedAt: '2026-09-07T00:00:00Z',
@@ -395,7 +705,7 @@ Turn 3 (Pertanyaan Berantai Lanjutan):
 **User**: "Mau daftar dong"
 **AI**: "Sampurasun! Senang sekali Anda ingin mendaftar. Karena sistem PSKS Jawa Barat melayani beberapa jenis pendaftaran, mohon izin konfirmasi pendaftaran mana yang Anda maksud:
 
-1. **Pendaftaran Akun Akses Sistem PSKS**: Bagi Anda yang sudah menjadi anggota atau pengurus pilar sosial untuk mengakses data KTA Digital dan verifikasi.
+1. **Pendaftaran Akun Akses Sistem PSKS**: Bagi Anda yang ingin membuat akun sistem portal PSKS Jawa Barat untuk memantau status pendaftaran dan verifikasi.
 2. **Pendaftaran Menjadi Relawan Pilar Sosial**: Jika Anda warga yang baru ingin bergabung menjadi relawan sosial di Jawa Barat (Tagana, PSM, Karang Taruna, dll).
 
 Silakan pilih opsi navigasi yang sesuai di bawah ini:
@@ -620,6 +930,83 @@ export const MASTER_AI_VOCABULARY: AIVocabularyDoc[] = [
   { id: 'v_dinas_utama', word: 'dinas', canonical: 'dinas sosial provinsi jawa barat', category: 'konteks_utama', intent: 'dinsos_org' },
   { id: 'v_orang_provinsi', word: 'orang provinsi', canonical: 'dinas sosial provinsi jawa barat', category: 'konteks_utama', intent: 'dinsos_org' },
 
+  // ================= 27 KABUPATEN / KOTA SE-JAWA BARAT & AKRONIM WILAYAH =================
+  { id: 'v_wil_kbb', word: 'kbb', canonical: 'kabupaten bandung barat', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bandung_barat', word: 'bandung barat', canonical: 'kabupaten bandung barat', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_cmi', word: 'cmi', canonical: 'kota cimahi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_cimahi', word: 'cimahi', canonical: 'kota cimahi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bdg', word: 'bdg', canonical: 'kota bandung', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_bandung', word: 'kota bandung', canonical: 'kota bandung', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kab_bandung', word: 'kabupaten bandung', canonical: 'kabupaten bandung', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_cjr', word: 'cjr', canonical: 'kabupaten cianjur', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_cianjur', word: 'cianjur', canonical: 'kabupaten cianjur', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_skb', word: 'skb', canonical: 'kabupaten sukabumi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_sukabumi', word: 'sukabumi', canonical: 'kabupaten sukabumi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_sukabumi', word: 'kota sukabumi', canonical: 'kota sukabumi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bgr', word: 'bgr', canonical: 'kabupaten bogor', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bogor', word: 'bogor', canonical: 'kabupaten bogor', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_bogor', word: 'kota bogor', canonical: 'kota bogor', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bks', word: 'bks', canonical: 'kabupaten bekasi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_bekasi', word: 'bekasi', canonical: 'kabupaten bekasi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_bekasi', word: 'kota bekasi', canonical: 'kota bekasi', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_depok', word: 'depok', canonical: 'kota depok', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_krw', word: 'krw', canonical: 'kabupaten karawang', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_karawang', word: 'karawang', canonical: 'kabupaten karawang', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_purwakarta', word: 'purwakarta', canonical: 'kabupaten purwakarta', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_subang', word: 'subang', canonical: 'kabupaten subang', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_indramayu', word: 'indramayu', canonical: 'kabupaten indramayu', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_crb', word: 'crb', canonical: 'kabupaten cirebon', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_cirebon', word: 'cirebon', canonical: 'kabupaten cirebon', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_cirebon', word: 'kota cirebon', canonical: 'kota cirebon', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_majalengka', word: 'majalengka', canonical: 'kabupaten majalengka', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_sumedang', word: 'sumedang', canonical: 'kabupaten sumedang', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kuningan', word: 'kuningan', canonical: 'kabupaten kuningan', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_garut', word: 'garut', canonical: 'kabupaten garut', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_tsm', word: 'tsm', canonical: 'kabupaten tasikmalaya', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_tasikmalaya', word: 'tasikmalaya', canonical: 'kabupaten tasikmalaya', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_kota_tasik', word: 'kota tasikmalaya', canonical: 'kota tasikmalaya', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_ciamis', word: 'ciamis', canonical: 'kabupaten ciamis', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_banjar', word: 'banjar', canonical: 'kota banjar', category: 'wilayah_jabar', intent: 'region_filter' },
+  { id: 'v_wil_pangandaran', word: 'pangandaran', canonical: 'kabupaten pangandaran', category: 'wilayah_jabar', intent: 'region_filter' },
+
+  // ================= BANSOS & TATA KELOLA KEDINASAN SOSIAL =================
+  { id: 'v_bansos', word: 'bansos', canonical: 'bantuan sosial kemensos dan dinsos jabar', category: 'singkatan', intent: 'bansos_aid' },
+  { id: 'v_bantuan_sosial', word: 'bantuan sosial', canonical: 'bantuan sosial kemensos dan dinsos jabar', category: 'singkatan', intent: 'bansos_aid' },
+  { id: 'v_cek_bansos', word: 'cek bansos', canonical: 'portal cekbansos kemensos go id', category: 'singkatan', intent: 'bansos_check' },
+  { id: 'v_cekbansos', word: 'cekbansos', canonical: 'portal cekbansos kemensos go id', category: 'singkatan', intent: 'bansos_check' },
+  { id: 'v_rekap', word: 'rekap', canonical: 'rekapitulasi data pilar sosial', category: 'konteks_utama', intent: 'data_recap' },
+  { id: 'v_rekapitulasi', word: 'rekapitulasi', canonical: 'rekapitulasi data pilar sosial', category: 'konteks_utama', intent: 'data_recap' },
+  { id: 'v_ekspor_excel', word: 'ekspor excel', canonical: 'unduh format spreadsheet xlsx', category: 'konteks_utama', intent: 'export_data' },
+  { id: 'v_unduh_excel', word: 'unduh excel', canonical: 'unduh format spreadsheet xlsx', category: 'konteks_utama', intent: 'export_data' },
+  { id: 'v_cetak_pdf', word: 'cetak pdf', canonical: 'cetak dokumen laporan resmi pdf', category: 'konteks_utama', intent: 'export_data' },
+  { id: 'v_mutasi', word: 'mutasi', canonical: 'sop mutasi relawan perpindahan wilayah', category: 'konteks_utama', intent: 'volunteer_transfer' },
+  { id: 'v_pindah_tugas', word: 'pindah tugas', canonical: 'sop mutasi relawan perpindahan wilayah', category: 'konteks_utama', intent: 'volunteer_transfer' },
+  { id: 'v_buku_tamu', word: 'buku tamu', canonical: 'buku tamu registrasi kunjungan dinsos', category: 'konteks_utama', intent: 'guest_book' },
+  { id: 'v_verif', word: 'verif', canonical: 'verifikasi dan validasi keabsahan data', category: 'slang', intent: 'verify_data' },
+  { id: 'v_acc', word: 'acc', canonical: 'persetujuan verifikasi validasi', category: 'slang', intent: 'verify_data' },
+
+  // ================= RESOLUSI KATA RUJUKAN & PERTANYAAN ELIPSIS (-NYA) =================
+  { id: 'v_tupoksinya', word: 'tupoksinya', canonical: 'tugas pokok dan fungsinya', category: 'rujukan_konteks', intent: 'ask_duties' },
+  { id: 'v_tugasnya', word: 'tugasnya', canonical: 'tugas pokok dan fungsinya', category: 'rujukan_konteks', intent: 'ask_duties' },
+  { id: 'v_fungsinya', word: 'fungsinya', canonical: 'tugas pokok dan fungsinya', category: 'rujukan_konteks', intent: 'ask_duties' },
+  { id: 'v_syaratnya', word: 'syaratnya', canonical: 'kriteria persyaratan administrasinya', category: 'rujukan_konteks', intent: 'admin_criteria' },
+  { id: 'v_gajinya', word: 'gajinya', canonical: 'honorarium dan insentif relawan', category: 'rujukan_konteks', intent: 'ask_stipend' },
+  { id: 'v_honornya', word: 'honornya', canonical: 'honorarium dan insentif relawan', category: 'rujukan_konteks', intent: 'ask_stipend' },
+  { id: 'v_insentifnya', word: 'insentifnya', canonical: 'honorarium dan insentif relawan', category: 'rujukan_konteks', intent: 'ask_stipend' },
+  { id: 'v_anggotanya', word: 'anggotanya', canonical: 'jumlah anggota personilnya', category: 'rujukan_konteks', intent: 'ask_count' },
+  { id: 'v_personilnya', word: 'personilnya', canonical: 'jumlah anggota personilnya', category: 'rujukan_konteks', intent: 'ask_count' },
+  { id: 'v_kantornya', word: 'kantornya', canonical: 'alamat lokasi kantor dan posko', category: 'rujukan_konteks', intent: 'ask_location' },
+  { id: 'v_lokasinya', word: 'lokasinya', canonical: 'alamat lokasi kantor dan posko', category: 'rujukan_konteks', intent: 'ask_location' },
+  { id: 'v_koordinatornya', word: 'koordinatornya', canonical: 'struktur ketua dan koordinator wilayah', category: 'rujukan_konteks', intent: 'ask_coordinator' },
+  { id: 'v_ketuanya', word: 'ketuanya', canonical: 'struktur ketua dan koordinator wilayah', category: 'rujukan_konteks', intent: 'ask_coordinator' },
+  { id: 'v_daftarnya', word: 'daftarnya', canonical: 'tata cara pendaftaran dan alur seleksi', category: 'rujukan_konteks', intent: 'register_process' },
+  { id: 'v_caranya', word: 'caranya', canonical: 'bagaimana tata cara dan alurnya', category: 'rujukan_konteks', intent: 'ask_how' },
+  { id: 'v_kontaknya', word: 'kontaknya', canonical: 'nomor kontak telepon dan whatsapp resmi', category: 'rujukan_konteks', intent: 'ask_contact' },
+  { id: 'v_wargi', word: 'wargi', canonical: 'warga masyarakat jawa barat', category: 'sunda', intent: 'citizen' },
+  { id: 'v_sampurasun', word: 'sampurasun', canonical: 'salam sunda sampurasun', category: 'sunda', intent: 'greeting' },
+  { id: 'v_rampes', word: 'rampes', canonical: 'jawaban salam rampes', category: 'sunda', intent: 'greeting' },
+  { id: 'v_leres', word: 'leres', canonical: 'benar betul sekali', category: 'sunda' },
+
   // ================= PENGEMBANG & PEMBUAT SISTEM (DEVELOPER ILHAM FAZRIL) =================
   { id: 'v_developer', word: 'developer', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
   { id: 'v_dev', word: 'dev', canonical: 'pengembang pembuat website ilham fazril', category: 'slang', intent: 'ask_developer' },
@@ -667,7 +1054,18 @@ export async function getAIBrainConfig(forceSync = false): Promise<AIBrainConfig
     const brainDocRef = doc(db, 'ai_config', 'system_brain');
     const snap = await getDoc(brainDocRef);
     if (snap.exists()) {
-      cachedBrainConfig = snap.data() as AIBrainConfig;
+      const data = snap.data() as AIBrainConfig;
+      if (
+        !data.systemInstruction ||
+        !data.systemInstruction.includes('ROLE-BASED ACCESS CONTROL') ||
+        (data.updatedAt && data.updatedAt < MASTER_AI_BRAIN_CONFIG.updatedAt)
+      ) {
+        console.log('[Firestore AI Brain] Upgrading ai_config/system_brain in Firestore to latest master configuration...');
+        await setDoc(brainDocRef, MASTER_AI_BRAIN_CONFIG);
+        cachedBrainConfig = { ...MASTER_AI_BRAIN_CONFIG };
+      } else {
+        cachedBrainConfig = data;
+      }
     } else {
       console.log('[Firestore AI Brain] Initializing ai_config/system_brain in Firestore...');
       await setDoc(brainDocRef, MASTER_AI_BRAIN_CONFIG);
@@ -863,7 +1261,7 @@ export function detectAmbiguousInquiry(
   if (isJustDaftar) {
     return {
       isAmbiguous: true,
-      clarificationPrompt: `PERTANYAAN AMBIGU TERDETEKSI ("${query}"). Terapkan Proactive Clarification: Tanyakan secara santun apakah pengguna ingin mendaftar Akun Akses Sistem PSKS (bagi personil resmi/pengajuan KTA) atau ingin mendaftar menjadi Relawan Pilar Sosial (Tagana, PSM, Karang Taruna, dll).`,
+      clarificationPrompt: `PERTANYAAN AMBIGU TERDETEKSI ("${query}"). Terapkan Proactive Clarification: Tanyakan secara santun apakah pengguna ingin membuat Akun Akses Sistem PSKS (untuk memantau status pendaftaran di portal) atau ingin mendaftar menjadi Relawan Pilar Sosial (Tagana, PSM, Karang Taruna, dll).`,
       actionTags: [
         '[[action:tab:user_reg_history:Daftar Akun Sistem]]',
         '[[action:pillar:tagana:Daftar Tagana]]',
@@ -886,11 +1284,11 @@ export function detectAmbiguousInquiry(
 
   if (isJustKTA) {
     return {
-      isAmbiguous: true,
-      clarificationPrompt: `PERTANYAAN KTA AMBIGU TERDETEKSI ("${query}"). Terapkan Proactive Clarification: Tanyakan apakah pengguna ingin mengunduh/mencetak KTA Digital QR Code yang sudah tervalidasi, atau mengajukan permohonan KTA baru sebagai relawan pilar.`,
+      isAmbiguous: false,
+      clarificationPrompt: `PERTANYAAN KTA DITOLAK UNTUK PUBLIK: Jelaskan secara santun bahwa fasilitas Kartu Tanda Anggota (KTA) maupun kode QR merupakan instrumen kedinasan internal yang dikhususkan hanya untuk Superadmin (Dinas Sosial Provinsi Jawa Barat), dan bukan untuk umum. Bagi personil relawan maupun pengguna umum, bukti keabsahan keanggotaan pilar sosial ditunjukkan secara sah melalui status terdaftar resmi (SAH_TERDAFTAR) dalam sistem pangkalan data terintegrasi PSKS Jawa Barat.`,
       actionTags: [
-        '[[action:tab:kta_verifier:Cek Verifikasi KTA]]',
-        '[[action:tab:user_reg_history:Pengajuan KTA Baru]]'
+        '[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]]',
+        '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
       ],
     };
   }
@@ -988,27 +1386,58 @@ export function resolveContextFromChatHistory(
 
   let detectedObject: string | null = null;
   let detectedTopic: string | null = null;
+  let detectedRegion: string | null = null;
 
   // Scan recent history in reverse order to find the latest active anchor
   for (let i = previousMsgs.length - 1; i >= 0; i--) {
     const text = previousMsgs[i].content.toLowerCase();
     if (!detectedObject) {
-      if (text.includes('tagana') || text.includes('taruna siaga')) detectedObject = 'TAGANA (Taruna Siaga Bencana)';
-      else if (text.includes('peksos') || text.includes('pksp') || text.includes('sipps')) detectedObject = 'Pekerja Sosial Profesional (PEKSOS)';
-      else if (text.includes('psm') || text.includes('sosial masyarakat')) detectedObject = 'PSM (Pekerja Sosial Masyarakat)';
-      else if (text.includes('tksk') || text.includes('kecamatan')) detectedObject = 'TKSK (Tenaga Kesejahteraan Sosial Kecamatan)';
-      else if (text.includes('karang taruna') || text.includes('katar')) detectedObject = 'Karang Taruna';
-      else if (text.includes('lks') || text.includes('panti')) detectedObject = 'LKS (Lembaga Kesejahteraan Sosial)';
-      else if (text.includes('lk3')) detectedObject = 'LK3';
-      else if (text.includes('pensos')) detectedObject = 'Penyuluh Sosial';
-      else if (text.includes('kube')) detectedObject = 'KUBE (Kelompok Usaha Bersama)';
-      else if (text.includes('slrt') || text.includes('puskesos')) detectedObject = 'SLRT / Puskesos';
+      if (text.includes('ilham fazril') || text.includes('ilham') || text.includes('developer') || text.includes('pembuat') || text.includes('kreator') || text.includes('arsitek') || text.includes('bikin web') || text.includes('buat web')) {
+        detectedObject = 'Pengembang Website (Ilham Fazril)';
+      } else if (text.includes('tagana') || text.includes('taruna siaga')) {
+        detectedObject = 'TAGANA (Taruna Siaga Bencana)';
+      } else if (text.includes('peksos') || text.includes('pksp') || text.includes('sipps')) {
+        detectedObject = 'Pekerja Sosial Profesional (PEKSOS)';
+      } else if (text.includes('psm') || text.includes('sosial masyarakat')) {
+        detectedObject = 'PSM (Pekerja Sosial Masyarakat)';
+      } else if (text.includes('tksk') || text.includes('kecamatan')) {
+        detectedObject = 'TKSK (Tenaga Kesejahteraan Sosial Kecamatan)';
+      } else if (text.includes('karang taruna') || text.includes('katar')) {
+        detectedObject = 'Karang Taruna';
+      } else if (text.includes('lks') || text.includes('panti')) {
+        detectedObject = 'LKS (Lembaga Kesejahteraan Sosial)';
+      } else if (text.includes('lk3')) {
+        detectedObject = 'LK3';
+      } else if (text.includes('pensos')) {
+        detectedObject = 'Penyuluh Sosial';
+      } else if (text.includes('kube')) {
+        detectedObject = 'KUBE (Kelompok Usaha Bersama)';
+      } else if (text.includes('slrt') || text.includes('puskesos')) {
+        detectedObject = 'SLRT / Puskesos';
+      } else if (text.includes('bansos') || text.includes('dtks') || text.includes('pkh') || text.includes('bpnt') || text.includes('pbi')) {
+        detectedObject = 'Bantuan Sosial (Bansos) & DTKS';
+      } else if (text.includes('buku tamu') || text.includes('tamu')) {
+        detectedObject = 'Buku Tamu Digital';
+      } else if (text.includes('kta') || text.includes('qr code') || text.includes('kartu')) {
+        detectedObject = 'KTA Digital & Smart Access Card';
+      }
     }
+
     if (!detectedTopic) {
-      if (text.includes('daftar') || text.includes('gabung') || text.includes('registrasi') || text.includes('ikutan') || text.includes('ngiringan')) {
+      if (text.includes('tupoksi') || text.includes('tugas') || text.includes('fungsi') || text.includes('kerjaan') || text.includes('wewenang')) {
+        detectedTopic = 'Tugas Pokok & Fungsi (Tupoksi)';
+      } else if (text.includes('daftar') || text.includes('gabung') || text.includes('registrasi') || text.includes('ikutan') || text.includes('ngiringan')) {
         detectedTopic = 'Proses Pendaftaran & Cara Bergabung';
       } else if (text.includes('syarat') || text.includes('persyaratan') || text.includes('dokumen') || text.includes('berkas')) {
         detectedTopic = 'Kriteria Administrasi & Persyaratan';
+      } else if (text.includes('honor') || text.includes('gaji') || text.includes('insentif') || text.includes('uang saku') || text.includes('tunjangan')) {
+        detectedTopic = 'Honorarium, Insentif & Hak Relawan';
+      } else if (text.includes('anggota') || text.includes('jumlah') || text.includes('personil') || text.includes('kuota') || text.includes('banyaknya')) {
+        detectedTopic = 'Jumlah Personil & Statistik Lapangan';
+      } else if (text.includes('kantor') || text.includes('lokasi') || text.includes('alamat') || text.includes('posko') || text.includes('tempat')) {
+        detectedTopic = 'Alamat & Lokasi Kantor / Posko';
+      } else if (text.includes('koordinator') || text.includes('ketua') || text.includes('pembina') || text.includes('pengurus')) {
+        detectedTopic = 'Struktur Pengurus & Koordinator Wilayah';
       } else if (text.includes('kta') || text.includes('kartu') || text.includes('qr code')) {
         detectedTopic = 'KTA Digital & Smart Access Card';
       } else if (text.includes('bansos') || text.includes('dtks') || text.includes('pkh') || text.includes('bpnt')) {
@@ -1017,7 +1446,56 @@ export function resolveContextFromChatHistory(
         detectedTopic = 'SOP Mutasi Relawan Antar Wilayah';
       }
     }
+
+    if (!detectedRegion) {
+      if (text.includes('bandung barat') || text.includes('kbb')) detectedRegion = 'Kabupaten Bandung Barat';
+      else if (text.includes('cimahi') || text.includes('cmi')) detectedRegion = 'Kota Cimahi';
+      else if (text.includes('kota bandung')) detectedRegion = 'Kota Bandung';
+      else if (text.includes('kabupaten bandung') || text.includes('kab bandung')) detectedRegion = 'Kabupaten Bandung';
+      else if (text.includes('cianjur') || text.includes('cjr')) detectedRegion = 'Kabupaten Cianjur';
+      else if (text.includes('sukabumi') || text.includes('skb')) detectedRegion = 'Kabupaten/Kota Sukabumi';
+      else if (text.includes('bogor') || text.includes('bgr')) detectedRegion = 'Kabupaten/Kota Bogor';
+      else if (text.includes('bekasi') || text.includes('bks')) detectedRegion = 'Kabupaten/Kota Bekasi';
+      else if (text.includes('depok')) detectedRegion = 'Kota Depok';
+      else if (text.includes('karawang') || text.includes('krw')) detectedRegion = 'Kabupaten Karawang';
+      else if (text.includes('purwakarta')) detectedRegion = 'Kabupaten Purwakarta';
+      else if (text.includes('subang')) detectedRegion = 'Kabupaten Subang';
+      else if (text.includes('cirebon') || text.includes('crb')) detectedRegion = 'Kabupaten/Kota Cirebon';
+      else if (text.includes('garut')) detectedRegion = 'Kabupaten Garut';
+      else if (text.includes('tasikmalaya') || text.includes('tsm')) detectedRegion = 'Kabupaten/Kota Tasikmalaya';
+      else if (text.includes('ciamis')) detectedRegion = 'Kabupaten Ciamis';
+      else if (text.includes('banjar')) detectedRegion = 'Kota Banjar';
+      else if (text.includes('pangandaran')) detectedRegion = 'Kabupaten Pangandaran';
+      else if (text.includes('kuningan')) detectedRegion = 'Kabupaten Kuningan';
+      else if (text.includes('majalengka')) detectedRegion = 'Kabupaten Majalengka';
+      else if (text.includes('sumedang')) detectedRegion = 'Kabupaten Sumedang';
+      else if (text.includes('indramayu')) detectedRegion = 'Kabupaten Indramayu';
+    }
   }
+
+  // Scan current user query for newly mentioned region
+  if (normCurrent.includes('bandung barat') || normCurrent.includes('kbb')) detectedRegion = 'Kabupaten Bandung Barat';
+  else if (normCurrent.includes('cimahi') || normCurrent.includes('cmi')) detectedRegion = 'Kota Cimahi';
+  else if (normCurrent.includes('kota bandung')) detectedRegion = 'Kota Bandung';
+  else if (normCurrent.includes('kabupaten bandung') || normCurrent.includes('kab bandung')) detectedRegion = 'Kabupaten Bandung';
+  else if (normCurrent.includes('cianjur') || normCurrent.includes('cjr')) detectedRegion = 'Kabupaten Cianjur';
+  else if (normCurrent.includes('sukabumi') || normCurrent.includes('skb')) detectedRegion = 'Kabupaten/Kota Sukabumi';
+  else if (normCurrent.includes('bogor') || normCurrent.includes('bgr')) detectedRegion = 'Kabupaten/Kota Bogor';
+  else if (normCurrent.includes('bekasi') || normCurrent.includes('bks')) detectedRegion = 'Kabupaten/Kota Bekasi';
+  else if (normCurrent.includes('depok')) detectedRegion = 'Kota Depok';
+  else if (normCurrent.includes('karawang') || normCurrent.includes('krw')) detectedRegion = 'Kabupaten Karawang';
+  else if (normCurrent.includes('purwakarta')) detectedRegion = 'Kabupaten Purwakarta';
+  else if (normCurrent.includes('subang')) detectedRegion = 'Kabupaten Subang';
+  else if (normCurrent.includes('cirebon') || normCurrent.includes('crb')) detectedRegion = 'Kabupaten/Kota Cirebon';
+  else if (normCurrent.includes('garut')) detectedRegion = 'Kabupaten Garut';
+  else if (normCurrent.includes('tasikmalaya') || normCurrent.includes('tsm')) detectedRegion = 'Kabupaten/Kota Tasikmalaya';
+  else if (normCurrent.includes('ciamis')) detectedRegion = 'Kabupaten Ciamis';
+  else if (normCurrent.includes('banjar')) detectedRegion = 'Kota Banjar';
+  else if (normCurrent.includes('pangandaran')) detectedRegion = 'Kabupaten Pangandaran';
+  else if (normCurrent.includes('kuningan')) detectedRegion = 'Kabupaten Kuningan';
+  else if (normCurrent.includes('majalengka')) detectedRegion = 'Kabupaten Majalengka';
+  else if (normCurrent.includes('sumedang')) detectedRegion = 'Kabupaten Sumedang';
+  else if (normCurrent.includes('indramayu')) detectedRegion = 'Kabupaten Indramayu';
 
   // Check if current user query names another entity explicitly (e.g. "Kalau TKSK sama juga gak?")
   let targetPillarInCurrentQuery: string | null = null;
@@ -1031,8 +1509,10 @@ export function resolveContextFromChatHistory(
   else if (normCurrent.includes('pensos')) targetPillarInCurrentQuery = 'Penyuluh Sosial';
   else if (normCurrent.includes('kube')) targetPillarInCurrentQuery = 'KUBE';
   else if (normCurrent.includes('slrt') || normCurrent.includes('puskesos')) targetPillarInCurrentQuery = 'SLRT / Puskesos';
+  else if (normCurrent.includes('ilham') || normCurrent.includes('developer') || normCurrent.includes('pembuat')) targetPillarInCurrentQuery = 'Pengembang Website (Ilham Fazril)';
 
-  const ambig = detectAmbiguousInquiry(lastUserMsg, targetPillarInCurrentQuery || detectedObject);
+  const activeResolvedObject = targetPillarInCurrentQuery || detectedObject;
+  const ambig = detectAmbiguousInquiry(lastUserMsg, activeResolvedObject);
 
   let instruction = '';
   if (isComplaintOrCorrection) {
@@ -1043,15 +1523,21 @@ AI MUTLAK: Pengguna menyatakan jawaban sebelumnya keliru atau tidak sesuai.
 3. Arahkan jawaban langsung menjawab topik yang dikoreksi pengguna (misal: jika pengguna protes minta info Bansos, jawab 100% tentang alur bansos DTKS di kelurahan dan cekbansos.kemensos.go.id).`;
   } else if (targetPillarInCurrentQuery && (normCurrent.includes('sama juga gak') || normCurrent.includes('sama gak') || normCurrent.includes('gimana') || normCurrent.includes('sami oge'))) {
     instruction = `[DYNAMIC TOPIC TRACKER - PERBANDINGAN ANTAR-PILAR]: Pengguna menanyakan apakah "${detectedTopic || 'Pendaftaran'}" untuk ${targetPillarInCurrentQuery} sama dengan ${detectedObject || 'pilar sebelumnya'}.\nInstruksi AI: Sambungkan konteks secara cerdas! Bandingkan alur spesifik untuk ${targetPillarInCurrentQuery} (seperti seleksi khusus kuota 1 personil per kecamatan oleh Dinsos Kab/Kota) dengan ramah.`;
-  } else if (detectedObject || detectedTopic) {
-    instruction = `[DYNAMIC TOPIC TRACKER - RESOLUSI KATA GANTI/ELIPSIS]: Pengguna mengajukan pertanyaan lanjutan/singkat ("${lastUserMsg}"). Objek aktif yang sedang dibahas adalah ${detectedObject ? `[${detectedObject}]` : ''} terkait ${detectedTopic ? `[${detectedTopic}]` : 'topik terkait'}.\nInstruksi AI: Pertahankan dan kunci topik aktif ini! JANGAN melompat ke pilar lain secara acak. Jawab langsung rincian kriteria/prosesnya untuk ${detectedObject || 'topik tersebut'}.`;
+  } else if (activeResolvedObject) {
+    instruction = `[DYNAMIC TOPIC TRACKER & RESOLUSI KATA RUJUKAN AKTIF]:
+- Pertanyaan Pengguna Saat Ini: "${lastUserMsg}"
+- Subjek Aktif yang Sedang Dibahas: "${activeResolvedObject}"
+${detectedTopic ? `- Topik Sebelumnya: "${detectedTopic}"` : ''}
+${detectedRegion ? `- Wilayah Relevan: "${detectedRegion}"` : ''}
+Instruksi AI (WAJIB DIPATUHI):
+Pertahankan dan sambungkan konteks secara presisi! Jawab pertanyaan "${lastUserMsg}" secara spesifik untuk "${activeResolvedObject}" ${detectedRegion ? `di wilayah ${detectedRegion}` : ''}. JANGAN PERNAH melompat ke pilar sosial lain atau memberikan jawaban yang tidak nyambung!`;
   } else if (ambig.isAmbiguous) {
     instruction = ambig.clarificationPrompt;
   }
 
   return {
-    detectedContext: Boolean(detectedObject || detectedTopic || targetPillarInCurrentQuery || isComplaintOrCorrection || ambig.isAmbiguous),
-    detectedObject: targetPillarInCurrentQuery || detectedObject,
+    detectedContext: Boolean(activeResolvedObject || detectedTopic || isComplaintOrCorrection || ambig.isAmbiguous),
+    detectedObject: activeResolvedObject,
     detectedTopic,
     instruction,
     isComplaintOrCorrection,
@@ -1096,6 +1582,25 @@ export async function ensureAIKnowledgeSeeded(forceSync = false): Promise<AIKnow
       snapshot.forEach((snap) => {
         docsFromFs.push(snap.data() as AIKnowledgeDoc);
       });
+      // Synchronize any missing or newer master items into Firestore and in-memory cache
+      for (const item of MASTER_AI_KNOWLEDGE_BASE) {
+        const existingIdx = docsFromFs.findIndex((d) => d.id === item.id);
+        if (existingIdx === -1) {
+          try {
+            await setDoc(doc(db, 'ai_knowledge_base', item.id), item);
+            docsFromFs.push(item);
+          } catch (setErr) {
+            console.warn(`[Firestore AI Knowledge] Error syncing missing item ${item.id}:`, setErr);
+          }
+        } else if (docsFromFs[existingIdx].updatedAt < item.updatedAt) {
+          try {
+            await setDoc(doc(db, 'ai_knowledge_base', item.id), item);
+            docsFromFs[existingIdx] = item;
+          } catch (upErr) {
+            console.warn(`[Firestore AI Knowledge] Error updating item ${item.id}:`, upErr);
+          }
+        }
+      }
       if (docsFromFs.length > 0) {
         cachedKnowledgeBase = docsFromFs;
       }
