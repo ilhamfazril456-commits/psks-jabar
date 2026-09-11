@@ -72,38 +72,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [currentTab]);
 
-  const scrollToTarget = (elementId?: string, fallbackTop = 0, offset = 90) => {
-    if (elementId) {
-      const el = document.getElementById(elementId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const targetY = window.pageYOffset + rect.top - offset;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'instant' });
-        return;
-      }
-    }
-    window.scrollTo({ top: fallbackTop, behavior: 'instant' });
-  };
-
   const handleNav = (tab: string) => {
     onNavigate(tab);
     setMobileMenuOpen(false);
-
-    if (tab === 'akun') {
-      scrollToTarget('informasi-akun-section', 100, 90);
-    } else if (tab === 'superadmin_settings') {
-      scrollToTarget('pengaturan-section', 100, 90);
-    } else if (tab === 'profil' || tab === 'contact') {
-      scrollToTarget(undefined, 90);
-    } else if (
-      tab === 'admin_manage' ||
-      tab === 'admin_monitor' ||
-      tab === 'admin_maintenance'
-    ) {
-      scrollToTarget(undefined, 100);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const isSuperadminOrDev =

@@ -1692,10 +1692,10 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     return `${opening}**SOP Resmi Mutasi Personil Pilar Sosial Antar-Wilayah se-Jawa Barat**:
 1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat riwayat pengabdian dan nomor registrasi keanggotaan.
 2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.
-3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui domisili penugasan anggota ke lokasi baru tanpa menghapus NIK atau riwayat pelatihan yang telah diraih.
+3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan melalui sistem terpusat memperbarui domisili penugasan anggota ke lokasi baru tanpa menghapus NIK atau riwayat pelatihan yang telah diraih.
 4. **Pembaruan Wilayah Tugas**: Data penugasan personil otomatis disesuaikan dengan wilayah tugas baru berstatus \`SAH_TERDAFTAR\` di pangkalan data Dinas Sosial Jawa Barat.
 
-[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]]`;
+[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
   // 12.10 SOP KASUS LAPANGAN: KTA RUSAK ATAU HILANG DI LAPANGAN (RE-PRINT)
@@ -1714,7 +1714,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 3. **Cetak Ulang Kartu (Re-Print)**: Superadmin dapat langsung mencetak ulang kartu personil melalui modul **Smart Access Card** (opsi Cetak Satuan atau Cetak Massal A4).
 4. Kartu yang baru dicetak langsung aktif dengan tanda validasi hash QR Code resmi.
 
-[[action:tab:admin_manage:Kelola Data Anggota]] [[action:tab:contact:Hubungi Bantuan Resmi]]`;
+[[action:tab:contact:Hubungi Bantuan Resmi]]`;
   }
 
   // 12.11 SOP KASUS LAPANGAN: TALI ASIH & BPJS KETENAGAKERJAAN RELAWAN

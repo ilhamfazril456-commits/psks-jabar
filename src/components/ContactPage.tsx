@@ -23,6 +23,26 @@ interface ContactPageProps {
 }
 
 export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToHome }) => {
+  // Autoscroll down slightly when entering Contact page
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const el =
+        document.getElementById('contact-main-card') ||
+        document.getElementById('contact-top-anchor') ||
+        document.getElementById('kontak-section');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offset = 75;
+        const targetY = window.pageYOffset + rect.top - offset;
+        window.scrollTo({ top: Math.max(70, targetY), behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Saved / Configured Official Links for Dinsos Jabar
   const officialLinks: Record<string, string> = {
     whatsapp: 'https://wa.me/6282126030038',
@@ -159,10 +179,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToH
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/80 py-6 sm:py-10 lg:py-14 px-3 sm:px-6 lg:px-8">
+    <div id="kontak-section" className="min-h-screen bg-slate-50/80 py-6 sm:py-10 lg:py-14 px-3 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {onBackToHome && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div id="contact-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
             <BackToHomeButton onClick={onBackToHome} id="btn-back-top-contact" />
             <div className="text-xs font-bold text-slate-500 bg-white/80 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs">
               <span>Kontak & Media Sosial Resmi Dinas Sosial Jabar</span>
@@ -171,6 +191,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToH
         )}
 
         <motion.div
+          id="contact-main-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}

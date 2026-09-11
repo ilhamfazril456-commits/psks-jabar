@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   UserSession,
   PillarId,
@@ -18,7 +18,6 @@ import {
   DEFAULT_TASK_ITEMS,
   KAB_KOTA_ONLY,
 } from './data/initialData';
-import { hashPassword } from './utils/crypto';
 import { stripDangerousTags } from './utils/sanitize';
 import { DEFAULT_APP_SETTINGS } from './data/defaultSettings';
 import { OFFICIAL_ECOOFFICE_VIDEO } from './assets/officialEcoOfficeVideo';
@@ -34,7 +33,7 @@ import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 import { BackToHomeButton } from './components/BackToHomeButton';
 
-import { SmartGateModal } from './components/SmartGateModal';
+const SmartGateModal = React.lazy(() => import('./components/SmartGateModal').then(m => ({ default: m.SmartGateModal })));
 
 // Dynamic module loaders with non-blocking prefetching capability
 export const loadHomePSKSAnalytics = () => import('./components/HomePSKSAnalytics');
@@ -842,7 +841,7 @@ export default function App() {
 
             // For 27 regional admin accounts, enforce new 12+ character semantic password
             let plainPass = data.passwordPolos || defaultMatch?.passwordPolos || (data.username ? `${data.username}123` : '123456');
-            let passHash = data.passwordHash || defaultMatch?.passwordHash || hashPassword(plainPass);
+            let passHash = data.passwordHash || defaultMatch?.passwordHash || '';
 
             if (defaultMatch && defaultMatch.role === 'admin' && defaultMatch.passwordPolos) {
               const isOldPass = !data.passwordPolos ||
@@ -851,7 +850,7 @@ export default function App() {
                 data.passwordPolos !== defaultMatch.passwordPolos;
               if (isOldPass) {
                 plainPass = defaultMatch.passwordPolos;
-                passHash = defaultMatch.passwordHash || hashPassword(defaultMatch.passwordPolos);
+                passHash = defaultMatch.passwordHash || '';
               }
             }
 
@@ -887,7 +886,7 @@ export default function App() {
                 username: def.username || '',
                 namaAdmin: def.namaAdmin || '',
                 wilayahTugas: def.wilayahTugas || '',
-                passwordHash: def.passwordHash || hashPassword(def.passwordPolos || ''),
+                passwordHash: def.passwordHash || '',
               };
               loadedMap.set(def.id, enriched);
             } else {
@@ -903,10 +902,10 @@ export default function App() {
 
               if (hasPersonalName || needsBcryptHash || isOldRegionalPass || !existing.namaAdmin || !existing.username || !existing.wilayahTugas) {
                 const updatedHash = isOldRegionalPass
-                  ? (def.passwordHash || hashPassword(def.passwordPolos || ''))
+                  ? (def.passwordHash || '')
                   : (existing.passwordHash && /^\$2[aby]\$\d{2}\$/.test(existing.passwordHash)
                     ? existing.passwordHash
-                    : hashPassword(existing.passwordPolos || def.passwordPolos || ''));
+                    : (def.passwordHash || ''));
 
                 const updatedPolos = isOldRegionalPass ? def.passwordPolos : (existing.passwordPolos || def.passwordPolos);
 
@@ -1520,136 +1519,144 @@ export default function App() {
     }
   }, [session]);
 
-  // Handlers
-  const handleSelectPillar = (pillarId: PillarId) => {
+  // Strict Role Security Guard: Block and redirect unauthorized roles from accessing restricted admin consoles
+  useEffect(() => {
+    const isSuperadminOrDev =
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true);
+    const isAdmin =
+      session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin';
+
+    const superadminTabs = [
+      'admin_manage',
+      'admin_monitor',
+      'admin_maintenance',
+      'superadmin_settings',
+      'activity_logs',
+      'announcement_manage',
+      'floating_wa_manage',
+      'user_manage',
+      'task_manage',
+    ];
+
+    if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
+      setCurrentTab('beranda');
+    } else if (currentTab === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
+      setCurrentTab('beranda');
+    }
+  }, [session, currentTab]);
+
+  // Unified High-Performance Navigation Handler (Instant, Zero Lag, Zero Footer Flash)
+  const navigateToTab = useCallback((
+    tab: string,
+    options?: {
+      pillarId?: PillarId | null;
+      detailData?: AnnouncementConfig | null;
+    }
+  ) => {
+    // 1. If we are currently on 'beranda', save the user's exact scroll position
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    handlePrefetchTab('pillar_detail');
-    setActivePillar(pillarId);
-    setCurrentTab('pillar_detail');
+
+    // 2. Immediately prefetch target module
+    handlePrefetchTab(tab);
+
+    // 3. Immediately reset scroll to top synchronously BEFORE state commit if navigating to any feature/subpage
+    if (tab !== 'beranda') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (typeof document !== 'undefined') {
+        document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }
+    }
+
+    // 4. Wrap state transition in React.startTransition so React keeps UI stable and commits without displaying an empty fallback
+    React.startTransition(() => {
+      if (tab === 'pillar_detail') {
+        if (options?.pillarId) setActivePillar(options.pillarId);
+      } else {
+        setActivePillar(null);
+      }
+
+      if (options?.detailData) {
+        setActiveAnnouncementDetail(options.detailData);
+      }
+
+      if (tab === 'beranda') {
+        shouldRestoreDashboardScrollRef.current = true;
+      }
+
+      setCurrentTab(tab);
+    });
+  }, [currentTab, handlePrefetchTab]);
+
+  // Handlers using unified navigateToTab
+  const handleSelectPillar = (pillarId: PillarId) => {
+    navigateToTab('pillar_detail', { pillarId });
   };
 
   const handleOpenAccountConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('admin_manage');
-    setCurrentTab('admin_manage');
+    navigateToTab('admin_manage');
   };
 
   const handleOpenMonitoringConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('admin_monitor');
-    setCurrentTab('admin_monitor');
+    navigateToTab('admin_monitor');
   };
 
   const handleOpenActivityLogConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('activity_logs');
-    setCurrentTab('activity_logs');
+    navigateToTab('activity_logs');
   };
 
   const handleOpenMaintenanceConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('admin_maintenance');
-    setCurrentTab('admin_maintenance');
+    navigateToTab('admin_maintenance');
   };
 
   const handleOpenUserAccountConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('user_manage');
-    setCurrentTab('user_manage');
+    navigateToTab('user_manage');
   };
 
   const handleOpenTaskManagerConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('task_manage');
-    setCurrentTab('task_manage');
+    navigateToTab('task_manage');
   };
 
   const handleOpenAnnouncementConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('announcement_manage');
-    setCurrentTab('announcement_manage');
+    navigateToTab('announcement_manage');
   };
 
   const handleOpenFloatingWaConsole = () => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('floating_wa_manage');
-    setCurrentTab('floating_wa_manage');
+    navigateToTab('floating_wa_manage');
   };
 
   const handleOpenAnnouncementDetail = (ann?: AnnouncementConfig) => {
-    if (currentTab === 'beranda') {
-      dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-    }
-    handlePrefetchTab('announcement_detail');
-    setActiveAnnouncementDetail(ann || appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG);
-    setCurrentTab('announcement_detail');
+    navigateToTab('announcement_detail', { detailData: ann || appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG });
   };
 
   const handleBackToDashboard = () => {
-    shouldRestoreDashboardScrollRef.current = true;
-    setCurrentTab('beranda');
-    setActivePillar(null);
+    navigateToTab('beranda');
   };
 
   const handleBackToHome = () => {
-    shouldRestoreDashboardScrollRef.current = true;
-    setCurrentTab('beranda');
-    setActivePillar(null);
+    navigateToTab('beranda');
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (currentTab === 'beranda' && shouldRestoreDashboardScrollRef.current) {
       shouldRestoreDashboardScrollRef.current = false;
       const targetY = dashboardScrollYRef.current || 0;
-
-      const restoreScroll = () => {
-        window.scrollTo({
-          top: targetY,
-          behavior: 'instant',
-        });
-      };
-
-      requestAnimationFrame(restoreScroll);
-      const timer1 = setTimeout(restoreScroll, 50);
-      const timer2 = setTimeout(restoreScroll, 150);
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-      };
-    } else if (currentTab !== 'beranda' || !shouldRestoreDashboardScrollRef.current) {
-      if (currentTab === 'superadmin_settings') {
-        const timer = setTimeout(() => {
-          const el = document.getElementById('pengaturan-section') || document.getElementById('settings-top-anchor');
-          if (el) {
-            const rect = el.getBoundingClientRect();
-            const targetY = window.pageYOffset + rect.top - 80;
-            window.scrollTo({ top: Math.max(0, targetY + 30), behavior: 'instant' });
-          } else {
-            window.scrollTo({ top: 120, behavior: 'instant' });
-          }
-        }, 80);
-        return () => clearTimeout(timer);
-      } else {
-        window.scrollTo(0, 0);
-      }
+      window.scrollTo({
+        top: targetY,
+        behavior: 'instant',
+      });
+      document.documentElement.scrollTop = targetY;
+    } else if (currentTab !== 'beranda') {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'instant',
+      });
+      document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
     }
   }, [currentTab, activePillar]);
 
@@ -1665,12 +1672,10 @@ export default function App() {
     setGateModalOpen(false);
 
     if (pendingPillarId) {
-      setActivePillar(pendingPillarId);
-      setCurrentTab('pillar_detail');
+      navigateToTab('pillar_detail', { pillarId: pendingPillarId });
       setPendingPillarId(null);
     } else {
-      setCurrentTab('beranda');
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      navigateToTab('beranda');
     }
 
     // Trigger top notification toast for Guest as well
@@ -1683,7 +1688,7 @@ export default function App() {
 
   const handleNavigateToLoginFromGate = () => {
     setOpenLoginModalOnAkun(true);
-    setCurrentTab('akun');
+    navigateToTab('akun');
   };
 
   const handleLogin = (
@@ -1744,12 +1749,10 @@ export default function App() {
       setLoginSuccessData(null);
 
       if (pendingPillarId) {
-        setActivePillar(pendingPillarId);
-        setCurrentTab('pillar_detail');
+        navigateToTab('pillar_detail', { pillarId: pendingPillarId });
         setPendingPillarId(null);
       } else {
-        setCurrentTab('beranda');
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        navigateToTab('beranda');
       }
     }
   };
@@ -1801,7 +1804,7 @@ export default function App() {
     sessionStorage.removeItem('session_token');
     sessionStorage.removeItem('login_timestamp');
     setActivePillar(null);
-    setCurrentTab('beranda');
+    navigateToTab('beranda');
     setGateModalOpen(true);
   };
 
@@ -2646,16 +2649,18 @@ export default function App() {
   if (gateModalOpen) {
     return (
       <div className="fixed inset-0 w-screen h-screen bg-[#01140e] overflow-hidden z-[9999]">
-        <SmartGateModal
-          isOpen={true}
-          onClose={() => setGateModalOpen(false)}
-          targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
-          onConfirmGuestRegion={handleConfirmGuestRegion}
-          onPerformLogin={handleLogin}
-          adminAccounts={adminAccounts}
-          onRegisterAccount={handleAddAdminAccount}
-          logoUrl={appSettings?.logoUrl}
-        />
+        <React.Suspense fallback={null}>
+          <SmartGateModal
+            isOpen={true}
+            onClose={() => setGateModalOpen(false)}
+            targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
+            onConfirmGuestRegion={handleConfirmGuestRegion}
+            onPerformLogin={handleLogin}
+            adminAccounts={adminAccounts}
+            onRegisterAccount={handleAddAdminAccount}
+            logoUrl={appSettings?.logoUrl}
+          />
+        </React.Suspense>
         {!!loginSuccessData && (
           <React.Suspense fallback={null}>
             <LoginSuccessModal
@@ -2712,9 +2717,11 @@ export default function App() {
       <Navbar
         currentTab={currentTab}
         onNavigate={(tab) => {
-          handlePrefetchTab(tab);
-          setCurrentTab(tab);
-          setActivePillar(null);
+          if (tab === 'beranda') {
+            handleBackToHome();
+          } else {
+            navigateToTab(tab);
+          }
         }}
         onPrefetch={handlePrefetchTab}
         session={session}
@@ -2731,7 +2738,7 @@ export default function App() {
       />
 
       {/* Main View Router */}
-      <main className="flex-1">
+      <main className="flex-1 min-h-[calc(100vh-70px)] w-full flex flex-col">
         <div className={currentTab === 'beranda' ? 'block' : 'hidden'}>
           <HeroSection
             onScrollToGrid={handleScrollToGrid}
@@ -2777,9 +2784,7 @@ export default function App() {
                       if (session.statusActive !== 'SAH_TERDAFTAR') {
                         setShowGuestHistoryModal(true);
                       } else {
-                        handlePrefetchTab('user_reg_history');
-                        setCurrentTab('user_reg_history');
-                        window.scrollTo({ top: 0, behavior: 'instant' });
+                        navigateToTab('user_reg_history');
                       }
                     }}
                     className="relative z-10 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group shrink-0"
@@ -2814,9 +2819,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      handlePrefetchTab('terima_pendaftaran');
-                      setCurrentTab('terima_pendaftaran');
-                      window.scrollTo({ top: 0, behavior: 'instant' });
+                      navigateToTab('terima_pendaftaran');
                     }}
                     className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
                   >
@@ -2832,19 +2835,24 @@ export default function App() {
               <JabarRegionalMap allPillarData={allPillarData} />
             </React.Suspense>
 
-            <React.Suspense fallback={null}>
-              <Section11Admin
-                session={session}
-                onOpenAccountConsole={handleOpenAccountConsole}
-                onOpenMonitoringConsole={handleOpenMonitoringConsole}
-                onOpenActivityLogConsole={handleOpenActivityLogConsole}
-                onOpenMaintenanceConsole={handleOpenMaintenanceConsole}
-                onOpenUserAccountConsole={handleOpenUserAccountConsole}
-                onOpenTaskManagerConsole={handleOpenTaskManagerConsole}
-                onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
-                onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
-              />
-            </React.Suspense>
+            {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && session.statusActive === 'SAH_TERDAFTAR' && (
+              <React.Suspense fallback={null}>
+                <Section11Admin
+                  session={session}
+                  onOpenAccountConsole={handleOpenAccountConsole}
+                  onOpenMonitoringConsole={handleOpenMonitoringConsole}
+                  onOpenActivityLogConsole={handleOpenActivityLogConsole}
+                  onOpenMaintenanceConsole={handleOpenMaintenanceConsole}
+                  onOpenUserAccountConsole={handleOpenUserAccountConsole}
+                  onOpenTaskManagerConsole={handleOpenTaskManagerConsole}
+                  onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
+                  onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
+                />
+              </React.Suspense>
+            )}
+
+            {/* Portal Footer: Eksklusif berada di bagian paling bawah Beranda */}
+            <Footer logoUrl={appSettings?.logoUrl} />
         </div>
 
         <React.Suspense fallback={null}>
@@ -2931,7 +2939,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'admin_manage' && (
+        {currentTab === 'admin_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <AdminManagementPage
             session={session}
             adminAccounts={adminAccounts}
@@ -2942,7 +2950,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'admin_monitor' && (
+        {currentTab === 'admin_monitor' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <AdminMonitoringPage
             session={session}
             adminAccounts={adminAccounts}
@@ -2952,7 +2960,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'admin_maintenance' && (
+        {currentTab === 'admin_maintenance' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <MaintenanceManagementPage
             session={session}
             appSettings={appSettings}
@@ -2961,7 +2969,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'superadmin_settings' && (
+        {currentTab === 'superadmin_settings' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <SuperadminSettingsPage
             session={session}
             onBackToHome={handleBackToHome}
@@ -2971,20 +2979,19 @@ export default function App() {
             adminAccounts={adminAccounts}
             adminMessages={adminMessages}
             onNavigateToTab={(tab) => {
-              handlePrefetchTab(tab);
-              setCurrentTab(tab);
+              navigateToTab(tab);
             }}
           />
         )}
 
-        {currentTab === 'activity_logs' && (
+        {currentTab === 'activity_logs' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <ActivityLogPage
             session={session}
             onBackToHome={handleBackToHome}
           />
         )}
 
-        {currentTab === 'announcement_manage' && (
+        {currentTab === 'announcement_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <AnnouncementManagementPage
             session={session}
             appSettings={appSettings}
@@ -3002,7 +3009,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'floating_wa_manage' && (
+        {currentTab === 'floating_wa_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <FloatingWaManagerPage
             session={session}
             appSettings={appSettings}
@@ -3046,17 +3053,36 @@ export default function App() {
           allPillarData={allPillarData}
           appSettings={appSettings}
           onNavigateTab={(tab: string) => {
+            const superadminTabs = [
+              'admin_manage',
+              'admin_monitor',
+              'admin_maintenance',
+              'superadmin_settings',
+              'activity_logs',
+              'announcement_manage',
+              'floating_wa_manage',
+              'user_manage',
+              'task_manage',
+            ];
+            const isSuperadminOrDev =
+              session.statusActive === 'SAH_TERDAFTAR' &&
+              (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true);
+            const isAdmin =
+              session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin';
+
+            if (superadminTabs.includes(tab) && !isSuperadminOrDev) {
+              return;
+            }
+            if (tab === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
+              return;
+            }
+
             if (tab === 'beranda') {
               handleBackToHome();
             } else if (tab === 'user_reg_history' && session.statusActive !== 'SAH_TERDAFTAR') {
               setShowGuestHistoryModal(true);
             } else {
-              if (currentTab === 'beranda') {
-                dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
-              }
-              handlePrefetchTab(tab);
-              setCurrentTab(tab);
-              window.scrollTo({ top: 0, behavior: 'instant' });
+              navigateToTab(tab);
             }
           }}
           onSelectPillar={(pillarId: PillarId) => {
@@ -3211,8 +3237,7 @@ export default function App() {
         </React.Suspense>
       )}
 
-      {/* Footer */}
-      <Footer logoUrl={appSettings?.logoUrl} />
+      {/* Footer is placed strictly inside the beranda container to prevent any footer flash on feature transitions */}
     </div>
   );
 }

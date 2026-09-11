@@ -64,6 +64,26 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
   }, [openLoginOnMount]);
 
+  // Autoscroll down slightly when entering Pusat Akun page
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const el =
+        document.getElementById('account-header-card') ||
+        document.getElementById('account-top-anchor') ||
+        document.getElementById('pusat-akun-section');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offset = 75;
+        const targetY = window.pageYOffset + rect.top - offset;
+        window.scrollTo({ top: Math.max(70, targetY), behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (isLoginModalOpen) {
       setUsernameInput('');
@@ -375,14 +395,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 py-10 px-4 sm:px-6 lg:px-8 pb-24 relative overflow-hidden font-sans">
+    <div id="pusat-akun-section" className="min-h-screen bg-slate-100 text-slate-800 py-10 px-4 sm:px-6 lg:px-8 pb-24 relative overflow-hidden font-sans">
       {/* Background Subtle Gradient Glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-emerald-500/10 via-emerald-100/20 to-transparent blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
         {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA */}
         {onBackToHome && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div id="account-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
             <BackToHomeButton onClick={onBackToHome} id="btn-back-top-account" />
             <div className="text-xs font-bold text-slate-500 bg-white/80 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs">
               <span>PSKS JABAR Provinsi Jawa Barat</span>
@@ -391,7 +411,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         )}
 
         {/* Header Title Section - Clean Emerald & Gold Accent */}
-        <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] border-l-4 border-[#d4af37] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#d4af37]/30">
+        <div id="account-header-card" className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] border-l-4 border-[#d4af37] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#d4af37]/30">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-[#d4af37] via-amber-200 to-[#f3e5ab] text-slate-950 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow flex items-center gap-1.5">

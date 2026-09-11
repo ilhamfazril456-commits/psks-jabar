@@ -50,50 +50,46 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
 }) => {
   const isCurrentUserDeveloper = session?.role === 'developer' || session?.isDeveloper;
 
-  // Filter tabs: 'all' | 'regional' | 'user' | 'super'
-  const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'regional' | 'user' | 'super'>('all');
-  const [newAdminRole, setNewAdminRole] = useState<'admin' | 'user' | 'superadmin'>('admin');
+  // Filter tabs: 'all' | 'regional' | 'super'
+  const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'regional' | 'super'>('all');
+  const [newAdminRole, setNewAdminRole] = useState<'admin' | 'superadmin'>('admin');
 
-  // Filter & order accounts according to authorization rules
+  // Filter & order accounts according to authorization rules - strictly ADMIN ONLY (no user accounts)
   const { allGrouped, displayedAccounts, counts } = useMemo(() => {
-    // 1. Purge legacy test admin_ilham
-    let list = adminAccounts.filter((a) => (a.username || '').toLowerCase() !== 'admin_ilham');
+    // 1. Purge legacy test admin_ilham and strictly exclude user accounts
+    let list = adminAccounts
+      .filter((a) => (a.username || '').toLowerCase() !== 'admin_ilham')
+      .filter((a) => a.role !== 'user');
 
     // 2. Hide developer account ONLY if current user is not developer (do NOT hide other accounts containing 'ilham' like IlhamFazril1)
     if (!isCurrentUserDeveloper) {
       list = list.filter((a) => a.role !== 'developer' && (a.username || '').toLowerCase() !== 'ilhamfazril');
     }
 
-    // 3. Separate top authority accounts (Dev & Superadmin), regional accounts, and user accounts
+    // 3. Separate top authority accounts (Dev & Superadmin) and regional accounts
     const devAccounts: typeof list = [];
     const superAccounts: typeof list = [];
     const regionalAccounts: typeof list = [];
-    const userAccounts: typeof list = [];
 
     list.forEach((acc) => {
       const uLower = (acc.username || '').toLowerCase().trim();
       const isDev = acc.role === 'developer' || uLower === 'ilhamfazril';
       const isSuper = acc.role === 'superadmin' || uLower.includes('superadmin');
-      const isUser = acc.role === 'user';
 
       if (isDev) {
         devAccounts.push(acc);
       } else if (isSuper) {
         superAccounts.push(acc);
-      } else if (isUser) {
-        userAccounts.push(acc);
       } else {
         regionalAccounts.push(acc);
       }
     });
 
-    const all = [...devAccounts, ...superAccounts, ...regionalAccounts, ...userAccounts];
+    const all = [...devAccounts, ...superAccounts, ...regionalAccounts];
 
     let filtered = all;
     if (accountRoleFilter === 'regional') {
       filtered = regionalAccounts;
-    } else if (accountRoleFilter === 'user') {
-      filtered = userAccounts;
     } else if (accountRoleFilter === 'super') {
       filtered = [...devAccounts, ...superAccounts];
     }
@@ -104,7 +100,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
       counts: {
         all: all.length,
         regional: regionalAccounts.length,
-        user: userAccounts.length,
         super: devAccounts.length + superAccounts.length,
       },
     };
@@ -177,9 +172,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
     }
 
     const assignedRole =
-      newAdminRole === 'user'
-        ? 'user'
-        : wilayahIn.toLowerCase().includes('provinsi')
+      newAdminRole === 'superadmin' || wilayahIn.toLowerCase().includes('provinsi')
         ? 'superadmin'
         : 'admin';
 
@@ -373,7 +366,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                     className="w-full h-11 bg-white border-2 border-slate-200 rounded-xl px-3 text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#043e2e] focus:ring-1 focus:ring-[#043e2e]"
                   >
                     <option value="admin">🏢 Admin Wilayah (Kab/Kota)</option>
-                    <option value="user">👥 Akun User (Petugas/Kader)</option>
                     {isCurrentUserDeveloper && (
                       <option value="superadmin">👑 Superadmin Provinsi</option>
                     )}
@@ -439,7 +431,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                     <option value="Provinsi Jabar">Provinsi Jabar (Pusat Superadmin)</option>
                   </select>
                   <p className="text-[10px] text-slate-400 font-medium">
-                    Pilih wilayah penugasan admin/user.
+                    Pilih wilayah penugasan admin dinas.
                   </p>
                 </div>
               </div>
@@ -490,20 +482,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setAccountRoleFilter('user')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer transition-all flex items-center gap-1.5 ${
-                  accountRoleFilter === 'user'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
-                }`}
-              >
-                <span>👥 Akun User Terdaftar</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${accountRoleFilter === 'user' ? 'bg-blue-800 text-white' : 'bg-blue-200 text-blue-900'}`}>
-                  {counts.user}
-                </span>
-              </button>
-              <button
-                type="button"
                 onClick={() => setAccountRoleFilter('regional')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer transition-all ${
                   accountRoleFilter === 'regional'
@@ -543,7 +521,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                     const uLower = (item.username || '').toLowerCase().trim();
                     const isDevAccount = item.role === 'developer' || uLower === 'ilhamfazril';
                     const isSuperAccount = item.role === 'superadmin' || uLower.includes('superadmin');
-                    const isUserAccount = item.role === 'user';
                     
                     // Password masking rule:
                     // By default passwords are plain text / uncensored.
@@ -564,10 +541,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                           ) : isSuperAccount ? (
                             <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded uppercase">
                               SUPERADMIN
-                            </span>
-                          ) : item.role === 'user' ? (
-                            <span className="bg-blue-100 text-blue-800 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                              USER TERDAFTAR
                             </span>
                           ) : (
                             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">

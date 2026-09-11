@@ -1,5 +1,3 @@
-import QRCode from 'qrcode';
-
 // Permanent Cryptographic Tokens for Physical Smart Cards (Printed once for permanent office usage)
 export const PERMANENT_SUPERADMIN_QR_TOKEN = 'ENC::SA-8F2B9D4C1E';
 export const PERMANENT_DEVELOPER_QR_TOKEN = 'ENC::DEV-7A3C5F9B2D';
@@ -153,6 +151,7 @@ export function generateQRCardPayload(role: 'superadmin' | 'developer', nama?: s
  */
 export async function generateQRDataUrl(token: string): Promise<string> {
   try {
+    const QRCode = (await import('qrcode')).default;
     const url = await QRCode.toDataURL(token, {
       width: 360,
       margin: 1,

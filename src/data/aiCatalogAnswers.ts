@@ -422,10 +422,10 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   'u-sop-1': `**SOP Resmi Mutasi Personil Pilar Sosial Antar-Wilayah se-Jawa Barat**:
 1. **Surat Pengantar Mutasi**: Personil meminta Surat Keterangan / Pengantar Mutasi dari Dinas Sosial Kabupaten/Kota asal yang memuat rekam jejak pengabdian dan nomor registrasi anggota.
 2. **Lapor Dinsos Tujuan**: Menyerahkan surat pengantar dan KTP ke Bidang Linjamsos / Pemberdayaan Sosial Dinsos Kabupaten/Kota yang baru.
-3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan membuka menu **Kelola Wilayah**, memperbarui data penugasan anggota ke domisili baru tanpa menghapus NIK atau riwayat sertifikasi yang telah diraih.
+3. **Mutasi Data Digital di PSKS Jabar**: Admin Wilayah tujuan melalui sistem terpusat memperbarui data penugasan anggota ke domisili baru tanpa menghapus NIK atau riwayat sertifikasi yang telah diraih.
 4. **Pembaruan Wilayah Tugas**: Data penugasan personil otomatis disesuaikan dengan wilayah tugas baru berstatus \`SAH_TERDAFTAR\` di pangkalan data Dinas Sosial Jawa Barat.
 
-[[action:tab:admin_manage:Buka Kelola Wilayah]] [[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]]`,
+[[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
 
   'u-sop-2': `**SOP Penanganan Status Keabsahan Personil Jika Dokumen Lapangan Hilang atau Rusak**:
 1. **Data Tetap Aman**: Status keanggotaan Anda tetap tersimpan aman dan terenkripsi di cloud database sistem PSKS Jabar dengan status **SAH_TERDAFTAR**.

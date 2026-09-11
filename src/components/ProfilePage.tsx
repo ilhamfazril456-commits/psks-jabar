@@ -33,6 +33,26 @@ interface ProfilePageProps {
 export const ProfilePage: React.FC<ProfilePageProps> = ({ appSettings, onBackToHome }) => {
   const [activeSection, setActiveSection] = useState<'sambutan' | 'dasar-hukum' | 'tujuan' | 'visi-misi'>('sambutan');
 
+  // Autoscroll down slightly when entering Profile page
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const el =
+        document.getElementById('profile-jump-nav') ||
+        document.getElementById('profile-top-anchor') ||
+        document.getElementById('profil-section');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offset = 75;
+        const targetY = window.pageYOffset + rect.top - offset;
+        window.scrollTo({ top: Math.max(70, targetY), behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const getKadinasPhoto = React.useCallback(() => {
     const fs = appSettings?.kadinasPhotoUrl;
     if (fs && fs !== 'LOCAL_STORAGE_SAVED_PHOTO' && !fs.startsWith('C:') && !fs.startsWith('file:') && !fs.includes('Users\\')) {
@@ -245,12 +265,12 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/80 py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
+    <div id="profil-section" className="min-h-screen bg-slate-50/80 py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* HEADER TOP BAR & BACK BUTTON */}
         {onBackToHome && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div id="profile-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
             <BackToHomeButton onClick={onBackToHome} id="btn-back-top-profile" />
             <div className="text-xs font-bold text-slate-600 bg-white border border-slate-200/90 px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#043e2e]" />
@@ -260,7 +280,7 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
         )}
 
         {/* 4 HORIZONTAL JUMP NAVIGATION BUTTONS (BERJAJAR RAPI DI PALING ATAS) */}
-        <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#022219] p-3 sm:p-4 rounded-2xl sm:rounded-3xl border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+        <div id="profile-jump-nav" className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#022219] p-3 sm:p-4 rounded-2xl sm:rounded-3xl border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 mb-3 pb-2.5 border-b border-white/10">
             <div className="flex items-center gap-2 text-white">

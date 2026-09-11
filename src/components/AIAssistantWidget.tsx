@@ -67,6 +67,7 @@ interface AIAssistantWidgetProps {
 interface TypingFormattedTextProps {
   content: string;
   isAnimated: boolean;
+  session?: UserSession;
   onScrollToBottom?: () => void;
   onComplete?: () => void;
   onNavigateTab?: (tab: string) => void;
@@ -77,6 +78,7 @@ interface TypingFormattedTextProps {
 const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   content,
   isAnimated,
+  session,
   onScrollToBottom,
   onComplete,
   onNavigateTab,
@@ -84,20 +86,53 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   onSendMessage,
 }) => {
   // Extract interactive action tags: [[action:tab:ID:Label]] or [[action:pillar:ID:Label]]
+  // STRICT SECURITY GUARD: Filter out unauthorized tabs for guest/user/admin roles
   const { cleanText, actions } = useMemo(() => {
     const actionRegex = /\[\[action:(tab|pillar):([a-zA-Z0-9_\-]+):(.*?)]]/g;
     const foundActions: ActionTag[] = [];
+    const isSuperadminOrDev =
+      session?.statusActive === 'SAH_TERDAFTAR' &&
+      (session?.role === 'superadmin' || session?.role === 'developer');
+    const isAdmin =
+      session?.statusActive === 'SAH_TERDAFTAR' && session?.role === 'admin';
+
+    const superadminOnlyTabs = [
+      'admin_manage',
+      'admin_monitor',
+      'admin_maintenance',
+      'superadmin_settings',
+      'activity_logs',
+      'announcement_manage',
+      'floating_wa_manage',
+      'user_manage',
+      'task_manage',
+    ];
+
     let match;
     while ((match = actionRegex.exec(content)) !== null) {
+      const type = match[1] as 'tab' | 'pillar';
+      const target = match[2];
+      const label = match[3];
+
+      // Strict access filter: NEVER allow admin management button to guest, regular user, or unauthorized admin
+      if (type === 'tab') {
+        if (superadminOnlyTabs.includes(target) && !isSuperadminOrDev) {
+          continue;
+        }
+        if (target === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
+          continue;
+        }
+      }
+
       foundActions.push({
-        type: match[1] as 'tab' | 'pillar',
-        target: match[2],
-        label: match[3],
+        type,
+        target,
+        label,
       });
     }
     const clean = content.replace(actionRegex, '').trim();
     return { cleanText: clean, actions: foundActions };
-  }, [content]);
+  }, [content, session]);
 
   const [displayedLength, setDisplayedLength] = useState(isAnimated ? 0 : cleanText.length);
   const [isDone, setIsDone] = useState(!isAnimated);
@@ -420,15 +455,21 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     if (currentTab === 'pillar_detail' && activePillar && PILLARS_CONFIG[activePillar]) {
       return `Detail ${PILLARS_CONFIG[activePillar].title}`;
     }
-    if (currentTab === 'admin_manage') return 'Kelola Data Wilayah';
-    if (currentTab === 'admin_monitor') return 'Monitoring & Laporan';
-    if (currentTab === 'admin_maintenance') return 'Pengaturan Maintenance';
-    if (currentTab === 'superadmin_settings') return 'Super Admin Provinsi';
+    const isSuperadminOrDev =
+      session?.statusActive === 'SAH_TERDAFTAR' &&
+      (session?.role === 'superadmin' || session?.role === 'developer');
+
+    if (isSuperadminOrDev) {
+      if (currentTab === 'admin_manage') return 'Kelola Data Wilayah';
+      if (currentTab === 'admin_monitor') return 'Monitoring & Laporan';
+      if (currentTab === 'admin_maintenance') return 'Pengaturan Maintenance';
+      if (currentTab === 'superadmin_settings') return 'Super Admin Provinsi';
+    }
     if (currentTab === 'akun') return 'Pusat Akun & Verifikasi';
     if (currentTab === 'profil') return 'Profil Dinsos Jabar';
     if (currentTab === 'contact') return 'Kontak & Bantuan';
     return 'Beranda PSKS JABAR';
-  }, [currentTab, activePillar]);
+  }, [currentTab, activePillar, session]);
 
   // Dynamic Context-Aware Quick Questions Engine
   const quickQuestions = useMemo(() => {
@@ -475,8 +516,12 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       );
     }
 
-    // 2. When on Admin Data Management
-    if (currentTab === 'admin_manage') {
+    // 2. When on Admin Data Management (Superadmin & Developer ONLY)
+    const isSuperadminOrDev =
+      session?.statusActive === 'SAH_TERDAFTAR' &&
+      (session?.role === 'superadmin' || session?.role === 'developer');
+
+    if (currentTab === 'admin_manage' && isSuperadminOrDev) {
       contextSpecificItems.push(
         {
           id: 'dyn-admin-sop',
@@ -1318,6 +1363,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                         {msg.role === 'assistant' ? (
                           <TypingFormattedText
                             content={msg.content}
+                            session={session}
                             isAnimated={msg.id === typingMessageId}
                             onScrollToBottom={scrollToBottom}
                             onComplete={() => setTypingMessageId(null)}
