@@ -373,7 +373,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => {
+              const next = !mobileMenuOpen;
+              setMobileMenuOpen(next);
+              if (next) {
+                onPrefetch?.('profil');
+                onPrefetch?.('contact');
+              }
+            }}
             className="text-white p-1.5 sm:p-2 rounded-lg hover:bg-white/10 focus:outline-none transition-colors shrink-0"
             aria-label="Toggle Navigation Menu"
           >

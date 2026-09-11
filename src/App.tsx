@@ -425,7 +425,8 @@ export default function App() {
     }
   }, []);
 
-  // User intent-based prefetching for instant, zero-latency transitions
+  // User intent-based prefetching (zero impact on PageSpeed & Core Web Vitals)
+  // Prefetches chunks only when user hovers or touches navigation items or opens mobile drawer
   const handlePrefetchTab = useCallback((tab: string) => {
     try {
       if (tab === 'profil') {
@@ -438,64 +439,6 @@ export default function App() {
         loadAdminRegistrationManager();
       }
     } catch (_) {}
-  }, []);
-
-  // Background prefetching for primary subpages (Profile, Contact)
-  // Strictly scheduled with requestIdleCallback + 4000ms delay after window load
-  // to guarantee ZERO impact on PageSpeed / Core Web Vitals (FCP, LCP, TBT)
-  useEffect(() => {
-    // Respect user's Data Saver mode or slow connections
-    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
-    if (nav?.connection?.saveData || nav?.connection?.effectiveType === '2g') {
-      return;
-    }
-
-    const scheduleSilentPrefetch = () => {
-      const runIdle = (cb: () => void) => {
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(cb, { timeout: 8000 });
-        } else {
-          setTimeout(cb, 200);
-        }
-      };
-
-      // 1. Prefetch ProfilePage first during browser idle
-      runIdle(() => {
-        loadProfilePage().catch(() => {});
-      });
-
-      // 2. Prefetch ContactPage staggered after Profile
-      runIdle(() => {
-        setTimeout(() => {
-          loadContactPage().catch(() => {});
-        }, 1500);
-      });
-
-      // 3. Prefetch AccountPage staggered after Contact
-      runIdle(() => {
-        setTimeout(() => {
-          loadAccountPage().catch(() => {});
-        }, 3000);
-      });
-    };
-
-    let timer: any;
-    if (document.readyState === 'complete') {
-      timer = setTimeout(scheduleSilentPrefetch, 4000);
-    } else {
-      const onWindowLoaded = () => {
-        timer = setTimeout(scheduleSilentPrefetch, 4000);
-      };
-      window.addEventListener('load', onWindowLoaded, { once: true });
-      return () => {
-        window.removeEventListener('load', onWindowLoaded);
-        clearTimeout(timer);
-      };
-    }
-
-    return () => {
-      clearTimeout(timer);
-    };
   }, []);
 
   const handleSaveAppSettings = async (newSettings: AppSettings) => {
