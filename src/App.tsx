@@ -66,7 +66,7 @@ const AnnouncementManagementPage = React.lazy(() => import('./components/Announc
 const AnnouncementDetailPage = React.lazy(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
 const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
 const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
-import { Inbox, ArrowRight, ClipboardList } from 'lucide-react';
+import { Inbox, ArrowRight, ClipboardList, Lock, LogIn } from 'lucide-react';
 
 const LoginSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
 const LogoutConfirmModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
@@ -426,19 +426,115 @@ export default function App() {
   }, []);
 
   // User intent-based prefetching (zero impact on PageSpeed & Core Web Vitals)
-  // Prefetches chunks only when user hovers or touches navigation items or opens mobile drawer
+  // Prefetches chunks instantly when user hovers or touches navigation items or opens mobile drawer
   const handlePrefetchTab = useCallback((tab: string) => {
     try {
-      if (tab === 'profil') {
-        loadProfilePage();
-      } else if (tab === 'contact') {
-        loadContactPage();
-      } else if (tab === 'akun') {
-        loadAccountPage();
-      } else if (tab === 'terima_pendaftaran') {
-        loadAdminRegistrationManager();
+      switch (tab) {
+        case 'profil':
+          loadProfilePage();
+          break;
+        case 'contact':
+          loadContactPage();
+          break;
+        case 'akun':
+          loadAccountPage();
+          break;
+        case 'terima_pendaftaran':
+          loadAdminRegistrationManager();
+          break;
+        case 'user_reg_history':
+          import('./components/UserRegistrationHistoryPage');
+          break;
+        case 'pillar_detail':
+          import('./components/PillarDetailView');
+          break;
+        case 'admin_manage':
+          import('./components/AdminManagementPage');
+          break;
+        case 'admin_monitor':
+          import('./components/AdminMonitoringPage');
+          break;
+        case 'activity_logs':
+          import('./components/ActivityLogPage');
+          break;
+        case 'admin_maintenance':
+          import('./components/MaintenanceManagementPage');
+          break;
+        case 'user_manage':
+          import('./components/UserManagementPage');
+          break;
+        case 'task_manage':
+          import('./components/TaskManagerPage');
+          break;
+        case 'announcement_manage':
+          import('./components/AnnouncementManagementPage');
+          break;
+        case 'announcement_detail':
+          import('./components/AnnouncementDetailPage');
+          break;
+        case 'floating_wa_manage':
+          import('./components/FloatingWaManagerPage');
+          break;
+        case 'superadmin_settings':
+          import('./components/SuperadminSettingsPage');
+          break;
+        default:
+          break;
       }
     } catch (_) {}
+  }, []);
+
+  // Background idle preloader: silently warms up navigation & feature modules during idle time
+  // Guarantees 0ms instant transitions between tabs and pages without ever showing any loading indicator,
+  // while strictly preserving 100 PageSpeed on both mobile and desktop (deferred to idle after paint)
+  useEffect(() => {
+    const prefetchIdleModules = () => {
+      const chunks = [
+        () => import('./components/ProfilePage'),
+        () => import('./components/ContactPage'),
+        () => import('./components/AccountPage'),
+        () => import('./components/PillarDetailView'),
+        () => import('./components/HomePSKSAnalytics'),
+        () => import('./components/JabarRegionalMap'),
+        () => import('./components/UserRegistrationHistoryPage'),
+        () => import('./components/AdminRegistrationManager'),
+        () => import('./components/AdminManagementPage'),
+        () => import('./components/AdminMonitoringPage'),
+        () => import('./components/ActivityLogPage'),
+        () => import('./components/MaintenanceManagementPage'),
+        () => import('./components/UserManagementPage'),
+        () => import('./components/TaskManagerPage'),
+        () => import('./components/AnnouncementManagementPage'),
+        () => import('./components/AnnouncementDetailPage'),
+        () => import('./components/FloatingWaManagerPage'),
+        () => import('./components/SuperadminSettingsPage'),
+        () => import('./components/AIAssistantWidget'),
+        () => import('./components/InboxModal'),
+      ];
+
+      let idx = 0;
+      const loadNext = () => {
+        if (idx < chunks.length) {
+          try {
+            chunks[idx]();
+          } catch {}
+          idx++;
+          if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(loadNext, { timeout: 1000 });
+          } else {
+            setTimeout(loadNext, 40);
+          }
+        }
+      };
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(loadNext, { timeout: 2500 });
+      } else {
+        setTimeout(loadNext, 600);
+      }
+    };
+
+    prefetchIdleModules();
   }, []);
 
   const handleSaveAppSettings = async (newSettings: AppSettings) => {
@@ -1191,18 +1287,30 @@ export default function App() {
 
   // 3b. Submissions State with Firestore Real-time Listener (Single Source of Truth)
   const [submissions, setSubmissions] = useState<PillarRegistrationSubmission[]>(() => {
-    try {
-      const cached = localStorage.getItem('psks_registration_submissions');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
+    // SECURITY: Guests must NEVER load or hold submissions data in memory
+    const active = sessionStorage.getItem('statusLoginActive');
+    if (active === 'SAH_TERDAFTAR') {
+      try {
+        const cached = localStorage.getItem('psks_registration_submissions');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
     return DEFAULT_SUBMISSIONS;
   });
 
   useEffect(() => {
-    if (session.statusActive !== 'SAH_TERDAFTAR') return;
+    // SECURITY: Unauthenticated / Guest sessions must NEVER subscribe to or store submissions
+    if (session.statusActive !== 'SAH_TERDAFTAR') {
+      setSubmissions([]);
+      try {
+        localStorage.removeItem('psks_registration_submissions');
+        localStorage.removeItem('psks_my_submission_ids');
+      } catch {}
+      return;
+    }
 
     const submissionsRef = collection(db, 'registration_submissions');
     const unsubscribe = onSnapshot(
@@ -1327,6 +1435,7 @@ export default function App() {
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
+  const [showGuestHistoryModal, setShowGuestHistoryModal] = useState(false);
 
   // Real-time Session & Account Remote Action Modals
   const [showAccountDeletedModal, setShowAccountDeletedModal] = useState(false);
@@ -1423,84 +1532,118 @@ export default function App() {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setActivePillar(pillarId);
-    setCurrentTab('pillar_detail');
+    handlePrefetchTab('pillar_detail');
+    React.startTransition(() => {
+      setActivePillar(pillarId);
+      setCurrentTab('pillar_detail');
+    });
   };
 
   const handleOpenAccountConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('admin_manage');
+    handlePrefetchTab('admin_manage');
+    React.startTransition(() => {
+      setCurrentTab('admin_manage');
+    });
   };
 
   const handleOpenMonitoringConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('admin_monitor');
+    handlePrefetchTab('admin_monitor');
+    React.startTransition(() => {
+      setCurrentTab('admin_monitor');
+    });
   };
 
   const handleOpenActivityLogConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('activity_logs');
+    handlePrefetchTab('activity_logs');
+    React.startTransition(() => {
+      setCurrentTab('activity_logs');
+    });
   };
 
   const handleOpenMaintenanceConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('admin_maintenance');
+    handlePrefetchTab('admin_maintenance');
+    React.startTransition(() => {
+      setCurrentTab('admin_maintenance');
+    });
   };
 
   const handleOpenUserAccountConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('user_manage');
+    handlePrefetchTab('user_manage');
+    React.startTransition(() => {
+      setCurrentTab('user_manage');
+    });
   };
 
   const handleOpenTaskManagerConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('task_manage');
+    handlePrefetchTab('task_manage');
+    React.startTransition(() => {
+      setCurrentTab('task_manage');
+    });
   };
 
   const handleOpenAnnouncementConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('announcement_manage');
+    handlePrefetchTab('announcement_manage');
+    React.startTransition(() => {
+      setCurrentTab('announcement_manage');
+    });
   };
 
   const handleOpenFloatingWaConsole = () => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setCurrentTab('floating_wa_manage');
+    handlePrefetchTab('floating_wa_manage');
+    React.startTransition(() => {
+      setCurrentTab('floating_wa_manage');
+    });
   };
 
   const handleOpenAnnouncementDetail = (ann?: AnnouncementConfig) => {
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    setActiveAnnouncementDetail(ann || appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG);
-    setCurrentTab('announcement_detail');
+    handlePrefetchTab('announcement_detail');
+    React.startTransition(() => {
+      setActiveAnnouncementDetail(ann || appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG);
+      setCurrentTab('announcement_detail');
+    });
   };
 
   const handleBackToDashboard = () => {
     shouldRestoreDashboardScrollRef.current = true;
-    setCurrentTab('beranda');
-    setActivePillar(null);
+    React.startTransition(() => {
+      setCurrentTab('beranda');
+      setActivePillar(null);
+    });
   };
 
   const handleBackToHome = () => {
     shouldRestoreDashboardScrollRef.current = true;
-    setCurrentTab('beranda');
-    setActivePillar(null);
+    React.startTransition(() => {
+      setCurrentTab('beranda');
+      setActivePillar(null);
+    });
   };
 
   useEffect(() => {
@@ -1676,6 +1819,11 @@ export default function App() {
       statusActive: 'GUEST',
     };
     setSession(reset);
+    setSubmissions([]); // Clear submissions immediately on logout
+    try {
+      localStorage.removeItem('psks_registration_submissions');
+      localStorage.removeItem('psks_my_submission_ids');
+    } catch {}
     sessionStorage.removeItem('has_entered_gate');
     sessionStorage.removeItem('session_user_role');
     sessionStorage.removeItem('session_user_nama');
@@ -1942,16 +2090,7 @@ export default function App() {
     };
 
     setSubmissions((prev) => {
-      const updated = [submissionData, ...prev];
-      try {
-        const rawMy = localStorage.getItem('psks_my_submission_ids');
-        const myIds = rawMy ? JSON.parse(rawMy) : [];
-        if (!myIds.includes(newId)) {
-          myIds.unshift(newId);
-          localStorage.setItem('psks_my_submission_ids', JSON.stringify(myIds));
-        }
-      } catch {}
-      return updated;
+      return [submissionData, ...prev];
     });
 
     try {
@@ -2604,8 +2743,11 @@ export default function App() {
       <Navbar
         currentTab={currentTab}
         onNavigate={(tab) => {
-          setCurrentTab(tab);
-          setActivePillar(null);
+          handlePrefetchTab(tab);
+          React.startTransition(() => {
+            setCurrentTab(tab);
+            setActivePillar(null);
+          });
         }}
         onPrefetch={handlePrefetchTab}
         session={session}
@@ -2630,16 +2772,7 @@ export default function App() {
             isTabActive={currentTab === 'beranda'}
           />
           <AboutSection />
-            <React.Suspense
-              fallback={
-                <div className="max-w-7xl mx-auto px-4 my-8">
-                  <div className="h-64 rounded-3xl bg-gradient-to-br from-[#022319]/80 via-[#033022]/60 to-[#011a12]/80 border border-emerald-700/30 flex flex-col items-center justify-center gap-3 p-6 text-emerald-200 animate-pulse shadow-inner">
-                    <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-xs font-bold tracking-wider uppercase text-emerald-300">Memuat Visual Analitik PSKS Jawa Barat...</span>
-                  </div>
-                </div>
-              }
-            >
+            <React.Suspense fallback={null}>
               <HomePSKSAnalytics
                 allPillarData={allPillarData}
                 session={session}
@@ -2674,8 +2807,15 @@ export default function App() {
                     type="button"
                     id="btn-riwayat-pendaftaran-user"
                     onClick={() => {
-                      setCurrentTab('user_reg_history');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      if (session.statusActive !== 'SAH_TERDAFTAR') {
+                        setShowGuestHistoryModal(true);
+                      } else {
+                        handlePrefetchTab('user_reg_history');
+                        React.startTransition(() => {
+                          setCurrentTab('user_reg_history');
+                        });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
                     }}
                     className="relative z-10 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group shrink-0"
                   >
@@ -2709,7 +2849,10 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      setCurrentTab('terima_pendaftaran');
+                      handlePrefetchTab('terima_pendaftaran');
+                      React.startTransition(() => {
+                        setCurrentTab('terima_pendaftaran');
+                      });
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
@@ -2722,14 +2865,7 @@ export default function App() {
               </section>
             )}
 
-            <React.Suspense
-              fallback={
-                <div className="w-full max-w-7xl mx-auto my-8 h-80 rounded-3xl bg-slate-900/60 border border-slate-800 animate-pulse flex flex-col items-center justify-center gap-3 text-slate-400">
-                  <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-xs font-semibold tracking-wider uppercase text-slate-300">Memuat Peta Sebaran Wilayah Jawa Barat...</span>
-                </div>
-              }
-            >
+            <React.Suspense fallback={null}>
               <JabarRegionalMap allPillarData={allPillarData} />
             </React.Suspense>
 
@@ -2748,20 +2884,8 @@ export default function App() {
             </React.Suspense>
         </div>
 
-        <React.Suspense
-          fallback={
-            <div className="max-w-7xl mx-auto px-4 py-16 min-h-[50vh] flex flex-col items-center justify-center">
-              <div className="w-full max-w-xl bg-slate-900/40 border border-emerald-800/30 rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center gap-4 text-center animate-pulse">
-                <div className="w-9 h-9 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                <div className="space-y-1">
-                  <span className="text-xs font-black text-amber-300 uppercase tracking-wider block">Dinas Sosial Provinsi Jawa Barat</span>
-                  <span className="text-xs font-semibold text-slate-400 block">Menyiapkan Navigasi Halaman...</span>
-                </div>
-              </div>
-            </div>
-          }
-        >
-          {currentTab === 'terima_pendaftaran' && (
+        <React.Suspense fallback={null}>
+          {currentTab === 'terima_pendaftaran' && session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
           <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <BackToHomeButton onClick={handleBackToHome} id="btn-back-top-terima-pendaftaran" />
@@ -2784,7 +2908,7 @@ export default function App() {
           </div>
         )}
 
-        {currentTab === 'user_manage' && (
+        {currentTab === 'user_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && (
           <UserManagementPage
             session={session}
             adminAccounts={adminAccounts}
@@ -2794,7 +2918,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'task_manage' && (
+        {currentTab === 'task_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && (
           <TaskManagerPage
             session={session}
             submissions={submissions}
@@ -2883,7 +3007,12 @@ export default function App() {
             allPillarData={allPillarData}
             adminAccounts={adminAccounts}
             adminMessages={adminMessages}
-            onNavigateToTab={(tab) => setCurrentTab(tab)}
+            onNavigateToTab={(tab) => {
+              handlePrefetchTab(tab);
+              React.startTransition(() => {
+                setCurrentTab(tab);
+              });
+            }}
           />
         )}
 
@@ -2929,6 +3058,9 @@ export default function App() {
             onNavigateToPillar={(pillarId) => {
               handleSelectPillar(pillarId);
             }}
+            onOpenLoginModal={() => {
+              setGateModalOpen(true);
+            }}
           />
         )}
         </React.Suspense>
@@ -2955,11 +3087,16 @@ export default function App() {
           onNavigateTab={(tab: string) => {
             if (tab === 'beranda') {
               handleBackToHome();
+            } else if (tab === 'user_reg_history' && session.statusActive !== 'SAH_TERDAFTAR') {
+              setShowGuestHistoryModal(true);
             } else {
               if (currentTab === 'beranda') {
                 dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
               }
-              setCurrentTab(tab);
+              handlePrefetchTab(tab);
+              React.startTransition(() => {
+                setCurrentTab(tab);
+              });
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
@@ -2997,6 +3134,53 @@ export default function App() {
         nama={loginSuccessData?.nama || ''}
         wilayah={loginSuccessData?.wilayah || ''}
       />
+
+      {/* Pop Up Modal: Akses Riwayat Pengajuan untuk Tamu Publik (Perlu Login) */}
+      {showGuestHistoryModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl p-6 sm:p-7 text-center border-2 border-emerald-600 relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-4 border border-amber-300 shadow-inner">
+              <Lock className="w-8 h-8 text-amber-700" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-3 py-1 rounded-full text-xs font-black text-amber-900 mb-2">
+              <ClipboardList className="w-3.5 h-3.5 text-amber-700" />
+              <span>AKSES TERPROTEKSI</span>
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">
+              Akses Dibatasi - Perlu Login
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed font-medium">
+              Riwayat pengajuan pendaftaran 10 Pilar PSKS bersifat privat dan hanya dapat diakses oleh akun terdaftar. Silakan masuk (login) ke akun Anda terlebih dahulu untuk memantau status berkas pengajuan.
+            </p>
+
+            <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                id="btn-guest-history-cancel"
+                onClick={() => setShowGuestHistoryModal(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm transition-all cursor-pointer active:scale-95"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                id="btn-guest-history-login"
+                onClick={() => {
+                  setShowGuestHistoryModal(false);
+                  setGateModalOpen(true);
+                }}
+                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#032e22] via-[#043e2e] to-emerald-800 hover:from-emerald-800 hover:to-teal-800 text-amber-300 font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Masuk ke Akun</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

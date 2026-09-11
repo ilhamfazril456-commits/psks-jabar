@@ -428,6 +428,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             hp: recordPayload.hp || '-',
             submittedByUserId: session.userId,
             submittedByName: session.nama || session.username || 'User Terdaftar',
+            submittedByUsername: session.username,
             submittedByRole: 'user',
             recordData: recordPayload,
           });

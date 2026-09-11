@@ -71,6 +71,7 @@ interface TypingFormattedTextProps {
   onComplete?: () => void;
   onNavigateTab?: (tab: string) => void;
   onSelectPillar?: (pillarId: PillarId) => void;
+  onSendMessage?: (text: string) => void;
 }
 
 const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
@@ -80,6 +81,7 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   onComplete,
   onNavigateTab,
   onSelectPillar,
+  onSendMessage,
 }) => {
   // Extract interactive action tags: [[action:tab:ID:Label]] or [[action:pillar:ID:Label]]
   const { cleanText, actions } = useMemo(() => {
@@ -230,6 +232,9 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
                   onNavigateTab?.(act.target);
                 } else if (act.type === 'pillar') {
                   onSelectPillar?.(act.target as PillarId);
+                  if (act.label.toLowerCase().startsWith('cara mendaftar')) {
+                    onSendMessage?.(`Bagaimana ${act.label.toLowerCase()}?`);
+                  }
                 }
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all transform hover:scale-103 active:scale-95 cursor-pointer"
@@ -375,11 +380,10 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   }, [isOpen]);
 
   const currentRole: UserRole = (session?.role as UserRole) || 'user';
-  // Developer identification: Checks role, session flag, or developer name (Ilham Fazril)
+  // Developer identification: strictly restricted to authenticated developer account
   const isDeveloperUser =
-    currentRole === 'developer' ||
-    session?.isDeveloper === true ||
-    session?.nama?.toLowerCase().includes('ilham') === true;
+    session?.statusActive === 'SAH_TERDAFTAR' &&
+    (currentRole === 'developer' || session?.isDeveloper === true);
 
   // LISTENER: Trigger recommendation updates and reset horizontal scroll whenever tab or active pillar changes
   useEffect(() => {
@@ -666,9 +670,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         roleDescription = `tata kelola dan rekapitulasi data pilar di wilayah **${userRegion}**, verifikasi berkas pendaftaran, dan ekspor laporan`;
       } else if (currentRole === 'superadmin') {
         roleDescription = `pengawasan agregat 27 Kab/Kota, manajemen akun admin daerah, saklar maintenance, dan audit trail`;
+      } else {
+        roleDescription = `panduan pendaftaran pilar sosial, pengecekan status berkas pengajuan, serta informasi 10 Pilar PSKS Jawa Barat`;
       }
 
-      welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSebagai **${userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
+      welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSebagai **${userRoleTitle === 'USER' ? 'Pengguna Terdaftar' : userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
     } else {
       welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, alur pendaftaran relawan, sebaran data 27 Kabupaten/Kota, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
     }
@@ -758,10 +764,10 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         content: m.content,
       }));
 
-      // Developer privileges and custom persona strictly restricted to developer account
-      const effectiveDev = isDeveloperUser;
-      const roleForContext: UserRole = effectiveDev ? 'developer' : currentRole;
-      const nameForContext = effectiveDev ? (session?.nama || 'Ilham Fazril') : (session?.nama || 'Tamu');
+      // Role and user context strictly based on actual authenticated session
+      const roleForContext: UserRole = isDeveloperUser ? 'developer' : currentRole;
+      const isUserAuthenticated = session?.statusActive === 'SAH_TERDAFTAR';
+      const nameForContext = isUserAuthenticated && session?.nama ? session.nama : 'Tamu Publik';
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -772,6 +778,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             nama: nameForContext,
             wilayah: session?.wilayah || 'Jawa Barat',
             role: roleForContext,
+            statusActive: session?.statusActive || 'GUEST',
             currentTab,
             activePillar,
             liveSummary: {
@@ -825,29 +832,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       console.warn('[AI Assistant] Server unreachable, using verified local knowledge engine:', err);
 
       const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
-
-      const lowerText = textToSend.toLowerCase();
-      const isSelfDevMention =
-        lowerText.includes('saya ilham') ||
-        lowerText.includes('aku ilham') ||
-        lowerText.includes('aing ilham') ||
-        lowerText.includes('gw ilham') ||
-        lowerText.includes('gue ilham') ||
-        lowerText.includes('saya developer') ||
-        lowerText.includes('saya developermu') ||
-        lowerText.includes('aku developer') ||
-        lowerText.includes('aku developermu') ||
-        lowerText.includes('aing developer') ||
-        lowerText.includes('kenal saya') ||
-        lowerText.includes('kenal aing') ||
-        lowerText.includes('siapa saya') ||
-        lowerText.includes('tau siapa saya') ||
-        lowerText.includes('tahu siapa saya') ||
-        lowerText.includes('kamu kenal saya');
-
-      const effectiveDev = isDeveloperUser || isSelfDevMention;
-      const roleForContext: UserRole = effectiveDev ? 'developer' : currentRole;
-      const nameForContext = effectiveDev ? (session?.nama || 'Ilham Fazril') : (session?.nama || 'Tamu');
+      const roleForContext: UserRole = isDeveloperUser ? 'developer' : currentRole;
+      const isUserAuthenticated = session?.statusActive === 'SAH_TERDAFTAR';
+      const nameForContext = isUserAuthenticated && session?.nama ? session.nama : 'Tamu Publik';
 
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
@@ -887,8 +874,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     let resetText = '';
     if (isDeveloperUser) {
       resetText = `Percakapan di-reset nih. Siap lanjut, **Ilham Fazril**! Ada arsitektur kode atau modul lain yang mau kita diskusikan bareng?`;
-    } else if (session?.nama) {
-      resetText = `Percakapan diperbarui. Ada hal lain yang ingin Anda tanyakan seputar peran **${currentRole.toUpperCase()}** di wilayah ${session?.wilayah || 'Jawa Barat'}?`;
+    } else if (session?.statusActive === 'SAH_TERDAFTAR' && session?.nama) {
+      resetText = `Percakapan diperbarui. Ada hal lain yang ingin Anda tanyakan seputar peran **${currentRole === 'user' ? 'Pengguna Terdaftar' : currentRole.toUpperCase()}** di wilayah ${session?.wilayah || 'Jawa Barat'}?`;
     } else {
       resetText = `Percakapan diperbarui. Ada hal lain seputar PSKS Jawa Barat yang ingin Anda tanyakan?`;
     }
@@ -1095,6 +1082,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                   <p className="text-[9.5px] sm:text-[10px] text-emerald-300/80 font-medium truncate">
                     {isDeveloperUser
                       ? 'Sesi Khusus Developer • Ilham Fazril'
+                      : session?.statusActive === 'SAH_TERDAFTAR'
+                      ? `Akun Terdaftar • ${session?.nama || 'Pengguna'}`
                       : 'Kecerdasan Buatan Dinsos Prov. Jawa Barat'}
                   </p>
                 </div>
@@ -1334,6 +1323,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                             onComplete={() => setTypingMessageId(null)}
                             onNavigateTab={onNavigateTab}
                             onSelectPillar={onSelectPillar}
+                            onSendMessage={handleSendMessage}
                           />
                         ) : (
                           <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
@@ -1501,6 +1491,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                         ? 'Sedang mendengarkan suara Anda...'
                         : isDeveloperUser
                         ? 'Halo Ilham Fazril, ketik pertanyaan teknis atau uji sistem...'
+                        : session?.statusActive === 'SAH_TERDAFTAR' && session?.nama
+                        ? `Halo ${session.nama}, tanya seputar ${contextLabel}...`
                         : `Tanya seputar ${contextLabel}...`
                     }
                     disabled={isLoading}

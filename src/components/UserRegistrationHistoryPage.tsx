@@ -27,6 +27,8 @@ import {
   ChevronRight,
   Info,
   Check,
+  Lock,
+  LogIn,
 } from 'lucide-react';
 
 interface UserRegistrationHistoryPageProps {
@@ -34,6 +36,7 @@ interface UserRegistrationHistoryPageProps {
   submissions: PillarRegistrationSubmission[];
   onBackToHome: () => void;
   onNavigateToPillar?: (pillarId: PillarId) => void;
+  onOpenLoginModal?: () => void;
 }
 
 export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPageProps> = ({
@@ -41,60 +44,68 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
   submissions,
   onBackToHome,
   onNavigateToPillar,
+  onOpenLoginModal,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [selectedSubmission, setSelectedSubmission] = useState<PillarRegistrationSubmission | null>(null);
+  const [showGuestLoginModal, setShowGuestLoginModal] = useState<boolean>(
+    session.statusActive !== 'SAH_TERDAFTAR'
+  );
 
-  // Get local IDs submitted by this browser session
-  const localSubmissionIds = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('psks_my_submission_ids');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
+  // Filter submissions that belong strictly to the authenticated user
+  const userSubmissions = useMemo(() => {
+    // 1. Strict Security Barrier: Public guests or unauthenticated users can NEVER access submissions
+    if (session.statusActive !== 'SAH_TERDAFTAR') {
       return [];
     }
-  }, []);
 
-  // Filter submissions that belong strictly to the current user or this browser session
-  const userSubmissions = useMemo(() => {
-    return submissions.filter((sub) => {
-      // 1. If user is logged in as 'user', match by ID, username, name, or locally saved submission IDs
-      if (session.role === 'user') {
-        const matchUserId = Boolean(session.userId && sub.submittedByUserId === session.userId);
-        const matchUsername = Boolean(
-          session.username &&
-            (sub.submittedByUsername || '').toLowerCase().trim() === session.username.toLowerCase().trim()
-        );
-        const matchName = Boolean(
-          session.nama &&
-            (sub.submittedByName || '').toLowerCase().trim() === session.nama.toLowerCase().trim()
-        );
-        const matchLocalId = localSubmissionIds.includes(sub.id);
+    const currentUserId = session.userId?.trim();
+    const currentUsername = session.username?.trim().toLowerCase();
+    const currentName = session.nama?.trim().toLowerCase();
+    const isGenericName =
+      !currentName ||
+      currentName === 'tamu publik' ||
+      currentName === 'user terdaftar' ||
+      currentName === 'guest';
 
-        if (matchUserId || matchUsername || matchName || matchLocalId) return true;
+    // 2. Regular registered user: MUST match strictly by authenticated identity
+    if (session.role === 'user') {
+      return submissions.filter((sub) => {
+        const subUserId = sub.submittedByUserId?.trim();
+        const subUsername = sub.submittedByUsername?.trim().toLowerCase();
+        const subName = sub.submittedByName?.trim().toLowerCase();
+
+        // Match by unique User ID
+        if (currentUserId && subUserId && currentUserId === subUserId) return true;
+
+        // Match by authenticated Username
+        if (currentUsername && subUsername && currentUsername === subUsername) return true;
+
+        // Match by registered Full Name (only if not a generic placeholder)
+        if (!isGenericName && currentName && subName && currentName === subName) return true;
+
         return false;
-      }
+      });
+    }
 
-      // 2. If user is admin/superadmin/developer accessing user history mode, show their submitted items
-      if (session.role === 'admin' || session.role === 'superadmin' || session.role === 'developer') {
-        const matchLocalId = localSubmissionIds.includes(sub.id);
-        const matchUserId = Boolean(session.userId && sub.submittedByUserId === session.userId);
-        const matchName = Boolean(
-          session.nama &&
-            (sub.submittedByName || '').toLowerCase().trim() === session.nama.toLowerCase().trim()
-        );
-        if (matchLocalId || matchUserId || matchName) return true;
+    // 3. Admin / Superadmin / Developer: only show items they personally submitted
+    if (session.role === 'admin' || session.role === 'superadmin' || session.role === 'developer') {
+      return submissions.filter((sub) => {
+        const subUserId = sub.submittedByUserId?.trim();
+        const subUsername = sub.submittedByUsername?.trim().toLowerCase();
+        const subName = sub.submittedByName?.trim().toLowerCase();
+
+        if (currentUserId && subUserId && currentUserId === subUserId) return true;
+        if (currentUsername && subUsername && currentUsername === subUsername) return true;
+        if (!isGenericName && currentName && subName && currentName === subName) return true;
+
         return false;
-      }
+      });
+    }
 
-      // 3. Guest / Tamu Publik: ONLY match submissions submitted from this local browser session
-      if (localSubmissionIds.includes(sub.id)) return true;
-
-      // Never expose other users' submissions to public guest
-      return false;
-    });
-  }, [submissions, session, localSubmissionIds]);
+    return [];
+  }, [submissions, session]);
 
   // Display submissions filtered strictly from user's own submissions
   const displaySubmissions = useMemo(() => {
@@ -303,22 +314,47 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
               </div>
               <div className="space-y-1">
                 <h3 className="text-base font-black text-slate-800">
-                  Belum Ada Riwayat Pengajuan
+                  {session.statusActive !== 'SAH_TERDAFTAR'
+                    ? 'Akses Riwayat Pengajuan Memerlukan Akun Terdaftar'
+                    : 'Belum Ada Riwayat Pengajuan'}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  {searchTerm || statusFilter !== 'ALL'
+                  {session.statusActive !== 'SAH_TERDAFTAR'
+                    ? 'Data riwayat pendaftaran bersifat privat. Silakan masuk dengan akun terdaftar untuk memantau status pengajuan berkas pilar sosial Anda.'
+                    : searchTerm || statusFilter !== 'ALL'
                     ? 'Tidak ada data pengajuan yang sesuai dengan kriteria filter atau pencarian Anda.'
                     : 'Anda belum mengajukan pendaftaran ke salah satu dari 10 Pilar PSKS. Buka salah satu kartu pilar di Beranda untuk mendaftar mandiri.'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onBackToHome}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 text-xs font-bold shadow-md cursor-pointer transition-all"
-              >
-                <ArrowLeft className="w-4 h-4 text-amber-300" />
-                <span>Buka 10 Pilar di Beranda</span>
-              </button>
+              {session.statusActive !== 'SAH_TERDAFTAR' ? (
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGuestLoginModal(true)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#032e22] to-emerald-800 hover:from-emerald-800 hover:to-teal-800 text-amber-300 text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95"
+                  >
+                    <LogIn className="w-4 h-4 text-amber-300" />
+                    <span>Masuk ke Akun</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onBackToHome}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all border border-slate-200 active:scale-95"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Kembali ke Beranda</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onBackToHome}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 text-xs font-bold shadow-md cursor-pointer transition-all"
+                >
+                  <ArrowLeft className="w-4 h-4 text-amber-300" />
+                  <span>Buka 10 Pilar di Beranda</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -591,6 +627,45 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
                 className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer transition-colors"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop Up Modal: Akses Dibatasi - Perlu Login */}
+      {showGuestLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center border-2 border-emerald-600">
+            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-300">
+              <Lock className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-black text-slate-900 uppercase">
+              Akses Dibatasi - Perlu Login
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+              Anda harus login terlebih dahulu untuk mengakses riwayat pengajuan pendaftaran pilar sosial PSKS Jawa Barat.
+            </p>
+            <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowGuestLoginModal(false)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGuestLoginModal(false);
+                  if (onOpenLoginModal) {
+                    onOpenLoginModal();
+                  }
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#043e2e] to-emerald-800 hover:from-emerald-800 hover:to-teal-800 text-amber-300 font-black text-xs shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Masuk ke Akun</span>
               </button>
             </div>
           </div>
