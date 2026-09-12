@@ -163,9 +163,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, [view]);
 
-  // Subscribe to real-time Firestore quota updates for this client's IP and device only in register view
+  // Subscribe to real-time Firestore quota updates for this device whenever modal is open
   useEffect(() => {
-    if (view !== 'register') return;
+    if (!isOpen) return;
     const unsubscribe = subscribeToClientQuota(
       detectedIp,
       detectedDeviceId,
@@ -177,7 +177,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return () => {
       unsubscribe();
     };
-  }, [view, detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
+  }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
 
   const deviceRegisteredAccounts = quotaInfo.registeredAccounts;
   const isDeviceQuotaFull = quotaInfo.count >= 3;
@@ -737,8 +737,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950">
                             Daftar Akun Baru
                           </span>
-                          <span className="text-[8.5px] font-black bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full uppercase">
-                            User Baru
+                          <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase ${
+                            isDeviceQuotaFull
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-blue-200 text-blue-900'
+                          }`}>
+                            {isDeviceQuotaFull ? 'Perangkat Penuh (3/3)' : `${deviceRegisteredAccounts.length}/3 Akun`}
                           </span>
                         </div>
                         <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5">

@@ -65,7 +65,7 @@ function generateUniqueRandomDeviceId(): string {
   );
 }
 
-// Stable, permanent device identifier (stored across Cookie and LocalStorage)
+// Stable, permanent device identifier (stored across Cookie, LocalStorage, and SessionStorage)
 export function getStableDeviceId(): string {
   if (typeof window === 'undefined') return 'dev_server';
 
@@ -75,6 +75,7 @@ export function getStableDeviceId(): string {
     if (cookieId && cookieId.trim().length > 3) {
       try {
         localStorage.setItem('simpsks_device_uuid', cookieId.trim());
+        sessionStorage.setItem('simpsks_device_uuid', cookieId.trim());
       } catch {}
       return cookieId.trim();
     }
@@ -82,14 +83,28 @@ export function getStableDeviceId(): string {
     // 2. Check localStorage
     const localId = localStorage.getItem('simpsks_device_uuid');
     if (localId && localId.trim().length > 3) {
+      try {
+        sessionStorage.setItem('simpsks_device_uuid', localId.trim());
+      } catch {}
       setCookie('simpsks_device_uuid', localId.trim());
       return localId.trim();
     }
 
-    // 3. New device: generate a truly unique random device UUID so NO TWO DEVICES ever collide
+    // 3. Check sessionStorage fallback
+    const sessionId = sessionStorage.getItem('simpsks_device_uuid');
+    if (sessionId && sessionId.trim().length > 3) {
+      try {
+        localStorage.setItem('simpsks_device_uuid', sessionId.trim());
+      } catch {}
+      setCookie('simpsks_device_uuid', sessionId.trim());
+      return sessionId.trim();
+    }
+
+    // 4. New device: generate a truly unique random device UUID so NO TWO DEVICES ever collide
     const newId = generateUniqueRandomDeviceId();
     try {
       localStorage.setItem('simpsks_device_uuid', newId);
+      sessionStorage.setItem('simpsks_device_uuid', newId);
     } catch {}
     setCookie('simpsks_device_uuid', newId);
     return newId;
@@ -443,6 +458,17 @@ export function subscribeToClientQuota(
       const lower = clean.toLowerCase();
       if (!lower) return;
       if (deletedList.includes(lower)) return; // Exclude deleted accounts
+
+      // If accounts list is loaded from database, confirm this account is still active in database
+      if (adminAccounts && adminAccounts.length > 0) {
+        const existsInDb = adminAccounts.some(
+          (a) => (a.username || '').toLowerCase().trim() === lower
+        );
+        if (!existsInDb) {
+          return; // Account was deleted/removed from database, release slot!
+        }
+      }
+
       if (!normalizedMap.has(lower)) {
         normalizedMap.set(lower, clean);
       }

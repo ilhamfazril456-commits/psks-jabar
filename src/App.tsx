@@ -1461,8 +1461,8 @@ export default function App() {
     return targetUserMap[s.wilayah] !== undefined ? !!targetUserMap[s.wilayah] : true;
   };
 
-  // Helper to trigger announcement after a smooth delay (2 seconds) without colliding with other popups
-  const triggerTargetedAnnouncementWithDelay = (delayMs = 2000, targetSession: UserSession = session) => {
+  // Helper to trigger announcement after a smooth delay (1 second default) without colliding with other popups
+  const triggerTargetedAnnouncementWithDelay = (delayMs = 1000, targetSession: UserSession = session) => {
     if (!appSettings.announcement?.active) return;
     if (!isAnnouncementTargeted(appSettings.announcement, targetSession)) return;
     setTimeout(() => {
@@ -1470,14 +1470,16 @@ export default function App() {
     }, delayMs);
   };
 
-  // Real-time trigger on website arrival or when announcement status changes in Firestore
+  // Real-time trigger on website arrival or refresh:
+  // Bila di refresh pengumuman muncul 1 detik setelah refresh
   useEffect(() => {
     if (!appSettings.announcement?.active) {
       setIsFloatingAnnouncementOpen(false);
       return;
     }
 
-    // Auto-trigger on initial visit only if no login/gate modal is actively open
+    // Auto-trigger on page refresh/initial mount exactly 1 second (1000ms) after refresh
+    // Hanya jika tidak terhalang gate modal atau pop up login success
     if (
       !hasTriggeredAnnouncementRef.current &&
       !loginSuccessData &&
@@ -1487,7 +1489,7 @@ export default function App() {
         hasTriggeredAnnouncementRef.current = true;
         const timer = setTimeout(() => {
           setIsFloatingAnnouncementOpen(true);
-        }, 2000);
+        }, 1000); // Tepat 1 detik setelah refresh
         return () => clearTimeout(timer);
       }
     }
@@ -1744,6 +1746,8 @@ export default function App() {
 
   const handleCloseLoginSuccess = () => {
     if (loginSuccessData) {
+      const currentRole = loginSuccessData.role;
+      const currentWilayah = loginSuccessData.wilayah;
       setLoginSuccessData(null);
 
       if (pendingPillarId) {
@@ -1751,6 +1755,22 @@ export default function App() {
         setPendingPillarId(null);
       } else {
         navigateToTab('beranda');
+      }
+
+      // Pengumuman muncul setelah 1 login setelah pop up login muncul saja
+      // Diberikan jeda transisi halus 300ms setelah pop up login ditutup
+      if (appSettings.announcement?.active) {
+        const targetSession: UserSession = {
+          ...session,
+          role: (currentRole as any) || session.role,
+          wilayah: currentWilayah || session.wilayah,
+        };
+        if (isAnnouncementTargeted(appSettings.announcement, targetSession)) {
+          hasTriggeredAnnouncementRef.current = true;
+          setTimeout(() => {
+            setIsFloatingAnnouncementOpen(true);
+          }, 300);
+        }
       }
     }
   };
@@ -1762,6 +1782,8 @@ export default function App() {
   const handleConfirmLogout = () => {
     setShowLogoutConfirm(false);
     setShowLogoutSuccess(true);
+    setIsFloatingAnnouncementOpen(false);
+    hasTriggeredAnnouncementRef.current = false;
   };
 
   const handleForceLogout = (reason?: string) => {
@@ -1801,6 +1823,8 @@ export default function App() {
     sessionStorage.removeItem('statusLoginActive');
     sessionStorage.removeItem('session_token');
     sessionStorage.removeItem('login_timestamp');
+    setIsFloatingAnnouncementOpen(false);
+    hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
     navigateToTab('beranda');
     setGateModalOpen(true);

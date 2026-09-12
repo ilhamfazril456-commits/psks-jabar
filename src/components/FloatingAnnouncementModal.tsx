@@ -139,10 +139,10 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
       aria-modal="true"
       aria-labelledby="floating-announcement-card"
     >
-      {/* Perfectly Square (1:1) Frameless Card Container */}
+      {/* Perfectly Proportioned 4:5 Frameless Card Container */}
       <div
         id="floating-announcement-card"
-        className={`relative w-[90vw] max-w-[500px] aspect-square max-h-[85vh] rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col transition-all bg-slate-950 select-none ${
+        className={`relative w-[88vw] max-w-[440px] aspect-[4/5] max-h-[85vh] rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col transition-all bg-slate-950 select-none ${
           isClosing ? 'animate-pop-exit' : 'animate-pop-spring'
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -224,12 +224,12 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none"
               />
-              {/* Crisp Foreground Poster fitted into the square */}
+              {/* Crisp Foreground Poster fitted seamlessly into 4:5 card */}
               <img
                 src={announcement.photoUrl}
                 alt={announcement.title || 'Pengumuman Resmi'}
                 referrerPolicy="no-referrer"
-                className="relative z-10 w-full h-full object-contain group-hover:scale-[1.015] transition-transform duration-300 select-none block"
+                className="relative z-10 w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-300 select-none block"
               />
             </>
           ) : (
