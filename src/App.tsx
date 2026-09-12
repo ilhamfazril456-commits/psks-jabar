@@ -1571,24 +1571,22 @@ export default function App() {
       }
     }
 
-    // 4. Wrap state transition in React.startTransition so React keeps UI stable and commits without displaying an empty fallback
-    React.startTransition(() => {
-      if (tab === 'pillar_detail') {
-        if (options?.pillarId) setActivePillar(options.pillarId);
-      } else {
-        setActivePillar(null);
-      }
+    // 4. Update state directly for instantaneous 0ms tab navigation
+    if (tab === 'pillar_detail') {
+      if (options?.pillarId) setActivePillar(options.pillarId);
+    } else {
+      setActivePillar(null);
+    }
 
-      if (options?.detailData) {
-        setActiveAnnouncementDetail(options.detailData);
-      }
+    if (options?.detailData) {
+      setActiveAnnouncementDetail(options.detailData);
+    }
 
-      if (tab === 'beranda') {
-        shouldRestoreDashboardScrollRef.current = true;
-      }
+    if (tab === 'beranda') {
+      shouldRestoreDashboardScrollRef.current = true;
+    }
 
-      setCurrentTab(tab);
-    });
+    setCurrentTab(tab);
   }, [currentTab, handlePrefetchTab]);
 
   // Handlers using unified navigateToTab

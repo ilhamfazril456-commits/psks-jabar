@@ -999,22 +999,30 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
       {/* 1. Header Banner */}
-      <div className="bg-[#043e2e] py-5 sm:py-10 px-3.5 sm:px-8 border-b-4 border-[#d4af37] text-white">
-        <div className="max-w-7xl mx-auto">
-          {/* Top Row for Navigation - Spacious layout */}
-          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-8 pb-3 sm:pb-4 border-b border-emerald-800/60">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#022b20] via-[#043e2e] to-[#032e22] py-4 sm:py-6 px-3.5 sm:px-8 border-b-2 border-[#d4af37] text-white shadow-md">
+        {/* Subtle decorative glow */}
+        <div className="absolute top-0 right-0 w-96 h-full bg-radial from-emerald-500/10 to-transparent pointer-events-none" />
+        <div className="absolute -bottom-6 left-1/4 w-64 h-24 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-7xl mx-auto">
+          {/* Top Row for Navigation */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 sm:mb-4 pb-2.5 sm:pb-3 border-b border-emerald-700/40">
             <BackToHomeButton onClick={onBackToDashboard} variant="gold" id="btn-back-top-pillar-detail" />
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-emerald-200/90 bg-emerald-950/40 border border-emerald-600/30 px-3 py-1 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span>Portal Data Pilar Sosial Terpadu</span>
+            </div>
           </div>
 
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-black uppercase tracking-tight leading-tight text-white mb-1.5 sm:mb-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
             {pillar.title}
           </h1>
-          <p className="text-emerald-200 font-semibold text-xs sm:text-base max-w-3xl leading-relaxed mb-2 sm:mb-3">
+          <p className="text-emerald-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
             {pillar.subtitle}
           </p>
-          <div className="text-[#d4af37] font-medium text-[11px] sm:text-xs flex items-center gap-2 pt-0.5">
+          <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
             <span>Dinas Sosial Provinsi Jawa Barat</span>
-            <span>•</span>
+            <span className="text-emerald-500/80">•</span>
             <span>Wilayah: {session.wilayah || 'Semua Kab/Kota'}</span>
           </div>
         </div>
