@@ -27,11 +27,12 @@ import { HeroSection } from './components/HeroSection';
 import { AboutSection } from './components/AboutSection';
 import { BannerBadge } from './components/BannerBadge';
 import { PillarsGrid } from './components/PillarsGrid';
-import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { Footer } from './components/Footer';
-import { MaintenanceOverlay } from './components/MaintenanceOverlay';
-import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 import { BackToHomeButton } from './components/BackToHomeButton';
+
+const FloatingAnnouncementModal = React.lazy(() => import('./components/FloatingAnnouncementModal').then(m => ({ default: m.FloatingAnnouncementModal })));
+const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
+const MaintenanceOverlay = React.lazy(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
 
 const SmartGateModal = React.lazy(() => import('./components/SmartGateModal').then(m => ({ default: m.SmartGateModal })));
 
@@ -75,22 +76,25 @@ const AccountEditedRemoteModal = React.lazy(() => import('./components/WelcomePo
 const AccountFrozenRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountFrozenRemoteModal })));
 const MultipleSessionWarningModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.MultipleSessionWarningModal })));
 
-import { db, handleFirestoreError, isQuotaError, OperationType } from './lib/firebase';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
-import { recordSystemActivity } from './lib/activityLogger';
-import { subscribeToRealtimeVideo } from './lib/videoSync';
+import {
+  subscribeToDoc,
+  subscribeToCollection,
+  setFirestoreDoc,
+  deleteFirestoreDoc,
+  checkServerConnectivity,
+  cleanFirestoreData,
+  OperationType,
+  handleFirestoreError,
+  isQuotaError,
+} from './services/firestoreDataService';
 import { validateQRCardPayload } from './utils/qrAuth';
 import { removeAccountFromQuota } from './services/ipRegistrationService';
 
-function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
-  const cleaned: Record<string, any> = {};
-  Object.keys(obj).forEach((key) => {
-    if (obj[key] !== undefined) {
-      cleaned[key] = obj[key];
-    }
-  });
-  return cleaned;
-}
+const recordSystemActivity = (params: any) => {
+  import('./lib/activityLogger').then(({ recordSystemActivity: fn }) => {
+    fn(params);
+  }).catch(() => {});
+};
 
 export default function App() {
   // 1. Session State
@@ -188,7 +192,7 @@ export default function App() {
     try {
       // 1. Uji koneksi langsung ke server Firestore untuk memeriksa apakah kuota harian telah direset oleh Google
       try {
-        await getDocFromServer(doc(db, 'app_settings', 'global'));
+        await checkServerConnectivity();
         // Jika pembacaan dari server berhasil tanpa error resource-exhausted, reset status kuota!
         quotaExceededRef.current = false;
         setIsQuotaExceeded(false);
@@ -225,10 +229,10 @@ export default function App() {
       for (let i = 0; i < queue.length; i++) {
         const item = queue[i];
         try {
-          if (item.type === 'SET') {
-            await setDoc(doc(db, item.collection, item.docId), item.data);
+          if (item.type === 'SET' && item.data) {
+            await setFirestoreDoc(item.collection, item.docId, item.data);
           } else if (item.type === 'DELETE') {
-            await deleteDoc(doc(db, item.collection, item.docId));
+            await deleteFirestoreDoc(item.collection, item.docId);
           }
           successCount++;
           remainingQueue.shift();
@@ -273,52 +277,52 @@ export default function App() {
       return;
     }
 
-    const settingsRef = doc(db, 'app_settings', 'global');
-    const unsubscribe = onSnapshot(
-      settingsRef,
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as AppSettings;
+    const unsubscribe = subscribeToDoc(
+      'app_settings',
+      'global',
+      (data, exists) => {
+        if (exists && data) {
+          const settings = data as AppSettings;
           // Fallback to local storage if Firestore holds placeholder marker
-          if (data.logoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+          if (settings.logoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
             const local = localStorage.getItem('dinsos_logo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') data.logoUrl = local;
+            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.logoUrl = local;
           }
-          if (data.kadinasPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+          if (settings.kadinasPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
             const local = localStorage.getItem('dinsos_kadinas_photo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') data.kadinasPhotoUrl = local;
+            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.kadinasPhotoUrl = local;
           }
-          if (data.bgPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+          if (settings.bgPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
             const local = localStorage.getItem('dinsos_bg_photo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') data.bgPhotoUrl = local;
+            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.bgPhotoUrl = local;
           }
-          if (data.bgPhotoUrl && (data.bgPhotoUrl.includes('eco_office_') || data.bgPhotoUrl.includes('dinsos_jabar_building') || data.bgPhotoUrl.includes('poster'))) {
-            data.bgPhotoUrl = '';
-            data.bgMode = 'video';
+          if (settings.bgPhotoUrl && (settings.bgPhotoUrl.includes('eco_office_') || settings.bgPhotoUrl.includes('dinsos_jabar_building') || settings.bgPhotoUrl.includes('poster'))) {
+            settings.bgPhotoUrl = '';
+            settings.bgMode = 'video';
           }
-          if (data.bgVideoUrl === 'LOCAL_STORAGE_SAVED_VIDEO' || !data.bgVideoUrl) {
+          if (settings.bgVideoUrl === 'LOCAL_STORAGE_SAVED_VIDEO' || !settings.bgVideoUrl) {
             const local = localStorage.getItem('dinsos_bg_video_url');
             if (local && local !== 'LOCAL_STORAGE_SAVED_VIDEO') {
-              data.bgVideoUrl = local;
+              settings.bgVideoUrl = local;
             } else {
-              data.bgVideoUrl = OFFICIAL_ECOOFFICE_VIDEO;
+              settings.bgVideoUrl = OFFICIAL_ECOOFFICE_VIDEO;
             }
           }
-          if (!data.bgMode) {
-            data.bgMode = 'video';
+          if (!settings.bgMode) {
+            settings.bgMode = 'video';
           }
-          if (data.announcement) {
+          if (settings.announcement) {
             try {
-              localStorage.setItem('dinsos_announcement', JSON.stringify(data.announcement));
+              localStorage.setItem('dinsos_announcement', JSON.stringify(settings.announcement));
             } catch {}
-            if (!data.announcement.active) {
+            if (!settings.announcement.active) {
               setIsFloatingAnnouncementOpen(false);
             }
           }
           try {
             localStorage.setItem('dinsos_settings_cache_time', String(Date.now()));
           } catch {}
-          setAppSettings(data);
+          setAppSettings(settings);
         } else {
           setAppSettings(DEFAULT_APP_SETTINGS);
         }
@@ -344,14 +348,19 @@ export default function App() {
   useEffect(() => {
     // Only subscribe to video chunks if logged in as Admin or Developer
     if (session.statusActive !== 'SAH_TERDAFTAR' && session.role !== 'developer') return;
-    const unsubVideo = subscribeToRealtimeVideo((videoBase64) => {
-      setAppSettings((prev) => ({
-        ...prev,
-        bgVideoUrl: videoBase64,
-        bgMode: 'video',
-      }));
-    });
-    return () => unsubVideo();
+    let unsubVideo: (() => void) | null = null;
+    import('./lib/videoSync').then(({ subscribeToRealtimeVideo }) => {
+      unsubVideo = subscribeToRealtimeVideo((videoBase64) => {
+        setAppSettings((prev) => ({
+          ...prev,
+          bgVideoUrl: videoBase64,
+          bgMode: 'video',
+        }));
+      });
+    }).catch(() => {});
+    return () => {
+      if (unsubVideo) unsubVideo();
+    };
   }, [session.statusActive, session.role]);
 
   // Instant Smart Card NFC 13.56 MHz Auto-Login Handler on URL Tap
@@ -581,7 +590,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'app_settings', 'global'), firestoreSettings);
+      await setFirestoreDoc('app_settings', 'global', firestoreSettings);
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -665,13 +674,13 @@ export default function App() {
 
     let unsubscribe: (() => void) | null = null;
     const timer = setTimeout(() => {
-      unsubscribe = onSnapshot(
-        collection(db, 'psks_records'),
-        (snapshot) => {
+      unsubscribe = subscribeToCollection(
+        'psks_records',
+        (docs) => {
           // Run queue processing if connection restored
           processSyncQueue();
 
-          if (snapshot.empty) {
+          if (!docs || docs.length === 0) {
             const fallback: Record<string, PSKSDataRecord[]> = {};
             for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
               fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
@@ -685,25 +694,25 @@ export default function App() {
             const loaded: Record<string, PSKSDataRecord[]> = {};
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => (loaded[k] = []));
 
-            snapshot.docs.forEach((docSnap) => {
-              if (deletedIds.includes(docSnap.id)) return;
+            docs.forEach(({ id: docId, data }) => {
+              if (deletedIds.includes(docId)) return;
 
-              const data = docSnap.data() as PSKSDataRecord & { pillarId?: string };
-              const pKey = data.pillarId || 'peksos';
+              const record = data as PSKSDataRecord & { pillarId?: string };
+              const pKey = record.pillarId || 'peksos';
               if (!loaded[pKey]) {
                 loaded[pKey] = [];
               }
               loaded[pKey].push({
-                ...data,
-                id: docSnap.id,
-                wilayah: data.wilayah || 'Kota Bandung',
-                kec: data.kec || 'Kecamatan Pusat',
-                nama: data.nama || '',
-                nik: data.nik || '',
-                sertifikasi: data.sertifikasi || 'CERT-2026',
-                hp: data.hp || '081234567890',
-                lembaga: data.lembaga || 'Lembaga Pemerintah',
-                status: data.status || 'Aktif',
+                ...record,
+                id: docId,
+                wilayah: record.wilayah || 'Kota Bandung',
+                kec: record.kec || 'Kecamatan Pusat',
+                nama: record.nama || '',
+                nik: record.nik || '',
+                sertifikasi: record.sertifikasi || 'CERT-2026',
+                hp: record.hp || '081234567890',
+                lembaga: record.lembaga || 'Lembaga Pemerintah',
+                status: record.status || 'Aktif',
               });
             });
 
@@ -794,9 +803,9 @@ export default function App() {
     let unsubscribe: (() => void) | null = null;
     const delay = session.statusActive === 'SAH_TERDAFTAR' ? 100 : 2500;
     const timer = setTimeout(() => {
-      unsubscribe = onSnapshot(
-        collection(db, 'admin_accounts'),
-        (snapshot) => {
+      unsubscribe = subscribeToCollection(
+        'admin_accounts',
+        (docs) => {
           const rawDeletedAdmin = localStorage.getItem('psks_deleted_admin_ids');
         let currentDeletedAdmins: string[] = [];
         try {
@@ -819,7 +828,7 @@ export default function App() {
           );
         };
 
-        if (snapshot.empty) {
+        if (!docs || docs.length === 0) {
           const filteredDefaults = DEFAULT_ADMIN_ACCOUNTS.filter((def) => {
             const defUname = (def.username || '').toLowerCase().trim();
             return defUname !== 'admin_ilham' && !isAccountDeleted(def.id, def.username);
@@ -827,45 +836,45 @@ export default function App() {
           setAdminAccounts(filteredDefaults);
         } else {
           const loadedMap = new Map<string, AdminAccount>();
-          snapshot.docs.forEach((d) => {
-            const data = d.data() as Omit<AdminAccount, 'id'>;
-            const uname = (data.username || '').toLowerCase().trim();
+          docs.forEach(({ id: docId, data }) => {
+            const accData = data as Omit<AdminAccount, 'id'>;
+            const uname = (accData.username || '').toLowerCase().trim();
 
             if (uname === 'admin_ilham') {
               return;
             }
 
             const defaultMatch = DEFAULT_ADMIN_ACCOUNTS.find(
-              (def) => def.id === d.id || (def.username || '').toLowerCase().trim() === uname
+              (def) => def.id === docId || (def.username || '').toLowerCase().trim() === uname
             );
 
             // For 27 regional admin accounts, enforce new 12+ character semantic password
-            let plainPass = data.passwordPolos || defaultMatch?.passwordPolos || (data.username ? `${data.username}123` : '123456');
-            let passHash = data.passwordHash || defaultMatch?.passwordHash || '';
+            let plainPass = accData.passwordPolos || defaultMatch?.passwordPolos || (accData.username ? `${accData.username}123` : '123456');
+            let passHash = accData.passwordHash || defaultMatch?.passwordHash || '';
 
             if (defaultMatch && defaultMatch.role === 'admin' && defaultMatch.passwordPolos) {
-              const isOldPass = !data.passwordPolos ||
-                data.passwordPolos === 'bandung123' ||
-                data.passwordPolos.includes('Secure99') ||
-                data.passwordPolos !== defaultMatch.passwordPolos;
+              const isOldPass = !accData.passwordPolos ||
+                accData.passwordPolos === 'bandung123' ||
+                accData.passwordPolos.includes('Secure99') ||
+                accData.passwordPolos !== defaultMatch.passwordPolos;
               if (isOldPass) {
                 plainPass = defaultMatch.passwordPolos;
                 passHash = defaultMatch.passwordHash || '';
               }
             }
 
-            loadedMap.set(d.id, {
-              id: d.id,
-              username: data.username || defaultMatch?.username || '',
-              namaAdmin: data.namaAdmin || defaultMatch?.namaAdmin || '',
-              wilayahTugas: data.wilayahTugas || defaultMatch?.wilayahTugas || '',
-              role: data.role || defaultMatch?.role || 'admin',
+            loadedMap.set(docId, {
+              id: docId,
+              username: accData.username || defaultMatch?.username || '',
+              namaAdmin: accData.namaAdmin || defaultMatch?.namaAdmin || '',
+              wilayahTugas: accData.wilayahTugas || defaultMatch?.wilayahTugas || '',
+              role: accData.role || defaultMatch?.role || 'admin',
               passwordHash: passHash,
-              terakhirLogin: data.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
-              ...data,
+              terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
+              ...accData,
               passwordPolos: plainPass,
-              registeredIp: data.registeredIp || undefined,
-              deviceId: data.deviceId || undefined,
+              registeredIp: accData.registeredIp || undefined,
+              deviceId: accData.deviceId || undefined,
             });
           });
 
@@ -1053,8 +1062,9 @@ export default function App() {
       // Attempt remote Firestore write if quota not exceeded
       if (!quotaExceededRef.current && !isQuotaExceeded) {
         try {
-          await setDoc(
-            doc(db, 'admin_accounts', matched.id),
+          await setFirestoreDoc(
+            'admin_accounts',
+            matched.id,
             {
               isOnline,
               isScreenActive,
@@ -1100,8 +1110,9 @@ export default function App() {
 
       const nowIso = new Date().toISOString();
       try {
-        setDoc(
-          doc(db, 'admin_accounts', matched.id),
+        setFirestoreDoc(
+          'admin_accounts',
+          matched.id,
           {
             isOnline: false,
             isScreenActive: false,
@@ -1145,19 +1156,18 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const messagesRef = collection(db, 'admin_messages');
-    const unsubscribe = onSnapshot(
-      messagesRef,
-      (snapshot) => {
-        if (snapshot.empty) {
+    const unsubscribe = subscribeToCollection(
+      'admin_messages',
+      (docs) => {
+        if (!docs || docs.length === 0) {
           setAdminMessages([]);
         } else {
           const loadedMsgs: AdminMessage[] = [];
-          snapshot.docs.forEach((docSnap) => {
-            if (docSnap.id === 'msg_init_1' || docSnap.id === 'msg_init_2') {
+          docs.forEach(({ id: docId, data }) => {
+            if (docId === 'msg_init_1' || docId === 'msg_init_2') {
               return;
             }
-            loadedMsgs.push({ id: docSnap.id, ...(docSnap.data() as Omit<AdminMessage, 'id'>) });
+            loadedMsgs.push({ id: docId, ...(data as Omit<AdminMessage, 'id'>) });
           });
           loadedMsgs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setAdminMessages(loadedMsgs);
@@ -1244,7 +1254,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'admin_messages', newId), newMsg);
+      await setFirestoreDoc('admin_messages', newId, newMsg);
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -1268,7 +1278,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'admin_messages', msgId), { isRead: true }, { merge: true });
+      await setFirestoreDoc('admin_messages', msgId, { isRead: true }, { merge: true });
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -1304,21 +1314,20 @@ export default function App() {
       return;
     }
 
-    const submissionsRef = collection(db, 'registration_submissions');
-    const unsubscribe = onSnapshot(
-      submissionsRef,
-      (snapshot) => {
-        if (snapshot.empty) {
+    const unsubscribe = subscribeToCollection(
+      'registration_submissions',
+      (docs) => {
+        if (!docs || docs.length === 0) {
           setSubmissions([]);
           try {
             localStorage.setItem('psks_registration_submissions', JSON.stringify([]));
           } catch {}
         } else {
           const loaded: PillarRegistrationSubmission[] = [];
-          snapshot.docs.forEach((docSnap) => {
+          docs.forEach(({ id: docId, data }) => {
             loaded.push({
-              id: docSnap.id,
-              ...(docSnap.data() as Omit<PillarRegistrationSubmission, 'id'>),
+              id: docId,
+              ...(data as Omit<PillarRegistrationSubmission, 'id'>),
             });
           });
           loaded.sort(
@@ -1358,25 +1367,24 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const tasksRef = collection(db, 'task_items');
-    const unsubscribe = onSnapshot(
-      tasksRef,
-      (snapshot) => {
-        if (snapshot.empty) {
+    const unsubscribe = subscribeToCollection(
+      'task_items',
+      (docs) => {
+        if (!docs || docs.length === 0) {
           // If Firestore collection is empty, seed with DEFAULT_TASK_ITEMS
           if (DEFAULT_TASK_ITEMS.length > 0) {
             DEFAULT_TASK_ITEMS.forEach(async (task) => {
               try {
-                await setDoc(doc(db, 'task_items', task.id), cleanFirestoreData(task));
+                await setFirestoreDoc('task_items', task.id, cleanFirestoreData(task));
               } catch {}
             });
           }
         } else {
           const loaded: TaskItem[] = [];
-          snapshot.docs.forEach((docSnap) => {
+          docs.forEach(({ id: docId, data }) => {
             loaded.push({
-              id: docSnap.id,
-              ...(docSnap.data() as Omit<TaskItem, 'id'>),
+              id: docId,
+              ...(data as Omit<TaskItem, 'id'>),
             });
           });
           loaded.sort(
@@ -1960,12 +1968,11 @@ export default function App() {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
     if (session.role === 'developer') return; // Developer is immune to security kickouts
 
-    const unsubscribe = onSnapshot(
-      doc(db, 'security_signals', 'live'),
-      (docSnap) => {
-        if (!docSnap.exists()) return;
-        const data = docSnap.data();
-        if (!data || !data.timestamp || !data.action) return;
+    const unsubscribe = subscribeToDoc(
+      'security_signals',
+      'live',
+      (data, exists) => {
+        if (!exists || !data || !data.timestamp || !data.action) return;
 
         // 1. Only respond to signals sent STRICTLY AFTER the user's login timestamp (at least 2s after login)
         const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
@@ -2051,7 +2058,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'psks_records', recordId), cleanFirestoreData(fullRecord));
+      await setFirestoreDoc('psks_records', recordId, cleanFirestoreData(fullRecord));
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -2088,8 +2095,7 @@ export default function App() {
     });
 
     try {
-      const docRef = doc(db, 'registration_submissions', newId);
-      await setDoc(docRef, cleanFirestoreData(submissionData));
+      await setFirestoreDoc('registration_submissions', newId, cleanFirestoreData(submissionData));
     } catch (error) {
       console.error('Failed to save submission to Firestore:', error);
     }
@@ -2127,8 +2133,7 @@ export default function App() {
 
     // 1. Update status in Firestore
     try {
-      const docRef = doc(db, 'registration_submissions', submission.id);
-      await setDoc(docRef, cleanFirestoreData(updatedSubmission), { merge: true });
+      await setFirestoreDoc('registration_submissions', submission.id, cleanFirestoreData(updatedSubmission), { merge: true });
     } catch (error) {
       console.error('Failed to approve submission in Firestore:', error);
     }
@@ -2180,8 +2185,7 @@ export default function App() {
     });
 
     try {
-      const docRef = doc(db, 'registration_submissions', submissionId);
-      await setDoc(docRef, cleanFirestoreData(updatedSubmission), { merge: true });
+      await setFirestoreDoc('registration_submissions', submissionId, cleanFirestoreData(updatedSubmission), { merge: true });
     } catch (error) {
       console.error('Failed to reject submission in Firestore:', error);
     }
@@ -2210,9 +2214,9 @@ export default function App() {
       const sub = submissions.find((item) => item.id === id);
       if (sub) {
         try {
-          const docRef = doc(db, 'registration_submissions', id);
-          await setDoc(
-            docRef,
+          await setFirestoreDoc(
+            'registration_submissions',
+            id,
             cleanFirestoreData({
               ...sub,
               status: 'APPROVED',
@@ -2278,8 +2282,7 @@ export default function App() {
     });
 
     try {
-      const docRef = doc(db, 'task_items', newId);
-      await setDoc(docRef, cleanFirestoreData(newTask));
+      await setFirestoreDoc('task_items', newId, cleanFirestoreData(newTask));
     } catch (err) {
       console.error('Failed to save task to Firestore:', err);
     }
@@ -2311,8 +2314,7 @@ export default function App() {
     });
 
     try {
-      const docRef = doc(db, 'task_items', task.id);
-      await setDoc(docRef, cleanFirestoreData(updatedTask), { merge: true });
+      await setFirestoreDoc('task_items', task.id, cleanFirestoreData(updatedTask), { merge: true });
     } catch (err) {
       console.error('Failed to update task in Firestore:', err);
     }
@@ -2343,7 +2345,7 @@ export default function App() {
     }
 
     try {
-      await deleteDoc(doc(db, 'task_items', taskId));
+      await deleteFirestoreDoc('task_items', taskId);
     } catch (err) {
       console.error('Failed to delete task from Firestore:', err);
     }
@@ -2406,7 +2408,7 @@ export default function App() {
     }
 
     try {
-      await deleteDoc(doc(db, 'psks_records', recordId));
+      await deleteFirestoreDoc('psks_records', recordId);
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -2471,7 +2473,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'admin_accounts', adminId), cleanFirestoreData(fullAdmin));
+      await setFirestoreDoc('admin_accounts', adminId, cleanFirestoreData(fullAdmin));
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -2518,7 +2520,7 @@ export default function App() {
 
     if (derivedSignal) {
       try {
-        setDoc(doc(db, 'security_signals', 'live'), {
+        setFirestoreDoc('security_signals', 'live', {
           action: derivedSignal,
           targetUsername: sanitizedAdmin.username,
           targetId: sanitizedAdmin.id,
@@ -2548,7 +2550,7 @@ export default function App() {
     }
 
     try {
-      await setDoc(doc(db, 'admin_accounts', sanitizedAdmin.id), cleanFirestoreData(sanitizedAdmin));
+      await setFirestoreDoc('admin_accounts', sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin));
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
@@ -2572,7 +2574,7 @@ export default function App() {
 
     // Broadcast remote deletion signal so victim client gets booted instantly with alert
     try {
-      setDoc(doc(db, 'security_signals', 'live'), {
+      setFirestoreDoc('security_signals', 'live', {
         action: 'DELETE',
         targetUsername: targetUname,
         targetId: targetId,
@@ -2646,9 +2648,9 @@ export default function App() {
     }
 
     try {
-      await deleteDoc(doc(db, 'admin_accounts', targetId));
+      await deleteFirestoreDoc('admin_accounts', targetId);
       if (id !== targetId) {
-        await deleteDoc(doc(db, 'admin_accounts', id)).catch(() => {});
+        await deleteFirestoreDoc('admin_accounts', id).catch(() => {});
       }
     } catch (err) {
       if (isQuotaError(err)) {
@@ -2701,11 +2703,13 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-[#d4af37] selection:text-[#0f2b5c]">
       {/* Maintenance Global Blocking Overlay */}
-      <MaintenanceOverlay
-        session={session}
-        appSettings={appSettings}
-        onDeveloperLogin={(role, nama, wilayah) => handleLogin(role, nama, wilayah)}
-      />
+      <React.Suspense fallback={null}>
+        <MaintenanceOverlay
+          session={session}
+          appSettings={appSettings}
+          onDeveloperLogin={(role, nama, wilayah) => handleLogin(role, nama, wilayah)}
+        />
+      </React.Suspense>
 
       {/* Quota Exceeded Cache Mode Banner (Visible only to authorized operators/admins who need offline queue info) */}
       {isQuotaExceeded && (session.statusActive === 'SAH_TERDAFTAR' || session.role === 'superadmin' || session.role === 'admin' || session.role === 'developer') && (
@@ -3057,15 +3061,19 @@ export default function App() {
       </main>
 
       {/* Floating Announcement Modal - 15s Timer Realtime on Entry */}
-      <FloatingAnnouncementModal
-        isOpen={isFloatingAnnouncementOpen}
-        announcement={appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG}
-        onClose={() => setIsFloatingAnnouncementOpen(false)}
-        onOpenDetail={() => handleOpenAnnouncementDetail(appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG)}
-      />
+      <React.Suspense fallback={null}>
+        <FloatingAnnouncementModal
+          isOpen={isFloatingAnnouncementOpen}
+          announcement={appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG}
+          onClose={() => setIsFloatingAnnouncementOpen(false)}
+          onOpenDetail={() => handleOpenAnnouncementDetail(appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG)}
+        />
+      </React.Suspense>
 
       {/* Floating Elements & Modals */}
-      <FloatingWhatsApp appSettings={appSettings} session={session} />
+      <React.Suspense fallback={null}>
+        <FloatingWhatsApp appSettings={appSettings} session={session} />
+      </React.Suspense>
       
       <React.Suspense fallback={null}>
         <AIAssistantWidget

@@ -309,6 +309,10 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
                         <img 
                           src={qrCodeDataUrl} 
                           alt="QR Code Superadmin"
+                          width="80"
+                          height="80"
+                          loading="lazy"
+                          decoding="async"
                           className="w-18 h-18 sm:w-20 sm:h-20 object-contain rounded-md"
                         />
                       ) : (
@@ -879,6 +883,10 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
                       <img 
                         src={qrCodeDataUrl} 
                         alt={`QR Code ${targetRole}`}
+                        width="80"
+                        height="80"
+                        loading="lazy"
+                        decoding="async"
                         className="w-18 h-18 sm:w-20 sm:h-20 object-contain rounded-md"
                       />
                     ) : (

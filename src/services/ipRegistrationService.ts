@@ -1,5 +1,3 @@
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { AdminAccount } from '../types';
 
 export interface QuotaInfo {
@@ -156,10 +154,11 @@ export async function detectClientIp(): Promise<string> {
 
   let finalIp = '';
 
-  // 2. Try server endpoint
+  // 2. Try server endpoint only if returning valid JSON
   try {
     const res = await fetch('/api/client-ip');
-    if (res.ok) {
+    const ct = res.headers.get('content-type') || '';
+    if (res.ok && ct.includes('application/json')) {
       const data = await res.json();
       if (data.ip && !isPrivateOrLocalIp(data.ip)) {
         finalIp = data.ip.trim();
@@ -244,76 +243,87 @@ export async function recordAccountRegistration(
   } catch {}
 
   // 2. Persist to Firestore: Device document (dev_${cleanDeviceId})
-  if (deviceId) {
+  if (deviceId || hasValidPublicIp || adminId) {
     try {
-      const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
-      const devSnap = await getDoc(devDocRef);
-      let existingList: string[] = [];
-      if (devSnap.exists()) {
-        existingList = devSnap.data().registeredAccounts || [];
-      }
-      if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
-        existingList.push(uname);
-      }
-      await setDoc(
-        devDocRef,
-        {
-          identifier: deviceId,
-          type: 'device',
-          registeredAccounts: existingList,
-          count: existingList.length,
-          lastRegisteredAt: nowIso,
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      );
-    } catch (err) {
-      console.warn('[Device Registration] Error updating Device doc in Firestore:', err);
-    }
-  }
+      const [{ doc, getDoc, setDoc }, { db }] = await Promise.all([
+        import('firebase/firestore'),
+        import('../lib/firebase')
+      ]);
 
-  // 3. Persist to Firestore: IP document ONLY IF this is a genuine public IP
-  if (hasValidPublicIp) {
-    try {
-      const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
-      const ipSnap = await getDoc(ipDocRef);
-      let existingList: string[] = [];
-      if (ipSnap.exists()) {
-        existingList = ipSnap.data().registeredAccounts || [];
+      if (deviceId) {
+        try {
+          const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
+          const devSnap = await getDoc(devDocRef);
+          let existingList: string[] = [];
+          if (devSnap.exists()) {
+            existingList = devSnap.data().registeredAccounts || [];
+          }
+          if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
+            existingList.push(uname);
+          }
+          await setDoc(
+            devDocRef,
+            {
+              identifier: deviceId,
+              type: 'device',
+              registeredAccounts: existingList,
+              count: existingList.length,
+              lastRegisteredAt: nowIso,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.warn('[Device Registration] Error updating Device doc in Firestore:', err);
+        }
       }
-      if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
-        existingList.push(uname);
-      }
-      await setDoc(
-        ipDocRef,
-        {
-          identifier: ip,
-          type: 'ip',
-          registeredAccounts: existingList,
-          count: existingList.length,
-          lastRegisteredAt: nowIso,
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      );
-    } catch (err) {
-      console.warn('[IP Registration] Error updating IP doc in Firestore:', err);
-    }
-  }
 
-  // 4. Ensure admin_accounts record has registeredIp and deviceId
-  if (adminId) {
-    try {
-      const accRef = doc(db, 'admin_accounts', adminId);
-      await setDoc(
-        accRef,
-        {
-          registeredIp: hasValidPublicIp ? ip : undefined,
-          deviceId: deviceId || undefined,
-        },
-        { merge: true }
-      );
-    } catch {}
+      // 3. Persist to Firestore: IP document ONLY IF this is a genuine public IP
+      if (hasValidPublicIp) {
+        try {
+          const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
+          const ipSnap = await getDoc(ipDocRef);
+          let existingList: string[] = [];
+          if (ipSnap.exists()) {
+            existingList = ipSnap.data().registeredAccounts || [];
+          }
+          if (!existingList.some((u) => u.toLowerCase() === uname.toLowerCase())) {
+            existingList.push(uname);
+          }
+          await setDoc(
+            ipDocRef,
+            {
+              identifier: ip,
+              type: 'ip',
+              registeredAccounts: existingList,
+              count: existingList.length,
+              lastRegisteredAt: nowIso,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.warn('[IP Registration] Error updating IP doc in Firestore:', err);
+        }
+      }
+
+      // 4. Ensure admin_accounts record has registeredIp and deviceId
+      if (adminId) {
+        try {
+          const accRef = doc(db, 'admin_accounts', adminId);
+          await setDoc(
+            accRef,
+            {
+              registeredIp: hasValidPublicIp ? ip : undefined,
+              deviceId: deviceId || undefined,
+            },
+            { merge: true }
+          );
+        } catch {}
+      }
+    } catch (importErr) {
+      console.warn('[Registration Service] Firestore dynamic load notice:', importErr);
+    }
   }
 
   // Trigger event for UI components to re-evaluate
@@ -345,44 +355,52 @@ export async function removeAccountFromQuota(
     }
   } catch {}
 
-  // 2. Remove from Firestore Device doc
-  if (deviceId) {
+  // 2. Remove from Firestore
+  if (deviceId || (hasValidPublicIp && ip)) {
     try {
-      const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
-      const devSnap = await getDoc(devDocRef);
-      if (devSnap.exists()) {
-        const existing: string[] = devSnap.data().registeredAccounts || [];
-        const filtered = existing.filter((u) => u.toLowerCase() !== uname);
-        await setDoc(
-          devDocRef,
-          {
-            registeredAccounts: filtered,
-            count: filtered.length,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-      }
-    } catch {}
-  }
+      const [{ doc, getDoc, setDoc }, { db }] = await Promise.all([
+        import('firebase/firestore'),
+        import('../lib/firebase')
+      ]);
 
-  // 3. Remove from Firestore IP doc ONLY IF valid public IP
-  if (hasValidPublicIp && ip) {
-    try {
-      const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
-      const ipSnap = await getDoc(ipDocRef);
-      if (ipSnap.exists()) {
-        const existing: string[] = ipSnap.data().registeredAccounts || [];
-        const filtered = existing.filter((u) => u.toLowerCase() !== uname);
-        await setDoc(
-          ipDocRef,
-          {
-            registeredAccounts: filtered,
-            count: filtered.length,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+      if (deviceId) {
+        try {
+          const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
+          const devSnap = await getDoc(devDocRef);
+          if (devSnap.exists()) {
+            const existing: string[] = devSnap.data().registeredAccounts || [];
+            const filtered = existing.filter((u) => u.toLowerCase() !== uname);
+            await setDoc(
+              devDocRef,
+              {
+                registeredAccounts: filtered,
+                count: filtered.length,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          }
+        } catch {}
+      }
+
+      if (hasValidPublicIp && ip) {
+        try {
+          const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
+          const ipSnap = await getDoc(ipDocRef);
+          if (ipSnap.exists()) {
+            const existing: string[] = ipSnap.data().registeredAccounts || [];
+            const filtered = existing.filter((u) => u.toLowerCase() !== uname);
+            await setDoc(
+              ipDocRef,
+              {
+                registeredAccounts: filtered,
+                count: filtered.length,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          }
+        } catch {}
       }
     } catch {}
   }
@@ -507,29 +525,35 @@ export function subscribeToClientQuota(
     });
   };
 
-  // Initial evaluation
+  // Initial evaluation with zero network delay
   evaluate();
 
-  // Subscribe to THIS Device document in Firestore
+  // Subscribe to THIS Device document in Firestore asynchronously without blocking main thread
   let unsubDev: (() => void) | null = null;
   if (deviceId) {
-    try {
-      const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
-      unsubDev = onSnapshot(
-        devDocRef,
-        (snap) => {
-          if (snap.exists()) {
-            deviceRegisteredAccounts = snap.data().registeredAccounts || [];
-          } else {
-            deviceRegisteredAccounts = [];
+    Promise.all([
+      import('firebase/firestore'),
+      import('../lib/firebase')
+    ]).then(([{ doc, onSnapshot }, { db }]) => {
+      if (!isSubscribed) return;
+      try {
+        const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
+        unsubDev = onSnapshot(
+          devDocRef,
+          (snap) => {
+            if (snap.exists()) {
+              deviceRegisteredAccounts = snap.data().registeredAccounts || [];
+            } else {
+              deviceRegisteredAccounts = [];
+            }
+            evaluate();
+          },
+          () => {
+            evaluate();
           }
-          evaluate();
-        },
-        () => {
-          evaluate();
-        }
-      );
-    } catch {}
+        );
+      } catch {}
+    }).catch(() => {});
   }
 
   // Listen to local window events

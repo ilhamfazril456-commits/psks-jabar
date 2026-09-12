@@ -11,8 +11,12 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    define: {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    },
     esbuild: {
       legalComments: 'none',
+      drop: ['debugger'],
     },
     build: {
       target: 'es2020',
@@ -37,6 +41,18 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
+              if (id.includes('jspdf') || id.includes('jspdf-autotable')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('xlsx')) {
+                return 'vendor-xlsx';
+              }
+              if (id.includes('leaflet')) {
+                return 'vendor-leaflet';
+              }
+              if (id.includes('recharts')) {
+                return 'vendor-recharts';
+              }
               if (id.includes('firebase')) {
                 return 'vendor-firebase';
               }

@@ -166,18 +166,32 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // Subscribe to real-time Firestore quota updates for this device whenever modal is open
   useEffect(() => {
     if (!isOpen) return;
-    const unsubscribe = subscribeToClientQuota(
-      detectedIp,
-      detectedDeviceId,
-      adminAccounts || [],
-      (info) => {
-        setQuotaInfo(info);
-      }
-    );
-    return () => {
-      unsubscribe();
+    let unsubscribe: (() => void) | null = null;
+    let timer: any = null;
+
+    const startSubscription = () => {
+      unsubscribe = subscribeToClientQuota(
+        detectedIp,
+        detectedDeviceId,
+        adminAccounts || [],
+        (info) => {
+          setQuotaInfo(info);
+        }
+      );
     };
-  }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
+
+    // If already on register view, sync immediately. If on main landing view, defer slightly so main thread remains completely idle.
+    if (view === 'register') {
+      startSubscription();
+    } else {
+      timer = setTimeout(startSubscription, 1200);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess, view]);
 
   const deviceRegisteredAccounts = quotaInfo.registeredAccounts;
   const isDeviceQuotaFull = quotaInfo.count >= 3;
