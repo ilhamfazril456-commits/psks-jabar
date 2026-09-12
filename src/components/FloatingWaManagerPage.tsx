@@ -270,16 +270,16 @@ export const FloatingWaManagerPage: React.FC<FloatingWaManagerPageProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <BackToHomeButton onClick={onBackToHome} id="btn-back-top-floating-wa" />
 
-          <div className="flex items-center gap-2 bg-gradient-to-r from-[#032e22] to-[#085a43] text-amber-300 border border-[#d4af37]/40 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md">
+          <div className="flex items-center gap-2 bg-gradient-to-r from-[#091f42] to-[#143b7d] text-amber-300 border border-[#d4af37]/40 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md">
             <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
             <span>FITUR 8 • OTORITAS KONTAK WHATSAPP CS</span>
           </div>
         </div>
 
         {/* HERO HEADER SECTION */}
-        <div className="relative bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-6 sm:p-10 text-white border-2 border-[#d4af37] shadow-2xl overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] rounded-3xl p-6 sm:p-10 text-white border-2 border-[#d4af37] shadow-2xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-3xl">
@@ -290,7 +290,7 @@ export const FloatingWaManagerPage: React.FC<FloatingWaManagerPageProps> = ({
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white uppercase leading-tight">
                 Ubah Kontak Floating WhatsApp
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed font-normal">
                 Pusat kendali pengaturan nomor WhatsApp Customer Service melayang untuk 27 Kabupaten/Kota se-Jawa Barat, 
                 Superadmin Dinsos Provinsi, dan Developer. Dilengkapi fitur <span className="text-[#d4af37] font-bold">ALL IN</span> untuk mengubah seluruh nomor wilayah dalam satu klik.
               </p>
@@ -303,11 +303,11 @@ export const FloatingWaManagerPage: React.FC<FloatingWaManagerPageProps> = ({
                 <span>Status Cakupan Wilayah</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-[#032e22]/80 border border-emerald-500/30 p-2.5 rounded-xl">
+                <div className="bg-[#091f42]/80 border border-blue-500/30 p-2.5 rounded-xl">
                   <div className="text-lg sm:text-2xl font-black text-white">{filledCount}/27</div>
-                  <div className="text-[10px] text-emerald-200 font-semibold">Wilayah Terisi</div>
+                  <div className="text-[10px] text-blue-200 font-semibold">Wilayah Terisi</div>
                 </div>
-                <div className="bg-[#032e22]/80 border border-amber-500/30 p-2.5 rounded-xl">
+                <div className="bg-[#091f42]/80 border border-amber-500/30 p-2.5 rounded-xl">
                   <div className="text-lg sm:text-2xl font-black text-amber-300">Realtime</div>
                   <div className="text-[10px] text-amber-200 font-semibold">Sinkronisasi Cloud</div>
                 </div>

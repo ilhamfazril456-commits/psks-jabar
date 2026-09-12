@@ -236,7 +236,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-screen h-screen overflow-hidden text-slate-100 animate-fadeIn">
       {/* 1. TOP HEADER BAR (FULL SCREEN CONTROL - FULLY RESPONSIVE) */}
-      <header className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 border-b-2 border-[#d4af37]/80 px-3 sm:px-6 md:px-8 py-3 flex items-center justify-between shrink-0 shadow-xl z-20 gap-2">
+      <header className="bg-gradient-to-r from-slate-950 via-[#0f2b5c] to-slate-950 border-b-2 border-[#d4af37]/80 px-3 sm:px-6 md:px-8 py-3 flex items-center justify-between shrink-0 shadow-xl z-20 gap-2">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <button
             type="button"
@@ -250,7 +250,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
           <div className="h-6 w-px bg-slate-700/80 hidden sm:block shrink-0" />
 
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#043e2e] to-slate-900 text-amber-300 border border-[#d4af37] flex items-center justify-center shadow-lg shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#0f2b5c] to-slate-900 text-amber-300 border border-[#d4af37] flex items-center justify-center shadow-lg shrink-0">
               <History className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
             </div>
             <div className="min-w-0">
@@ -274,7 +274,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
             type="button"
             onClick={fetchLogs}
             disabled={isLoading}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 hover:text-amber-200 border border-[#d4af37]/50 font-bold text-xs transition-all cursor-pointer shadow-md disabled:opacity-50 active:scale-95"
+            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 hover:text-amber-200 border border-[#d4af37]/50 font-bold text-xs transition-all cursor-pointer shadow-md disabled:opacity-50 active:scale-95"
             title="Segarkan Log Real-Time"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -304,7 +304,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
             }}
             className={`flex items-center justify-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
               activeCategory === 'PSKS'
-                ? 'bg-gradient-to-r from-[#043e2e] to-[#085a43] text-amber-300 border border-[#d4af37] shadow-lg scale-100'
+                ? 'bg-gradient-to-r from-[#0f2b5c] to-[#1a4a9c] text-amber-300 border border-[#d4af37] shadow-lg scale-100'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
             }`}
           >
@@ -330,7 +330,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
             }}
             className={`flex items-center justify-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
               activeCategory === 'ADMIN_ACCOUNT'
-                ? 'bg-gradient-to-r from-[#043e2e] to-[#085a43] text-amber-300 border border-[#d4af37] shadow-lg scale-100'
+                ? 'bg-gradient-to-r from-[#0f2b5c] to-[#1a4a9c] text-amber-300 border border-[#d4af37] shadow-lg scale-100'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
             }`}
           >
@@ -476,7 +476,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
                   setSelectedWilayah('ALL');
                   setSelectedPillar('ALL');
                 }}
-                className="mt-4 px-4 py-2 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-bold text-xs border border-[#d4af37]/40 cursor-pointer transition-all"
+                className="mt-4 px-4 py-2 rounded-xl bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 font-bold text-xs border border-[#d4af37]/40 cursor-pointer transition-all"
               >
                 Reset Semua Filter
               </button>
@@ -514,7 +514,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
                         {/* 1. Who Modified (Siapa yang mengubah) */}
                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">Pengubah:</span>
-                          <span className="inline-flex items-center gap-1 bg-[#043e2e] text-amber-300 border border-[#d4af37]/40 px-2 sm:px-2.5 py-0.5 rounded-lg text-xs font-extrabold shadow-xs max-w-full truncate">
+                          <span className="inline-flex items-center gap-1 bg-[#0f2b5c] text-amber-300 border border-[#d4af37]/40 px-2 sm:px-2.5 py-0.5 rounded-lg text-xs font-extrabold shadow-xs max-w-full truncate">
                             <User className="w-3 h-3 text-amber-300 shrink-0" />
                             <span className="truncate">{log.actorName || 'Admin'}</span>
                           </span>

@@ -349,17 +349,17 @@ export const AnnouncementManagementPage: React.FC<AnnouncementManagementPageProp
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setIsPreviewOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-emerald-600 text-emerald-800 hover:bg-emerald-50 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-600 text-blue-800 hover:bg-blue-50 rounded-xl text-xs sm:text-sm font-extrabold shadow-xs transition-all cursor-pointer"
               title="Pratinjau tampilan melayang 15 detik"
             >
-              <Eye className="w-4 h-4 text-emerald-700" />
+              <Eye className="w-4 h-4 text-blue-700" />
               <span>Uji Tampil Melayang (15s)</span>
             </button>
 
             <button
               onClick={handleInitiateSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#043e2e] to-[#085a43] hover:from-[#065e44] hover:to-[#0a6f53] text-amber-300 rounded-xl text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all cursor-pointer border border-[#d4af37]/60 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#0f2b5c] to-[#143b7d] hover:from-[#143b7d] hover:to-[#1a4a9c] text-amber-300 rounded-xl text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all cursor-pointer border border-[#d4af37]/60 disabled:opacity-50"
             >
               <Save className="w-4 h-4 text-amber-300" />
               <span>{isSaving ? 'Menyimpan...' : 'Simpan & Publikasikan'}</span>
@@ -369,11 +369,11 @@ export const AnnouncementManagementPage: React.FC<AnnouncementManagementPageProp
 
         {/* Success Alert Toast */}
         {saveSuccessNotice && (
-          <div className="bg-emerald-900 text-white p-4 sm:p-5 rounded-2xl shadow-xl border-2 border-amber-400 flex items-start gap-3 animate-fade-in">
+          <div className="bg-blue-900 text-white p-4 sm:p-5 rounded-2xl shadow-xl border-2 border-amber-400 flex items-start gap-3 animate-fade-in">
             <CheckCircle2 className="w-6 h-6 text-amber-300 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-sm font-black text-amber-300">{saveSuccessNotice.title}</h4>
-              <p className="text-xs text-emerald-100 font-medium mt-1 leading-relaxed">
+              <p className="text-xs text-blue-100 font-medium mt-1 leading-relaxed">
                 {saveSuccessNotice.msg}
               </p>
             </div>
@@ -397,7 +397,7 @@ export const AnnouncementManagementPage: React.FC<AnnouncementManagementPageProp
         )}
 
         {/* Page Header Title */}
-        <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border-2 border-[#d4af37]/60 relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] text-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border-2 border-[#d4af37]/60 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-2">
@@ -408,7 +408,7 @@ export const AnnouncementManagementPage: React.FC<AnnouncementManagementPageProp
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
                 Pusat Kendali Pengumuman Melayang Real-Time
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100/90 max-w-2xl leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-blue-100/90 max-w-2xl leading-relaxed font-medium">
                 Kelola siaran pengumuman interaktif yang otomatis tampil di layar melayang selama 15 detik ketika seseorang baru masuk ke dalam website. Status tombol siaran di bawah tersinkronisasi otomatis secara real-time antara Superadmin dan Developer.
               </p>
             </div>

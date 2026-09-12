@@ -257,11 +257,11 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
             <BackToHomeButton onClick={onBackToHome} id="btn-back-top-admin-monitor" />
 
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                <Radio className="w-3 h-3 text-emerald-600 animate-pulse" />
+              <div className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                <Radio className="w-3 h-3 text-blue-600 animate-pulse" />
                 <span>Monitoring Presensi Real-Time</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#043e2e] m-0">
+              <h1 className="text-xl sm:text-2xl font-black text-[#0f2b5c] m-0">
                 Pemantauan Admin Wilayah Jabar
               </h1>
             </div>
@@ -269,8 +269,8 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
 
           {/* FEATURE LABEL */}
           <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full md:w-auto">
-            <div className="px-4 py-2 rounded-xl text-xs font-black bg-[#043e2e] text-[#f3e5ab] shadow-md flex items-center justify-center gap-1.5 border border-[#d4af37]/40">
-              <Activity className="w-4 h-4 text-emerald-400" />
+            <div className="px-4 py-2 rounded-xl text-xs font-black bg-[#0f2b5c] text-[#f3e5ab] shadow-md flex items-center justify-center gap-1.5 border border-[#d4af37]/40">
+              <Activity className="w-4 h-4 text-amber-300" />
               <span>FITUR 2: PEMANTAUAN LIVE ADMIN WILAYAH</span>
             </div>
           </div>
@@ -288,14 +288,14 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {/* KPI 1: TOTAL ACCOUNT */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200 shadow-sm flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-900/10 text-[#043e2e] flex items-center justify-center shrink-0">
-              <Users className="w-6 h-6 text-[#043e2e]" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-900/10 text-[#0f2b5c] flex items-center justify-center shrink-0">
+              <Users className="w-6 h-6 text-[#0f2b5c]" />
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider m-0">
                 {isDeveloperUser ? 'Target Developer (28 Akun)' : 'Admin Wilayah (27 Kab/Kota)'}
               </p>
-              <h3 className="text-2xl sm:text-3xl font-black text-[#043e2e] m-0">
+              <h3 className="text-2xl sm:text-3xl font-black text-[#0f2b5c] m-0">
                 {totalMonitored} <span className="text-xs font-extrabold text-slate-400">Akun</span>
               </h3>
             </div>
@@ -357,7 +357,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
               placeholder="Cari Kabupaten/Kota or Nama Admin..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#043e2e] focus:bg-white"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0f2b5c] focus:bg-white"
             />
           </div>
 
@@ -370,7 +370,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
                 onClick={() => setStatusFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                   statusFilter === 'all'
-                    ? 'bg-[#043e2e] text-white shadow'
+                    ? 'bg-[#0f2b5c] text-white shadow'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -404,7 +404,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenInbox}
-                className="inline-flex items-center gap-1.5 bg-[#043e2e] hover:bg-[#065e44] text-[#f3e5ab] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm border border-[#d4af37]/40"
+                className="inline-flex items-center gap-1.5 bg-[#0f2b5c] hover:bg-[#143b7d] text-[#f3e5ab] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm border border-[#d4af37]/40"
               >
                 <Inbox className="w-4 h-4 text-[#d4af37]" />
                 <span>Buka Inbox Pesan</span>
@@ -415,7 +415,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
               type="button"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 bg-[#d4af37] hover:bg-[#b8901c] text-[#043e2e] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 bg-[#d4af37] hover:bg-[#b8901c] text-[#0f2b5c] font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRefreshing ? 'Sinkron...' : 'Pindai Koneksi'}</span>

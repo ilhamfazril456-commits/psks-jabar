@@ -226,14 +226,14 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
         <div className="relative overflow-hidden rounded-3xl bg-white border-2 border-slate-200 p-6 sm:p-7 shadow-sm">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
             <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-black tracking-wider uppercase">
-                <Sparkles className="w-3.5 h-3.5 text-[#043e2e]" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-black tracking-wider uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-[#0f2b5c]" />
                 <span>Otentikasi Fisik Resmi • Dinsos Prov. Jabar</span>
               </div>
               
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 flex items-center gap-3">
                 <span>Smart Acces Card</span>
-                <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">
+                <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300">
                   KARTU SUPERADMIN
                 </span>
               </h2>
@@ -244,12 +244,12 @@ export const SmartAccessCardSection: React.FC<SmartAccessCardSectionProps> = ({ 
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <div className="flex items-center gap-2 bg-emerald-50 px-3.5 py-2 rounded-2xl border border-emerald-200 text-xs font-bold text-emerald-900">
-                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              <div className="flex items-center gap-2 bg-blue-50 px-3.5 py-2 rounded-2xl border border-blue-200 text-xs font-bold text-blue-900">
+                <ShieldCheck className="w-4 h-4 text-blue-700" />
                 <span>Kartu Fisik Terdaftar</span>
               </div>
               <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700">
-                <Radio className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <Radio className="w-4 h-4 text-blue-600 animate-pulse" />
                 <span>13,56 MHz NFC Active</span>
               </div>
             </div>

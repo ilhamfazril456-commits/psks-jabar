@@ -283,11 +283,11 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
         </div>
 
         {/* HERO BANNER CARD */}
-        <div className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-950 via-[#0f2b5c] to-slate-950 rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 space-y-3">
-            <div className="inline-flex items-center gap-2 bg-[#043e2e] border border-[#d4af37]/60 px-3 py-1 rounded-full text-[11px] font-black text-[#d4af37]">
+            <div className="inline-flex items-center gap-2 bg-[#0f2b5c] border border-[#d4af37]/60 px-3 py-1 rounded-full text-[11px] font-black text-[#d4af37]">
               <Users className="w-3.5 h-3.5 text-[#d4af37]" />
               <span>FITUR 5 • MANAJEMEN AKUN USER</span>
             </div>
@@ -296,7 +296,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
               Pusat Data & Kontrol Akun User
             </h1>
 
-            <p className="text-xs sm:text-sm text-emerald-100 font-medium max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-blue-100 font-medium max-w-3xl leading-relaxed">
               Monitoring seluruh akun pengguna (User) yang terdaftar di PSKS Jabar. Anda dapat melihat informasi akun, memperbarui kata sandi, mengaktifkan/membekukan akses otentikasi, atau menghapus akun secara permanen.
             </p>
           </div>
@@ -385,7 +385,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari berdasarkan Username, Nama, atau Wilayah..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#043e2e] focus:outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-slate-50 focus:bg-white transition-all shadow-inner"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#0f2b5c] focus:outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-slate-50 focus:bg-white transition-all shadow-inner"
               />
               {searchQuery && (
                 <button
@@ -407,7 +407,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                   onClick={() => setStatusFilter('ALL')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     statusFilter === 'ALL'
-                      ? 'bg-white text-[#043e2e] shadow-xs'
+                      ? 'bg-white text-[#0f2b5c] shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -460,9 +460,9 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
         {/* DATA TABLE CONTAINER */}
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
           
-          <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-[#043e2e] to-slate-900 text-white border-b-2 border-[#d4af37] flex flex-wrap items-center justify-between gap-2">
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-[#0f2b5c] to-slate-900 text-white border-b-2 border-[#d4af37] flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#d4af37] text-[#043e2e] font-black">
+              <div className="p-2 rounded-xl bg-[#d4af37] text-[#0f2b5c] font-black">
                 <Users className="w-5 h-5" />
               </div>
               <div>
@@ -548,7 +548,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${
                               isFrozen
                                 ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                : 'bg-[#043e2e] text-amber-300'
+                                : 'bg-[#0f2b5c] text-amber-300'
                             }`}>
                               {(user.username || 'U').substring(0, 2).toUpperCase()}
                             </div>
@@ -598,7 +598,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
                         {/* Wilayah */}
                         <td className="py-3.5 px-4 font-bold text-slate-700">
-                          <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-[#043e2e] px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
+                          <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-[#0f2b5c] px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
                             <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{user.wilayahTugas || 'Jawa Barat'}</span>
                           </div>
@@ -708,7 +708,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
             
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#043e2e] text-amber-300 font-black">
+                <div className="p-2 rounded-xl bg-[#0f2b5c] text-amber-300 font-black">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
@@ -738,7 +738,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
             <form onSubmit={handleSaveNewPassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-[#043e2e] uppercase mb-1">
+                <label className="block text-xs font-black text-[#0f2b5c] uppercase mb-1">
                   Kata Sandi Baru
                 </label>
                 <div className="relative">
@@ -750,7 +750,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                       setEditError('');
                     }}
                     placeholder="Masukkan kata sandi baru (min 8 karakter)"
-                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-300 focus:border-[#043e2e] focus:outline-none text-xs font-bold text-slate-900"
+                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-300 focus:border-[#0f2b5c] focus:outline-none text-xs font-bold text-slate-900"
                     autoFocus
                   />
                   <button
@@ -793,7 +793,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 text-xs font-black shadow-md transition-all cursor-pointer border border-[#d4af37]/40"
+                  className="px-5 py-2 rounded-xl bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 text-xs font-black shadow-md transition-all cursor-pointer border border-[#d4af37]/40"
                 >
                   Simpan Password Baru
                 </button>
@@ -919,7 +919,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       {/* ========================================================================= */}
       {actionSuccessModal && (
         <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border-2 border-[#043e2e] max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-4 text-center animate-scaleUp">
+          <div className="bg-white rounded-3xl border-2 border-[#0f2b5c] max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-4 text-center animate-scaleUp">
             
             <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 border-2 border-emerald-500 text-emerald-700 flex items-center justify-center shadow-lg animate-bounce">
               <CheckCircle2 className="w-9 h-9" />
@@ -943,7 +943,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
               <button
                 type="button"
                 onClick={() => setActionSuccessModal(null)}
-                className="w-full py-3 px-4 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-amber-300 text-sm font-black shadow-lg transition-all cursor-pointer border border-[#d4af37]/40"
+                className="w-full py-3 px-4 rounded-xl bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 text-sm font-black shadow-lg transition-all cursor-pointer border border-[#d4af37]/40"
               >
                 Mengerti & Selesai
               </button>

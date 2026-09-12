@@ -81,7 +81,7 @@ export const AboutSection: React.FC = () => {
             <span className="text-[#b8901c] font-bold text-[11px] sm:text-xs uppercase tracking-widest block">
               Profil Resmi Dinas Sosial Provinsi Jawa Barat
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-[#043e2e] leading-tight">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0f2b5c] leading-tight">
               Pilar Kekuatan Sosial <br />
               <span className="text-slate-500 font-medium text-lg sm:text-2xl block mt-1">
                 Mewujudkan Jabar Juara Lahir Batin
@@ -108,7 +108,7 @@ export const AboutSection: React.FC = () => {
                 </div>
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-xl text-[#043e2e] flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-extrabold text-sm sm:text-xl text-[#0f2b5c] flex items-center gap-1.5 sm:gap-2">
                       Visi Utama
                     </h3>
                     <span className="text-[8.5px] sm:text-[10px] font-black bg-amber-100 text-amber-900 px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-amber-300/80 shadow-2xs flex items-center gap-1">
@@ -124,21 +124,21 @@ export const AboutSection: React.FC = () => {
             </div>
 
             {/* MISI CARD */}
-            <div className="group relative bg-gradient-to-br from-white via-emerald-50/40 to-emerald-100/25 border-l-4 border-[#043e2e] p-3.5 sm:p-6 rounded-r-2xl border border-emerald-200/70 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden">
+            <div className="group relative bg-gradient-to-br from-white via-blue-50/40 to-blue-100/25 border-l-4 border-[#0f2b5c] p-3.5 sm:p-6 rounded-r-2xl border border-blue-200/70 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden">
               {/* Background Ambient Glow */}
-              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-emerald-300/25 rounded-full blur-2xl group-hover:bg-emerald-400/40 transition-all duration-500 pointer-events-none" />
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-300/25 rounded-full blur-2xl group-hover:bg-blue-400/40 transition-all duration-500 pointer-events-none" />
 
               <div className="relative flex gap-2.5 sm:gap-4 items-start">
-                <div className="p-2 sm:p-3.5 bg-gradient-to-br from-[#043e2e] to-[#085a43] text-emerald-100 rounded-xl shrink-0 shadow-md border border-emerald-500/40 group-hover:-rotate-6 group-hover:scale-105 transition-transform duration-300">
+                <div className="p-2 sm:p-3.5 bg-gradient-to-br from-[#0f2b5c] to-[#1a4a9c] text-blue-100 rounded-xl shrink-0 shadow-md border border-blue-500/40 group-hover:-rotate-6 group-hover:scale-105 transition-transform duration-300">
                   <Rocket className="w-4 h-4 sm:w-6 sm:h-6 text-amber-300" />
                 </div>
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-xl text-[#043e2e] flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-extrabold text-sm sm:text-xl text-[#0f2b5c] flex items-center gap-1.5 sm:gap-2">
                       Misi Strategis
                     </h3>
-                    <span className="text-[8.5px] sm:text-[10px] font-black bg-emerald-100 text-emerald-900 px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-emerald-300/80 shadow-2xs flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600" />
+                    <span className="text-[8.5px] sm:text-[10px] font-black bg-blue-100 text-blue-900 px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-300/80 shadow-2xs flex items-center gap-1">
+                      <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
                       3 Langkah
                     </span>
                   </div>
@@ -152,9 +152,9 @@ export const AboutSection: React.FC = () => {
         </div>
 
         {/* Bottom Row: 4 Metric Cards with Staggered Scroll-Triggered Animations */}
-        <div ref={metricsRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-8 sm:mt-12 pt-6 sm:pt-10 border-t border-emerald-950/10">
+        <div ref={metricsRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-8 sm:mt-12 pt-6 sm:pt-10 border-t border-slate-200">
           {/* Card 1: 27 Kab/Kota */}
-          <div className="bg-gradient-to-br from-[#043e2e] via-[#064e3b] to-[#085a43] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
             <Users className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
             <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
@@ -166,7 +166,7 @@ export const AboutSection: React.FC = () => {
           </div>
 
           {/* Card 2: 10 Pilar */}
-          <div className="bg-gradient-to-br from-[#043e2e] via-[#064e3b] to-[#085a43] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
             <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
             <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
@@ -178,7 +178,7 @@ export const AboutSection: React.FC = () => {
           </div>
 
           {/* Card 3: 100% Akurasi */}
-          <div className="bg-gradient-to-br from-[#043e2e] via-[#064e3b] to-[#085a43] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
             <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
             <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
@@ -190,7 +190,7 @@ export const AboutSection: React.FC = () => {
           </div>
 
           {/* Card 4: Real-Time */}
-          <div className="bg-gradient-to-br from-[#043e2e] via-[#064e3b] to-[#085a43] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
             <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
             <div className="text-xl sm:text-3xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">

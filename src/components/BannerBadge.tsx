@@ -47,7 +47,7 @@ export const BannerBadge: React.FC<BannerBadgeProps> = ({ session }) => {
   return (
     <section
       id="banner-gerbang-digital"
-      className="relative w-full bg-[#043e2e] border-y border-emerald-900/60 py-5 sm:py-7 px-4 sm:px-6"
+      className="relative w-full bg-[#0f2b5c] border-y border-blue-900/60 py-5 sm:py-7 px-4 sm:px-6"
     >
       <div className="max-w-5xl mx-auto flex flex-col items-center justify-center text-center space-y-2.5 sm:space-y-3">
         {/* Main Title: Clean, Modern, Authoritative Typography */}
@@ -59,15 +59,15 @@ export const BannerBadge: React.FC<BannerBadgeProps> = ({ session }) => {
         </h2>
 
         {/* Dynamic Contextual Region / Role Sorting Tag */}
-        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#02281e] border border-emerald-700/50 text-white shadow-2xs max-w-[95vw] sm:max-w-none">
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#091f42] border border-blue-600/50 text-white shadow-2xs max-w-[95vw] sm:max-w-none">
           {roleIcon}
           <span className={`${textSizeClass} font-extrabold tracking-wide uppercase truncate`}>
             {badgeText}
           </span>
           {badgeSub && (
             <>
-              <span className="hidden sm:inline text-emerald-500/80">•</span>
-              <span className="hidden sm:inline text-[11px] sm:text-xs font-semibold text-emerald-300/90 truncate">
+              <span className="hidden sm:inline text-blue-400/80">•</span>
+              <span className="hidden sm:inline text-[11px] sm:text-xs font-semibold text-blue-200/90 truncate">
                 {badgeSub}
               </span>
             </>

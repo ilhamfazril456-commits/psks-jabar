@@ -999,16 +999,16 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
       {/* 1. Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#022b20] via-[#043e2e] to-[#032e22] py-4 sm:py-6 px-3.5 sm:px-8 border-b-2 border-[#d4af37] text-white shadow-md">
+      <div className="relative overflow-hidden bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] py-4 sm:py-6 px-3.5 sm:px-8 border-b-2 border-[#d4af37] text-white shadow-md">
         {/* Subtle decorative glow */}
-        <div className="absolute top-0 right-0 w-96 h-full bg-radial from-emerald-500/10 to-transparent pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-full bg-radial from-blue-500/10 to-transparent pointer-events-none" />
         <div className="absolute -bottom-6 left-1/4 w-64 h-24 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative z-10 max-w-7xl mx-auto">
           {/* Top Row for Navigation */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 sm:mb-4 pb-2.5 sm:pb-3 border-b border-emerald-700/40">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 sm:mb-4 pb-2.5 sm:pb-3 border-b border-blue-700/40">
             <BackToHomeButton onClick={onBackToDashboard} variant="gold" id="btn-back-top-pillar-detail" />
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-emerald-200/90 bg-emerald-950/40 border border-emerald-600/30 px-3 py-1 rounded-lg">
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-blue-200/90 bg-blue-950/40 border border-blue-600/30 px-3 py-1 rounded-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
               <span>Portal Data Pilar Sosial Terpadu</span>
             </div>
@@ -1017,12 +1017,12 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
             {pillar.title}
           </h1>
-          <p className="text-emerald-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+          <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
             {pillar.subtitle}
           </p>
           <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
             <span>Dinas Sosial Provinsi Jawa Barat</span>
-            <span className="text-emerald-500/80">•</span>
+            <span className="text-blue-400/80">•</span>
             <span>Wilayah: {session.wilayah || 'Semua Kab/Kota'}</span>
           </div>
         </div>
@@ -1032,7 +1032,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       <div ref={containerRef} className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
         {/* 2. Summary Widget Cards */}
         <div className="flex flex-col items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-[#043e2e] border-2 border-[#d4af37] rounded-xl p-3.5 sm:p-6 text-center text-white w-full max-w-lg shadow-lg">
+          <div className="bg-[#0f2b5c] border-2 border-[#d4af37] rounded-xl p-3.5 sm:p-6 text-center text-white w-full max-w-lg shadow-lg">
             <h3 className="text-[10px] sm:text-xs uppercase tracking-widest text-[#f1c40f] font-bold mb-1 sm:mb-2">
               TOTAL {pillar.title} TERDATA
             </h3>
@@ -1046,11 +1046,11 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
           {pillarId === 'peksos' && (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-2xl">
-              <div className="bg-emerald-50 border-2 border-[#043e2e] rounded-xl p-3 sm:p-4 text-center shadow-xs">
-                <div className="text-[10px] sm:text-xs font-black text-[#043e2e] uppercase tracking-wide">
+              <div className="bg-blue-50 border-2 border-[#0f2b5c] rounded-xl p-3 sm:p-4 text-center shadow-xs">
+                <div className="text-[10px] sm:text-xs font-black text-[#0f2b5c] uppercase tracking-wide">
                   PEKSOS PEMERINTAH
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-[#043e2e] mt-0.5 sm:mt-1">
+                <div className="text-xl sm:text-2xl font-black text-[#0f2b5c] mt-0.5 sm:mt-1">
                   <AnimatedCounter end={govCount} duration={1400} trigger={chartVisible} /> <span className="text-[10px] sm:text-xs text-slate-500 font-bold">Orang</span>
                 </div>
               </div>
@@ -1070,7 +1070,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         {/* 3. Horizontal Bar Chart */}
         <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-6 border border-slate-200 shadow-xs mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 className="text-base font-bold text-[#064e3b]">
+            <h3 className="text-base font-bold text-[#0f2b5c]">
               Perbandingan Komposisi Kuantitas {pillar.shortName} di Wilayah Tugas
             </h3>
 
@@ -1078,7 +1078,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             {pillarId === 'peksos' && (
               <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-sm bg-[#043e2e] inline-block shadow-sm"></span>
+                  <span className="w-3 h-3 rounded-sm bg-[#0f2b5c] inline-block shadow-sm"></span>
                   <span className="font-bold">Peksos Pemerintah</span>
                 </div>
                 <span className="text-slate-300">|</span>
@@ -1108,15 +1108,15 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                     </div>
 
                     <div className="space-y-1 pl-2">
-                      {/* Batang 1: Peksos Lembaga Pemerintah (Hijau) */}
+                      {/* Batang 1: Peksos Lembaga Pemerintah (Biru Jabar) */}
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="w-24 text-[10px] font-bold text-emerald-900 shrink-0 truncate">
+                        <span className="w-24 text-[10px] font-bold text-blue-900 shrink-0 truncate">
                           Pemerintah
                         </span>
                         <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden">
                           <div
                             style={{ width: chartVisible ? `${counts.gov > 0 ? percentGov : 0}%` : '0%' }}
-                            className="h-4 bg-[#043e2e] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
+                            className="h-4 bg-[#0f2b5c] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
                           >
                             <span className="text-[10px] font-black text-white">
                               <AnimatedCounter end={counts.gov} duration={1400} trigger={chartVisible} />
@@ -1135,7 +1135,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                             style={{ width: chartVisible ? `${counts.swasta > 0 ? percentSwasta : 0}%` : '0%' }}
                             className="h-4 bg-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
                           >
-                            <span className="text-[10px] font-black text-[#043e2e]">
+                            <span className="text-[10px] font-black text-[#0f2b5c]">
                               <AnimatedCounter end={counts.swasta} duration={1400} trigger={chartVisible} />
                             </span>
                           </div>
@@ -1199,7 +1199,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari berdasarkan nama, wilayah, atau sertifikasi..."
-              className="w-full bg-white border border-slate-300 rounded-lg sm:rounded-xl pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e] shadow-xs font-medium"
+              className="w-full bg-white border border-slate-300 rounded-lg sm:rounded-xl pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#0f2b5c] shadow-xs font-medium"
             />
           </div>
 
@@ -1210,7 +1210,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                   id={`btn-export-excel-${pillarId}`}
                   type="button"
                   onClick={handleExportExcel}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#043e2e] font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#0f2b5c] font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
                   title="Ekspor data pilar ke file spreadsheet CSV/Excel"
                 >
                   <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -1235,7 +1235,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 id={`btn-new-reg-${pillarId}`}
                 type="button"
                 onClick={handleOpenModal}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#064e3b] hover:bg-[#047857] text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Registrasi<span className="hidden sm:inline"> Baru</span></span>
@@ -1251,7 +1251,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                     handleOpenModal();
                   }
                 }}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#064e3b] hover:bg-[#047857] text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-white font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span><span className="hidden sm:inline">Ajukan </span>Pendaftaran</span>

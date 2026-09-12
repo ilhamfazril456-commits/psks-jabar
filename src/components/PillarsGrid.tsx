@@ -143,7 +143,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
               className="group relative bg-white border border-slate-200/90 rounded-xl sm:rounded-3xl p-1.5 sm:p-4 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#d4af37] transition-all duration-300 h-full overflow-hidden"
             >
               {/* Subtle accent bar on hover */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-emerald-600 via-amber-500 to-emerald-700" />
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-[#0f2b5c] via-amber-500 to-[#1a4a9c]" />
 
               {/* Icon / Logo Badge */}
               <div className="relative mb-1 sm:mb-3 mt-0.5 sm:mt-1 flex items-center justify-center">
@@ -165,7 +165,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
 
               {/* Title & Description section */}
               <div className="flex-1 flex flex-col items-center justify-center w-full px-0.5 my-0.5 sm:my-1.5">
-                <h3 className="text-[9px] sm:text-xs md:text-sm font-black text-[#064e3b] uppercase tracking-tighter sm:tracking-wider group-hover:text-[#b8901c] transition-colors leading-tight sm:leading-snug min-h-[22px] sm:min-h-[36px] flex items-center justify-center text-center">
+                <h3 className="text-[9px] sm:text-xs md:text-sm font-black text-[#0f2b5c] uppercase tracking-tighter sm:tracking-wider group-hover:text-[#b8901c] transition-colors leading-tight sm:leading-snug min-h-[22px] sm:min-h-[36px] flex items-center justify-center text-center">
                   {pillar?.title || key}
                 </h3>
                 {/* Sub-title / shortName is hidden on mobile screens, visible on desktop/laptop (sm:) */}
@@ -179,7 +179,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
                 <div className="inline-flex items-center justify-center gap-0.5 sm:gap-1.5 w-full bg-slate-50 group-hover:bg-amber-50/70 border border-slate-200/80 group-hover:border-[#d4af37]/60 rounded-md sm:rounded-xl py-0.5 sm:py-1.5 px-0.5 sm:px-2 transition-all duration-300 shadow-2xs">
                   <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${count > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'} shrink-0`} />
                   <div className="flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-xs font-black text-slate-800 whitespace-nowrap">
-                    <span className="text-[#043e2e] group-hover:text-amber-900 font-black">
+                    <span className="text-[#0f2b5c] group-hover:text-amber-900 font-black">
                       {count.toLocaleString('id-ID')}
                     </span>
                     <span className="hidden sm:inline text-slate-500 font-bold text-[9px] sm:text-[10.5px]">

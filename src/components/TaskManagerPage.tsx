@@ -447,7 +447,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
 
         {/* Action Success Toast */}
         {actionSuccessMsg && (
-          <div className="fixed top-20 right-4 sm:right-8 z-50 bg-[#043e2e] text-amber-300 px-5 py-3.5 rounded-2xl shadow-2xl border-2 border-[#d4af37] flex items-center gap-3 animate-slideIn text-xs sm:text-sm font-black">
+          <div className="fixed top-20 right-4 sm:right-8 z-50 bg-[#0f2b5c] text-amber-300 px-5 py-3.5 rounded-2xl shadow-2xl border-2 border-[#d4af37] flex items-center gap-3 animate-slideIn text-xs sm:text-sm font-black">
             <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
             <span>{actionSuccessMsg}</span>
           </div>
@@ -463,7 +463,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
             ) : (
               <BackToHomeButton onClick={handleBackToPillars} label="Kembali ke Halaman Sebelumnya" id="btn-back-to-previous-pillars" />
             )}
-            <div className="inline-flex items-center gap-2 bg-[#043e2e] text-amber-300 px-3.5 py-2 rounded-xl text-xs font-black shadow-xs">
+            <div className="inline-flex items-center gap-2 bg-[#0f2b5c] text-amber-300 px-3.5 py-2 rounded-xl text-xs font-black shadow-xs">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>
                 {viewMode === 'REGION_GRID'
@@ -481,9 +481,9 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
               type="button"
               onClick={handleManualSync}
               title="Perbarui Sinkronisasi Realtime"
-              className="bg-slate-50 hover:bg-emerald-50 border border-slate-300/80 px-3.5 py-2 rounded-xl text-xs font-bold text-[#043e2e] flex items-center gap-2 shadow-xs transition-all cursor-pointer active:scale-95"
+              className="bg-slate-50 hover:bg-blue-50 border border-slate-300/80 px-3.5 py-2 rounded-xl text-xs font-bold text-[#0f2b5c] flex items-center gap-2 shadow-xs transition-all cursor-pointer active:scale-95"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-700 ${isSyncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-blue-700 ${isSyncing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Sinkronisasi Realtime:</span>
               <span className="font-mono text-[11px] text-slate-600 font-bold">{lastSyncTime}</span>
             </button>
@@ -501,10 +501,10 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                 type="button"
                 onClick={handleBackToRegions}
                 className={`flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === 'REGION_GRID' ? 'text-[#043e2e] font-black' : 'text-slate-500 hover:text-emerald-800 underline decoration-dotted'
+                  viewMode === 'REGION_GRID' ? 'text-[#0f2b5c] font-black' : 'text-slate-500 hover:text-blue-800 underline decoration-dotted'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5 text-emerald-700" />
+                <Layers className="w-3.5 h-3.5 text-blue-700" />
                 <span>27 Kabupaten/Kota</span>
               </button>
 
@@ -515,7 +515,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                     type="button"
                     onClick={viewMode === 'SUBMISSION_TABLE' ? handleBackToPillars : undefined}
                     className={`flex items-center gap-1.5 cursor-pointer ${
-                      viewMode === 'PILLAR_GRID' ? 'text-[#043e2e] font-black' : 'text-slate-500 hover:text-emerald-800 underline decoration-dotted'
+                      viewMode === 'PILLAR_GRID' ? 'text-[#0f2b5c] font-black' : 'text-slate-500 hover:text-blue-800 underline decoration-dotted'
                     }`}
                   >
                     <MapPin className="w-3.5 h-3.5 text-amber-600" />
@@ -527,7 +527,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
               {selectedPillar && activePillarInfo && (
                 <>
                   <ChevronRight className="w-3 h-3 text-slate-400" />
-                  <span className="text-emerald-900 font-black flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  <span className="text-blue-900 font-black flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                     <span>{activePillarInfo.icon}</span>
                     <span>Pilar {activePillarInfo.short}</span>
                   </span>
@@ -540,7 +540,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                 <button
                   type="button"
                   onClick={handleBackToRegions}
-                  className="text-xs font-bold text-[#043e2e] hover:text-[#065f46] px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
+                  className="text-xs font-bold text-[#0f2b5c] hover:text-[#143b7d] px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-300 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Kembali ke Halaman Sebelumnya</span>
@@ -551,7 +551,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                 <button
                   type="button"
                   onClick={handleBackToPillars}
-                  className="text-xs font-bold text-[#043e2e] hover:text-[#065f46] px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
+                  className="text-xs font-bold text-[#0f2b5c] hover:text-[#143b7d] px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-300 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Kembali ke Halaman Sebelumnya</span>
@@ -566,13 +566,13 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
           {viewMode === 'REGION_GRID' && (
             <div className="space-y-6">
               {/* Header Hero Banner with Realtime Stats */}
-              <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#022319] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="inline-flex items-center gap-2 bg-emerald-950/90 border border-emerald-400/50 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
+                    <div className="inline-flex items-center gap-2 bg-blue-950/90 border border-blue-400/50 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
                       <ShieldCheck className="w-4 h-4 text-amber-400" />
                       <span>PUSAT VERIFIKASI PENDAFTARAN 10 PILAR PSKS JAWA BARAT</span>
                     </div>

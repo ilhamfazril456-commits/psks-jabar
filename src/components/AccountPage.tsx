@@ -397,7 +397,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   return (
     <div id="pusat-akun-section" className="min-h-screen bg-slate-100 text-slate-800 py-10 px-4 sm:px-6 lg:px-8 pb-24 relative overflow-hidden font-sans">
       {/* Background Subtle Gradient Glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-emerald-500/10 via-emerald-100/20 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-500/10 via-blue-100/20 to-transparent blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
         {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA */}
@@ -410,22 +410,22 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         )}
 
-        {/* Header Title Section - Clean Emerald & Gold Accent */}
-        <div id="account-header-card" className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] border-l-4 border-[#d4af37] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#d4af37]/30">
+        {/* Header Title Section - Clean Biru Jabar & Gold Accent */}
+        <div id="account-header-card" className="bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] border-l-4 border-[#d4af37] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#d4af37]/30">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-[#d4af37] via-amber-200 to-[#f3e5ab] text-slate-950 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
                 <span>PUSAT OTORITAS PSKS JABAR</span>
               </span>
-              <span className="bg-emerald-950/80 text-emerald-200 font-bold text-[10px] px-2.5 py-1 rounded-full border border-emerald-600/40">
+              <span className="bg-blue-950/80 text-blue-200 font-bold text-[10px] px-2.5 py-1 rounded-full border border-blue-600/40">
                 PROVINSI JAWA BARAT
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white m-0 tracking-tight">
               Pusat Otoritas & Akses Pengguna
             </h2>
-            <p className="text-emerald-100/90 text-xs sm:text-sm mt-1.5 m-0 font-medium max-w-2xl leading-relaxed">
+            <p className="text-blue-100/90 text-xs sm:text-sm mt-1.5 m-0 font-medium max-w-2xl leading-relaxed">
               {(session.role === 'superadmin' || session.isDeveloper || (session.role as string) === 'developer')
                 ? 'Manajemen kredensial terpadu, tingkat hak otorisasi dinas, proteksi pendaftaran admin, dan akses cepat berbasis Smart Card Kode QR.'
                 : 'Rincian data profil, status otorisasi akun terdaftar, dan informasi wilayah tugas dinas.'}
@@ -433,9 +433,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         </div>
 
-        {/* SEKSI CARD PROFIL MEWAH UPGRADE MAKSIMAL - Bright Clean Emerald & Gold */}
+        {/* SEKSI CARD PROFIL MEWAH UPGRADE MAKSIMAL - Bright Clean Biru Jabar & Gold */}
         <div id="informasi-akun-section" className="bg-white rounded-3xl shadow-xl border-2 border-slate-200 overflow-hidden relative">
-          <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] p-6 sm:p-10 border-b-2 border-[#d4af37] text-white flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] p-6 sm:p-10 border-b-2 border-[#d4af37] text-white flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 relative overflow-hidden">
             {/* Top Right Metallic Overlay */}
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#d4af37]/15 rounded-full blur-2xl pointer-events-none" />
 
@@ -448,8 +448,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     : session.statusActive === 'SAH_TERDAFTAR' && session.role === 'superadmin'
                     ? 'bg-gradient-to-br from-[#d4af37] to-amber-200 text-slate-950'
                     : session.statusActive === 'SAH_TERDAFTAR'
-                    ? 'bg-gradient-to-br from-emerald-600 via-emerald-800 to-emerald-950 text-emerald-100'
-                    : 'bg-emerald-900 text-amber-300 border-[#d4af37]'
+                    ? 'bg-gradient-to-br from-blue-600 via-blue-800 to-blue-950 text-blue-100'
+                    : 'bg-blue-900 text-amber-300 border-[#d4af37]'
                 }`}
               >
                 {session.statusActive === 'SAH_TERDAFTAR' && session.nama
@@ -457,7 +457,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   : 'G'}
               </div>
               {session.statusActive === 'SAH_TERDAFTAR' && (
-                <span className="absolute bottom-1 right-1 bg-emerald-400 border-2 border-[#043e2e] w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                <span className="absolute bottom-1 right-1 bg-emerald-400 border-2 border-[#0f2b5c] w-5 h-5 rounded-full flex items-center justify-center shadow-md">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
                 </span>
               )}
@@ -496,18 +496,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                       <span>Otoritas Penuh Pengelolaan Provinsi Jawa Barat</span>
                     </span>
                   ) : session.role === 'user' ? (
-                    <span className="text-emerald-100 font-semibold flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-emerald-300" />
+                    <span className="text-blue-100 font-semibold flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-blue-300" />
                       <span>Pengguna Terdaftar: {session.wilayah || 'Jawa Barat'}</span>
                     </span>
                   ) : (
-                    <span className="text-emerald-100 font-semibold flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-emerald-300" />
+                    <span className="text-blue-100 font-semibold flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-blue-300" />
                       <span>Admin Wilayah Tugas: {session.wilayah || 'Jawa Barat'}</span>
                     </span>
                   )
                 ) : (
-                  <span className="text-emerald-200 font-medium">Sesi Tamu Publik (Tanpa Otorisasi Dinas)</span>
+                  <span className="text-blue-200 font-medium">Sesi Tamu Publik (Tanpa Otorisasi Dinas)</span>
                 )}
               </div>
             </div>
@@ -517,7 +517,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           <div className="p-6 sm:p-8 bg-slate-50 divide-y divide-slate-200 text-xs sm:text-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3.5">
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Nama Pengguna (Username)
                 </span>
                 <span className="font-bold text-slate-900 text-sm">
@@ -527,10 +527,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               </div>
 
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Tingkat Otoritas (Role Level)
                 </span>
-                <span className="font-black text-[#043e2e] text-sm uppercase">
+                <span className="font-black text-[#0f2b5c] text-sm uppercase">
                   {session.statusActive === 'SAH_TERDAFTAR'
                     ? session.role === 'developer'
                       ? 'DEVELOPER SYSTEM ADMINISTRATOR'
@@ -547,7 +547,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3.5">
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Status Sesi & Otorisasi
                 </span>
                 <div>
@@ -566,7 +566,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               </div>
 
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Wilayah Tugas / Domisili
                 </span>
                 <span className="font-bold text-slate-900 text-sm">
@@ -581,11 +581,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             {/* Added Session Login Timestamp & Security Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3.5">
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Waktu Masuk / Terakhir Login
                 </span>
                 <span className="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                  <Clock className="w-3.5 h-3.5 text-blue-700" />
                   <span>
                     {session.loginTimestamp
                       ? new Date(session.loginTimestamp).toLocaleString('id-ID', {
@@ -603,11 +603,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               </div>
 
               <div>
-                <span className="font-extrabold text-emerald-900 block text-[11px] uppercase tracking-wider mb-1">
+                <span className="font-extrabold text-blue-900 block text-[11px] uppercase tracking-wider mb-1">
                   Status Enkripsi & Kredensial Akun
                 </span>
                 <span className="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
                   <span>Bcrypt Salting (10 Rounds) Terproteksi</span>
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">Kredensial tersimpan dan terlindungi dengan standar keamanan tinggi.</p>
@@ -624,7 +624,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }
                 }}
-                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] hover:brightness-110 text-amber-300 border border-[#d4af37] font-black py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-98"
+                className="w-full sm:w-auto flex-1 bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] hover:brightness-110 text-amber-300 border border-[#d4af37] font-black py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-98"
               >
                 <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
                 <span>Kembali ke Beranda Utama</span>
@@ -641,9 +641,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               ) : (
                 <button
                   onClick={() => setShowLoginConfirmModal(true)}
-                  className="w-full sm:w-auto flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-400 font-extrabold py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs active:scale-95"
+                  className="w-full sm:w-auto flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400 font-extrabold py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs active:scale-95"
                 >
-                  <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-100" />
+                  <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-100" />
                   <span>Masuk ke akun</span>
                 </button>
               )}
@@ -652,7 +652,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         </div>
 
         {session.role !== 'user' && (session.role === 'superadmin' || session.role === 'developer') && (
-          <div className="bg-gradient-to-br from-[#022319] via-[#043e2e] to-[#065e44] rounded-3xl p-6 sm:p-8 border-2 border-[#d4af37]/80 shadow-2xl shadow-[#d4af37]/10 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#0a1c3a] via-[#0f2b5c] to-[#143b7d] rounded-3xl p-6 sm:p-8 border-2 border-[#d4af37]/80 shadow-2xl shadow-[#d4af37]/10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37]/15 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
@@ -672,7 +672,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   Integrasi Smart Card Akses QR Pintar Otoritas Tinggi
                 </h3>
 
-                <p className="text-emerald-100/90 text-xs sm:text-sm font-medium leading-relaxed m-0">
+                <p className="text-blue-100/90 text-xs sm:text-sm font-medium leading-relaxed m-0">
                   <strong className="text-amber-300">
                     Akun {session.role === 'superadmin' ? 'Superadmin Jawa Barat' : session.role === 'developer' ? 'Developer Sistem' : 'Admin Wilayah'}
                   </strong> telah terintegrasi secara pintar dengan teknologi <strong className="text-[#d4af37]">Smart Card QR Code</strong>. Anda dapat mengecek keaktifan, validitas, dan status otorisasi Smart Card QR fisik maupun digital secara langsung melalui pemindai kamera perangkat Anda.

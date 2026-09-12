@@ -54,7 +54,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
       {/* Decorative Gold Divider with Center Emblem */}
       <div className="relative flex items-center justify-center my-8">
         <div className="w-full h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent" />
-        <div className="absolute bg-[#043e2e] border-2 border-[#d4af37] text-amber-300 px-4 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-2">
+        <div className="absolute bg-[#0f2b5c] border-2 border-[#d4af37] text-amber-300 px-4 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
           <span>PUSAT KONTROL OTORITAS PUSAT</span>
         </div>
@@ -62,14 +62,14 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
 
       <div className="flex flex-col items-center text-center">
         {/* Category Badge */}
-        <div className="inline-flex items-center gap-2 bg-emerald-950/10 border border-emerald-900/20 text-[#043e2e] text-xs font-black px-4 py-1.5 rounded-full mb-3 shadow-xs">
+        <div className="inline-flex items-center gap-2 bg-emerald-950/10 border border-emerald-900/20 text-[#0f2b5c] text-xs font-black px-4 py-1.5 rounded-full mb-3 shadow-xs">
           <KeyRound className="w-4 h-4 text-[#d4af37]" />
           <span>KREDENSIAL & HAK AKSES PUSAT</span>
           <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
         </div>
 
         {/* Section Heading */}
-        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#043e2e] tracking-tight uppercase">
+        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0f2b5c] tracking-tight uppercase">
           Kredensial & Otorisasi Sistem
         </h3>
 
@@ -104,21 +104,21 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
           {/* FITUR 1: MANAJEMEN AKUN ADMIN WILAYAH (Theme: Deep Emerald & Gold) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-amber-50/20 rounded-xl sm:rounded-2xl border border-amber-200/90 hover:border-amber-400/90 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             {/* Top Accent Gradient Bar */}
-            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#043e2e] via-[#d4af37] to-[#043e2e] absolute top-0 left-0" />
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#0f2b5c] via-[#d4af37] to-[#0f2b5c] absolute top-0 left-0" />
             
             <div>
               {/* Icon Box & Badge Header */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
-                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#043e2e] to-[#085a43] text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-amber-400/30 shrink-0">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#0f2b5c] to-[#1a4a9c] text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-amber-400/30 shrink-0">
                   <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
-                <span className="bg-amber-100 text-[#043e2e] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-200 shadow-2xs leading-none">
+                <span className="bg-amber-100 text-[#0f2b5c] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-200 shadow-2xs leading-none">
                   FITUR 1
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h4 className="text-[11px] sm:text-base font-black text-[#043e2e] mb-1 sm:mb-2 group-hover:text-[#065e44] transition-colors leading-snug">
+              <h4 className="text-[11px] sm:text-base font-black text-[#0f2b5c] mb-1 sm:mb-2 group-hover:text-[#143b7d] transition-colors leading-snug">
                 Manajemen Akun Admin
               </h4>
               <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
@@ -141,7 +141,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             {/* Action Button */}
             <button
               onClick={onOpenAccountConsole}
-              className="w-full bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-emerald-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/30"
+              className="w-full bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-emerald-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/30"
             >
               <span className="truncate">Konsol Akun</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />

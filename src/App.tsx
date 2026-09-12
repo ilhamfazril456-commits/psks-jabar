@@ -2675,7 +2675,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-[#d4af37] selection:text-[#043e2e]">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-[#d4af37] selection:text-[#0f2b5c]">
       {/* Maintenance Global Blocking Overlay */}
       <MaintenanceOverlay
         session={session}
@@ -2758,19 +2758,19 @@ export default function App() {
             {/* Button Panjang Elegan "RIWAYAT PENGAJUAN" Khusus Tamu Publik & User (Bukan Superadmin / Developer / Admin) Di Atas Peta Sebaran Interaktif */}
             {(session.role === 'user' || session.statusActive === 'GUEST') && session.role !== 'superadmin' && session.role !== 'developer' && session.role !== 'admin' && (
               <section id="section-riwayat-pendaftaran-user" className="max-w-7xl mx-auto px-3 sm:px-6 my-6 sm:my-8 scroll-mt-24">
-                <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-5 sm:p-7 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#06152d] rounded-3xl p-5 sm:p-7 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
                   <div className="relative z-10 space-y-2 text-center md:text-left flex-1">
-                    <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
+                    <div className="inline-flex items-center gap-2 bg-blue-950/80 border border-blue-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
                       <ClipboardList className="w-3.5 h-3.5 text-amber-400" />
                       <span>PORTAL MONITORING STATUS PENGAJUAN MANDIRI</span>
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
                       Riwayat Pengajuan 10 Pilar PSKS
                     </h3>
-                    <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-2xl">
+                    <p className="text-xs sm:text-sm text-blue-100/90 font-medium max-w-2xl">
                       Pantau status verifikasi dan pengesahan berkas pendaftaran Anda ke 10 Pilar PSKS secara realtime, transparan, dan akurat (Menunggu Persetujuan, Diterima/Acc, atau Ditolak).
                     </p>
                   </div>
@@ -2785,11 +2785,11 @@ export default function App() {
                         navigateToTab('user_reg_history');
                       }
                     }}
-                    className="relative z-10 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group shrink-0"
+                    className="relative z-10 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#0f2b5c] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group shrink-0"
                   >
-                    <ClipboardList className="w-5 h-5 text-[#043e2e]" />
+                    <ClipboardList className="w-5 h-5 text-[#0f2b5c]" />
                     <span>RIWAYAT PENGAJUAN</span>
-                    <ArrowRight className="w-4 h-4 text-[#043e2e] transform group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4 text-[#0f2b5c] transform group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </section>
@@ -2798,18 +2798,18 @@ export default function App() {
             {/* Khusus Admin Wilayah: 1 Tombol Eksklusif Untuk Beralih ke Halaman Terima Pendaftaran 10 Pilar PSKS (Di Atas Peta Sebaran) */}
             {session.role === 'admin' && (
               <section id="section-terima-pendaftaran" className="max-w-7xl mx-auto px-3 sm:px-6 my-6 sm:my-8 scroll-mt-24">
-                <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#06152d] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
                   <div className="relative z-10 space-y-2 text-center md:text-left flex-1">
-                    <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
+                    <div className="inline-flex items-center gap-2 bg-blue-950/80 border border-blue-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
                       <span>OTORITAS ADMIN WILAYAH • {(session.wilayah || 'Jawa Barat').toUpperCase()}</span>
                     </div>
                     <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase tracking-tight">
                       Terima Pendaftaran 10 Pilar PSKS
                     </h3>
-                    <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-2xl">
+                    <p className="text-xs sm:text-sm text-blue-100/90 font-medium max-w-2xl">
                       Akses modul verifikasi berkas dan pengesahan anggota baru dari 10 Pilar Potensi dan Sumber Kesejahteraan Sosial khusus untuk wilayah <strong className="text-amber-300">{session.wilayah || 'Jawa Barat'}</strong>.
                     </p>
                   </div>
@@ -2819,11 +2819,11 @@ export default function App() {
                     onClick={() => {
                       navigateToTab('terima_pendaftaran');
                     }}
-                    className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#043e2e] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
+                    className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#0f2b5c] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
                   >
-                    <Inbox className="w-5 h-5 text-[#043e2e]" />
+                    <Inbox className="w-5 h-5 text-[#0f2b5c]" />
                     <span>Buka Terima Pendaftaran 10 Pilar</span>
-                    <ArrowRight className="w-4 h-4 text-[#043e2e] transform group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4 text-[#0f2b5c] transform group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </section>
@@ -3155,7 +3155,7 @@ export default function App() {
                   setShowGuestHistoryModal(false);
                   setGateModalOpen(true);
                 }}
-                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#032e22] via-[#043e2e] to-emerald-800 hover:from-emerald-800 hover:to-teal-800 text-amber-300 font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] hover:from-[#0f2b5c] hover:to-[#1a4a9c] text-amber-300 font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Masuk ke Akun</span>

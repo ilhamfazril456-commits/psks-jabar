@@ -175,21 +175,21 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
           <BackToHomeButton onClick={onBackToHome} id="btn-back-top-user-reg-history" />
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-emerald-950 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="text-xs font-black text-blue-950 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
               <span>PORTAL PENDAFTARAN MANDIRI</span>
             </span>
           </div>
         </div>
 
         {/* 2. HERO HEADER BANNER */}
-        <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="inline-flex items-center gap-2 bg-emerald-950/80 border border-emerald-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
+              <div className="inline-flex items-center gap-2 bg-blue-950/80 border border-blue-400/40 px-3.5 py-1 rounded-full text-xs font-black text-amber-300 shadow-sm">
                 <ClipboardList className="w-4 h-4 text-amber-400" />
                 <span>MONITORING STATUS PENDAFTARAN 10 PILAR PSKS JAWA BARAT</span>
               </div>
@@ -203,16 +203,16 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
               Riwayat Pengajuan Pendaftaran
             </h1>
 
-            <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-blue-100/90 font-medium max-w-3xl leading-relaxed">
               Pantau rekam jejak dan status verifikasi berkas formulir pendaftaran 10 Pilar PSKS milik akun/perangkat Anda. Demi menjaga keamanan dan kerahasiaan identitas, data pendaftaran bersifat privat dan hanya dapat diakses oleh pemohon yang bersangkutan.
             </p>
 
             {/* Quick Status Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-emerald-800/60">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-blue-800/60">
               <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-white/10">
-                <div className="flex items-center justify-between text-xs text-emerald-200 font-bold mb-1">
+                <div className="flex items-center justify-between text-xs text-blue-200 font-bold mb-1">
                   <span>Total Pengajuan</span>
-                  <ClipboardList className="w-4 h-4 text-emerald-300" />
+                  <ClipboardList className="w-4 h-4 text-blue-300" />
                 </div>
                 <div className="text-2xl font-black text-white">{stats.total}</div>
               </div>

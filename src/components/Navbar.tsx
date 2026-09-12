@@ -97,8 +97,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div 
         className={`w-full relative transition-all duration-500 ease-in-out shadow-sm overflow-hidden ${
           isBeranda && !isScrolledPastHero
-            ? 'bg-gradient-to-br from-[#043e2e] via-[#054836] to-[#064e3b] md:bg-transparent md:bg-none border-b border-[#d4af37]/80 jabarprov-navbar-transparent'
-            : 'bg-gradient-to-br from-[#043e2e] via-[#054836] to-[#064e3b] border-b-2 border-[#d4af37] shadow-xl jabarprov-navbar-scrolled'
+            ? 'bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] md:bg-transparent md:bg-none border-b border-[#d4af37]/80 jabarprov-navbar-transparent'
+            : 'bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] border-b-2 border-[#d4af37] shadow-xl jabarprov-navbar-scrolled'
         }`}
       >
         <div className="relative z-10 max-w-[1440px] mx-auto px-3 sm:px-5 lg:px-8 h-[70px] flex items-center justify-between gap-2 sm:gap-4">
@@ -271,15 +271,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Button Hijau Login di Pojok Kanan Atas Untuk Tamu Publik yang Belum Login */}
+          {/* Button Biru Jabar Login di Pojok Kanan Atas Untuk Tamu Publik yang Belum Login */}
           {session.statusActive !== 'SAH_TERDAFTAR' && (
             <button
               onClick={() => setShowLoginConfirmModal(true)}
               aria-label="Masuk ke Akun"
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black px-3.5 lg:px-4 py-1.5 rounded-xl border border-emerald-400/60 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/30 transition-all duration-200 cursor-pointer active:scale-95 shrink-0 ring-1 ring-emerald-300/30"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black px-3.5 lg:px-4 py-1.5 rounded-xl border border-blue-400/60 shadow-lg shadow-blue-950/40 hover:shadow-blue-500/30 transition-all duration-200 cursor-pointer active:scale-95 shrink-0 ring-1 ring-blue-300/30"
               title="Masuk / Login ke Akun"
             >
-              <LogIn className="w-3.5 h-3.5 text-emerald-100" />
+              <LogIn className="w-3.5 h-3.5 text-blue-100" />
               <span>Login</span>
             </button>
           )}
@@ -304,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onOpenInbox}
               aria-label="Kotak Masuk"
-              className="relative p-1.5 sm:p-2 bg-[#022a1f] text-amber-200 rounded-lg border border-[#d4af37]/40 shrink-0"
+              className="relative p-1.5 sm:p-2 bg-[#0a1e3f] text-amber-200 rounded-lg border border-[#d4af37]/40 shrink-0"
               title="Kotak Masuk"
             >
               <Inbox className="w-4 h-4 sm:w-5 sm:h-5 text-[#e5c158]" />
@@ -321,10 +321,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => setShowLoginConfirmModal(true)}
               aria-label="Masuk ke Akun"
-              className="flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[11px] font-black px-2.5 py-1.5 rounded-lg border border-emerald-400/50 shadow-sm active:scale-95 transition-all shrink-0"
+              className="flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[11px] font-black px-2.5 py-1.5 rounded-lg border border-blue-400/50 shadow-sm active:scale-95 transition-all shrink-0"
               title="Masuk / Login"
             >
-              <LogIn className="w-3.5 h-3.5 text-emerald-100" />
+              <LogIn className="w-3.5 h-3.5 text-blue-100" />
               <span>Login</span>
             </button>
           )}
@@ -362,9 +362,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* MOBILE NAVIGATION DROPDOWN DRAWER (MD:HIDDEN) */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-gradient-to-br from-[#043e2e] via-[#054836] to-[#064e3b] border-t-2 border-[#d4af37] px-4 py-4 space-y-3 shadow-2xl animate-in fade-in duration-200">
+        <div className="md:hidden bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] border-t-2 border-[#d4af37] px-4 py-4 space-y-3 shadow-2xl animate-in fade-in duration-200">
           {/* 1. STATUS CARD (UNIFIED FOR ALL ROLES) */}
-          <div className="p-3 rounded-2xl bg-[#032e22]/90 border border-[#d4af37]/50 shadow-md flex items-center justify-between gap-3">
+          <div className="p-3 rounded-2xl bg-[#081d3f]/90 border border-[#d4af37]/50 shadow-md flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
                 {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') ? (

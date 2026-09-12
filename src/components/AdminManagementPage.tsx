@@ -312,17 +312,17 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <BackToHomeButton onClick={onBackToHome} id="btn-back-top-admin-manage" />
 
-          <div className="flex items-center gap-2 bg-emerald-950/10 border border-emerald-800/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-emerald-950">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
+          <div className="flex items-center gap-2 bg-blue-950/10 border border-blue-800/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-blue-950">
+            <ShieldCheck className="w-4 h-4 text-blue-700" />
             <span>Kredensial & Otorisasi: Manajemen Akun Admin</span>
           </div>
         </div>
 
         <div className="flex flex-col gap-6">
           {/* Header Role Notification Banner */}
-          <div className="bg-[#043e2e] text-white p-5 rounded-2xl border-l-8 border-[#d4af37] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+          <div className="bg-[#0f2b5c] text-white p-5 rounded-2xl border-l-8 border-[#d4af37] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
             <div>
-              <span className="text-[10px] uppercase tracking-wider font-extrabold bg-[#d4af37] text-[#043e2e] px-2.5 py-0.5 rounded shadow-sm">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold bg-[#d4af37] text-[#0f2b5c] px-2.5 py-0.5 rounded shadow-sm">
                 {isCurrentUserDeveloper ? 'SULTAN DEVELOPER PRIVILEGE' : 'SUPERADMIN PRIVILEGE'}
               </span>
               <h2 className="text-lg font-black mt-1 m-0 text-white">
@@ -335,7 +335,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-emerald-900/60 border border-[#d4af37]/40 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl">
+              <span className="bg-blue-900/60 border border-[#d4af37]/40 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl">
                 Fitur 1 Admin
               </span>
             </div>

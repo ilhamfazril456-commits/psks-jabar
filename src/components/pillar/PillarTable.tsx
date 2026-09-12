@@ -65,88 +65,88 @@ export const PillarTable: React.FC<PillarTableProps> = ({
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs sm:text-sm">
-          <thead className="bg-[#043e2e] text-white border-b-2 border-[#d4af37]">
+          <thead className="bg-[#0f2b5c] text-white border-b-2 border-[#d4af37]">
             {pillarId === 'peksos' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">NIK</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jenis Kelamin</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Pendidikan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor dan tanggal sertifikasi</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Sertifikasi Kompetensi</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jenjang Jabatan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Tempat Bertugas</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Instansi/tempat bertugas</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status Peksos (Pemerintah/Masyarakat)</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jenjang Jabatan (jika Pemerintah)</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">NIK</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenis Kelamin</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Pendidikan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor dan tanggal sertifikasi</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Sertifikasi Kompetensi</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenjang Jabatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Tempat Bertugas</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Instansi/tempat bertugas</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status Peksos (Pemerintah/Masyarakat)</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenjang Jabatan (jika Pemerintah)</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor HP</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Email</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status keaktifan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor kontak</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor HP</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Email</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status keaktifan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor kontak</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'psm' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Desa/Kelurahan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kecamatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Desa/Kelurahan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kecamatan</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Masa Bakti</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor SK</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor HP</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status aktif</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Masa Bakti</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor SK</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor HP</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status aktif</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'tagana' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor Induk</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Sertifikat</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Keahlian</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Pelatihan</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status Aktif</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor Induk</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Sertifikat</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Keahlian</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Pelatihan</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status Aktif</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'lks' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama LKS</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Bidang pelayanan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Ketua</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Alamat</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor Tanda Daftar</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Masa Berlaku</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama LKS</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bidang pelayanan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Ketua</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Alamat</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor Tanda Daftar</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Masa Berlaku</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
@@ -154,124 +154,124 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'karangtaruna' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama Karang Taruna</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Desa/Kelurahan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kecamatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama Karang Taruna</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Desa/Kelurahan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kecamatan</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Ketua</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor SK</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Tahun Berdiri</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Ketua</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor SK</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Tahun Berdiri</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'lk3' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama LK3</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama LK3</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Ketua</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Alamat</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kontak</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jenis layanan</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status aktif</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Ketua</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Alamat</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kontak</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenis layanan</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status aktif</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'pensos' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Instansi</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jabatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Instansi</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jabatan</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Wilayah kerja</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Wilayah kerja</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Sertifikasi</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Sertifikasi</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'tksk' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kecamatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kecamatan</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">SK Pengangkatan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Pendidikan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nomor HP</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Masa tugas</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">SK Pengangkatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Pendidikan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor HP</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Masa tugas</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'badanusaha' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama Badan Usaha</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Jenis usaha</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama Badan Usaha</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenis usaha</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Bentuk CSR</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Bidang bantuan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kontak</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bentuk CSR</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bidang bantuan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kontak</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : pillarId === 'slrt_puskesos' ? (
               <tr>
-                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-emerald-800/70">No</th>
+                <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70 bg-[#06503c] text-amber-300">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Nama SLRT</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Desa/Kelurahan</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kecamatan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama SLRT</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Desa/Kelurahan</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kecamatan</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Tahun Berdiri</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-emerald-800/70">Operator Puskesos</th>
-                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-emerald-800/70">Status Aktif</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Tahun Berdiri</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Operator Puskesos</th>
+                <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status Aktif</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
             ) : (
               <tr>
-                <th className="py-3.5 px-4 font-bold text-center w-12 border-r border-emerald-800/70">No</th>
-                <th className="py-3.5 px-4 font-bold border-r border-emerald-800/70">Kabupaten/Kota</th>
-                <th className="py-3.5 px-4 font-bold border-r border-emerald-800/70">Nama Lengkap</th>
-                <th className="py-3.5 px-4 font-bold border-r border-emerald-800/70">Kecamatan</th>
-                <th className="py-3.5 px-4 font-bold border-r border-emerald-800/70">Sertifikasi / SK</th>
-                <th className="py-3.5 px-4 font-bold border-r border-emerald-800/70">Handphone</th>
-                <th className="py-3.5 px-4 font-bold text-center border-r border-emerald-800/70">Status</th>
+                <th className="py-3.5 px-4 font-bold text-center w-12 border-r border-blue-800/70">No</th>
+                <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Kabupaten/Kota</th>
+                <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Nama Lengkap</th>
+                <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Kecamatan</th>
+                <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Sertifikasi / SK</th>
+                <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Handphone</th>
+                <th className="py-3.5 px-4 font-bold text-center border-r border-blue-800/70">Status</th>
                 {session.role !== 'user' && (
                   <th className="py-3.5 px-4 font-bold text-center">Aksi</th>
                 )}
@@ -302,7 +302,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
                       <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">
                         {isStaffOrAdmin ? record.nik : maskNIK(record.nik)}
                       </td>
@@ -380,7 +380,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kelDesa || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kec || '-'}</td>
                       {!isSuperOrDev && (
@@ -408,7 +408,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
                       )}
@@ -433,7 +433,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.namaLks || record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaLks || record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.bidangPelayanan || '-'}</td>
                       <td className="py-3 px-3 text-slate-800 font-bold whitespace-nowrap border-r border-slate-100">{record.ketua || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 text-xs max-w-[200px] truncate border-r border-slate-100" title={record.alamat || record.kec || '-'}>{record.alamat || record.kec || '-'}</td>
@@ -450,7 +450,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.namaKarangTaruna || record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaKarangTaruna || record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kelDesa || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kec || '-'}</td>
                       {!isSuperOrDev && (
@@ -467,7 +467,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.namaLk3 || record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaLk3 || record.nama}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
                       )}
@@ -494,7 +494,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayahKerja || record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.instansi || '-'}</td>
                       <td className="py-3 px-3 text-slate-800 font-bold whitespace-nowrap border-r border-slate-100">{record.jabatan || '-'}</td>
                       {!isSuperOrDev && (
@@ -509,7 +509,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kec || '-'}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
@@ -528,7 +528,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.namaBadanUsaha || record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaBadanUsaha || record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.jenisUsaha || '-'}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
@@ -546,7 +546,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#064e3b] whitespace-nowrap border-r border-slate-100">{record.namaSlrt || record.nama}</td>
+                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaSlrt || record.nama}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kelDesa || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.kec || '-'}</td>
                       {!isSuperOrDev && (
@@ -567,7 +567,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                   ) : (
                     <>
                       <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100 bg-amber-50/20">{record.wilayah}</td>
-                      <td className="py-3 px-4 font-bold text-[#064e3b] border-r border-slate-100">{record.nama}</td>
+                      <td className="py-3 px-4 font-bold text-[#0f2b5c] border-r border-slate-100">{record.nama}</td>
                       <td className="py-3 px-4 text-slate-600 border-r border-slate-100">{record.kec}</td>
                       <td className="py-3 px-4 text-slate-700 border-r border-slate-100">{record.sertifikasi}</td>
                       <td className="py-3 px-4 text-slate-700 font-medium border-r border-slate-100">

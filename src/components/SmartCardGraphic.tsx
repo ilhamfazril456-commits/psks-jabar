@@ -32,12 +32,12 @@ export const SmartCardGraphic: React.FC<SmartCardGraphicProps> = ({
         isInteractive ? 'hover:scale-[1.02] active:scale-[0.98]' : ''
       } ${className}`}
       style={{
-        background: 'linear-gradient(135deg, #0c5942 0%, #043e2e 50%, #011c15 100%)',
+        background: 'linear-gradient(135deg, #143b7d 0%, #0f2b5c 50%, #091f42 100%)',
       }}
     >
       {/* Subtle Vector Background Geometric Accents */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-emerald-400/15 blur-2xl" />
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-blue-400/15 blur-2xl" />
         <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-[#d4af37]/15 blur-2xl" />
         <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-white/5 to-transparent pointer-events-none" />
       </div>
@@ -74,15 +74,15 @@ export const SmartCardGraphic: React.FC<SmartCardGraphicProps> = ({
           <h3 className="text-sm sm:text-base font-black text-white tracking-wide uppercase m-0 leading-tight">
             PSKS JABAR PROVINSI JAWA BARAT
           </h3>
-          <p className="text-[9.5px] sm:text-[10.5px] font-bold text-emerald-200 tracking-wide m-0">
+          <p className="text-[9.5px] sm:text-[10.5px] font-bold text-blue-200 tracking-wide m-0">
             {subRole}
           </p>
         </div>
 
         {/* BOTTOM ROW: Holder Info / Instruction */}
-        <div className="flex items-end justify-between gap-2 pt-1 border-t border-emerald-500/20">
+        <div className="flex items-end justify-between gap-2 pt-1 border-t border-blue-400/20">
           <div className="min-w-0">
-            <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-300/90 uppercase tracking-wider m-0">
+            <p className="text-[8px] sm:text-[9px] font-semibold text-blue-200/90 uppercase tracking-wider m-0">
               Metode Validasi
             </p>
             <p className="text-[9.5px] sm:text-[10.5px] font-bold text-white truncate m-0">

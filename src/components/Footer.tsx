@@ -28,7 +28,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   const iframeSrc = `https://maps.google.com/maps?q=Dinas+Sosial+Provinsi+Jawa+Barat,+Jl.+Jend.+H.+Amir+Machmud+No.331,+Cigugur+Tengah,+Cimahi&t=&z=${zoomLevel}&ie=UTF8&iwloc=&output=embed`;
 
   return (
-    <footer className="bg-gradient-to-br from-[#043e2e] via-[#054836] to-[#064e3b] text-white border-t-4 border-[#d4af37] pt-10 sm:pt-12 pb-6">
+    <footer className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white border-t-4 border-[#d4af37] pt-10 sm:pt-12 pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-8 sm:pb-10 border-b border-white/10">
           {/* Column 1: PSKS Jabar Info (4 cols) */}

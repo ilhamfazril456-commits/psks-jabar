@@ -330,9 +330,9 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
       {/* Header Bar */}
-      <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 text-white flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#d4af37]">
+      <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-950 via-[#0f2b5c] to-slate-950 text-white flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#d4af37]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#d4af37] to-amber-600 text-[#043e2e] flex items-center justify-center font-black shadow-md shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#d4af37] to-amber-600 text-[#0f2b5c] flex items-center justify-center font-black shadow-md shrink-0">
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
@@ -340,11 +340,11 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
               <h3 className="text-sm sm:text-base font-black tracking-wide uppercase">
                 Grafik Analisis Akun User &amp; Distribusi Peran
               </h3>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 hidden sm:inline-flex items-center gap-1">
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 hidden sm:inline-flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-[#d4af37]" /> Recharts Engine
               </span>
             </div>
-            <p className="text-xs text-emerald-200/90 font-medium mt-0.5">
+            <p className="text-xs text-blue-200/90 font-medium mt-0.5">
               Visualisasi distribusi peran pengguna dan sebaran lengkap 27 Kabupaten/Kota se-Jawa Barat secara realtime.
             </p>
           </div>
@@ -603,7 +603,7 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
             {/* Regional Header & Controls */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#043e2e] text-[#d4af37] flex items-center justify-center font-black">
+                <div className="w-8 h-8 rounded-xl bg-[#0f2b5c] text-[#d4af37] flex items-center justify-center font-black">
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div>
@@ -611,7 +611,7 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
                     <h4 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider">
                       Distribusi Semua 27 Kabupaten / Kota (Realtime)
                     </h4>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
                       27 Kab/Kota Lengkap
                     </span>
                   </div>
@@ -629,7 +629,7 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
                   onClick={() => setSortBy('COUNT')}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     sortBy === 'COUNT'
-                      ? 'bg-[#043e2e] text-[#d4af37] shadow-xs'
+                      ? 'bg-[#0f2b5c] text-[#d4af37] shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Urutkan dari jumlah akun terbanyak"
@@ -642,7 +642,7 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
                   onClick={() => setSortBy('MAP')}
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     sortBy === 'MAP'
-                      ? 'bg-[#043e2e] text-[#d4af37] shadow-xs'
+                      ? 'bg-[#0f2b5c] text-[#d4af37] shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Urutkan berurutan sesuai peta Jawa Barat (Kab. Bogor s/d Kota Banjar)"
@@ -657,7 +657,7 @@ export const UserAccountAnalyticsChart: React.FC<UserAccountAnalyticsChartProps>
             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-2xs">
               <div className="flex items-center justify-between text-xs font-black text-slate-700 mb-2">
                 <span className="flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-[#043e2e]" />
+                  <BarChart3 className="w-4 h-4 text-[#0f2b5c]" />
                   Grafik Batang Recharts (27 Wilayah)
                 </span>
                 <div className="flex items-center gap-3 text-[11px]">
