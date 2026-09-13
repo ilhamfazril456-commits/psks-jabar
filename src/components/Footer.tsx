@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Globe, ZoomIn, ZoomOut, ExternalLink, RotateCcw, ShieldCheck, Scale } from 'lucide-react';
 import { OfficialPsksLogo } from './OfficialPsksLogo';
-import { PrivacyTermsModal } from './PrivacyTermsModal';
+
+const PrivacyTermsModal = React.lazy(() =>
+  import('./PrivacyTermsModal').then((m) => ({ default: m.PrivacyTermsModal }))
+);
 
 interface FooterProps {
   logoUrl?: string;
@@ -194,11 +197,15 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
         </div>
       </div>
 
-      <PrivacyTermsModal
-        isOpen={isPrivacyTermsOpen}
-        onClose={() => setIsPrivacyTermsOpen(false)}
-        initialTab={privacyTermsTab}
-      />
+      {isPrivacyTermsOpen && (
+        <React.Suspense fallback={null}>
+          <PrivacyTermsModal
+            isOpen={isPrivacyTermsOpen}
+            onClose={() => setIsPrivacyTermsOpen(false)}
+            initialTab={privacyTermsTab}
+          />
+        </React.Suspense>
+      )}
     </footer>
   );
 };

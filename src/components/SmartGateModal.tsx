@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { OfficialPsksLogo } from './OfficialPsksLogo';
 import { KAB_KOTA_ONLY } from '../data/initialData';
 import { AdminAccount } from '../types';
@@ -31,9 +30,8 @@ import {
   CreditCard,
   Radio
 } from 'lucide-react';
-import { comparePassword, hashPassword } from '../utils/crypto';
-import { CaptchaWidget } from './CaptchaWidget';
 
+const CaptchaWidget = React.lazy(() => import('./CaptchaWidget').then(m => ({ default: m.CaptchaWidget })));
 const PrivacyTermsModal = React.lazy(() => import('./PrivacyTermsModal').then(m => ({ default: m.PrivacyTermsModal })));
 const RegisterSuccessModal = React.lazy(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
 const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
@@ -75,9 +73,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // 'login_smart_card' -> Jalur 2: Pilihan B (Layar Transisi & Animasi Smart Card)
   // 'guest' -> Jalur 3 (Akses Tamu Publik & Pilih Wilayah)
   const [view, setView] = useState<'main' | 'register' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest'>('main');
-
-  // Mobile specific flow: Extra intro layer with "MULAI" button before displaying 3 menu options
-  const [mobileIntroStarted, setMobileIntroStarted] = useState(false);
 
   // Wilayah selection states - defaults to empty string so user consciously selects
   const [selectedGuestRegion, setSelectedGuestRegion] = useState<string>('');
@@ -163,32 +158,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, [view]);
 
-  // Subscribe to real-time Firestore quota updates for this device whenever modal is open
+  // Subscribe to real-time Firestore quota updates for this device only when user is on registration view
   useEffect(() => {
-    if (!isOpen) return;
-    let unsubscribe: (() => void) | null = null;
-    let timer: any = null;
+    if (!isOpen || view !== 'register') return;
 
-    const startSubscription = () => {
-      unsubscribe = subscribeToClientQuota(
-        detectedIp,
-        detectedDeviceId,
-        adminAccounts || [],
-        (info) => {
-          setQuotaInfo(info);
-        }
-      );
-    };
-
-    // If already on register view, sync immediately. If on main landing view, defer slightly so main thread remains completely idle.
-    if (view === 'register') {
-      startSubscription();
-    } else {
-      timer = setTimeout(startSubscription, 1200);
-    }
+    const unsubscribe = subscribeToClientQuota(
+      detectedIp,
+      detectedDeviceId,
+      adminAccounts || [],
+      (info) => {
+        setQuotaInfo(info);
+      }
+    );
 
     return () => {
-      if (timer) clearTimeout(timer);
       if (unsubscribe) unsubscribe();
     };
   }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess, view]);
@@ -205,7 +188,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setView('main');
-      setMobileIntroStarted(false);
       setUsernameInput('');
       setPasswordInput('');
       setCaptchaInput('');
@@ -326,6 +308,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     setIsRegistering(true);
 
     try {
+      const { hashPassword } = await import('../utils/crypto');
       const newAccountData: Omit<AdminAccount, 'id'> = {
         username: uTrim,
         namaAdmin: uTrim,
@@ -416,7 +399,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   };
 
   // --- JALUR 2: LOGIN MANUAL SUBMIT (UNIVERSAL ROLE SORTING) ---
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (lockoutRemaining > 0 || isLoggingIn) return;
@@ -444,6 +427,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       }, 100);
       return;
     }
+
+    const { comparePassword } = await import('../utils/crypto');
 
     const uLower = usernameInput.trim().toLowerCase();
     const pInput = passwordInput.trim();
@@ -521,18 +506,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
   };
 
-  // Animation variants for smooth view transitions
-  const pageVariants = {
-    initial: { opacity: 0, y: 10, scale: 0.985 },
-    animate: { opacity: 1, y: 0, scale: 1 },
-    exit: { opacity: 0, y: -10, scale: 0.985 },
-  };
-
-  const pageTransition = {
-    duration: 0.28,
-    ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-  };
-
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#06152d] via-[#091f42] to-[#040e1f] w-screen h-screen h-[100dvh] overflow-hidden flex flex-col justify-between select-none font-sans text-slate-800 p-2 sm:p-3 md:p-4">
       {/* Dynamic Aesthetic Ambient Glow Canvas */}
@@ -548,68 +521,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         {/* Split-Screen Card */}
         <div className="relative w-full h-full max-h-[92vh] sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
           
-          {/* ================= MOBILE-ONLY INTRO SCREEN (SHOWN ONLY ON MOBILE WHEN !mobileIntroStarted && view === 'main') ================= */}
-          <AnimatePresence>
-            {!mobileIntroStarted && view === 'main' && (
-              <motion.div
-                key="mobile-intro-layer"
-                initial={false}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -12 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="md:hidden absolute inset-0 z-30 w-full h-full bg-gradient-to-br from-[#143b7d] via-[#0f2b5c] to-[#091f42] text-white p-5 sm:p-6 flex flex-col justify-between overflow-hidden select-none"
-              >
-                {/* Organic Curved Decorative Circles */}
-                <div className="absolute -top-14 -right-14 w-44 h-44 rounded-full bg-blue-500/15 pointer-events-none" />
-                <div className="absolute top-1/2 -left-16 w-36 h-36 rounded-full bg-blue-400/10 pointer-events-none" />
-                <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-blue-600/15 pointer-events-none" />
-
-                {/* Top Brand Logo & Title */}
-                <div className="relative z-10 flex flex-col items-center text-center pt-2">
-                  <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 mb-2" />
-                  <span className="text-sm font-black tracking-widest text-blue-100 uppercase">
-                    PSKS JABAR
-                  </span>
-                  <span className="text-[10px] text-blue-200 font-semibold mt-0.5">
-                    Pilar Sosial Jawa Barat
-                  </span>
-                </div>
-
-                {/* Center Welcome Statement & MULAI Button */}
-                <div className="relative z-10 my-auto py-2 text-center flex flex-col items-center">
-                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight mb-2">
-                    Welcome Back!
-                  </h2>
-                  <p className="text-xs sm:text-[12.5px] text-blue-100 font-medium leading-relaxed max-w-xs mx-auto mb-6">
-                    Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.
-                  </p>
-
-                  {/* Button MULAI with Smooth Transition */}
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    type="button"
-                    onClick={() => {
-                      setErrorMessage('');
-                      setMobileIntroStarted(true);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 border-2 border-blue-400 hover:border-white bg-[#091f42] hover:bg-[#0d2d5e] text-white font-black text-xs sm:text-sm px-8 py-3 rounded-full transition-all duration-300 shadow-xl shadow-black/40 cursor-pointer backdrop-blur-md ring-2 ring-blue-500/20 active:scale-95"
-                  >
-                    <UserPlus className="w-4 h-4 text-[#d4af37]" />
-                    <span className="tracking-wider">MULAI</span>
-                  </motion.button>
-                </div>
-
-                {/* Bottom Sub-Links */}
-                <div className="relative z-10 pt-2 border-t border-blue-700/40 text-center pb-1">
-                  <p className="text-[9px] sm:text-[9.5px] text-blue-200 font-bold tracking-widest uppercase">
-                    DINAS SOSIAL PROVINSI JAWA BARAT
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* ================= LEFT COLUMN: BIRU JABAR GRADIENT BRANDING (DESKTOP / LAPTOP) ================= */}
           <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#143b7d] via-[#0f2b5c] to-[#091f42] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0">
             
@@ -640,33 +551,29 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
               {/* Dynamic Left Action Button */}
               {view === 'main' ? (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                <button
                   type="button"
                   onClick={() => {
                     setErrorMessage('');
                     setView('register');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm"
+                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
                 >
                   <UserPlus className="w-3.5 h-3.5 text-[#d4af37]" />
                   <span>Daftar Akun Baru</span>
-                </motion.button>
+                </button>
               ) : (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                <button
                   type="button"
                   onClick={() => {
                     setErrorMessage('');
                     setView('main');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm"
+                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 text-blue-200" />
                   <span>Menu Utama</span>
-                </motion.button>
+                </button>
               )}
             </div>
 
@@ -687,21 +594,21 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
             {/* Header Greeting inside White Area */}
             <div className="relative z-10 text-center mb-1 sm:mb-1.5 shrink-0">
-              {/* Mobile Back to Intro Button when on 3-menu list */}
-              {view === 'main' && mobileIntroStarted && (
-                <div className="md:hidden flex justify-center mb-1">
-                  <button
-                    type="button"
-                    onClick={() => setMobileIntroStarted(false)}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 hover:text-blue-950 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-full border border-blue-300 shadow-2xs cursor-pointer transition-colors"
-                  >
-                    <ArrowLeft className="w-3 h-3" />
-                    <span>Kembali ke Depan</span>
-                  </button>
+              {/* Mobile Branding Header (Shown only on mobile since desktop has left column) */}
+              <div className="md:hidden flex items-center justify-center gap-2 mb-1.5 pt-0.5">
+                <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-8 h-8" />
+                <div className="text-left">
+                  <h4 className="text-xs font-black text-[#0f2b5c] uppercase tracking-wider leading-none">PSKS JABAR</h4>
+                  <p className="text-[9px] text-slate-500 font-bold leading-tight mt-0.5">Pilar Sosial Jawa Barat</p>
                 </div>
-              )}
-              <h3 className="text-lg sm:text-xl font-black text-[#0f2b5c] tracking-tight">
-                Welcome
+              </div>
+              <h3 className="text-base sm:text-xl font-black text-[#0f2b5c] tracking-tight">
+                {view === 'main' && 'Selamat Datang'}
+                {view === 'register' && 'Daftar Akun Baru'}
+                {view === 'login_choice' && 'Pilih Metode Masuk'}
+                {view === 'login_manual' && 'Masuk Akun'}
+                {view === 'login_smart_card' && 'Smart Card Login'}
+                {view === 'guest' && 'Akses Tamu Publik'}
               </h3>
               <p className="text-[10.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
                 {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
@@ -716,32 +623,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             {/* Center Animated Form Container (Strictly fits without scrollbar) */}
             <div className="relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5">
               
-              <AnimatePresence mode="wait">
-                
                 {/* ========================================================================= */}
                 {/* LAYAR UTAMA (3 JALUR UTAMA SEJAJAR) */}
                 {/* ========================================================================= */}
                 {view === 'main' && (
-                  <motion.div
+                  <div
                     key="view-main"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
-                    className="space-y-2 my-auto"
+                    className="space-y-2 my-auto animate-scaleUp"
                   >
                     
                     {/* JALUR 1: TOMBOL DAFTAR AKUN BARU */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       type="button"
                       onClick={() => {
                         setErrorMessage('');
                         setView('register');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3"
+                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
                         <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
@@ -763,18 +661,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Registrasi mandiri untuk warga & personil potensi sosial Jawa Barat.
                         </p>
                       </div>
-                    </motion.button>
+                    </button>
 
                     {/* JALUR 2: TOMBOL MASUK KE AKUN */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       type="button"
                       onClick={() => {
                         setErrorMessage('');
                         setView('login_choice');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3"
+                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -792,7 +688,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Login/Masuk ke akun yang sudah terdaftar
                         </p>
                       </div>
-                    </motion.button>
+                    </button>
 
                     {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
                     <div className="relative flex items-center justify-center py-0.5 sm:py-1">
@@ -804,15 +700,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     </div>
 
                     {/* JALUR 3: TOMBOL LANJUTKAN SEBAGAI TAMU */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       type="button"
                       onClick={() => {
                         setErrorMessage('');
                         setView('guest');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3"
+                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
                         <Globe2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -830,24 +724,19 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Akses publik instan untuk membaca grafik & data PSKS tanpa password.
                         </p>
                       </div>
-                    </motion.button>
+                    </button>
 
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* ========================================================================= */}
                 {/* JALUR 1: FORMULIR PENDAFTARAN AKUN USER BARU */}
                 {/* ========================================================================= */}
                 {view === 'register' && (
-                  <motion.form
+                  <form
                     key="view-register"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
                     onSubmit={handleRegisterSubmit}
-                    className="space-y-1.5 sm:space-y-1.5 my-auto"
+                    className="space-y-1.5 sm:space-y-1.5 my-auto animate-scaleUp"
                   >
                     {/* Device Quota Info Badge */}
                     <div className={`p-2 rounded-xl border flex flex-wrap items-center justify-between gap-1.5 text-[9.5px] font-black ${
@@ -1040,15 +929,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                     {/* Action Buttons */}
                     <div className="pt-0.5 space-y-1">
-                      <motion.button
-                        whileHover={{ scale: isDeviceQuotaFull ? 1 : 1.01 }}
-                        whileTap={{ scale: isDeviceQuotaFull ? 1 : 0.99 }}
+                      <button
                         type="submit"
                         disabled={isDeviceQuotaFull || isRegistering}
                         className={`w-full py-1.5 font-black rounded-full text-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
                           isDeviceQuotaFull
                             ? 'bg-slate-300 text-slate-700 cursor-not-allowed border border-slate-300'
-                            : 'bg-[#0f2b5c] hover:bg-[#143b7d] text-white shadow-blue-950/20 cursor-pointer'
+                            : 'bg-[#0f2b5c] hover:bg-[#143b7d] text-white shadow-blue-950/20 cursor-pointer hover:scale-[1.01] active:scale-[0.99]'
                         }`}
                       >
                         {isRegistering ? (
@@ -1061,7 +948,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             <span>Daftar Sekarang</span>
                           </>
                         )}
-                      </motion.button>
+                      </button>
 
                       <button
                         type="button"
@@ -1076,33 +963,26 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       </button>
                     </div>
 
-                  </motion.form>
+                  </form>
                 )}
 
                 {/* ========================================================================= */}
                 {/* JALUR 2: PILIHAN METODE MASUK (LOGIN CHOICE) */}
                 {/* ========================================================================= */}
                 {view === 'login_choice' && (
-                  <motion.div
+                  <div
                     key="view-login-choice"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
-                    className="space-y-2 my-auto"
+                    className="space-y-2 my-auto animate-scaleUp"
                   >
                     
                     {/* PILIHAN A: LOGIN MANUAL */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       type="button"
                       onClick={() => {
                         setErrorMessage('');
                         setView('login_manual');
                       }}
-                      className="w-full group text-left p-3 rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-600/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-3"
+                      className="w-full group text-left p-3 rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-600/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 rounded-xl bg-[#0f2b5c] text-[#d4af37] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <Key className="w-4 h-4" />
@@ -1120,18 +1000,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Login manual dengan Username, Password, dan Verifikasi Captcha.
                         </p>
                       </div>
-                    </motion.button>
+                    </button>
 
                     {/* PILIHAN B: MASUK MENGGUNAKAN SMART CARD */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       type="button"
                       onClick={() => {
                         setErrorMessage('');
                         setView('login_smart_card');
                       }}
-                      className="w-full group text-left p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-3"
+                      className="w-full group text-left p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <CreditCard className="w-4 h-4" />
@@ -1150,7 +1028,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Scan Kode QR / Tap Kartu
                         </p>
                       </div>
-                    </motion.button>
+                    </button>
 
                     {/* Tombol Kembali ke Menu Utama */}
                     <div className="pt-0.5">
@@ -1167,22 +1045,17 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       </button>
                     </div>
 
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* ========================================================================= */}
                 {/* JALUR 2 -> PILIHAN A: FORM LOGIN MANUAL */}
                 {/* ========================================================================= */}
                 {view === 'login_manual' && (
-                  <motion.form
+                  <form
                     key="view-login-manual"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
                     onSubmit={handleLoginSubmit}
-                    className="space-y-1 sm:space-y-1.5 flex-1 flex flex-col justify-center min-h-0 py-0.5"
+                    className="space-y-1 sm:space-y-1.5 flex-1 flex flex-col justify-center min-h-0 py-0.5 animate-scaleUp"
                   >
                     
                     {/* Rate Limiting & Account Lockout Banner */}
@@ -1382,31 +1255,31 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                     {/* Input 3: Visual CAPTCHA Widget */}
                     <div>
-                      <CaptchaWidget
-                        userInput={captchaInput}
-                        setUserInput={(val) => {
-                          setCaptchaInput(val);
-                          setCaptchaError(false);
-                          setErrorMessage('');
-                        }}
-                        onCaptchaCodeChange={(code) => setCurrentCaptchaCode(code)}
-                        isError={captchaError}
-                        refreshTrigger={captchaRefreshTrigger}
-                        inputRef={captchaInputRef}
-                      />
+                      <React.Suspense fallback={<div className="h-10 bg-blue-50/60 rounded-xl animate-pulse" />}>
+                        <CaptchaWidget
+                          userInput={captchaInput}
+                          setUserInput={(val) => {
+                            setCaptchaInput(val);
+                            setCaptchaError(false);
+                            setErrorMessage('');
+                          }}
+                          onCaptchaCodeChange={(code) => setCurrentCaptchaCode(code)}
+                          isError={captchaError}
+                          refreshTrigger={captchaRefreshTrigger}
+                          inputRef={captchaInputRef}
+                        />
+                      </React.Suspense>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="pt-0.5 space-y-1">
-                      <motion.button
-                        whileHover={lockoutRemaining > 0 || isLoggingIn ? {} : { scale: 1.01 }}
-                        whileTap={lockoutRemaining > 0 || isLoggingIn ? {} : { scale: 0.99 }}
+                      <button
                         type="submit"
                         disabled={lockoutRemaining > 0 || isLoggingIn}
                         className={`w-full py-2 rounded-full text-xs font-black text-white shadow-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
                           lockoutRemaining > 0 || isLoggingIn
                             ? 'bg-slate-400 cursor-not-allowed shadow-none'
-                            : 'bg-[#0f2b5c] hover:bg-[#143b7d] shadow-blue-950/20'
+                            : 'bg-[#0f2b5c] hover:bg-[#143b7d] shadow-blue-950/20 hover:scale-[1.01] active:scale-[0.99]'
                         }`}
                       >
                         <Lock className="w-3.5 h-3.5 text-[#d4af37]" />
@@ -1417,7 +1290,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             ? `Dibekukan (${lockoutRemaining}s)`
                             : 'Masuk Sekarang'}
                         </span>
-                      </motion.button>
+                      </button>
 
                       <button
                         type="button"
@@ -1432,21 +1305,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       </button>
                     </div>
 
-                  </motion.form>
+                  </form>
                 )}
 
                 {/* ========================================================================= */}
                 {/* JALUR 2 -> PILIHAN B: LAYAR PEMINDAIAN SMART CARD */}
                 {/* ========================================================================= */}
                 {view === 'login_smart_card' && (
-                  <motion.div
+                  <div
                     key="view-login-smart-card"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
-                    className="space-y-3 sm:space-y-3.5 text-center my-auto py-1 max-w-sm mx-auto w-full"
+                    className="space-y-3 sm:space-y-3.5 text-center my-auto py-1 max-w-sm mx-auto w-full animate-scaleUp"
                   >
                     {/* Header Smart Card */}
                     <div className="space-y-0.5">
@@ -1465,15 +1333,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     {/* 2 Pilihan Bersebelahan Kanan-Kiri yang Rapi dan Seimbang */}
                     <div className="grid grid-cols-2 gap-2.5 sm:gap-3 text-left w-full">
                       {/* Pilihan 1 (Kiri): Pemindai Kode QR */}
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <button
                         type="button"
                         onClick={() => {
                           setScannerDefaultTab('qr');
                           setIsQrScannerOpen(true);
                         }}
-                        className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37] shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center text-center justify-between group transition-all min-h-[145px] sm:min-h-[155px]"
+                        className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37] shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center text-center justify-between group transition-all min-h-[145px] sm:min-h-[155px] hover:scale-[1.02] active:scale-[0.98]"
                       >
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 mb-1 group-hover:scale-105 transition-transform shadow-inner">
                           <QrCode className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
@@ -1489,18 +1355,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         <span className="mt-2 text-[9px] sm:text-[9.5px] font-black bg-gradient-to-r from-[#b8901c] via-[#d4af37] to-[#f3e5ab] text-slate-950 px-2 py-1 rounded-full uppercase tracking-wider w-full shadow-xs">
                           Buka Kamera
                         </span>
-                      </motion.button>
+                      </button>
 
                       {/* Pilihan 2 (Kanan): Tap SmartCard (NFC) */}
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <button
                         type="button"
                         onClick={() => {
                           setScannerDefaultTab('nfc');
                           setIsQrScannerOpen(true);
                         }}
-                        className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center text-center justify-between group transition-all min-h-[145px] sm:min-h-[155px]"
+                        className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center text-center justify-between group transition-all min-h-[145px] sm:min-h-[155px] hover:scale-[1.02] active:scale-[0.98]"
                       >
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-400/20 border border-amber-300/30 flex items-center justify-center text-amber-300 mb-1 group-hover:scale-105 transition-transform shadow-inner">
                           <Wifi className="w-5 h-5 sm:w-6 sm:h-6 rotate-90 animate-pulse" />
@@ -1516,7 +1380,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         <span className="mt-2 text-[9px] sm:text-[9.5px] font-black bg-gradient-to-r from-[#b8901c] via-[#d4af37] to-[#f3e5ab] text-slate-950 px-2 py-1 rounded-full uppercase tracking-wider w-full shadow-xs">
                           Sensor Tap NFC
                         </span>
-                      </motion.button>
+                      </button>
                     </div>
 
                     {/* Informasi Status NFC */}
@@ -1540,21 +1404,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       </button>
                     </div>
 
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* ========================================================================= */}
                 {/* JALUR 3: TAMPILAN AKSES TAMU (PILIH 27 WILAYAH) */}
                 {/* ========================================================================= */}
                 {view === 'guest' && (
-                  <motion.div
+                  <div
                     key="view-guest"
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={pageTransition}
-                    className="space-y-2.5 my-auto"
+                    className="space-y-2.5 my-auto animate-scaleUp"
                   >
                     
                     <div className="text-center">
@@ -1615,16 +1474,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                     {/* Action Buttons */}
                     <div className="pt-0.5 space-y-1">
-                      <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
+                      <button
                         type="button"
                         onClick={handleGuestSubmit}
-                        className="w-full py-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-white font-black rounded-full text-xs shadow-sm shadow-blue-950/20 transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                        className="w-full py-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-white font-black rounded-full text-xs shadow-sm shadow-blue-950/20 transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-[#d4af37]" />
                         <span>Masuk Sebagai Tamu</span>
-                      </motion.button>
+                      </button>
 
                       <button
                         type="button"
@@ -1639,10 +1496,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       </button>
                     </div>
 
-                  </motion.div>
+                  </div>
                 )}
-
-              </AnimatePresence>
 
             </div>
 

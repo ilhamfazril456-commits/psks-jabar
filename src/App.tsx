@@ -29,12 +29,11 @@ import { BannerBadge } from './components/BannerBadge';
 import { PillarsGrid } from './components/PillarsGrid';
 import { Footer } from './components/Footer';
 import { BackToHomeButton } from './components/BackToHomeButton';
+import { SmartGateModal } from './components/SmartGateModal';
 
 const FloatingAnnouncementModal = React.lazy(() => import('./components/FloatingAnnouncementModal').then(m => ({ default: m.FloatingAnnouncementModal })));
 const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
 const MaintenanceOverlay = React.lazy(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
-
-const SmartGateModal = React.lazy(() => import('./components/SmartGateModal').then(m => ({ default: m.SmartGateModal })));
 
 // Dynamic module loaders with non-blocking prefetching capability
 export const loadHomePSKSAnalytics = () => import('./components/HomePSKSAnalytics');
@@ -187,7 +186,7 @@ export default function App() {
     }
   };
 
-  const processSyncQueue = async () => {
+  const processSyncQueue = async (isManualClick: boolean = false) => {
     setIsSyncing(true);
     try {
       // 1. Uji koneksi langsung ke server Firestore untuk memeriksa apakah kuota harian telah direset oleh Google
@@ -200,12 +199,18 @@ export default function App() {
         if (isQuotaError(testErr)) {
           quotaExceededRef.current = true;
           setIsQuotaExceeded(true);
-          alert(
-            `⚠️ Batas Kuota Harian Firestore Masih Belum Direset.\n\n` +
-            `Catatan Waktu Reset:\n` +
-            `Kuota harian gratis Firebase Firestore (Spark / Free Tier) direset oleh Google secara global pada MIDNIGHT PACIFIC TIME (PST/PDT), yaitu sekitar pukul 14:00 - 15:00 WIB (bukan jam 07:00 pagi WIB).\n\n` +
-            `Semua perubahan data Anda tetap tersimpan aman di Cache Lokal & Antrean Offline pada perangkat Anda.`
-          );
+          if (isManualClick) {
+            try {
+              if (typeof window !== 'undefined' && window.alert) {
+                window.alert(
+                  `⚠️ Batas Kuota Harian Firestore Masih Belum Direset.\n\n` +
+                  `Catatan Waktu Reset:\n` +
+                  `Kuota harian gratis Firebase Firestore (Spark / Free Tier) direset oleh Google secara global pada MIDNIGHT PACIFIC TIME (PST/PDT), yaitu sekitar pukul 14:00 - 15:00 WIB (bukan jam 07:00 pagi WIB).\n\n` +
+                  `Semua perubahan data Anda tetap tersimpan aman di Cache Lokal & Antrean Offline pada perangkat Anda.`
+                );
+              }
+            } catch {}
+          }
           setIsSyncing(false);
           return;
         }
@@ -218,7 +223,13 @@ export default function App() {
       if (!Array.isArray(queue) || queue.length === 0) {
         quotaExceededRef.current = false;
         setIsQuotaExceeded(false);
-        alert(`✅ Koneksi Server Terhubung Normal!\n\nFirestore sudah aktif kembali dan tidak ada antrean data offline yang tertunda.`);
+        if (isManualClick) {
+          try {
+            if (typeof window !== 'undefined' && window.alert) {
+              window.alert(`✅ Koneksi Server Terhubung Normal!\n\nFirestore sudah aktif kembali dan tidak ada antrean data offline yang tertunda.`);
+            }
+          } catch {}
+        }
         setIsSyncing(false);
         return;
       }
@@ -240,7 +251,13 @@ export default function App() {
           if (isQuotaError(err)) {
             quotaExceededRef.current = true;
             setIsQuotaExceeded(true);
-            alert(`⚠️ Kuota terlampaui saat proses sinkronisasi. ${successCount} data berhasil terkirim sebelum kuota habis kembali.`);
+            if (isManualClick) {
+              try {
+                if (typeof window !== 'undefined' && window.alert) {
+                  window.alert(`⚠️ Kuota terlampaui saat proses sinkronisasi. ${successCount} data berhasil terkirim sebelum kuota habis kembali.`);
+                }
+              } catch {}
+            }
             break;
           }
           console.error(`Sync queue item failed (${item.collection}/${item.docId}):`, err);
@@ -255,8 +272,12 @@ export default function App() {
         setIsQuotaExceeded(false);
       }
 
-      if (successCount > 0 && remainingQueue.length === 0) {
-        alert(`✅ Sinkronisasi Berhasil!\n\n${successCount} data perubahan offline/cache lokal telah sukses tersimpan permanen ke server Firestore.`);
+      if (successCount > 0 && remainingQueue.length === 0 && isManualClick) {
+        try {
+          if (typeof window !== 'undefined' && window.alert) {
+            window.alert(`✅ Sinkronisasi Berhasil!\n\n${successCount} data perubahan offline/cache lokal telah sukses tersimpan permanen ke server Firestore.`);
+          }
+        } catch {}
       }
     } catch (e) {
       console.error('Failed processing sync queue', e);
@@ -678,7 +699,9 @@ export default function App() {
         'psks_records',
         (docs) => {
           // Run queue processing if connection restored
-          processSyncQueue();
+          if (session.statusActive === 'SAH_TERDAFTAR') {
+            processSyncQueue(false);
+          }
 
           if (!docs || docs.length === 0) {
             const fallback: Record<string, PSKSDataRecord[]> = {};
@@ -795,8 +818,8 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    // Only subscribe to admin_accounts if the user is an active admin or actively attempting login
-    if (session.statusActive !== 'SAH_TERDAFTAR' && !gateModalOpen) {
+    // Only subscribe to admin_accounts if the user is an active logged in admin
+    if (session.statusActive !== 'SAH_TERDAFTAR') {
       return;
     }
 
@@ -1506,10 +1529,12 @@ export default function App() {
   // Sync Session to sessionStorage
   useEffect(() => {
     // Pastikan otomatis tampil dari paling atas beranda saat baru masuk / render pertama
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
+    try {
+      window.scrollTo(0, 0);
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -2672,19 +2697,17 @@ export default function App() {
   // render ONLY SmartGateModal so zero main content, hero, navbar, or background flashes
   if (gateModalOpen) {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-[#01140e] overflow-hidden z-[9999]">
-        <React.Suspense fallback={null}>
-          <SmartGateModal
-            isOpen={true}
-            onClose={() => setGateModalOpen(false)}
-            targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
-            onConfirmGuestRegion={handleConfirmGuestRegion}
-            onPerformLogin={handleLogin}
-            adminAccounts={adminAccounts}
-            onRegisterAccount={handleAddAdminAccount}
-            logoUrl={appSettings?.logoUrl}
-          />
-        </React.Suspense>
+      <div className="fixed inset-0 w-screen h-screen bg-[#06152d] overflow-hidden z-[9999]">
+        <SmartGateModal
+          isOpen={true}
+          onClose={() => setGateModalOpen(false)}
+          targetPillarTitle={pendingPillarId ? PILLARS_CONFIG[pendingPillarId]?.title : 'Layanan PSKS'}
+          onConfirmGuestRegion={handleConfirmGuestRegion}
+          onPerformLogin={handleLogin}
+          adminAccounts={adminAccounts}
+          onRegisterAccount={handleAddAdminAccount}
+          logoUrl={appSettings?.logoUrl}
+        />
         {!!loginSuccessData && (
           <React.Suspense fallback={null}>
             <LoginSuccessModal
@@ -2730,7 +2753,7 @@ export default function App() {
           )}
           <button
             type="button"
-            onClick={processSyncQueue}
+            onClick={() => processSyncQueue(true)}
             disabled={isSyncing}
             className="ml-1 bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] hover:from-amber-400 hover:to-amber-200 text-slate-950 font-black text-[11px] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow active:scale-95 flex items-center gap-1 disabled:opacity-60"
           >

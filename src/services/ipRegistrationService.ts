@@ -142,6 +142,24 @@ export function isPrivateOrLocalIp(ip: string): boolean {
   );
 }
 
+function getSafeTimeoutSignal(ms: number): AbortSignal | undefined {
+  if (typeof AbortSignal !== 'undefined' && typeof (AbortSignal as any).timeout === 'function') {
+    try {
+      return (AbortSignal as any).timeout(ms);
+    } catch {}
+  }
+  if (typeof AbortController !== 'undefined') {
+    try {
+      const controller = new AbortController();
+      setTimeout(() => {
+        try { controller.abort(); } catch {}
+      }, ms);
+      return controller.signal;
+    } catch {}
+  }
+  return undefined;
+}
+
 // Detect client public IP with fallback chain
 export async function detectClientIp(): Promise<string> {
   if (typeof window === 'undefined') return '';
@@ -171,7 +189,8 @@ export async function detectClientIp(): Promise<string> {
   // 3. Try public ipify if server IP is private or empty
   if (!finalIp || isPrivateOrLocalIp(finalIp)) {
     try {
-      const res2 = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+      const sig = getSafeTimeoutSignal(3000);
+      const res2 = await fetch('https://api.ipify.org?format=json', sig ? { signal: sig } : {});
       if (res2.ok) {
         const data2 = await res2.json();
         if (data2.ip) {
@@ -180,7 +199,8 @@ export async function detectClientIp(): Promise<string> {
       }
     } catch {
       try {
-        const res3 = await fetch('https://api64.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+        const sig2 = getSafeTimeoutSignal(3000);
+        const res3 = await fetch('https://api64.ipify.org?format=json', sig2 ? { signal: sig2 } : {});
         if (res3.ok) {
           const data3 = await res3.json();
           if (data3.ip) {
