@@ -544,7 +544,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN') {
         try {
           const { getFirestoreDoc } = await import('../services/firestoreDataService');
-          const remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.id);
+          let remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.id);
+          if (!remoteDoc.exists && matchedAccount.username) {
+            remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.username);
+          }
           if (remoteDoc.exists && remoteDoc.data) {
             const remote = remoteDoc.data;
             if (!remote.isFrozen && remote.statusAkun !== 'DIBEKUKAN') {
@@ -574,6 +577,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
       const isValid = comparePassword(pInput, matchedAccount.passwordHash || matchedAccount.passwordPolos) || (matchedAccount.passwordPolos && pInput === matchedAccount.passwordPolos);
       if (isValid) {
+        // Explicitly set isFrozen false & statusAkun AKTIF on successful authenticated login
+        matchedAccount = {
+          ...matchedAccount,
+          isFrozen: false,
+          statusAkun: 'AKTIF',
+        };
+        if (onUpdateAccountLocal) {
+          onUpdateAccountLocal(matchedAccount);
+        }
+
         const assignedRole: 'user' | 'admin' | 'superadmin' | 'developer' = 
           matchedAccount.role || 'user';
         handleLoginSuccess(

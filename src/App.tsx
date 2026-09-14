@@ -289,67 +289,92 @@ export default function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = subscribeToDoc(
-      'app_settings',
-      'global',
-      (data, exists) => {
-        if (exists && data) {
-          const settings = data as AppSettings;
-          // Fallback to local storage if Firestore holds placeholder marker
-          if (settings.logoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
-            const local = localStorage.getItem('dinsos_logo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.logoUrl = local;
-          }
-          if (settings.kadinasPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
-            const local = localStorage.getItem('dinsos_kadinas_photo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.kadinasPhotoUrl = local;
-          }
-          if (settings.bgPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
-            const local = localStorage.getItem('dinsos_bg_photo_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.bgPhotoUrl = local;
-          }
-          if (settings.bgPhotoUrl && (settings.bgPhotoUrl.includes('eco_office_') || settings.bgPhotoUrl.includes('dinsos_jabar_building') || settings.bgPhotoUrl.includes('poster'))) {
-            settings.bgPhotoUrl = '';
-            settings.bgMode = 'video';
-          }
-          if (settings.bgVideoUrl === 'LOCAL_STORAGE_SAVED_VIDEO' || !settings.bgVideoUrl) {
-            const local = localStorage.getItem('dinsos_bg_video_url');
-            if (local && local !== 'LOCAL_STORAGE_SAVED_VIDEO') {
-              settings.bgVideoUrl = local;
-            } else {
-              settings.bgVideoUrl = OFFICIAL_ECOOFFICE_VIDEO;
-            }
-          }
-          if (!settings.bgMode) {
-            settings.bgMode = 'video';
-          }
-          if (settings.announcement) {
-            try {
-              localStorage.setItem('dinsos_announcement', JSON.stringify(settings.announcement));
-            } catch {}
-            if (!settings.announcement.active) {
-              setIsFloatingAnnouncementOpen(false);
-            }
-          }
-          try {
-            localStorage.setItem('dinsos_settings_cache_time', String(Date.now()));
-          } catch {}
-          setAppSettings(settings);
-        } else {
-          setAppSettings(DEFAULT_APP_SETTINGS);
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, 'app_settings/global');
-        if (isQuotaError(error)) {
-          quotaExceededRef.current = true;
-          setIsQuotaExceeded(true);
-        }
-      }
-    );
+    let unsubscribe: (() => void) | null = null;
+    let timer: any = null;
 
-    return () => unsubscribe();
-  }, []);
+    const startSettingsSubscription = () => {
+      unsubscribe = subscribeToDoc(
+        'app_settings',
+        'global',
+        (data, exists) => {
+          if (exists && data) {
+            const settings = data as AppSettings;
+            // Fallback to local storage if Firestore holds placeholder marker
+            if (settings.logoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+              const local = localStorage.getItem('dinsos_logo_url');
+              if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.logoUrl = local;
+            }
+            if (settings.kadinasPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+              const local = localStorage.getItem('dinsos_kadinas_photo_url');
+              if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.kadinasPhotoUrl = local;
+            }
+            if (settings.bgPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
+              const local = localStorage.getItem('dinsos_bg_photo_url');
+              if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.bgPhotoUrl = local;
+            }
+            if (settings.bgPhotoUrl && (settings.bgPhotoUrl.includes('eco_office_') || settings.bgPhotoUrl.includes('dinsos_jabar_building') || settings.bgPhotoUrl.includes('poster'))) {
+              settings.bgPhotoUrl = '';
+              settings.bgMode = 'video';
+            }
+            if (settings.bgVideoUrl === 'LOCAL_STORAGE_SAVED_VIDEO' || !settings.bgVideoUrl) {
+              const local = localStorage.getItem('dinsos_bg_video_url');
+              if (local && local !== 'LOCAL_STORAGE_SAVED_VIDEO') {
+                settings.bgVideoUrl = local;
+              } else {
+                settings.bgVideoUrl = OFFICIAL_ECOOFFICE_VIDEO;
+              }
+            }
+            if (!settings.bgMode) {
+              settings.bgMode = 'video';
+            }
+            if (settings.announcement) {
+              try {
+                localStorage.setItem('dinsos_announcement', JSON.stringify(settings.announcement));
+              } catch {}
+              if (!settings.announcement.active) {
+                setIsFloatingAnnouncementOpen(false);
+              }
+            }
+            try {
+              localStorage.setItem('dinsos_settings_cache_time', String(Date.now()));
+            } catch {}
+            setAppSettings(settings);
+          } else {
+            setAppSettings(DEFAULT_APP_SETTINGS);
+          }
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.GET, 'app_settings/global');
+          if (isQuotaError(error)) {
+            quotaExceededRef.current = true;
+            setIsQuotaExceeded(true);
+          }
+        }
+      );
+    };
+
+    if (session.statusActive === 'SAH_TERDAFTAR') {
+      timer = setTimeout(startSettingsSubscription, 100);
+    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = (window as any).requestIdleCallback(
+        () => {
+          startSettingsSubscription();
+        },
+        { timeout: 3500 }
+      );
+      return () => {
+        if ('cancelIdleCallback' in window) (window as any).cancelIdleCallback(idleId);
+        if (unsubscribe) unsubscribe();
+      };
+    } else {
+      timer = setTimeout(startSettingsSubscription, 2500);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+    };
+  }, [session.statusActive]);
 
   // Realtime Sync Video Background across all connected devices (Gated to Admin sessions only)
   useEffect(() => {
@@ -1772,7 +1797,8 @@ export default function App() {
     const formattedLogin = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
 
     // Mark matching account as online & record session token, status, and login timestamp in state & database
-    const matched = adminAccounts.find(
+    const currentAccounts = adminAccountsRef.current.length > 0 ? adminAccountsRef.current : adminAccounts;
+    const matched = currentAccounts.find(
       (a) =>
         (resolvedUserId && a.id === resolvedUserId) ||
         (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim() ||
@@ -1782,6 +1808,8 @@ export default function App() {
     if (matched) {
       handleUpdateAdminAccount({
         ...matched,
+        isFrozen: false,
+        statusAkun: 'AKTIF',
         isOnline: true,
         statusKoneksi: 'ONLINE',
         statusLayar: 'AKTIF_LAYAR',
@@ -2748,7 +2776,14 @@ export default function App() {
           adminAccounts={adminAccounts}
           onRegisterAccount={handleAddAdminAccount}
           onUpdateAccountLocal={(acc) => {
-            setAdminAccounts((prev) => prev.map((a) => (a.id === acc.id ? acc : a)));
+            setAdminAccounts((prev) => {
+              const next = prev.map((a) => (a.id === acc.id || (a.username && a.username === acc.username) ? acc : a));
+              adminAccountsRef.current = next;
+              try {
+                localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
           }}
           appSettings={appSettings}
           logoUrl={appSettings?.logoUrl}
