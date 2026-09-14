@@ -140,6 +140,23 @@ export async function deleteFirestoreDoc(
 }
 
 /**
+ * Fetch a single document directly from Firestore
+ */
+export async function getFirestoreDoc(
+  collectionName: string,
+  docId: string
+): Promise<{ exists: boolean; data: any }> {
+  try {
+    const { firestore, db } = await getFirestoreModule();
+    const docRef = firestore.doc(db, collectionName, docId);
+    const snap = await firestore.getDoc(docRef);
+    return { exists: snap.exists(), data: snap.data() };
+  } catch (err) {
+    return { exists: false, data: null };
+  }
+}
+
+/**
  * Check if backend server is responsive
  */
 export async function checkServerConnectivity(): Promise<boolean> {

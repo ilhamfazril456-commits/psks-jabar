@@ -36,9 +36,13 @@ export const MaintenanceOverlay: React.FC<MaintenanceOverlayProps> = ({
   const isWilayahMatch = (wil: string, map?: Record<string, boolean>) => {
     if (!map || !wil) return false;
     if (map[wil] === true) return true;
-    const matchKey = Object.keys(map).find(
-      (k) => k.toLowerCase().trim() === wil.toLowerCase().trim()
-    );
+    const wilLower = wil.toLowerCase().trim();
+    const wilClean = wilLower.replace(/^(kabupaten|kab\.|kota)\s+/i, '').trim();
+    const matchKey = Object.keys(map).find((k) => {
+      const kLower = k.toLowerCase().trim();
+      const kClean = kLower.replace(/^(kabupaten|kab\.|kota)\s+/i, '').trim();
+      return kLower === wilLower || kClean === wilClean;
+    });
     return matchKey ? map[matchKey] === true : false;
   };
 
@@ -46,11 +50,13 @@ export const MaintenanceOverlay: React.FC<MaintenanceOverlayProps> = ({
   let titleRole = '';
   let messageContent = '';
 
-  if (session.role === 'user') {
+  if (session.role === 'user' || session.statusActive === 'GUEST') {
     const isWilMaintenance = isWilayahMatch(session.wilayah, appSettings.maintenanceUserWilayah);
     if (appSettings.maintenanceUser || isWilMaintenance) {
       isBlocked = true;
-      titleRole = `PENGUNJUNG / USER PUBLIK (${session.wilayah || 'Jawa Barat'})`;
+      titleRole = session.statusActive === 'GUEST'
+        ? `TAMU PUBLIK (${session.wilayah || 'Jawa Barat'})`
+        : `PENGUNJUNG / USER PUBLIK (${session.wilayah || 'Jawa Barat'})`;
       messageContent = appSettings.maintenanceMsgUser;
     }
   } else if (session.role === 'admin') {

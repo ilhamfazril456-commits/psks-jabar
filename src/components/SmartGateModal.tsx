@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { OfficialPsksLogo } from './OfficialPsksLogo';
 import { KAB_KOTA_ONLY } from '../data/initialData';
-import { AdminAccount } from '../types';
+import { AdminAccount, AppSettings } from '../types';
 import {
   Shield,
   User,
@@ -49,9 +49,11 @@ interface SmartGateModalProps {
   onClose: () => void;
   targetPillarTitle?: string;
   onConfirmGuestRegion: (region: string) => void;
-  onPerformLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', nama: string, wilayah: string) => void;
+  onPerformLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', nama: string, wilayah: string, username?: string, userId?: string) => void;
   adminAccounts: AdminAccount[];
   onRegisterAccount?: (newAccount: Omit<AdminAccount, 'id'>) => Promise<void> | void;
+  onUpdateAccountLocal?: (account: AdminAccount) => void;
+  appSettings?: AppSettings;
   logoUrl?: string;
 }
 
@@ -63,6 +65,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   onPerformLogin,
   adminAccounts,
   onRegisterAccount,
+  onUpdateAccountLocal,
+  appSettings,
   logoUrl,
 }) => {
   // Navigation Flow State:
@@ -228,6 +232,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       setErrorMessage('⚠️ Silakan pilih salah satu Wilayah Kabupaten / Kota terlebih dahulu untuk melanjutkan!');
       return;
     }
+
+    // Pengecekan Maintenance untuk Akses Tamu Publik
+    if (appSettings) {
+      const isGlobalUserMaintenance = !!appSettings.maintenanceUser;
+      const isWilayahMaintenance = appSettings.maintenanceUserWilayah?.[selectedGuestRegion] === true;
+      if (isGlobalUserMaintenance || isWilayahMaintenance) {
+        const msg = appSettings.maintenanceMsgUser || 'Mohon maaf, sistem informasi portal publik sedang dalam tahap pemeliharaan rutin (Maintenance).';
+        setErrorMessage(`⚠️ PEMELIHARAAN SISTEM (MAINTENANCE AKTIF):\n\n${msg}\n\nAkses Tamu Publik untuk wilayah "${selectedGuestRegion}" ditutup sementara waktu demi peningkatan layanan.`);
+        return;
+      }
+    }
+
     setErrorMessage('');
     onConfirmGuestRegion(selectedGuestRegion);
     setView('main');
@@ -433,13 +449,19 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     const uLower = usernameInput.trim().toLowerCase();
     const pInput = passwordInput.trim();
 
-    const handleLoginSuccess = (role: 'user' | 'developer' | 'superadmin' | 'admin', nama: string, wilayah: string) => {
+    const handleLoginSuccess = (
+      role: 'user' | 'developer' | 'superadmin' | 'admin',
+      nama: string,
+      wilayah: string,
+      username?: string,
+      userId?: string
+    ) => {
       setIsLoggingIn(true);
       setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
       setErrorMessage('');
 
-      // Trigger login state update
-      onPerformLogin(role, nama, wilayah);
+      // Trigger login state update with explicit username and account ID
+      onPerformLogin(role, nama, wilayah, username, userId);
 
       setTimeout(() => {
         setFailedAttempts(0);
@@ -460,7 +482,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     if (uLower === 'ilhamfazril') {
       const isDevValid = comparePassword(pInput, devAcc?.passwordHash || devAcc?.passwordPolos || 'IlhamSangDeveloper') || (devAcc?.passwordPolos && pInput === devAcc.passwordPolos);
       if (isDevValid) {
-        handleLoginSuccess('developer', devAcc?.namaAdmin || 'Ilham Fazril', 'Pusat Developer Jabar');
+        handleLoginSuccess(
+          'developer',
+          devAcc?.namaAdmin || 'Ilham Fazril',
+          'Pusat Developer Jabar',
+          devAcc?.username || 'ilhamfazril',
+          devAcc?.id
+        );
         return;
       } else {
         triggerFailedAttempt();
@@ -473,7 +501,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     if (uLower === 'superadmin jabar' || uLower === 'superadmin') {
       const isSuperValid = comparePassword(pInput, superAcc?.passwordHash || superAcc?.passwordPolos || 'super12345jabar') || (superAcc?.passwordPolos && pInput === superAcc.passwordPolos);
       if (isSuperValid) {
-        handleLoginSuccess('superadmin', 'Superadmin jabar', 'PROVINSI JAWA BARAT');
+        handleLoginSuccess(
+          'superadmin',
+          'Superadmin jabar',
+          'PROVINSI JAWA BARAT',
+          superAcc?.username || 'superadmin jabar',
+          superAcc?.id
+        );
         return;
       } else {
         triggerFailedAttempt();
@@ -482,20 +516,54 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
 
     // 2. Check Universal Registered Accounts (User, Admin Wilayah, etc.)
-    const matchedAccount = adminAccounts.find(
+    let matchedAccount = adminAccounts.find(
       (a) => (a.username || '').toLowerCase().trim() === uLower
     );
 
     if (matchedAccount) {
+      // Verifikasi status pembekuan secara langsung ke server jika terindikasi dibekukan
       if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN') {
-        setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
-        return;
+        try {
+          const { getFirestoreDoc } = await import('../services/firestoreDataService');
+          const remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.id);
+          if (remoteDoc.exists && remoteDoc.data) {
+            const remote = remoteDoc.data;
+            if (!remote.isFrozen && remote.statusAkun !== 'DIBEKUKAN') {
+              // Akun telah dibuka status pembekuannya di Firestore!
+              matchedAccount = {
+                ...matchedAccount,
+                ...remote,
+                isFrozen: false,
+                statusAkun: 'AKTIF',
+              };
+              if (onUpdateAccountLocal) {
+                onUpdateAccountLocal(matchedAccount);
+              }
+            } else {
+              setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
+              return;
+            }
+          } else {
+            setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
+            return;
+          }
+        } catch {
+          setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
+          return;
+        }
       }
+
       const isValid = comparePassword(pInput, matchedAccount.passwordHash || matchedAccount.passwordPolos) || (matchedAccount.passwordPolos && pInput === matchedAccount.passwordPolos);
       if (isValid) {
         const assignedRole: 'user' | 'admin' | 'superadmin' | 'developer' = 
           matchedAccount.role || 'user';
-        handleLoginSuccess(assignedRole, matchedAccount.namaAdmin || matchedAccount.username, matchedAccount.wilayahTugas || 'Jawa Barat');
+        handleLoginSuccess(
+          assignedRole,
+          matchedAccount.namaAdmin || matchedAccount.username,
+          matchedAccount.wilayahTugas || 'Jawa Barat',
+          matchedAccount.username,
+          matchedAccount.id
+        );
         return;
       } else {
         triggerFailedAttempt();

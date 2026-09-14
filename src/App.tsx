@@ -105,7 +105,9 @@ export default function App() {
     const isDeveloper = role === 'developer';
     const sessionToken = sessionStorage.getItem('session_token') || undefined;
     const loginTimestamp = sessionStorage.getItem('login_timestamp') ? Number(sessionStorage.getItem('login_timestamp')) : undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp };
+    const username = sessionStorage.getItem('session_user_username') || undefined;
+    const userId = sessionStorage.getItem('session_user_id') || undefined;
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId };
   });
 
   // 1b. Global App Settings state with Firestore Real-time Sync & Permanent Persistence
@@ -1727,11 +1729,29 @@ export default function App() {
   const handleLogin = (
     role: 'user' | 'admin' | 'superadmin' | 'developer',
     nama: string,
-    wilayah: string
+    wilayah: string,
+    username?: string,
+    userId?: string
   ) => {
     const statusActive = 'SAH_TERDAFTAR';
     const isDeveloper = role === 'developer';
     
+    // Resolve exact username and user ID
+    const resolvedUsername =
+      username ||
+      adminAccounts.find(
+        (a) =>
+          (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim() ||
+          (a.username || '').toLowerCase().trim() === (nama || '').toLowerCase().trim()
+      )?.username ||
+      nama;
+
+    const resolvedUserId =
+      userId ||
+      adminAccounts.find(
+        (a) => (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim()
+      )?.id;
+
     // Generate unique session token & timestamp for Single Session & 24h Timeout
     const sessionToken = `token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const loginTimestamp = Date.now();
@@ -1741,12 +1761,22 @@ export default function App() {
       nama, 
       wilayah, 
       statusActive, 
+      username: resolvedUsername,
+      userId: resolvedUserId,
       isDeveloper, 
       sessionToken, 
       loginTimestamp 
     };
     setSession(newSession);
     sessionStorage.setItem('has_entered_gate', 'true');
+    sessionStorage.setItem('session_user_role', role);
+    sessionStorage.setItem('session_user_nama', nama);
+    sessionStorage.setItem('session_user_wilayah', wilayah);
+    sessionStorage.setItem('statusLoginActive', statusActive);
+    sessionStorage.setItem('session_user_username', resolvedUsername);
+    if (resolvedUserId) sessionStorage.setItem('session_user_id', resolvedUserId);
+    sessionStorage.setItem('session_token', sessionToken);
+    sessionStorage.setItem('login_timestamp', String(loginTimestamp));
     setGateModalOpen(false);
 
     // Format current login timestamp
@@ -1756,9 +1786,9 @@ export default function App() {
     // Mark matching account as online & record session token, status, and login timestamp in state & database
     const matched = adminAccounts.find(
       (a) =>
-        (a.username || '').toLowerCase().trim() === (nama || '').toLowerCase().trim() ||
-        (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim() ||
-        (a.role === role && (a.wilayahTugas || '').toLowerCase().trim() === (wilayah || '').toLowerCase().trim())
+        (resolvedUserId && a.id === resolvedUserId) ||
+        (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim() ||
+        (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim()
     );
 
     if (matched) {
@@ -1856,6 +1886,8 @@ export default function App() {
     sessionStorage.removeItem('statusLoginActive');
     sessionStorage.removeItem('session_token');
     sessionStorage.removeItem('login_timestamp');
+    sessionStorage.removeItem('session_user_username');
+    sessionStorage.removeItem('session_user_id');
     setIsFloatingAnnouncementOpen(false);
     hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
@@ -1872,13 +1904,15 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const userUname = (session.nama || '').toLowerCase().trim();
-    const userWilayah = (session.wilayah || '').toLowerCase().trim();
+    const userUname = (session.username || session.nama || '').toLowerCase().trim();
+    const sessionNama = (session.nama || '').toLowerCase().trim();
+    const sessionUserId = (session.userId || '').toLowerCase().trim();
 
     // 1. Check deletion in deletedAdminIds list (Req 3)
     const isDeletedByIds =
-      deletedAdminIds.includes(userUname) ||
-      deletedAdminIds.includes((session.nama || '').trim());
+      (sessionUserId && deletedAdminIds.includes(sessionUserId)) ||
+      (userUname && deletedAdminIds.includes(userUname)) ||
+      (sessionNama && deletedAdminIds.includes(sessionNama));
 
     if (isDeletedByIds) {
       if (!showAccountDeletedModal) {
@@ -1890,20 +1924,26 @@ export default function App() {
     if (adminAccounts.length > 0) {
       const matched = adminAccounts.find((a) => {
         const aUname = (a.username || '').toLowerCase().trim();
-        const aWil = (a.wilayahTugas || '').toLowerCase().trim();
+        const aId = (a.id || '').toLowerCase().trim();
         if (session.role === 'developer') {
           return a.role === 'developer';
         }
         if (session.role === 'superadmin') {
           return a.role === 'superadmin' || aUname.includes('superadmin');
         }
-        return aUname === userUname || (a.role === session.role && aWil === userWilayah);
+        // STRICT IDENTIFIER MATCHING: Only match exact username or exact account ID
+        if (sessionUserId && aId === sessionUserId) return true;
+        if (userUname && aUname === userUname) return true;
+        if (sessionNama && aUname === sessionNama) return true;
+        return false;
       });
 
       // 2. Check deletion if not matched in adminAccounts (Req 3)
       if (!matched && !showAccountDeletedModal) {
-        setShowAccountDeletedModal(true);
-        return;
+        if (session.role !== 'developer' && session.role !== 'superadmin') {
+          setShowAccountDeletedModal(true);
+          return;
+        }
       }
 
       if (matched) {
@@ -1999,27 +2039,27 @@ export default function App() {
       (data, exists) => {
         if (!exists || !data || !data.timestamp || !data.action) return;
 
-        // 1. Only respond to signals sent STRICTLY AFTER the user's login timestamp (at least 2s after login)
-        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-        if (loginTime > 0 && data.timestamp <= loginTime + 2000) return;
+        // 1. Drop stale signals older than 60 seconds
+        if (Date.now() - data.timestamp > 60000) return;
 
-        // 2. Only respond to fresh signals sent within the last 30 seconds
-        if (Date.now() - data.timestamp > 30000) return;
+        // 2. Only respond to signals sent around or after login (allow slight server clock skew)
+        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+        if (loginTime > 0 && data.timestamp < loginTime - 5000) return;
 
         // 3. If the signal was triggered by the current user themselves, ignore
         const actorName = (data.by || '').toLowerCase().trim();
-        const userUname = (session.nama || '').toLowerCase().trim();
-        if (actorName && actorName === userUname) return;
+        const userUname = (session.username || session.nama || '').toLowerCase().trim();
+        const userNama = (session.nama || '').toLowerCase().trim();
+        const sessionUserId = (session.userId || '').toLowerCase().trim();
+        if (actorName && (actorName === userUname || actorName === userNama)) return;
 
-        const userWilayah = (session.wilayah || '').toLowerCase().trim();
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
-        const targetWil = (data.targetWilayah || '').toLowerCase().trim();
 
+        // STRICT TARGET MATCH: Must match this exact account's username or ID
         const isMatch =
-          (targetUname && (targetUname === userUname || targetUname === (session.nama || '').toLowerCase().trim())) ||
-          (targetId && targetId === userUname) ||
-          (targetWil && targetWil === userWilayah && session.role === 'admin');
+          (targetUname && (targetUname === userUname || targetUname === userNama)) ||
+          (targetId && (targetId === sessionUserId || targetId === userUname));
 
         if (isMatch) {
           if (data.action === 'FREEZE') {
@@ -2533,12 +2573,12 @@ export default function App() {
 
     // Send instant remote security signal to victim client in real-time
     let derivedSignal = 'UPDATE';
-    if (securitySignal === 'PASSWORD_CHANGED' || securitySignal === 'PASSWORD') {
+    if (securitySignal === 'UNFROZEN' || securitySignal === 'UNFREEZE') {
+      derivedSignal = 'UNFREEZE';
+    } else if (securitySignal === 'PASSWORD_CHANGED' || securitySignal === 'PASSWORD') {
       derivedSignal = 'PASSWORD';
     } else if (securitySignal === 'FROZEN' || securitySignal === 'FREEZE' || sanitizedAdmin.isFrozen || sanitizedAdmin.statusAkun === 'DIBEKUKAN') {
       derivedSignal = 'FREEZE';
-    } else if (securitySignal === 'UNFROZEN' || securitySignal === 'UNFREEZE') {
-      derivedSignal = 'UNFREEZE';
     } else if (securitySignal) {
       derivedSignal = securitySignal;
     }
@@ -2551,7 +2591,7 @@ export default function App() {
           targetId: sanitizedAdmin.id,
           targetWilayah: sanitizedAdmin.wilayahTugas,
           timestamp: Date.now(),
-          by: session.nama,
+          by: session.username || session.nama,
         }).catch(() => {});
       } catch {}
     }
@@ -2706,6 +2746,10 @@ export default function App() {
           onPerformLogin={handleLogin}
           adminAccounts={adminAccounts}
           onRegisterAccount={handleAddAdminAccount}
+          onUpdateAccountLocal={(acc) => {
+            setAdminAccounts((prev) => prev.map((a) => (a.id === acc.id ? acc : a)));
+          }}
+          appSettings={appSettings}
           logoUrl={appSettings?.logoUrl}
         />
         {!!loginSuccessData && (
