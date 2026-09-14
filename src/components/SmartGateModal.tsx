@@ -226,6 +226,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Helper for matching wilayah with prefixes and variations
+  const isWilayahMatch = (wil: string, map?: Record<string, boolean>) => {
+    if (!map || !wil) return false;
+    if (map[wil] === true) return true;
+    const wilLower = wil.toLowerCase().trim();
+    const wilClean = wilLower.replace(/^(kabupaten|kab\.|kota|provinsi|prov\.)\s+/i, '').trim();
+    const matchKey = Object.keys(map).find((k) => {
+      const kLower = k.toLowerCase().trim();
+      const kClean = kLower.replace(/^(kabupaten|kab\.|kota|provinsi|prov\.)\s+/i, '').trim();
+      return (
+        kLower === wilLower ||
+        kClean === wilClean ||
+        (wilClean.length > 2 && kClean.includes(wilClean)) ||
+        (kClean.length > 2 && wilClean.includes(kClean))
+      );
+    });
+    return matchKey ? map[matchKey] === true : false;
+  };
+
   // --- JALUR 3: AKSES TAMU SUBMIT ---
   const handleGuestSubmit = () => {
     if (!selectedGuestRegion || selectedGuestRegion === '') {
@@ -236,7 +255,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     // Pengecekan Maintenance untuk Akses Tamu Publik
     if (appSettings) {
       const isGlobalUserMaintenance = !!appSettings.maintenanceUser;
-      const isWilayahMaintenance = appSettings.maintenanceUserWilayah?.[selectedGuestRegion] === true;
+      const isWilayahMaintenance = isWilayahMatch(selectedGuestRegion, appSettings.maintenanceUserWilayah);
       if (isGlobalUserMaintenance || isWilayahMaintenance) {
         const msg = appSettings.maintenanceMsgUser || 'Mohon maaf, sistem informasi portal publik sedang dalam tahap pemeliharaan rutin (Maintenance).';
         setErrorMessage(`⚠️ PEMELIHARAAN SISTEM (MAINTENANCE AKTIF):\n\n${msg}\n\nAkses Tamu Publik untuk wilayah "${selectedGuestRegion}" ditutup sementara waktu demi peningkatan layanan.`);

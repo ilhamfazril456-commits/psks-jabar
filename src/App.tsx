@@ -100,7 +100,7 @@ export default function App() {
   const [session, setSession] = useState<UserSession>(() => {
     const role = (sessionStorage.getItem('session_user_role') || 'user') as 'user' | 'admin' | 'superadmin' | 'developer';
     const nama = sessionStorage.getItem('session_user_nama') || 'Tamu Publik';
-    const wilayah = sessionStorage.getItem('session_user_wilayah') || 'Kota Cimahi';
+    const wilayah = sessionStorage.getItem('session_user_wilayah') || '';
     const statusActive = (sessionStorage.getItem('statusLoginActive') || 'GUEST') as 'SAH_TERDAFTAR' | 'GUEST';
     const isDeveloper = role === 'developer';
     const sessionToken = sessionStorage.getItem('session_token') || undefined;
@@ -289,17 +289,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Smart cache: public visitors use cached settings if fresh (< 30 minutes)
-    const isPublicGuest = session.statusActive !== 'SAH_TERDAFTAR';
-    if (isPublicGuest && gateModalOpen) {
-      return;
-    }
-    const lastFetch = Number(localStorage.getItem('dinsos_settings_cache_time') || '0');
-    const hasCachedSettings = !!localStorage.getItem('dinsos_logo_url');
-    if (isPublicGuest && hasCachedSettings && Date.now() - lastFetch < 30 * 60 * 1000) {
-      return;
-    }
-
     const unsubscribe = subscribeToDoc(
       'app_settings',
       'global',
@@ -349,11 +338,6 @@ export default function App() {
         } else {
           setAppSettings(DEFAULT_APP_SETTINGS);
         }
-
-        // For public guests, disconnect listener after 1 initial fetch to avoid persistent stream
-        if (isPublicGuest && unsubscribe) {
-          unsubscribe();
-        }
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, 'app_settings/global');
@@ -365,7 +349,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, [session.statusActive]);
+  }, []);
 
   // Realtime Sync Video Background across all connected devices (Gated to Admin sessions only)
   useEffect(() => {
@@ -1704,6 +1688,10 @@ export default function App() {
     };
     setSession(updated);
     sessionStorage.setItem('has_entered_gate', 'true');
+    sessionStorage.setItem('session_user_role', 'user');
+    sessionStorage.setItem('session_user_nama', 'Tamu Publik');
+    sessionStorage.setItem('session_user_wilayah', region);
+    sessionStorage.setItem('statusLoginActive', 'GUEST');
     setGateModalOpen(false);
 
     if (pendingPillarId) {
@@ -1870,7 +1858,7 @@ export default function App() {
     const reset: UserSession = {
       role: 'user',
       nama: 'Tamu Publik',
-      wilayah: 'Kota Cimahi',
+      wilayah: '',
       statusActive: 'GUEST',
     };
     setSession(reset);
@@ -2032,7 +2020,7 @@ export default function App() {
   // Real-time Instant Security Kickout Listener (Targeted directly from Superadmin/Developer actions)
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
-    if (session.role === 'developer' || session.role === 'superadmin') return; // Developer and Superadmin are immune to security kickouts
+    if (session.role === 'developer') return; // Developer is 100% immune to security kickouts
 
     const unsubscribe = subscribeToDoc(
       'security_signals',
@@ -2043,9 +2031,9 @@ export default function App() {
         // 1. Drop stale signals older than 60 seconds
         if (Date.now() - data.timestamp > 60000) return;
 
-        // 2. Only respond to signals sent around or after login (allow slight server clock skew)
+        // 2. Only respond to signals sent strictly after login (+1s buffer)
         const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-        if (loginTime > 0 && data.timestamp < loginTime - 5000) return;
+        if (loginTime > 0 && data.timestamp <= loginTime + 1000) return;
 
         // 3. If the signal was triggered by the current user themselves, ignore
         const actorName = (data.by || '').toLowerCase().trim();
@@ -2053,6 +2041,16 @@ export default function App() {
         const userNama = (session.nama || '').toLowerCase().trim();
         const sessionUserId = (session.userId || '').toLowerCase().trim();
         if (actorName && (actorName === userUname || actorName === userNama)) return;
+
+        // 4. Superadmin is ONLY kickable/editable/freezable by Developer
+        if (session.role === 'superadmin') {
+          const isDevActor =
+            actorName === 'ilhamfazril' ||
+            actorName === 'admin_ilham' ||
+            data.byRole === 'developer' ||
+            data.byRole === 'Developer';
+          if (!isDevActor) return;
+        }
 
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
@@ -2593,6 +2591,7 @@ export default function App() {
           targetWilayah: sanitizedAdmin.wilayahTugas,
           timestamp: Date.now(),
           by: session.username || session.nama,
+          byRole: session.role,
         }).catch(() => {});
       } catch {}
     }
@@ -2645,7 +2644,8 @@ export default function App() {
         targetUsername: targetUname,
         targetId: targetId,
         timestamp: Date.now(),
-        by: session.nama,
+        by: session.username || session.nama,
+        byRole: session.role,
       }).catch(() => {});
     } catch {}
 

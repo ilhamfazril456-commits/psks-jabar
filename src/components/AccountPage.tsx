@@ -44,11 +44,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   const [loginRole, setLoginRole] = useState<'user' | 'admin' | 'superadmin'>('admin');
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [selectedRegionInput, setSelectedRegionInput] = useState('Kota Cimahi');
+  const [selectedRegionInput, setSelectedRegionInput] = useState(() => session.wilayah || 'Kota Bandung');
   const [captchaInput, setCaptchaInput] = useState('');
   const [currentCaptchaCode, setCurrentCaptchaCode] = useState('');
   const [captchaError, setCaptchaError] = useState(false);
   const [modalStep, setModalStep] = useState<'main' | 'user_region' | 'dinas_method_choice' | 'dinas_login'>('main');
+  
+  // Keep selectedRegionInput in sync with active session.wilayah
+  useEffect(() => {
+    if (session.wilayah) {
+      setSelectedRegionInput(session.wilayah);
+    }
+  }, [session.wilayah]);
   
   // QR Card Scanner & Printable Card Modals
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
@@ -507,7 +514,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     </span>
                   )
                 ) : (
-                  <span className="text-blue-200 font-medium">Sesi Tamu Publik (Tanpa Otorisasi Dinas)</span>
+                  <span className="text-blue-100 font-semibold flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-blue-300" />
+                    <span>Sesi Tamu Publik: {session.wilayah || selectedRegionInput || 'Seluruh Jawa Barat'}</span>
+                  </span>
                 )}
               </div>
             </div>
@@ -521,7 +531,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   Nama Pengguna (Username)
                 </span>
                 <span className="font-bold text-slate-900 text-sm">
-                  {session.statusActive === 'SAH_TERDAFTAR' ? session.nama : 'Pengunjung Tamu'}
+                  {session.statusActive === 'SAH_TERDAFTAR' ? session.nama : 'Pengunjung Tamu Publik'}
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">Identitas otentikasi akun yang terdaftar dalam database.</p>
               </div>
@@ -539,7 +549,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                       : session.role === 'user'
                       ? `PENGGUNA TERDAFTAR (${session.wilayah || 'Jawa Barat'})`
                       : `ADMIN REGIONAL (${session.wilayah || 'Jawa Barat'})`
-                    : 'Public Visitor'}
+                    : `TAMU PUBLIK (${session.wilayah || selectedRegionInput || 'SELURUH JAWA BARAT'})`}
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">Tingkat hak akses operasi dan persetujuan data.</p>
               </div>
@@ -572,7 +582,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 <span className="font-bold text-slate-900 text-sm">
                   {session.statusActive === 'SAH_TERDAFTAR'
                     ? session.wilayah || 'PROVINSI JAWA BARAT'
-                    : selectedRegionInput || 'Seluruh Jawa Barat'}
+                    : session.wilayah || selectedRegionInput || 'Seluruh Jawa Barat'}
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">Cakupan area pengelolaan dan pelaporan PSKS.</p>
               </div>

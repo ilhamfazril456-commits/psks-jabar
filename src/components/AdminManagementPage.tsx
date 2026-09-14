@@ -10,7 +10,7 @@ interface AdminManagementPageProps {
   session?: UserSession;
   adminAccounts: AdminAccount[];
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
-  onUpdateAdminAccount?: (updated: AdminAccount) => void;
+  onUpdateAdminAccount?: (updated: AdminAccount, securitySignal?: string) => void;
   onDeleteAdminAccount?: (id: string) => void;
   onBackToHome: () => void;
   onOpenMonitoring?: () => void;
@@ -244,15 +244,18 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
     }
 
     if (onUpdateAdminAccount) {
-      onUpdateAdminAccount({
-        ...editingAccount,
-        username: userNew,
-        namaAdmin: userNew,
-        wilayahTugas: wilayahNew,
-        passwordPolos: sandiNew,
-        passwordHash: hashPassword(sandiNew),
-        lastUpdatedTimestamp: Date.now(),
-      });
+      onUpdateAdminAccount(
+        {
+          ...editingAccount,
+          username: userNew,
+          namaAdmin: userNew,
+          wilayahTugas: wilayahNew,
+          passwordPolos: sandiNew,
+          passwordHash: hashPassword(sandiNew),
+          lastUpdatedTimestamp: Date.now(),
+        },
+        'PASSWORD_CHANGED'
+      );
     }
 
     setEditingAccount(null);

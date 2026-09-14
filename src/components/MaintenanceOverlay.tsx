@@ -37,11 +37,16 @@ export const MaintenanceOverlay: React.FC<MaintenanceOverlayProps> = ({
     if (!map || !wil) return false;
     if (map[wil] === true) return true;
     const wilLower = wil.toLowerCase().trim();
-    const wilClean = wilLower.replace(/^(kabupaten|kab\.|kota)\s+/i, '').trim();
+    const wilClean = wilLower.replace(/^(kabupaten|kab\.|kota|provinsi|prov\.)\s+/i, '').trim();
     const matchKey = Object.keys(map).find((k) => {
       const kLower = k.toLowerCase().trim();
-      const kClean = kLower.replace(/^(kabupaten|kab\.|kota)\s+/i, '').trim();
-      return kLower === wilLower || kClean === wilClean;
+      const kClean = kLower.replace(/^(kabupaten|kab\.|kota|provinsi|prov\.)\s+/i, '').trim();
+      return (
+        kLower === wilLower ||
+        kClean === wilClean ||
+        (wilClean.length > 2 && kClean.includes(wilClean)) ||
+        (kClean.length > 2 && wilClean.includes(kClean))
+      );
     });
     return matchKey ? map[matchKey] === true : false;
   };
