@@ -315,12 +315,17 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
       const st = normalizeStatus(sub.status);
       const matchStatus = tableStatusFilter === 'ALL' || st === tableStatusFilter;
       const q = tableSearchTerm.toLowerCase().trim();
+      const safeNama = sub.nama || sub.recordData?.nama || '';
+      const safeNik = sub.nik || sub.recordData?.nik || '';
+      const safeKec = sub.kec || sub.recordData?.kec || '';
+      const safeHp = sub.hp || sub.recordData?.hp || '';
+
       const matchSearch =
         !q ||
-        (sub.nama || '').toLowerCase().includes(q) ||
-        (sub.nik || '').toLowerCase().includes(q) ||
-        (sub.kec || '').toLowerCase().includes(q) ||
-        (sub.hp || '').toLowerCase().includes(q) ||
+        safeNama.toLowerCase().includes(q) ||
+        safeNik.toLowerCase().includes(q) ||
+        safeKec.toLowerCase().includes(q) ||
+        safeHp.toLowerCase().includes(q) ||
         (sub.submittedByName || '').toLowerCase().includes(q) ||
         (sub.submittedByUsername || '').toLowerCase().includes(q);
 
@@ -385,16 +390,19 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
     onApproveSubmission(sub);
     setSubToApproveDirect(null);
     setSelectedDetailSub(null);
-    triggerSuccessBanner(`Pendaftaran ${sub.nama} di ${sub.wilayah} BERHASIL DISETUJUI (Acc)!`);
+    const safeName = sub.nama || sub.recordData?.nama || 'Pemohon';
+    const safeRegion = sub.wilayah || sub.recordData?.wilayah || resolveSubmissionRegion(sub);
+    triggerSuccessBanner(`Pendaftaran ${safeName} di ${safeRegion} BERHASIL DISETUJUI (Acc)!`);
   };
 
   const executeRejectDirect = () => {
     if (!subToReject) return;
     onRejectSubmission(subToReject.id, rejectReason || 'Berkas tidak memenuhi syarat.');
+    const safeName = subToReject.nama || subToReject.recordData?.nama || 'Pemohon';
     setSubToReject(null);
     setRejectReason('');
     setSelectedDetailSub(null);
-    triggerSuccessBanner(`Pendaftaran ${subToReject.nama} telah DITOLAK.`);
+    triggerSuccessBanner(`Pendaftaran ${safeName} telah DITOLAK.`);
   };
 
   const handleExecuteBatchApprove = () => {
@@ -1126,19 +1134,19 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                               </td>
 
                               <td className="p-3">
-                                <div className="font-black text-slate-900 text-xs sm:text-sm">{sub.nama}</div>
-                                <div className="text-[11px] text-slate-500 font-mono">NIK: {sub.nik || '-'}</div>
+                                <div className="font-black text-slate-900 text-xs sm:text-sm">{sub.nama || sub.recordData?.nama || 'Pemohon PSKS'}</div>
+                                <div className="text-[11px] text-slate-500 font-mono">NIK: {sub.nik || sub.recordData?.nik || '-'}</div>
                               </td>
 
                               <td className="p-3">
-                                <div className="text-slate-800 font-bold">{sub.kec || 'Kecamatan Belum Diisi'}</div>
+                                <div className="text-slate-800 font-bold">{sub.kec || sub.recordData?.kec || 'Kecamatan Belum Diisi'}</div>
                                 <div className="text-[11px] text-slate-500">{resolveSubmissionRegion(sub)}</div>
                               </td>
 
                               <td className="p-3">
                                 <div className="text-slate-800 font-bold flex items-center gap-1">
                                   <Phone className="w-3 h-3 text-emerald-600" />
-                                  <span>{sub.hp || '-'}</span>
+                                  <span>{sub.hp || sub.recordData?.hp || '-'}</span>
                                 </div>
                               </td>
 
@@ -1244,27 +1252,27 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">Nama Lengkap</div>
-                  <div className="text-sm font-black text-slate-900 mt-0.5">{selectedDetailSub.nama}</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{selectedDetailSub.nama || selectedDetailSub.recordData?.nama || 'Pemohon PSKS'}</div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">NIK / No. KTP</div>
-                  <div className="text-sm font-mono font-bold text-slate-900 mt-0.5">{selectedDetailSub.nik || '-'}</div>
+                  <div className="text-sm font-mono font-bold text-slate-900 mt-0.5">{selectedDetailSub.nik || selectedDetailSub.recordData?.nik || '-'}</div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">Kabupaten / Kota</div>
-                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.wilayah}</div>
+                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.wilayah || selectedDetailSub.recordData?.wilayah || resolveSubmissionRegion(selectedDetailSub)}</div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">Kecamatan</div>
-                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.kec || '-'}</div>
+                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.kec || selectedDetailSub.recordData?.kec || '-'}</div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">Nomor HP / WhatsApp</div>
-                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.hp || '-'}</div>
+                  <div className="font-bold text-slate-900 mt-0.5">{selectedDetailSub.hp || selectedDetailSub.recordData?.hp || '-'}</div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
@@ -1317,7 +1325,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
               </div>
               <h3 className="text-lg font-black text-slate-900">Setujui Pendaftaran Ini?</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Anda akan menyetujui pengajuan pendaftaran <strong>{subToApproveDirect.nama}</strong> ({subToApproveDirect.wilayah}). Data akan otomatis ditambahkan ke database rekapitulasi 10 pilar aktif.
+                Anda akan menyetujui pengajuan pendaftaran <strong>{subToApproveDirect.nama || subToApproveDirect.recordData?.nama || 'Pemohon'}</strong> ({subToApproveDirect.wilayah || subToApproveDirect.recordData?.wilayah || resolveSubmissionRegion(subToApproveDirect)}). Data akan otomatis ditambahkan ke database rekapitulasi 10 pilar aktif.
               </p>
               <div className="flex items-center justify-center gap-3 pt-3">
                 <button
@@ -1351,7 +1359,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">Tolak Pendaftaran</h3>
-                  <p className="text-xs text-slate-500">{subToReject.nama} • {subToReject.wilayah}</p>
+                  <p className="text-xs text-slate-500">{subToReject.nama || subToReject.recordData?.nama || 'Pemohon'} • {subToReject.wilayah || subToReject.recordData?.wilayah || resolveSubmissionRegion(subToReject)}</p>
                 </div>
               </div>
 

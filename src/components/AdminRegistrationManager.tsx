@@ -359,42 +359,42 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
         </div>
       ) : (
         /* ========================================================================= */
-        /* TAMPILAN 2: TABEL AJUAN PENDAFTARAN PILAR YANG DIPILIH */
+        /* TAMPILAN 2: TABEL & KARTU AJUAN PENDAFTARAN PILAR YANG DIPILIH */
         /* ========================================================================= */
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-4 sm:space-y-6 animate-fadeIn">
           {/* Top Bar for Selected Pillar with Back Button */}
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap">
               <button
                 type="button"
                 onClick={() => setActivePillarGrid(null)}
-                className="bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-extrabold text-[11px] sm:text-xs px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-xs flex items-center gap-1.5 sm:gap-2 cursor-pointer border border-[#d4af37]/40 active:scale-95 shrink-0"
+                className="bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-black text-xs sm:text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-[#d4af37]/40 active:scale-95 shrink-0"
               >
-                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
+                <ArrowLeft className="w-4 h-4 text-amber-300" />
                 <span>Kembali<span className="hidden sm:inline"> Ke 10 Pilar PSKS</span></span>
               </button>
 
               <div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-base sm:text-lg">{activePillarInfo?.icon}</span>
+                  <span className="text-base sm:text-lg">{activePillarInfo?.icon || '📋'}</span>
                   <h3 className="text-sm sm:text-lg font-black text-[#043e2e] uppercase leading-tight">
-                    Tabel Pengajuan: {activePillarInfo?.label}
+                    Ajuan: {activePillarInfo?.label || activePillarGrid}
                   </h3>
                 </div>
-                <p className="text-[10.5px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                  Wilayah: <strong>{adminWilayah}</strong> • {filteredSubmissions.length} pengajuan ditampilkan
+                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
+                  Wilayah: <strong className="text-slate-700">{adminWilayah}</strong> • {filteredSubmissions.length} pengajuan ditampilkan
                 </p>
               </div>
             </div>
 
-            {/* Status Filter Tab Pills */}
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-[11px] sm:text-xs font-bold shrink-0 self-start md:self-auto flex-wrap gap-0.5 sm:gap-1">
+            {/* Status Filter Tab Pills - Horizontal scrollable on mobile */}
+            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar bg-slate-100 p-1 sm:p-1.5 rounded-xl border border-slate-200 text-xs font-black shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedStatus('ALL')}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   selectedStatus === 'ALL'
-                    ? 'bg-[#043e2e] text-white shadow-xs'
+                    ? 'bg-[#043e2e] text-amber-300 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -403,9 +403,9 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               <button
                 type="button"
                 onClick={() => setSelectedStatus('PENDING')}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   selectedStatus === 'PENDING'
-                    ? 'bg-amber-600 text-white shadow-xs'
+                    ? 'bg-amber-600 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -414,9 +414,9 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               <button
                 type="button"
                 onClick={() => setSelectedStatus('APPROVED')}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   selectedStatus === 'APPROVED'
-                    ? 'bg-emerald-700 text-white shadow-xs'
+                    ? 'bg-emerald-700 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -425,9 +425,9 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               <button
                 type="button"
                 onClick={() => setSelectedStatus('REJECTED')}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                   selectedStatus === 'REJECTED'
-                    ? 'bg-rose-700 text-white shadow-xs'
+                    ? 'bg-rose-700 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -437,23 +437,32 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
           </div>
 
           {/* Search Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-xs">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={`Cari nama, NIK, atau kecamatan pada pengajuan ${activePillarInfo?.short}...`}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e] focus:bg-white transition-all shadow-xs font-medium"
+                placeholder={`Cari nama, NIK, atau kecamatan pada pengajuan ${activePillarInfo?.short || ''}...`}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e] focus:bg-white transition-all shadow-xs font-medium"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700"
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Submissions Table */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden">
+          {/* Submissions Container: Mobile Cards (block md:hidden) vs Desktop Table (hidden md:block) */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             {filteredSubmissions.length === 0 ? (
-              <div className="p-12 text-center space-y-4">
+              <div className="p-8 sm:p-12 text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center border-2 border-slate-200">
                   <Inbox className="w-8 h-8" />
                 </div>
@@ -477,162 +486,303 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-sm">
-                  <thead className="bg-[#043e2e] text-white border-b-2 border-[#d4af37]">
-                    <tr>
-                      <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap">No</th>
-                      <th className="py-3.5 px-3 font-bold whitespace-nowrap">Waktu Submit</th>
-                      <th className="py-3.5 px-3 font-bold whitespace-nowrap">Identitas Pemohon / Anggota</th>
-                      <th className="py-3.5 px-3 font-bold whitespace-nowrap">Kecamatan & Wilayah</th>
-                      <th className="py-3.5 px-3 font-bold whitespace-nowrap">Nomor Kontak</th>
-                      <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Status Ajuan</th>
-                      <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi Verifikasi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {filteredSubmissions.map((sub, index) => {
-                      const isPending = sub.status === 'PENDING';
-                      const isApproved = sub.status === 'APPROVED';
-                      const isRejected = sub.status === 'REJECTED';
+              <>
+                {/* 1. KHUSUS TAMPILAN HP (block md:hidden): Kartu Pendaftar Rapi & Ergonomis */}
+                <div className="block md:hidden divide-y divide-slate-100 p-2.5 space-y-3">
+                  {filteredSubmissions.map((sub, index) => {
+                    const isPending = sub.status === 'PENDING';
+                    const isApproved = sub.status === 'APPROVED';
+                    const isRejected = sub.status === 'REJECTED';
+                    const safeName = sub.nama || sub.recordData?.nama || 'Pemohon PSKS';
+                    const safeNik = sub.nik || sub.recordData?.nik || '-';
+                    const safeKec = sub.kec || sub.recordData?.kec || '-';
+                    const safeHp = sub.hp || sub.recordData?.hp || '-';
 
-                      return (
-                        <tr
-                          key={sub.id}
-                          className="hover:bg-amber-50/40 transition-colors"
-                        >
-                          <td className="py-3.5 px-3 font-bold text-center text-slate-500">
-                            {index + 1}
-                          </td>
-                          <td className="py-3.5 px-3 whitespace-nowrap text-slate-600">
-                            <div className="flex items-center gap-1.5 font-medium text-xs">
-                              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    return (
+                      <div
+                        key={sub.id}
+                        className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3 transition-all hover:bg-amber-50/30"
+                      >
+                        {/* Header Kartu: No Urut + Status + Waktu */}
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-[#043e2e] text-amber-300 text-[11px] font-black flex items-center justify-center shadow-xs">
+                              {index + 1}
+                            </span>
+                            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-slate-400" />
                               <span>{sub.submittedAtFormatted || 'Baru Saja'}</span>
                             </div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">
-                              Akun: <strong className="text-slate-600">{sub.submittedByName}</strong>
+                          </div>
+
+                          {/* Status Badge */}
+                          {isPending && (
+                            <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                              <Clock className="w-2.5 h-2.5 text-amber-700 animate-pulse" />
+                              <span>Menunggu</span>
+                            </span>
+                          )}
+                          {isApproved && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                              <span>Diterima / Sah</span>
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                              <XCircle className="w-2.5 h-2.5 text-rose-700" />
+                              <span>Ditolak</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Identitas Pemohon */}
+                        <div className="space-y-1">
+                          <div className="text-base font-black text-slate-900 leading-snug">
+                            {safeName}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
+                            <span className="font-semibold text-slate-400">NIK:</span>
+                            <span className="font-bold text-slate-700">{safeNik}</span>
+                          </div>
+                        </div>
+
+                        {/* Lokasi & Kontak */}
+                        <div className="grid grid-cols-1 gap-1 text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="font-bold text-slate-800">{sub.wilayah}</span>
+                            <span className="text-slate-400">•</span>
+                            <span className="text-slate-600">Kec. {safeKec}</span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-1">
+                            <div className="flex items-center gap-1.5 font-mono text-slate-700">
+                              <Phone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                              <span>{safeHp}</span>
                             </div>
-                          </td>
-                          <td className="py-3.5 px-3 whitespace-nowrap">
-                            <div className="font-black text-slate-900 text-sm">
-                              {sub.nama || sub.recordData.nama}
+                            <div className="text-[10px] text-slate-400">
+                              Akun: <strong className="text-slate-600">{sub.submittedByName || sub.submittedByUsername || 'User'}</strong>
                             </div>
-                            <div className="text-xs text-slate-500 font-mono">
-                              NIK: {sub.nik || sub.recordData.nik || '-'}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-3 whitespace-nowrap">
-                            <div className="font-bold text-slate-800">
-                              {sub.wilayah}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              Kec. {sub.kec || sub.recordData.kec || '-'}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-3 whitespace-nowrap font-mono text-xs text-slate-700">
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-slate-400" />
-                              <span>{sub.hp || sub.recordData.hp || '-'}</span>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                            {isPending && (
-                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-black">
-                                <Clock className="w-3 h-3 text-amber-700 animate-pulse" />
-                                <span>Menunggu Verifikasi</span>
-                              </span>
-                            )}
-                            {isApproved && (
-                              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-black">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                                <span>Diterima / Sah</span>
-                              </span>
-                            )}
-                            {isRejected && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1 rounded-full text-xs font-black">
-                                <XCircle className="w-3 h-3 text-rose-700" />
-                                <span>Ditolak</span>
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Button Detail */}
+                          </div>
+                        </div>
+
+                        {/* Alasan Penolakan jika ada */}
+                        {isRejected && sub.rejectedReason && (
+                          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-2.5 text-xs">
+                            <span className="font-bold">Alasan Ditolak:</span> {sub.rejectedReason}
+                          </div>
+                        )}
+
+                        {/* Tombol Aksi HP (Touch-Friendly min 42px) */}
+                        <div className="pt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSubmissionForDetail(sub)}
+                            className="flex-1 min-h-[42px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                          >
+                            <Eye className="w-4 h-4 text-slate-700" />
+                            <span>Lihat Berkas</span>
+                          </button>
+
+                          {isPending && (
+                            <>
                               <button
                                 type="button"
-                                onClick={() => setSelectedSubmissionForDetail(sub)}
-                                title="Lihat Formulir Lengkap"
-                                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all cursor-pointer active:scale-95"
+                                onClick={() => setSubmissionToApprove(sub)}
+                                className="flex-1 min-h-[42px] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-md"
                               >
-                                <Eye className="w-4 h-4" />
+                                <Check className="w-4 h-4" />
+                                <span>Terima</span>
                               </button>
 
-                              {/* Button Approve / Reject if Pending */}
-                              {isPending && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => setSubmissionToApprove(sub)}
-                                    title="Setujui Pendaftaran"
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                    <span>Terima</span>
-                                  </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSubmissionToReject(sub);
+                                  setRejectReason('');
+                                }}
+                                className="min-h-[42px] px-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
+                              >
+                                <X className="w-4 h-4" />
+                                <span>Tolak</span>
+                              </button>
+                            </>
+                          )}
 
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSubmissionToReject(sub);
-                                      setRejectReason('');
-                                    }}
-                                    title="Tolak Pendaftaran"
-                                    className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                    <span>Tolak</span>
-                                  </button>
-                                </>
-                              )}
-
-                              {isApproved && (
-                                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
-                                  ✓ Tercatat Resmi
-                                </span>
-                              )}
-
-                              {isRejected && (
-                                <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-md border border-rose-200" title={sub.rejectedReason || 'Tanpa catatan'}>
-                                  Ditolak
-                                </span>
-                              )}
+                          {isApproved && (
+                            <div className="flex-1 min-h-[42px] bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-center text-xs font-black text-emerald-800">
+                              ✓ Tercatat Resmi
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 2. KHUSUS TAMPILAN LAPTOP/DESKTOP (hidden md:block): Tabel Standar Sangat Rapi */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-[#043e2e] text-white border-b-2 border-[#d4af37]">
+                      <tr>
+                        <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap">No</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Waktu Submit</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Identitas Pemohon / Anggota</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Kecamatan & Wilayah</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Nomor Kontak</th>
+                        <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Status Ajuan</th>
+                        <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi Verifikasi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {filteredSubmissions.map((sub, index) => {
+                        const isPending = sub.status === 'PENDING';
+                        const isApproved = sub.status === 'APPROVED';
+                        const isRejected = sub.status === 'REJECTED';
+                        const safeName = sub.nama || sub.recordData?.nama || 'Pemohon PSKS';
+                        const safeNik = sub.nik || sub.recordData?.nik || '-';
+                        const safeKec = sub.kec || sub.recordData?.kec || '-';
+                        const safeHp = sub.hp || sub.recordData?.hp || '-';
+
+                        return (
+                          <tr
+                            key={sub.id}
+                            className="hover:bg-amber-50/40 transition-colors"
+                          >
+                            <td className="py-3.5 px-3 font-bold text-center text-slate-500">
+                              {index + 1}
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap text-slate-600">
+                              <div className="flex items-center gap-1.5 font-medium text-xs">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span>{sub.submittedAtFormatted || 'Baru Saja'}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                Akun: <strong className="text-slate-600">{sub.submittedByName || sub.submittedByUsername || 'User'}</strong>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap">
+                              <div className="font-black text-slate-900 text-sm">
+                                {safeName}
+                              </div>
+                              <div className="text-xs text-slate-500 font-mono">
+                                NIK: {safeNik}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap">
+                              <div className="font-bold text-slate-800">
+                                {sub.wilayah}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Kec. {safeKec}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap font-mono text-xs text-slate-700">
+                              <div className="flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-slate-400" />
+                                <span>{safeHp}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                              {isPending && (
+                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-black">
+                                  <Clock className="w-3 h-3 text-amber-700 animate-pulse" />
+                                  <span>Menunggu Verifikasi</span>
+                                </span>
+                              )}
+                              {isApproved && (
+                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-black">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                  <span>Diterima / Sah</span>
+                                </span>
+                              )}
+                              {isRejected && (
+                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1 rounded-full text-xs font-black">
+                                  <XCircle className="w-3 h-3 text-rose-700" />
+                                  <span>Ditolak</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {/* Button Detail */}
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedSubmissionForDetail(sub)}
+                                  title="Lihat Formulir Lengkap"
+                                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all cursor-pointer active:scale-95"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+
+                                {/* Button Approve / Reject if Pending */}
+                                {isPending && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSubmissionToApprove(sub)}
+                                      title="Setujui Pendaftaran"
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Terima</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSubmissionToReject(sub);
+                                        setRejectReason('');
+                                      }}
+                                      title="Tolak Pendaftaran"
+                                      className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                      <span>Tolak</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {isApproved && (
+                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                                    ✓ Tercatat Resmi
+                                  </span>
+                                )}
+
+                                {isRejected && (
+                                  <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-md border border-rose-200" title={sub.rejectedReason || 'Tanpa catatan'}>
+                                    Ditolak
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 
           {/* Bottom Back to 10 Pillars Button */}
-          <div className="pt-2 flex items-center justify-between">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setActivePillarGrid(null)}
-              className="bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md flex items-center gap-2 cursor-pointer border border-[#d4af37]/40"
+              className="w-full sm:w-auto bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border border-[#d4af37]/40 active:scale-95"
             >
               <ArrowLeft className="w-4 h-4 text-amber-300" />
               <span>&larr; Kembali Ke Pilihan 10 Pilar PSKS</span>
             </button>
-            <div className="text-xs text-slate-500 font-semibold">
+            <div className="text-[11px] sm:text-xs text-slate-500 font-semibold text-center sm:text-right">
               <span>PSKS JABAR Provinsi Jawa Barat • Otoritas Verifikasi Daerah</span>
             </div>
           </div>
         </div>
       )}
+
 
       {/* ========================================================================= */}
       {/* MODAL 1: DETAIL FORMULIR PENDAFTARAN LENGKAP */}
@@ -695,11 +845,11 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Nama Lengkap</span>
-                    <span className="font-black text-slate-900">{selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData.nama}</span>
+                    <span className="font-black text-slate-900">{selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData?.nama || '-'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">NIK / Nomor Registrasi</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.nik || selectedSubmissionForDetail.recordData.nik || '-'}</span>
+                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.nik || selectedSubmissionForDetail.recordData?.nik || '-'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Wilayah Kabupaten/Kota</span>
@@ -707,23 +857,23 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Kecamatan</span>
-                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.kec || selectedSubmissionForDetail.recordData.kec || '-'}</span>
+                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.kec || selectedSubmissionForDetail.recordData?.kec || '-'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Nomor Handphone</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.hp || selectedSubmissionForDetail.recordData.hp || '-'}</span>
+                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.hp || selectedSubmissionForDetail.recordData?.hp || '-'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Jenis Kelamin</span>
-                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.jenisKelamin || '-'}</span>
+                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData?.jenisKelamin || '-'}</span>
                   </div>
-                  {selectedSubmissionForDetail.recordData.pendidikan && (
+                  {selectedSubmissionForDetail.recordData?.pendidikan && (
                     <div>
                       <span className="text-[11px] text-slate-500 font-semibold block">Pendidikan</span>
                       <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.pendidikan}</span>
                     </div>
                   )}
-                  {selectedSubmissionForDetail.recordData.noTglSertifikasi && (
+                  {selectedSubmissionForDetail.recordData?.noTglSertifikasi && (
                     <div>
                       <span className="text-[11px] text-slate-500 font-semibold block">No / Tgl Sertifikasi / SK</span>
                       <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.noTglSertifikasi}</span>
@@ -792,7 +942,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 Setujui Pendaftaran Anggota?
               </h3>
               <p className="text-xs text-slate-600">
-                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData.nama}</strong> ({submissionToApprove.wilayah}) akan disahkan dan langsung dimasukkan ke tabel resmi pilar <strong>{PILLARS_CONFIG[submissionToApprove.pillarId]?.title}</strong>.
+                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData?.nama || 'Pemohon'}</strong> ({submissionToApprove.wilayah}) akan disahkan dan langsung dimasukkan ke tabel resmi pilar <strong>{PILLARS_CONFIG[submissionToApprove.pillarId]?.title}</strong>.
               </p>
             </div>
             <div className="flex gap-2 pt-2">
@@ -830,7 +980,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                   Tolak Pengajuan Pendaftaran?
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Pemohon: <strong>{submissionToReject.nama || submissionToReject.recordData.nama}</strong>
+                  Pemohon: <strong>{submissionToReject.nama || submissionToReject.recordData?.nama || 'Pemohon'}</strong>
                 </p>
               </div>
             </div>
