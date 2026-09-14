@@ -1959,6 +1959,7 @@ export default function App() {
         const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
         if (
           session.role !== 'developer' &&
+          session.role !== 'superadmin' &&
           matched.lastUpdatedTimestamp &&
           loginTime > 0 &&
           matched.lastUpdatedTimestamp > loginTime + 4000
@@ -2031,7 +2032,7 @@ export default function App() {
   // Real-time Instant Security Kickout Listener (Targeted directly from Superadmin/Developer actions)
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
-    if (session.role === 'developer') return; // Developer is immune to security kickouts
+    if (session.role === 'developer' || session.role === 'superadmin') return; // Developer and Superadmin are immune to security kickouts
 
     const unsubscribe = subscribeToDoc(
       'security_signals',
@@ -2571,13 +2572,13 @@ export default function App() {
       return next;
     });
 
-    // Send instant remote security signal to victim client in real-time
-    let derivedSignal = 'UPDATE';
+    // Send instant remote security signal to victim client in real-time (ONLY if an explicit security action occurred)
+    let derivedSignal = '';
     if (securitySignal === 'UNFROZEN' || securitySignal === 'UNFREEZE') {
       derivedSignal = 'UNFREEZE';
     } else if (securitySignal === 'PASSWORD_CHANGED' || securitySignal === 'PASSWORD') {
       derivedSignal = 'PASSWORD';
-    } else if (securitySignal === 'FROZEN' || securitySignal === 'FREEZE' || sanitizedAdmin.isFrozen || sanitizedAdmin.statusAkun === 'DIBEKUKAN') {
+    } else if (securitySignal === 'FROZEN' || securitySignal === 'FREEZE') {
       derivedSignal = 'FREEZE';
     } else if (securitySignal) {
       derivedSignal = securitySignal;
