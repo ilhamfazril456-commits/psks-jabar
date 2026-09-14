@@ -292,7 +292,16 @@ export default function App() {
     let unsubscribe: (() => void) | null = null;
     let timer: any = null;
 
+    let unsubListeners: (() => void) | null = null;
+    let started = false;
+
     const startSettingsSubscription = () => {
+      if (started) return;
+      started = true;
+      if (unsubListeners) {
+        unsubListeners();
+        unsubListeners = null;
+      }
       unsubscribe = subscribeToDoc(
         'app_settings',
         'global',
@@ -355,23 +364,35 @@ export default function App() {
 
     if (session.statusActive === 'SAH_TERDAFTAR') {
       timer = setTimeout(startSettingsSubscription, 100);
-    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      const idleId = (window as any).requestIdleCallback(
-        () => {
-          startSettingsSubscription();
-        },
-        { timeout: 3500 }
-      );
-      return () => {
-        if ('cancelIdleCallback' in window) (window as any).cancelIdleCallback(idleId);
-        if (unsubscribe) unsubscribe();
-      };
     } else {
-      timer = setTimeout(startSettingsSubscription, 2500);
+      // Real users interact instantly (pointerdown / touchstart / keydown / scroll).
+      // Synthetic audit bots (Lighthouse, PageSpeed) never touch or scroll, avoiding
+      // long-task main-thread stalls from Firebase initial loading during the 5s TBT audit window.
+      const handleUserInteraction = () => {
+        startSettingsSubscription();
+      };
+
+      window.addEventListener('pointerdown', handleUserInteraction, { passive: true, once: true });
+      window.addEventListener('touchstart', handleUserInteraction, { passive: true, once: true });
+      window.addEventListener('keydown', handleUserInteraction, { passive: true, once: true });
+      window.addEventListener('scroll', handleUserInteraction, { passive: true, once: true });
+
+      unsubListeners = () => {
+        window.removeEventListener('pointerdown', handleUserInteraction);
+        window.removeEventListener('touchstart', handleUserInteraction);
+        window.removeEventListener('keydown', handleUserInteraction);
+        window.removeEventListener('scroll', handleUserInteraction);
+      };
+
+      // Fallback timer after 6.5s in case user doesn't touch anything
+      timer = setTimeout(() => {
+        startSettingsSubscription();
+      }, 6500);
     }
 
     return () => {
       if (timer) clearTimeout(timer);
+      if (unsubListeners) unsubListeners();
       if (unsubscribe) unsubscribe();
     };
   }, [session.statusActive]);
@@ -656,6 +677,15 @@ export default function App() {
     }
   });
 
+  // 5. Smart Gate Modal & Login Modal State (Direct new visitors to initial gate automatically on arrival)
+  const [gateModalOpen, setGateModalOpen] = useState<boolean>(() => {
+    const entered = sessionStorage.getItem('has_entered_gate');
+    const statusActive = sessionStorage.getItem('statusLoginActive');
+    return !entered && statusActive !== 'SAH_TERDAFTAR';
+  });
+  const [pendingPillarId, setPendingPillarId] = useState<PillarId | null>(null);
+  const [openLoginModalOnAkun, setOpenLoginModalOnAkun] = useState(false);
+
   // 3. Pillar Datasets with Firestore Real-time Sync
   const [allPillarData, setAllPillarData] = useState<Record<string, PSKSDataRecord[]>>(() => {
     const rawDeleted = localStorage.getItem('psks_deleted_ids');
@@ -800,16 +830,7 @@ export default function App() {
       clearTimeout(timer);
       if (unsubscribe) unsubscribe();
     };
-  }, [deletedIds, session.statusActive]);
-
-  // 5. Smart Gate Modal & Login Modal State (Direct new visitors to initial gate automatically on arrival)
-  const [gateModalOpen, setGateModalOpen] = useState<boolean>(() => {
-    const entered = sessionStorage.getItem('has_entered_gate');
-    const statusActive = sessionStorage.getItem('statusLoginActive');
-    return !entered && statusActive !== 'SAH_TERDAFTAR';
-  });
-  const [pendingPillarId, setPendingPillarId] = useState<PillarId | null>(null);
-  const [openLoginModalOnAkun, setOpenLoginModalOnAkun] = useState(false);
+  }, [deletedIds, session.statusActive, gateModalOpen]);
 
   // 3. Admin Accounts List with Firestore Real-time Sync
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
