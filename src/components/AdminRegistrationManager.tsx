@@ -30,6 +30,8 @@ import {
   ArrowLeft,
   RefreshCw,
   FolderOpen,
+  LayoutList,
+  Table2,
 } from 'lucide-react';
 
 interface AdminRegistrationManagerProps {
@@ -50,6 +52,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
   // activePillarGrid: null means showing the 10 Pillar Grid Cards
   // string (e.g. 'peksos') means showing the submission table for that pillar
   const [activePillarGrid, setActivePillarGrid] = useState<string | null>(null);
+  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedSubmissionForDetail, setSelectedSubmissionForDetail] =
@@ -176,109 +179,109 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
   return (
     <section
       id="terima-pendaftaran-pilar"
-      className="py-4 sm:py-8 font-sans"
+      className="py-2 sm:py-6 font-sans"
     >
       {/* Decorative Gold Header Divider */}
-      <div className="relative flex items-center justify-center mb-6">
+      <div className="relative flex items-center justify-center mb-4 sm:mb-6">
         <div className="w-full h-px bg-gradient-to-r from-transparent via-[#d4af37]/70 to-transparent" />
-        <div className="absolute bg-[#043e2e] border-2 border-[#d4af37] text-amber-300 px-5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-md flex items-center gap-2">
-          <Inbox className="w-4 h-4 text-amber-300 animate-bounce" />
+        <div className="absolute bg-[#043e2e] border-2 border-[#d4af37] text-amber-300 px-4 sm:px-5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-widest shadow-md flex items-center gap-2">
+          <Inbox className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-amber-300 animate-bounce" />
           <span>VERIFIKASI PENDAFTARAN 10 PILAR PSKS</span>
         </div>
       </div>
 
-      {/* Hero Header Box */}
-      <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-6 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden mb-8">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-emerald-950/60 border border-emerald-400/40 px-3.5 py-1 rounded-full text-[11px] font-black text-amber-300 shadow-sm">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>OTORITAS ADMIN DAERAH • {adminWilayah.toUpperCase()}</span>
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
-              Terima Pendaftaran 10 Pilar PSKS
-            </h2>
-
-            <p className="text-xs sm:text-sm text-emerald-100 font-medium max-w-3xl leading-relaxed">
-              Pusat verifikasi berkas pendaftaran mandiri dari anggota/organisasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial untuk wilayah{' '}
-              <strong className="text-amber-300 font-black">{adminWilayah}</strong>.
-            </p>
-          </div>
-
-          {/* Wilayah Badge Card */}
-          <div className="bg-black/30 border border-emerald-400/30 rounded-2xl p-4 shrink-0 text-center md:text-right">
-            <div className="text-[10px] text-emerald-300 uppercase font-black tracking-wider">
-              Wilayah Tugas
-            </div>
-            <div className="text-lg sm:text-xl font-black text-amber-300 mt-0.5">
-              {adminWilayah}
-            </div>
-            <div className="text-[11px] text-slate-300 mt-1 font-semibold flex items-center justify-center md:justify-end gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span>{totalPending} Ajuan Perlu Tindakan</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Global Stats Counter */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-emerald-800/60">
-          <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-white/10">
-            <div className="flex items-center justify-between text-xs text-emerald-200 font-bold mb-1">
-              <span>Total Semua Ajuan</span>
-              <Layers className="w-4 h-4 text-emerald-300" />
-            </div>
-            <div className="text-2xl font-black text-white">{totalSubmissions}</div>
-          </div>
-
-          <div className="bg-amber-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-amber-400/30">
-            <div className="flex items-center justify-between text-xs text-amber-200 font-bold mb-1">
-              <span>Menunggu Verifikasi</span>
-              <Clock className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-black text-amber-300">{totalPending}</div>
-          </div>
-
-          <div className="bg-emerald-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-emerald-400/30">
-            <div className="flex items-center justify-between text-xs text-emerald-200 font-bold mb-1">
-              <span>Telah Disetujui</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-300">{totalApproved}</div>
-          </div>
-
-          <div className="bg-rose-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-rose-400/30">
-            <div className="flex items-center justify-between text-xs text-rose-200 font-bold mb-1">
-              <span>Ditolak</span>
-              <XCircle className="w-4 h-4 text-rose-400" />
-            </div>
-            <div className="text-2xl font-black text-rose-300">{totalRejected}</div>
-          </div>
-        </div>
-      </div>
-
       {/* ========================================================================= */}
-      {/* TAMPILAN 1: GRID 10 BUTTON PILAR PSKS (MODERN & ELEGAN) */}
+      {/* TAMPILAN 1: PILIH 10 PILAR PSKS (TAMPIL KETIKA activePillarGrid === null) */}
       {/* ========================================================================= */}
       {activePillarGrid === null ? (
         <div className="space-y-6 animate-fadeIn">
+          {/* Hero Header Box Khusus Tampilan Pilihan 10 Pilar */}
+          <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-3xl p-5 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 bg-emerald-950/60 border border-emerald-400/40 px-3.5 py-1 rounded-full text-[11px] font-black text-amber-300 shadow-sm">
+                  <ShieldCheck className="w-4 h-4 text-amber-400" />
+                  <span>OTORITAS ADMIN DAERAH • {adminWilayah.toUpperCase()}</span>
+                </div>
+
+                <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase">
+                  Terima Pendaftaran 10 Pilar PSKS
+                </h2>
+
+                <p className="text-xs sm:text-sm text-emerald-100 font-medium max-w-3xl leading-relaxed">
+                  Pusat verifikasi berkas pendaftaran mandiri dari anggota/organisasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial untuk wilayah{' '}
+                  <strong className="text-amber-300 font-black">{adminWilayah}</strong>.
+                </p>
+              </div>
+
+              {/* Wilayah Badge Card */}
+              <div className="bg-black/30 border border-emerald-400/30 rounded-2xl p-4 shrink-0 text-left md:text-right">
+                <div className="text-[10px] text-emerald-300 uppercase font-black tracking-wider">
+                  Wilayah Tugas
+                </div>
+                <div className="text-lg sm:text-xl font-black text-amber-300 mt-0.5">
+                  {adminWilayah}
+                </div>
+                <div className="text-[11px] text-slate-300 mt-1 font-semibold flex items-center justify-start md:justify-end gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span>{totalPending} Ajuan Perlu Tindakan</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Global Stats Counter */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-emerald-800/60">
+              <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-white/10">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs text-emerald-200 font-bold mb-1">
+                  <span>Total Semua</span>
+                  <Layers className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-300" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-white">{totalSubmissions}</div>
+              </div>
+
+              <div className="bg-amber-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-amber-400/30">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs text-amber-200 font-bold mb-1">
+                  <span>Menunggu</span>
+                  <Clock className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-amber-400" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-amber-300">{totalPending}</div>
+              </div>
+
+              <div className="bg-emerald-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-emerald-400/30">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs text-emerald-200 font-bold mb-1">
+                  <span>Disetujui</span>
+                  <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-400" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-300">{totalApproved}</div>
+              </div>
+
+              <div className="bg-rose-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-rose-400/30">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs text-rose-200 font-bold mb-1">
+                  <span>Ditolak</span>
+                  <XCircle className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-rose-400" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-rose-300">{totalRejected}</div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg sm:text-xl font-black text-[#043e2e] uppercase tracking-tight flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-amber-600" />
+              <h3 className="text-base sm:text-xl font-black text-[#043e2e] uppercase tracking-tight flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-amber-600 shrink-0" />
                 <span>Pilih 10 Pilar PSKS Untuk Verifikasi Ajuan</span>
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 font-medium">
-                Klik salah satu pilar di bawah untuk membuka tabel dan memproses ajuan pendaftaran.
+                Klik salah satu pilar di bawah untuk membuka daftar dan memproses berkas pendaftaran.
               </p>
             </div>
           </div>
 
           {/* 10 Pillar Grid Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
             {tenPillars.map((pilar, index) => {
               const stats = pillarStats[pilar.id] || { total: 0, pending: 0, approved: 0, rejected: 0 };
               const hasPending = stats.pending > 0;
@@ -292,15 +295,15 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                     setSelectedStatus('ALL');
                     setSearchTerm('');
                   }}
-                  className={`group text-left bg-white rounded-3xl p-5 border-2 transition-all duration-300 shadow-md hover:shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer transform hover:-translate-y-1 ${
+                  className={`group text-left bg-white rounded-3xl p-4 sm:p-5 border-2 transition-all duration-300 shadow-sm hover:shadow-xl relative overflow-hidden flex flex-col justify-between cursor-pointer transform hover:-translate-y-1 ${
                     hasPending
                       ? 'border-amber-400 hover:border-amber-500 ring-2 ring-amber-400/20'
                       : 'border-slate-200 hover:border-emerald-600'
                   }`}
                 >
                   {/* Top Accent Pill Indicator */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#043e2e] to-[#085a43] text-white flex items-center justify-center text-xl shadow-md border border-amber-400/30 group-hover:scale-110 transition-transform">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-[#043e2e] to-[#085a43] text-white flex items-center justify-center text-lg sm:text-xl shadow-md border border-amber-400/30 group-hover:scale-110 transition-transform shrink-0">
                       {pilar.icon}
                     </div>
                     <span className="text-[10px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full uppercase">
@@ -309,7 +312,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                   </div>
 
                   {/* Pillar Title */}
-                  <div className="mb-4">
+                  <div className="mb-3 sm:mb-4">
                     <h4 className="text-sm sm:text-base font-black text-[#043e2e] group-hover:text-emerald-700 transition-colors leading-tight">
                       {pilar.short}
                     </h4>
@@ -319,7 +322,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                   </div>
 
                   {/* Status Badges Group */}
-                  <div className="space-y-2 pt-3 border-t border-slate-100">
+                  <div className="space-y-2 pt-2.5 sm:pt-3 border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-slate-500">Total Ajuan:</span>
                       <span className="font-black text-slate-800">{stats.total}</span>
@@ -359,107 +362,200 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
         </div>
       ) : (
         /* ========================================================================= */
-        /* TAMPILAN 2: TABEL & KARTU AJUAN PENDAFTARAN PILAR YANG DIPILIH */
+        /* TAMPILAN 2: TABEL & KARTU AJUAN PENDAFTARAN PILAR YANG DIPILIH           */
         /* ========================================================================= */
         <div className="space-y-4 sm:space-y-6 animate-fadeIn">
-          {/* Top Bar for Selected Pillar with Back Button */}
-          <div className="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap">
-              <button
-                type="button"
-                onClick={() => setActivePillarGrid(null)}
-                className="bg-[#043e2e] hover:bg-[#065e44] text-amber-300 font-black text-xs sm:text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border border-[#d4af37]/40 active:scale-95 shrink-0"
-              >
-                <ArrowLeft className="w-4 h-4 text-amber-300" />
-                <span>Kembali<span className="hidden sm:inline"> Ke 10 Pilar PSKS</span></span>
-              </button>
+          {/* Header Kontekstual Pilar Terpilih (Sangat Rapi & Padat di HP) */}
+          <div className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-base sm:text-lg">{activePillarInfo?.icon || '📋'}</span>
-                  <h3 className="text-sm sm:text-lg font-black text-[#043e2e] uppercase leading-tight">
-                    Ajuan: {activePillarInfo?.label || activePillarGrid}
-                  </h3>
+            <div className="relative z-10 space-y-3.5">
+              {/* Baris Navigasi Atas: Tombol Kembali + Wilayah */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActivePillarGrid(null)}
+                  className="inline-flex items-center gap-2 bg-[#d4af37] hover:bg-[#c39e2c] active:scale-95 text-[#043e2e] font-black text-xs px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer border border-amber-200"
+                >
+                  <ArrowLeft className="w-4 h-4 text-[#043e2e]" />
+                  <span>&larr; Kembali Ke 10 Pilar PSKS</span>
+                </button>
+
+                <div className="inline-flex items-center gap-1.5 bg-black/40 border border-emerald-400/30 px-3 py-1 rounded-full text-[11px] font-bold text-amber-300">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Wilayah: {adminWilayah}</span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                  Wilayah: <strong className="text-slate-700">{adminWilayah}</strong> • {filteredSubmissions.length} pengajuan ditampilkan
-                </p>
               </div>
-            </div>
 
-            {/* Status Filter Tab Pills - Horizontal scrollable on mobile */}
-            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar bg-slate-100 p-1 sm:p-1.5 rounded-xl border border-slate-200 text-xs font-black shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('ALL')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
-                  selectedStatus === 'ALL'
-                    ? 'bg-[#043e2e] text-amber-300 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Semua ({regionSubmissions.filter((s) => s.pillarId === activePillarGrid).length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('PENDING')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
-                  selectedStatus === 'PENDING'
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Menunggu ({pillarStats[activePillarGrid]?.pending || 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('APPROVED')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
-                  selectedStatus === 'APPROVED'
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Disetujui ({pillarStats[activePillarGrid]?.approved || 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedStatus('REJECTED')}
-                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
-                  selectedStatus === 'REJECTED'
-                    ? 'bg-rose-700 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Ditolak ({pillarStats[activePillarGrid]?.rejected || 0})
-              </button>
+              {/* Identitas Pilar yang Sedang Dibuka */}
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-white/10 backdrop-blur-xs text-xl sm:text-2xl flex items-center justify-center border border-amber-400/40 shadow-sm shrink-0">
+                  {activePillarInfo?.icon || '📋'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] sm:text-xs text-amber-300 font-black uppercase tracking-wider">
+                    Modul Verifikasi Pendaftaran Pilar PSKS
+                  </div>
+                  <h2 className="text-base sm:text-2xl font-black text-white truncate leading-tight">
+                    {activePillarInfo?.label || activePillarGrid}
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-emerald-200/90 font-medium mt-0.5">
+                    Memverifikasi berkas ajuan pendaftaran mandiri khusus anggota <strong>{activePillarInfo?.short}</strong>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Counter Khusus Pilar Ini (4 Kotak Rapi) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
+                <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-white/10">
+                  <div className="text-[10px] sm:text-xs text-emerald-200 font-bold">Total Ajuan</div>
+                  <div className="text-lg sm:text-2xl font-black text-white">{pillarStats[activePillarGrid]?.total || 0}</div>
+                </div>
+
+                <div className={`rounded-xl p-2.5 sm:p-3 border ${
+                  (pillarStats[activePillarGrid]?.pending || 0) > 0
+                    ? 'bg-amber-500/25 border-amber-400/60 ring-1 ring-amber-300/40'
+                    : 'bg-white/10 border-white/10'
+                }`}>
+                  <div className="text-[10px] sm:text-xs text-amber-200 font-bold flex items-center justify-between">
+                    <span>Menunggu</span>
+                    {(pillarStats[activePillarGrid]?.pending || 0) > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    )}
+                  </div>
+                  <div className="text-lg sm:text-2xl font-black text-amber-300">{pillarStats[activePillarGrid]?.pending || 0}</div>
+                </div>
+
+                <div className="bg-emerald-500/15 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-emerald-400/30">
+                  <div className="text-[10px] sm:text-xs text-emerald-200 font-bold">Disetujui</div>
+                  <div className="text-lg sm:text-2xl font-black text-emerald-300">{pillarStats[activePillarGrid]?.approved || 0}</div>
+                </div>
+
+                <div className="bg-rose-500/15 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-rose-400/30">
+                  <div className="text-[10px] sm:text-xs text-rose-200 font-bold">Ditolak</div>
+                  <div className="text-lg sm:text-2xl font-black text-rose-300">{pillarStats[activePillarGrid]?.rejected || 0}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-xs">
+          {/* Control Bar: Pencarian, Tab Filter Status & Switcher Mode Tampilan HP */}
+          <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-xs space-y-3">
+            {/* Search Bar Input */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={`Cari nama, NIK, atau kecamatan pada pengajuan ${activePillarInfo?.short || ''}...`}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e] focus:bg-white transition-all shadow-xs font-medium"
+                placeholder={`Cari nama, NIK, atau kecamatan...`}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-9 py-2 sm:py-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e] focus:bg-white transition-all shadow-xs font-medium"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs cursor-pointer"
+                  title="Hapus pencarian"
                 >
-                  Hapus
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
+
+            {/* Filter Status + Mode Tampilan HP */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+              {/* Tab Filter Status */}
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-1 sm:gap-1.5 bg-slate-100 p-1 sm:p-1.5 rounded-xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatus('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer ${
+                    selectedStatus === 'ALL'
+                      ? 'bg-[#043e2e] text-amber-300 shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Semua ({regionSubmissions.filter((s) => (s.pillarId || '').toLowerCase() === activePillarGrid.toLowerCase()).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatus('PENDING')}
+                  className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    selectedStatus === 'PENDING'
+                      ? 'bg-amber-600 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Menunggu</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
+                    {pillarStats[activePillarGrid]?.pending || 0}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatus('APPROVED')}
+                  className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    selectedStatus === 'APPROVED'
+                      ? 'bg-emerald-700 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Disetujui</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
+                    {pillarStats[activePillarGrid]?.approved || 0}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatus('REJECTED')}
+                  className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    selectedStatus === 'REJECTED'
+                      ? 'bg-rose-700 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Ditolak</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
+                    {pillarStats[activePillarGrid]?.rejected || 0}
+                  </span>
+                </button>
+              </div>
+
+              {/* Toggle Switcher Mode Tampilan Mobile: Kartu Rapi vs Tabel Data */}
+              <div className="flex md:hidden items-center justify-between bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <span className="text-[11px] font-bold text-slate-500 px-2">Mode Tampilan:</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setMobileViewMode('cards')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      mobileViewMode === 'cards'
+                        ? 'bg-[#043e2e] text-amber-300 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <LayoutList className="w-3.5 h-3.5" />
+                    <span>Kartu</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileViewMode('table')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      mobileViewMode === 'table'
+                        ? 'bg-[#043e2e] text-amber-300 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Table2 className="w-3.5 h-3.5" />
+                    <span>Tabel</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Submissions Container: Mobile Cards (block md:hidden) vs Desktop Table (hidden md:block) */}
+          {/* Submissions Container */}
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
             {filteredSubmissions.length === 0 ? (
               <div className="p-8 sm:p-12 text-center space-y-4">
@@ -487,8 +583,10 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               </div>
             ) : (
               <>
-                {/* 1. KHUSUS TAMPILAN HP (block md:hidden): Kartu Pendaftar Rapi & Ergonomis */}
-                <div className="block md:hidden divide-y divide-slate-100 p-2.5 space-y-3">
+                {/* ========================================================================= */}
+                {/* 1. KHUSUS TAMPILAN HP: Kartu Pendaftar Ergonomis, Terstruktur & Sangat Rapi */}
+                {/* ========================================================================= */}
+                <div className={`md:hidden p-3 space-y-3.5 ${mobileViewMode === 'cards' ? 'block' : 'hidden'}`}>
                   {filteredSubmissions.map((sub, index) => {
                     const isPending = sub.status === 'PENDING';
                     const isApproved = sub.status === 'APPROVED';
@@ -501,17 +599,23 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                     return (
                       <div
                         key={sub.id}
-                        className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-3 transition-all hover:bg-amber-50/30"
+                        className={`bg-white rounded-2xl p-4 border shadow-xs space-y-3 transition-all ${
+                          isPending
+                            ? 'border-amber-300 border-l-4 border-l-amber-500 bg-amber-50/20'
+                            : isApproved
+                            ? 'border-emerald-200 border-l-4 border-l-emerald-600 bg-emerald-50/10'
+                            : 'border-rose-200 border-l-4 border-l-rose-500 bg-rose-50/10'
+                        }`}
                       >
-                        {/* Header Kartu: No Urut + Status + Waktu */}
-                        <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-[#043e2e] text-amber-300 text-[11px] font-black flex items-center justify-center shadow-xs">
+                        {/* Header Kartu: No Urut + Waktu + Status */}
+                        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-6 h-6 rounded-full bg-[#043e2e] text-amber-300 text-[11px] font-black flex items-center justify-center shadow-xs shrink-0">
                               {index + 1}
                             </span>
-                            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-slate-400" />
-                              <span>{sub.submittedAtFormatted || 'Baru Saja'}</span>
+                            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1 truncate">
+                              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{sub.submittedAtFormatted || 'Baru Saja'}</span>
                             </div>
                           </div>
 
@@ -537,62 +641,62 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                         </div>
 
                         {/* Identitas Pemohon */}
-                        <div className="space-y-1">
-                          <div className="text-base font-black text-slate-900 leading-snug">
+                        <div>
+                          <h4 className="text-base font-black text-slate-900 leading-snug break-words">
                             {safeName}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
-                            <span className="font-semibold text-slate-400">NIK:</span>
-                            <span className="font-bold text-slate-700">{safeNik}</span>
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono mt-1">
+                            <span className="font-semibold text-slate-400 text-[11px]">NIK:</span>
+                            <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                              {safeNik}
+                            </span>
                           </div>
                         </div>
 
                         {/* Lokasi & Kontak */}
-                        <div className="grid grid-cols-1 gap-1 text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
-                          <div className="flex items-center gap-1.5">
+                        <div className="bg-slate-50/90 rounded-xl p-3 border border-slate-200/80 space-y-1.5 text-xs">
+                          <div className="flex items-center gap-2 text-slate-700">
                             <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span className="font-bold text-slate-800">{sub.wilayah}</span>
-                            <span className="text-slate-400">•</span>
+                            <span className="font-bold text-slate-900">{sub.wilayah}</span>
+                            <span className="text-slate-300">•</span>
                             <span className="text-slate-600">Kec. {safeKec}</span>
                           </div>
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-1">
-                            <div className="flex items-center gap-1.5 font-mono text-slate-700">
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-slate-600">
+                            <a
+                              href={safeHp !== '-' ? `tel:${safeHp}` : undefined}
+                              className="flex items-center gap-1.5 font-mono text-blue-700 hover:underline font-bold"
+                            >
                               <Phone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                               <span>{safeHp}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400">
-                              Akun: <strong className="text-slate-600">{sub.submittedByName || sub.submittedByUsername || 'User'}</strong>
-                            </div>
+                            </a>
+                            <span className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                              Oleh: <strong className="text-slate-600">{sub.submittedByName || sub.submittedByUsername || 'User'}</strong>
+                            </span>
                           </div>
                         </div>
 
                         {/* Alasan Penolakan jika ada */}
                         {isRejected && sub.rejectedReason && (
-                          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-2.5 text-xs">
-                            <span className="font-bold">Alasan Ditolak:</span> {sub.rejectedReason}
+                          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs space-y-0.5">
+                            <div className="font-bold flex items-center gap-1 text-rose-900">
+                              <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>Alasan Penolakan:</span>
+                            </div>
+                            <p className="text-rose-700 leading-relaxed">{sub.rejectedReason}</p>
                           </div>
                         )}
 
-                        {/* Tombol Aksi HP (Touch-Friendly min 42px) */}
-                        <div className="pt-1 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSubmissionForDetail(sub)}
-                            className="flex-1 min-h-[42px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
-                          >
-                            <Eye className="w-4 h-4 text-slate-700" />
-                            <span>Lihat Berkas</span>
-                          </button>
-
+                        {/* Tombol Aksi HP (Touch-Friendly min 44px, 2 Baris Rapi untuk Pending) */}
+                        <div className="pt-1 space-y-2">
                           {isPending && (
-                            <>
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => setSubmissionToApprove(sub)}
-                                className="flex-1 min-h-[42px] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-md"
+                                className="flex-1 min-h-[44px] bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 active:scale-95 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all border border-emerald-500/40"
                               >
                                 <Check className="w-4 h-4" />
-                                <span>Terima</span>
+                                <span>Terima & Sahkan</span>
                               </button>
 
                               <button
@@ -601,27 +705,53 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                                   setSubmissionToReject(sub);
                                   setRejectReason('');
                                 }}
-                                className="min-h-[42px] px-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
+                                className="min-h-[44px] px-4 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs"
                               >
-                                <X className="w-4 h-4" />
+                                <X className="w-4 h-4 text-rose-600" />
                                 <span>Tolak</span>
                               </button>
-                            </>
+                            </div>
                           )}
 
                           {isApproved && (
-                            <div className="flex-1 min-h-[42px] bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-center text-xs font-black text-emerald-800">
-                              ✓ Tercatat Resmi
+                            <div className="min-h-[40px] bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-center gap-1.5 text-xs font-black text-emerald-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span>Telah Sah Terdaftar & Masuk Database</span>
                             </div>
                           )}
+
+                          {isRejected && (
+                            <div className="min-h-[40px] bg-rose-50 border border-rose-300 rounded-xl flex items-center justify-center gap-1.5 text-xs font-black text-rose-800">
+                              <XCircle className="w-4 h-4 text-rose-600" />
+                              <span>Pengajuan Pendaftaran Ditolak</span>
+                            </div>
+                          )}
+
+                          {/* Tombol Lihat Berkas Formulir Lengkap */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSubmissionForDetail(sub)}
+                            className="w-full min-h-[42px] bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200 shadow-xs"
+                          >
+                            <Eye className="w-4 h-4 text-slate-600" />
+                            <span>Lihat Berkas Formulir Lengkap</span>
+                          </button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* 2. KHUSUS TAMPILAN LAPTOP/DESKTOP (hidden md:block): Tabel Standar Sangat Rapi */}
-                <div className="hidden md:block overflow-x-auto">
+                {/* ========================================================================= */}
+                {/* 2. KHUSUS TAMPILAN LAPTOP/DESKTOP ATAU MODE TABEL DI HP                   */}
+                {/* ========================================================================= */}
+                <div className={`overflow-x-auto ${mobileViewMode === 'table' ? 'block' : 'hidden md:block'}`}>
+                  {/* Prompt Geser Khusus HP jika Mode Tabel Aktif */}
+                  <div className="md:hidden bg-amber-50 border-b border-amber-200 px-3.5 py-2 text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+                    <span className="animate-bounce">👉</span>
+                    <span>Geser tabel ke samping kanan untuk melihat kolom lengkap & tombol verifikasi</span>
+                  </div>
+
                   <table className="w-full text-left text-xs sm:text-sm">
                     <thead className="bg-[#043e2e] text-white border-b-2 border-[#d4af37]">
                       <tr>
@@ -892,7 +1022,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="bg-slate-100 p-4 border-t border-slate-200 flex items-center justify-end gap-2">
+            <div className="bg-slate-100 p-3.5 sm:p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
               {selectedSubmissionForDetail.status === 'PENDING' ? (
                 <>
                   <button
@@ -901,14 +1031,14 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                       setSubmissionToReject(selectedSubmissionForDetail);
                       setRejectReason('');
                     }}
-                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer shadow-sm transition-all"
+                    className="min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-black text-xs cursor-pointer shadow-xs transition-all active:scale-95 text-center"
                   >
                     Tolak Pengajuan
                   </button>
                   <button
                     type="button"
                     onClick={() => setSubmissionToApprove(selectedSubmissionForDetail)}
-                    className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5"
+                    className="min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
                   >
                     <Check className="w-4 h-4" />
                     <span>Setujui & Terbitkan Rekap</span>
@@ -918,7 +1048,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 <button
                   type="button"
                   onClick={() => setSelectedSubmissionForDetail(null)}
-                  className="px-5 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs cursor-pointer"
+                  className="min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs cursor-pointer active:scale-95 text-center"
                 >
                   Tutup
                 </button>
@@ -933,30 +1063,30 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
       {/* ========================================================================= */}
       {submissionToApprove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border-2 border-emerald-600 max-w-md w-full p-6 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center border-2 border-emerald-300">
-              <CheckCircle2 className="w-8 h-8" />
+          <div className="bg-white rounded-3xl shadow-2xl border-2 border-emerald-600 max-w-md w-full p-5 sm:p-6 text-center space-y-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center border-2 border-emerald-300">
+              <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-black text-slate-900">
+              <h3 className="text-base sm:text-lg font-black text-slate-900">
                 Setujui Pendaftaran Anggota?
               </h3>
-              <p className="text-xs text-slate-600">
-                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData?.nama || 'Pemohon'}</strong> ({submissionToApprove.wilayah}) akan disahkan dan langsung dimasukkan ke tabel resmi pilar <strong>{PILLARS_CONFIG[submissionToApprove.pillarId]?.title}</strong>.
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData?.nama || 'Pemohon'}</strong> ({submissionToApprove.wilayah}) akan disahkan dan langsung dimasukkan ke database resmi pilar <strong>{PILLARS_CONFIG[submissionToApprove.pillarId]?.title}</strong>.
               </p>
             </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setSubmissionToApprove(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer transition-colors"
+                className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleConfirmApprove}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all"
+                className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95"
               >
                 Ya, Setujui Sekarang
               </button>
@@ -970,7 +1100,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
       {/* ========================================================================= */}
       {submissionToReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border-2 border-rose-600 max-w-md w-full p-6 space-y-4">
+          <div className="bg-white rounded-3xl shadow-2xl border-2 border-rose-600 max-w-md w-full p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center border border-rose-300 shrink-0">
                 <XCircle className="w-6 h-6" />
@@ -998,18 +1128,18 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               />
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setSubmissionToReject(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer transition-colors"
+                className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReject}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer shadow-md transition-all"
+                className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95"
               >
                 Tolak Pengajuan
               </button>

@@ -354,6 +354,8 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const polygonLayersRef = useRef<{ [key: string]: L.Polygon }>({});
   const markerLayersRef = useRef<{ [key: string]: L.Marker }>({});
+  const lastFlownKabKotaRef = useRef<string | null>(null);
+  const regionCentersRef = useRef<Record<string, L.LatLng>>({});
   const [shouldLoadGeoJson, setShouldLoadGeoJson] = useState(false);
 
   // Defer fetching heavy 619KB GeoJSON until user scrolls near the map section
@@ -541,37 +543,100 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
     return { center: [-6.82, 107.6191] as [number, number], zoom: 7.1 };
   };
 
-  // Initialize and update Leaflet GIS Map
+  // Render HTML for responsive Pin Marker
+  const renderPinIconHtml = (regionName: string, total: number, isSelected: boolean) => {
+    return `
+      <div class="group relative cursor-pointer flex flex-col items-center justify-end transition-transform duration-200 hover:scale-125 ${isSelected ? 'z-40 scale-110' : 'z-20'}">
+        ${isSelected ? '<div class="absolute -top-1 w-9 h-9 rounded-full bg-emerald-400/40 animate-ping pointer-events-none"></div>' : ''}
+        
+        <!-- MOBILE PHONE ONLY DISPLAY (<640px): Simplified compact avatar to prevent overlap -->
+        <div class="sm:hidden relative flex flex-col items-center">
+          ${isSelected ? `
+            <div class="bg-emerald-50 border-2 border-emerald-600 ring-2 ring-emerald-300 shadow-md rounded-full p-0.5 flex items-center justify-center w-5 h-5 shrink-0">
+              <svg class="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </div>
+            <div class="bg-emerald-700 text-white font-black text-[7.5px] px-1.5 py-0.5 rounded-full shadow-xs border border-white font-mono -mt-0.5 z-10 whitespace-nowrap leading-none">
+              ${total}
+            </div>
+            <div class="w-1.5 h-1.5 rotate-45 bg-emerald-700 -mt-0.5"></div>
+          ` : `
+            <div class="w-4 h-4 rounded-full bg-white border border-slate-900 shadow-sm flex items-center justify-center shrink-0">
+              <svg class="w-2.5 h-2.5 text-slate-800" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </div>
+          `}
+        </div>
+
+        <!-- LAPTOP, TABLET & DESKTOP DISPLAY (>=640px): 100% ORIGINAL DESIGN -->
+        <div class="hidden sm:flex relative flex-col items-center">
+          <!-- Circular Badge with Person/User Avatar Logo -->
+          <div class="bg-white border-2 ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-300 shadow-emerald-500/50' : 'border-slate-900 shadow-slate-950/80'} rounded-full p-1 shadow-xl flex items-center justify-center w-7 h-7 shrink-0 transition-transform">
+            <svg class="w-4 h-4 ${isSelected ? 'text-emerald-600' : 'text-slate-800'}" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          
+          <!-- Realtime Personnel Count Pill -->
+          <div class="${isSelected ? 'bg-emerald-600 text-white border-white ring-1 ring-emerald-300' : 'bg-slate-900 text-amber-300 border-slate-700'} font-black text-[9px] px-1.5 py-0.5 rounded-full shadow-md border font-mono -mt-1 z-10 whitespace-nowrap leading-none tracking-tight">
+            ${total}
+          </div>
+
+          <!-- Precision Pin Tip Pointer -->
+          <div class="w-2 h-2 rotate-45 ${isSelected ? 'bg-emerald-600' : 'bg-slate-900'} -mt-1 shadow-sm"></div>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderTooltipHtml = (regionName: string, total: number) => {
+    return `
+      <div class="px-2.5 py-1.5 text-slate-900 font-sans">
+        <div class="font-black text-xs text-slate-950 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full ${total > 0 ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+          ${regionName}
+        </div>
+        <div class="text-[11px] font-bold text-emerald-800 mt-0.5">Total SDM PSKS: <span class="font-black text-emerald-950">${total.toLocaleString('id-ID')} Personil</span></div>
+      </div>
+    `;
+  };
+
+  // 1. Initialize Leaflet Map Instance Once
   useEffect(() => {
     if (!mapContainerRef.current || viewMode !== 'map') return;
 
     if (!leafletMapRef.current) {
+      if ((mapContainerRef.current as any)._leaflet_id) {
+        delete (mapContainerRef.current as any)._leaflet_id;
+      }
+
       const initialConfig = getResponsiveMapConfig();
 
-      // Create Leaflet Map instance
       const map = L.map(mapContainerRef.current, {
         center: initialConfig.center,
         zoom: initialConfig.zoom,
-        preferCanvas: true, // GPU canvas rendering for butter-smooth vector performance
+        preferCanvas: true,
         zoomControl: false,
         attributionControl: false,
         wheelDebounceTime: 40,
         wheelPxPerZoomLevel: 120,
       });
 
-      // Automatic snap/bounce back to original size & position after pinch zoom-out
       const checkAndResetZoom = () => {
-        const currentConfig = getResponsiveMapConfig();
-        if (map.getZoom() < currentConfig.zoom) {
-          map.flyTo(currentConfig.center, currentConfig.zoom, { duration: 0.8 });
-          setSelectedKabKota('Semua Kabupaten/Kota');
-        }
+        try {
+          const currentConfig = getResponsiveMapConfig();
+          if (map.getZoom() < currentConfig.zoom) {
+            map.flyTo(currentConfig.center, currentConfig.zoom, { duration: 0.8 });
+            setSelectedKabKota('Semua Kabupaten/Kota');
+          }
+        } catch (err) {}
       };
 
       map.on('zoomend', checkAndResetZoom);
       map.on('touchend', checkAndResetZoom);
 
-      // High quality Esri World Imagery Satellite Tile Layer (Exact match to geuliss.jabarprov.go.id screenshot)
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 18,
         minZoom: 6,
@@ -582,275 +647,251 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       }).addTo(map);
 
       leafletMapRef.current = map;
+      lastFlownKabKotaRef.current = 'Semua Kabupaten/Kota';
     }
+  }, [viewMode]);
 
+  // 2. Real-time In-Place GIS Layers & Markers Update (No destruction, zero flicker, 60fps)
+  useEffect(() => {
     const map = leafletMapRef.current;
+    if (!map || viewMode !== 'map') return;
 
-    // Clean up previous layers
-    if (geoJsonLayerRef.current) {
-      map.removeLayer(geoJsonLayerRef.current);
-      geoJsonLayerRef.current = null;
-    }
-    Object.values(polygonLayersRef.current).forEach((p) => map.removeLayer(p));
-    Object.values(markerLayersRef.current).forEach((m) => map.removeLayer(m));
-    polygonLayersRef.current = {};
-    markerLayersRef.current = {};
+    try {
+      // 2a. Official GeoJSON polygons
+      if (geoJsonData && geoJsonData.features) {
+        // Clean up fallback polygons if they were previously mounted
+        Object.values(polygonLayersRef.current).forEach((p) => {
+          if (p && map.hasLayer(p)) {
+            try { map.removeLayer(p); } catch (e) {}
+          }
+        });
+        polygonLayersRef.current = {};
 
-    const regionCentersMap: Record<string, L.LatLng> = {};
+        if (!geoJsonLayerRef.current) {
+          const geoLayer = L.geoJSON(geoJsonData, {
+            style: (feature) => {
+              const regionName = getNormalizedRegionName(feature?.properties);
+              const count = regionName ? (regionalStats[regionName]?.total || 0) : 0;
+              const isSelected = selectedKabKota === regionName;
+              return {
+                fillColor: getChoroplethColor(count),
+                fillOpacity: 0.85,
+                color: isSelected ? '#38bdf8' : '#0f172a',
+                weight: isSelected ? 3.5 : 1.5,
+              };
+            },
+            onEachFeature: (feature, layer) => {
+              const regionName = getNormalizedRegionName(feature?.properties);
+              if (!regionName) return;
 
-    // 1. IF Official GeoJSON is available, render real GIS Administrative Polygons
-    if (geoJsonData && geoJsonData.features) {
-      const geoLayer = L.geoJSON(geoJsonData, {
-        style: (feature) => {
-          const regionName = getNormalizedRegionName(feature?.properties);
-          const count = regionName ? (regionalStats[regionName]?.total || 0) : 0;
-          const isSelected = selectedKabKota === regionName;
-          const color = getChoroplethColor(count);
+              const stats = regionalStats[regionName] || { total: 0 };
+              layer.bindTooltip(renderTooltipHtml(regionName, stats.total), {
+                permanent: false,
+                direction: 'top',
+                sticky: true,
+                className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
+              });
 
-          return {
-            fillColor: color,
-            fillOpacity: 0.85,
-            color: isSelected ? '#38bdf8' : '#0f172a',
-            weight: isSelected ? 3.5 : 1.5,
-          };
-        },
-        onEachFeature: (feature, layer) => {
-          const regionName = getNormalizedRegionName(feature?.properties);
-          if (!regionName) return;
+              layer.on({
+                mouseover: (e) => {
+                  setHoveredKabKota(regionName);
+                  try {
+                    e.target.setStyle({ weight: 2.5, color: '#ffffff', fillOpacity: 0.95 });
+                  } catch (err) {}
+                },
+                mouseout: (e) => {
+                  setHoveredKabKota(null);
+                  try {
+                    const isSelected = selectedKabKota === regionName;
+                    e.target.setStyle({
+                      weight: isSelected ? 3.5 : 1.5,
+                      color: isSelected ? '#38bdf8' : '#0f172a',
+                      fillOpacity: 0.85,
+                    });
+                  } catch (err) {}
+                },
+                click: () => {
+                  setSelectedKabKota(regionName);
+                  if (onSelectRegion) onSelectRegion(regionName);
+                },
+              });
 
-          const stats = regionalStats[regionName] || { total: 0 };
+              try {
+                const bounds = (layer as any).getBounds?.();
+                if (bounds && bounds.isValid()) {
+                  regionCentersRef.current[regionName] = bounds.getCenter();
+                }
+              } catch (err) {}
+            },
+          }).addTo(map);
 
-          // Subtle, non-intrusive Leaflet Tooltip
-          layer.bindTooltip(
-            `
-            <div class="px-2.5 py-1.5 text-slate-900 font-sans">
-              <div class="font-extrabold text-xs text-slate-950 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full ${stats.total > 0 ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
-                ${regionName}
-              </div>
-              <div class="text-[11px] font-bold text-emerald-800 mt-0.5">Total SDM PSKS: <span class="font-black text-emerald-950">${stats.total.toLocaleString('id-ID')}</span></div>
-            </div>
-            `,
-            {
+          geoJsonLayerRef.current = geoLayer;
+        } else {
+          // In-place real-time update of GeoJSON layer without recreating!
+          geoJsonLayerRef.current.setStyle((feature) => {
+            const regionName = getNormalizedRegionName(feature?.properties);
+            const count = regionName ? (regionalStats[regionName]?.total || 0) : 0;
+            const isSelected = selectedKabKota === regionName;
+            return {
+              fillColor: getChoroplethColor(count),
+              fillOpacity: 0.85,
+              color: isSelected ? '#38bdf8' : '#0f172a',
+              weight: isSelected ? 3.5 : 1.5,
+            };
+          });
+
+          // Update tooltips in-place
+          geoJsonLayerRef.current.eachLayer((layer: any) => {
+            const regionName = getNormalizedRegionName(layer.feature?.properties);
+            if (regionName && layer.setTooltipContent) {
+              const stats = regionalStats[regionName] || { total: 0 };
+              layer.setTooltipContent(renderTooltipHtml(regionName, stats.total));
+            }
+          });
+        }
+      } else {
+        // Fallback polygon mode (before GeoJSON loads)
+        JABAR_DETAILED_REGIONS.forEach((region) => {
+          const stats = regionalStats[region.name] || { total: 0 };
+          const isSelected = selectedKabKota === region.name;
+          const color = getChoroplethColor(stats.total);
+
+          if (!polygonLayersRef.current[region.name]) {
+            const polygon = L.polygon(region.coordinates as [number, number][], {
+              fillColor: color,
+              fillOpacity: 0.85,
+              color: isSelected ? '#38bdf8' : '#0f172a',
+              weight: isSelected ? 3.5 : 1.5,
+            }).addTo(map);
+
+            polygon.bindTooltip(renderTooltipHtml(region.name, stats.total), {
               permanent: false,
               direction: 'top',
               sticky: true,
               className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
-            }
-          );
-
-          layer.on({
-            mouseover: (e) => {
-              setHoveredKabKota(regionName);
-              const target = e.target;
-              target.setStyle({
-                weight: 2.5,
-                color: '#ffffff',
-                fillOpacity: 0.95,
-              });
-            },
-            mouseout: (e) => {
-              setHoveredKabKota(null);
-              const target = e.target;
-              const isSelected = selectedKabKota === regionName;
-              target.setStyle({
-                weight: isSelected ? 3.5 : 1.5,
-                color: isSelected ? '#38bdf8' : '#0f172a',
-                fillOpacity: 0.85,
-              });
-            },
-            click: () => {
-              setSelectedKabKota(regionName);
-              if (onSelectRegion) onSelectRegion(regionName);
-            },
-          });
-
-          // Calculate center of polygon
-          try {
-            const bounds = (layer as L.Polygon).getBounds();
-            if (bounds && bounds.isValid()) {
-              regionCentersMap[regionName] = bounds.getCenter();
-            }
-          } catch (err) {
-            // ignore
-          }
-        },
-      }).addTo(map);
-
-      geoJsonLayerRef.current = geoLayer;
-    } else {
-      // Robust Instant Fallback: Render JABAR_DETAILED_REGIONS immediately while GeoJSON is loading or if network drops
-      JABAR_DETAILED_REGIONS.forEach((region) => {
-        const stats = regionalStats[region.name] || { total: 0 };
-        const isSelected = selectedKabKota === region.name;
-        const color = getChoroplethColor(stats.total);
-
-        const polygon = L.polygon(region.coordinates as [number, number][], {
-          fillColor: color,
-          fillOpacity: 0.85,
-          color: isSelected ? '#38bdf8' : '#0f172a',
-          weight: isSelected ? 3.5 : 1.5,
-        }).addTo(map);
-
-        polygon.bindTooltip(
-          `
-          <div class="px-2.5 py-1.5 text-slate-900 font-sans">
-            <div class="font-extrabold text-xs text-slate-950 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full ${stats.total > 0 ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
-              ${region.name}
-            </div>
-            <div class="text-[11px] font-bold text-emerald-800 mt-0.5">Total SDM PSKS: <span class="font-black text-emerald-950">${stats.total.toLocaleString('id-ID')}</span></div>
-          </div>
-          `,
-          {
-            permanent: false,
-            direction: 'top',
-            sticky: true,
-            className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
-          }
-        );
-
-        polygon.on({
-          mouseover: (e) => {
-            setHoveredKabKota(region.name);
-            e.target.setStyle({ weight: 2.5, color: '#ffffff', fillOpacity: 0.95 });
-          },
-          mouseout: (e) => {
-            setHoveredKabKota(null);
-            e.target.setStyle({
-              weight: isSelected ? 3.5 : 1.5,
-              color: isSelected ? '#38bdf8' : '#0f172a',
-              fillOpacity: 0.85,
             });
-          },
-          click: () => {
-            setSelectedKabKota(region.name);
-            if (onSelectRegion) onSelectRegion(region.name);
-          },
+
+            polygon.on({
+              mouseover: (e) => {
+                setHoveredKabKota(region.name);
+                try { e.target.setStyle({ weight: 2.5, color: '#ffffff', fillOpacity: 0.95 }); } catch (err) {}
+              },
+              mouseout: (e) => {
+                setHoveredKabKota(null);
+                try {
+                  const isSel = selectedKabKota === region.name;
+                  e.target.setStyle({
+                    weight: isSel ? 3.5 : 1.5,
+                    color: isSel ? '#38bdf8' : '#0f172a',
+                    fillOpacity: 0.85,
+                  });
+                } catch (err) {}
+              },
+              click: () => {
+                setSelectedKabKota(region.name);
+                if (onSelectRegion) onSelectRegion(region.name);
+              },
+            });
+
+            polygonLayersRef.current[region.name] = polygon;
+            regionCentersRef.current[region.name] = L.latLng(region.center[0], region.center[1]);
+          } else {
+            const poly = polygonLayersRef.current[region.name];
+            poly.setStyle({
+              fillColor: color,
+              fillOpacity: 0.85,
+              color: isSelected ? '#38bdf8' : '#0f172a',
+              weight: isSelected ? 3.5 : 1.5,
+            });
+            poly.setTooltipContent(renderTooltipHtml(region.name, stats.total));
+          }
+        });
+      }
+
+      // 2b. In-Place Real-Time Update for 27 Person Pin Markers
+      KAB_KOTA_ONLY.forEach((regionName) => {
+        const stats = regionalStats[regionName] || { total: 0 };
+        const calibratedCoord = JABAR_PRECISION_PIN_CENTERS[regionName];
+        const fallbackObj = JABAR_DETAILED_REGIONS.find((r) => r.name === regionName);
+        const center = calibratedCoord
+          ? L.latLng(calibratedCoord[0], calibratedCoord[1])
+          : (regionCentersRef.current[regionName] || (fallbackObj ? L.latLng(fallbackObj.center[0], fallbackObj.center[1]) : null));
+
+        if (!center) return;
+
+        const isSelected = selectedKabKota === regionName;
+        const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 640;
+        const pinHtml = renderPinIconHtml(regionName, stats.total, isSelected);
+
+        const customIcon = L.divIcon({
+          className: 'custom-jabar-pin',
+          html: pinHtml,
+          iconSize: [34, 44],
+          iconAnchor: [17, 44],
         });
 
-        polygonLayersRef.current[region.name] = polygon;
-        regionCentersMap[region.name] = L.latLng(region.center[0], region.center[1]);
-      });
-    }
+        const tooltipContent = renderTooltipHtml(regionName, stats.total);
 
-    // Render Precision Person Pin Markers with Live Badge Count
-    KAB_KOTA_ONLY.forEach((regionName) => {
-      const stats = regionalStats[regionName] || { total: 0 };
-      const calibratedCoord = JABAR_PRECISION_PIN_CENTERS[regionName];
-      const fallbackObj = JABAR_DETAILED_REGIONS.find((r) => r.name === regionName);
-      const center = calibratedCoord
-        ? L.latLng(calibratedCoord[0], calibratedCoord[1])
-        : (regionCentersMap[regionName] || (fallbackObj ? L.latLng(fallbackObj.center[0], fallbackObj.center[1]) : null));
+        if (markerLayersRef.current[regionName]) {
+          const existingMarker = markerLayersRef.current[regionName];
+          existingMarker.setIcon(customIcon);
+          existingMarker.setZIndexOffset(isSelected ? 1000 : 100);
+          existingMarker.setTooltipContent(tooltipContent);
+        } else {
+          const marker = L.marker(center, {
+            icon: customIcon,
+            zIndexOffset: isSelected ? 1000 : 100,
+          }).addTo(map);
 
-      if (!center) return;
+          marker.bindTooltip(tooltipContent, {
+            permanent: false,
+            direction: 'top',
+            offset: isSmallScreen ? (isSelected ? [0, -26] : [0, -10]) : [0, -38],
+            className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
+          });
 
-      const isSelected = selectedKabKota === regionName;
-      const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 640;
+          marker.on('mouseover', () => setHoveredKabKota(regionName));
+          marker.on('mouseout', () => setHoveredKabKota(null));
+          marker.on('click', () => {
+            setSelectedKabKota(regionName);
+            if (onSelectRegion) onSelectRegion(regionName);
+          });
 
-      // Render responsive Pin Marker: Full original avatar & count badge for Laptop/Tablet/Desktop, compact non-overlapping for mobile phone
-      const pinIconHtml = `
-        <div class="group relative cursor-pointer flex flex-col items-center justify-end transition-transform duration-200 hover:scale-125 ${isSelected ? 'z-40 scale-110' : 'z-20'}">
-          ${isSelected ? '<div class="absolute -top-1 w-9 h-9 rounded-full bg-emerald-400/40 animate-ping pointer-events-none"></div>' : ''}
-          
-          <!-- MOBILE PHONE ONLY DISPLAY (<640px): Simplified compact avatar to prevent overlap -->
-          <div class="sm:hidden relative flex flex-col items-center">
-            ${isSelected ? `
-              <div class="bg-emerald-50 border-2 border-emerald-600 ring-2 ring-emerald-300 shadow-md rounded-full p-0.5 flex items-center justify-center w-5 h-5 shrink-0">
-                <svg class="w-3 h-3 text-emerald-700" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              </div>
-              <div class="bg-emerald-700 text-white font-black text-[7.5px] px-1.5 py-0.5 rounded-full shadow-xs border border-white font-mono -mt-0.5 z-10 whitespace-nowrap leading-none">
-                ${stats.total}
-              </div>
-              <div class="w-1.5 h-1.5 rotate-45 bg-emerald-700 -mt-0.5"></div>
-            ` : `
-              <div class="w-4 h-4 rounded-full bg-white border border-slate-900 shadow-sm flex items-center justify-center shrink-0">
-                <svg class="w-2.5 h-2.5 text-slate-800" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              </div>
-            `}
-          </div>
-
-          <!-- LAPTOP, TABLET & DESKTOP DISPLAY (>=640px): 100% ORIGINAL DESIGN -->
-          <div class="hidden sm:flex relative flex-col items-center">
-            <!-- Circular Badge with Person/User Avatar Logo -->
-            <div class="bg-white border-2 ${isSelected ? 'border-emerald-500 ring-2 ring-emerald-300 shadow-emerald-500/50' : 'border-slate-900 shadow-slate-950/80'} rounded-full p-1 shadow-xl flex items-center justify-center w-7 h-7 shrink-0 transition-transform">
-              <svg class="w-4 h-4 ${isSelected ? 'text-emerald-600' : 'text-slate-800'}" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
-            </div>
-            
-            <!-- Realtime Personnel Count Pill -->
-            <div class="${isSelected ? 'bg-emerald-600 text-white border-white ring-1 ring-emerald-300' : 'bg-slate-900 text-amber-300 border-slate-700'} font-black text-[9px] px-1.5 py-0.5 rounded-full shadow-md border font-mono -mt-1 z-10 whitespace-nowrap leading-none tracking-tight">
-              ${stats.total}
-            </div>
-
-            <!-- Precision Pin Tip Pointer -->
-            <div class="w-2 h-2 rotate-45 ${isSelected ? 'bg-emerald-600' : 'bg-slate-900'} -mt-1 shadow-sm"></div>
-          </div>
-        </div>
-      `;
-
-      const customIcon = L.divIcon({
-        className: 'custom-jabar-pin',
-        html: pinIconHtml,
-        iconSize: [34, 44],
-        iconAnchor: [17, 44],
-      });
-
-      const marker = L.marker(center, { 
-        icon: customIcon,
-        zIndexOffset: isSelected ? 1000 : 100
-      }).addTo(map);
-
-      marker.bindTooltip(
-        `
-        <div class="px-2.5 py-1.5 text-slate-900 font-sans">
-          <div class="font-black text-xs text-slate-950 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full ${stats.total > 0 ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
-            ${regionName}
-          </div>
-          <div class="text-[11px] font-bold text-emerald-800 mt-0.5">Total SDM PSKS: <span class="font-black text-emerald-950">${stats.total.toLocaleString('id-ID')} Personil</span></div>
-        </div>
-        `,
-        {
-          permanent: false,
-          direction: 'top',
-          offset: isSmallScreen ? (isSelected ? [0, -26] : [0, -10]) : [0, -38],
-          className: 'custom-jabar-tooltip shadow-2xl border-2 border-emerald-600 rounded-xl bg-white/95 backdrop-blur-sm',
+          markerLayersRef.current[regionName] = marker;
         }
-      );
-
-      marker.on('mouseover', () => setHoveredKabKota(regionName));
-      marker.on('mouseout', () => setHoveredKabKota(null));
-      marker.on('click', () => {
-        setSelectedKabKota(regionName);
-        if (onSelectRegion) onSelectRegion(regionName);
       });
-
-      markerLayersRef.current[regionName] = marker;
-    });
-
-    // Pan map to selected region or overview
-    if (selectedKabKota !== 'Semua Kabupaten/Kota') {
-      const calibratedCoord = JABAR_PRECISION_PIN_CENTERS[selectedKabKota];
-      const fallbackObj = JABAR_DETAILED_REGIONS.find((r) => r.name === selectedKabKota);
-      const center = calibratedCoord
-        ? L.latLng(calibratedCoord[0], calibratedCoord[1])
-        : (regionCentersMap[selectedKabKota] || (fallbackObj ? L.latLng(fallbackObj.center[0], fallbackObj.center[1]) : null));
-      if (center) {
-        const targetZoom = window.innerWidth < 640 ? 9.2 : 10;
-        map.flyTo(center, targetZoom, { duration: 0.8 });
-      }
-    } else {
-      const responsiveConfig = getResponsiveMapConfig();
-      map.flyTo(responsiveConfig.center, responsiveConfig.zoom, { duration: 0.8 });
+    } catch (err) {
+      console.warn('Safe map update caught:', err);
     }
-
   }, [geoJsonData, regionalStats, selectedKabKota, viewMode, onSelectRegion]);
+
+  // 3. Camera Pan/Zoom (Runs ONLY when user selects a different Kab/Kota, never on real-time data changes)
+  useEffect(() => {
+    const map = leafletMapRef.current;
+    if (!map || viewMode !== 'map') return;
+
+    if (lastFlownKabKotaRef.current === selectedKabKota) return;
+    lastFlownKabKotaRef.current = selectedKabKota;
+
+    try {
+      if (selectedKabKota !== 'Semua Kabupaten/Kota') {
+        const calibratedCoord = JABAR_PRECISION_PIN_CENTERS[selectedKabKota];
+        const fallbackObj = JABAR_DETAILED_REGIONS.find((r) => r.name === selectedKabKota);
+        const center = calibratedCoord
+          ? L.latLng(calibratedCoord[0], calibratedCoord[1])
+          : (regionCentersRef.current[selectedKabKota] || (fallbackObj ? L.latLng(fallbackObj.center[0], fallbackObj.center[1]) : null));
+        if (center) {
+          const targetZoom = typeof window !== 'undefined' && window.innerWidth < 640 ? 9.2 : 10;
+          map.flyTo(center, targetZoom, { duration: 0.8 });
+        }
+      } else {
+        const responsiveConfig = getResponsiveMapConfig();
+        map.flyTo(responsiveConfig.center, responsiveConfig.zoom, { duration: 0.8 });
+      }
+    } catch (err) {
+      console.warn('Map camera pan caught:', err);
+    }
+  }, [selectedKabKota, viewMode]);
 
   // Re-fit Leaflet map size when toggling viewMode or resizing/rotating screen
   useEffect(() => {

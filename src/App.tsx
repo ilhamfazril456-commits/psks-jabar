@@ -3033,7 +3033,7 @@ export default function App() {
               </section>
             )}
 
-            <ErrorBoundary fallbackMode="inline" fallbackTitle="Peta Sebaran Wilayah PSKS" resetKeys={[allPillarData]}>
+            <ErrorBoundary fallbackMode="silent" fallbackTitle="Peta Sebaran Wilayah PSKS" resetKeys={[allPillarData]}>
               <React.Suspense fallback={null}>
                 <JabarRegionalMap allPillarData={allPillarData} />
               </React.Suspense>
@@ -3061,10 +3061,10 @@ export default function App() {
 
         <React.Suspense fallback={null}>
           {currentTab === 'terima_pendaftaran' && session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
-          <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
               <BackToHomeButton onClick={handleBackToHome} id="btn-back-top-terima-pendaftaran" />
-              <div className="text-xs font-bold text-slate-500 bg-white/80 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs">
+              <div className="text-[11px] sm:text-xs font-bold text-slate-500 bg-white/90 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs text-center sm:text-right">
                 <span>Manajemen Verifikasi Pendaftaran Pilar PSKS</span>
               </div>
             </div>
@@ -3074,9 +3074,9 @@ export default function App() {
               onApproveSubmission={handleApproveSubmission}
               onRejectSubmission={handleRejectSubmission}
             />
-            <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div className="pt-4 sm:pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
               <BackToHomeButton onClick={handleBackToHome} id="btn-back-bottom-terima-pendaftaran" />
-              <div className="text-xs text-slate-500 font-semibold">
+              <div className="text-[11px] sm:text-xs text-slate-500 font-semibold text-center sm:text-right">
                 <span>Dinas Sosial Provinsi Jawa Barat</span>
               </div>
             </div>
