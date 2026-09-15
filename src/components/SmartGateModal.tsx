@@ -624,7 +624,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       <main className="relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 my-auto py-1 sm:py-2 flex items-center justify-center">
         
         {/* Split-Screen Card */}
-        <div className="relative w-full h-full max-h-[92vh] sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
+        <div className="relative w-full h-full max-h-[90dvh] sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
           
           {/* ================= LEFT COLUMN: DISTINCT ROYAL BLUE BRANDING (DESKTOP / LAPTOP) ================= */}
           <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#1d63d2] via-[#1a53b5] to-[#113a84] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/30 shadow-lg">
@@ -691,7 +691,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           </div>
 
           {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
-          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-4 py-3 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 transition-colors duration-300`}>
+          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-4 pt-3 pb-3.5 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 transition-colors duration-300`}>
             
             {/* Top Right Curved Blue Accent Wave */}
             <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-blue-400/15 bg-blue-600/10' : 'bg-blue-600/10'} pointer-events-none`} />
@@ -701,50 +701,50 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (INTRO BIRU SELAMAT DATANG & BUTTON MULAI) */}
             {/* ========================================================================= */}
             {showMobileIntro && view === 'main' && (
-              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center py-2 px-1 animate-fadeIn text-white">
+              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center pt-0.5 pb-2.5 px-1 animate-fadeIn text-white">
                 {/* Bagian Atas: Logo Resmi & Badge Provinsi Jawa Barat */}
-                <div className="flex flex-col items-center pt-1">
-                  <div className="p-2.5 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-2">
-                    <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 sm:w-16 sm:h-16" />
+                <div className="flex flex-col items-center pt-0.5">
+                  <div className="p-2 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-1.5">
+                    <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-13 h-13 sm:w-16 sm:h-16" />
                   </div>
-                  <span className="text-[9.5px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-3 py-0.5 rounded-full border border-white/20">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-3 py-0.5 rounded-full border border-white/20">
                     PEMERINTAH PROVINSI JAWA BARAT
                   </span>
-                  <span className="text-[8.5px] font-bold text-blue-200 uppercase tracking-wider mt-1">
+                  <span className="text-[8px] font-bold text-blue-200 uppercase tracking-wider mt-0.5">
                     Dinas Sosial Provinsi Jawa Barat
                   </span>
                 </div>
 
                 {/* Bagian Tengah: Teks Sambutan & Identitas Sistem */}
-                <div className="my-auto py-1.5 flex flex-col items-center">
+                <div className="my-auto py-1 flex flex-col items-center">
                   <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
                     Selamat Datang
                   </h2>
-                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 leading-snug mt-1 max-w-xs px-2">
+                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 leading-snug mt-0.5 max-w-xs px-2">
                     Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial (PSKS)
                   </p>
-                  <div className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[10px] sm:text-[10.5px] font-bold mt-2.5 shadow-2xs max-w-xs text-center leading-relaxed">
+                  <div className="inline-flex items-center justify-center px-3.5 py-1 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[9.5px] sm:text-[10px] font-bold mt-2 shadow-2xs max-w-xs text-center leading-relaxed">
                     <span>Layanan integrasi satu data, registrasi mandiri, dan verifikasi pilar sosial se-Jawa Barat.</span>
                   </div>
                 </div>
 
                 {/* Bagian Bawah: Button MULAI & Copyright Lapisan 1 (Satu-Satunya) */}
-                <div className="w-full space-y-2 pt-1 pb-0.5">
+                <div className="w-full space-y-1.5 pt-0.5 pb-1">
                   <button
                     type="button"
                     id="btn-mobile-intro-mulai"
                     onClick={() => setShowMobileIntro(false)}
-                    className="w-full min-h-[48px] py-3 px-6 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3d978] to-[#d4af37] hover:brightness-105 active:scale-95 text-[#043e2e] font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/25 border-2 border-amber-300 transition-all cursor-pointer select-none"
+                    className="w-full min-h-[46px] py-2.5 px-6 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3d978] to-[#d4af37] hover:brightness-105 active:scale-95 text-[#043e2e] font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/25 border-2 border-amber-300 transition-all cursor-pointer select-none"
                   >
                     <span>MULAI</span>
                     <ArrowRight className="w-5 h-5 text-[#043e2e] stroke-[2.5]" />
                   </button>
-                  <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-blue-200/80 font-semibold">
+                  <div className="flex items-center justify-center gap-1.5 text-[9px] text-blue-200/80 font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span>Portal Resmi Terverifikasi • 27 Kab/Kota</span>
                   </div>
-                  {/* Copyright Resmi Lapisan 1 (Satu-Satunya) */}
-                  <div className="pt-2 border-t border-blue-400/25 w-full">
+                  {/* Copyright Resmi Lapisan 1 (Satu-Satunya) - Terangkat dan Tidak Terpotong */}
+                  <div className="pt-2 pb-2.5 border-t border-blue-400/25 w-full">
                     <p className="text-[8px] sm:text-[8.5px] text-blue-100 font-semibold tracking-tight text-center leading-snug break-words px-1">
                       © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
                     </p>
@@ -1707,8 +1707,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 </div>
               </div>
 
-              {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) */}
-              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-medium text-center leading-snug break-words px-1 pt-0.5">
+              {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) - Terangkat dan Tidak Terpotong */}
+              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-semibold text-center leading-snug break-words px-1 pt-1 pb-2">
                 © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
