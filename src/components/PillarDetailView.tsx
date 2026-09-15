@@ -329,13 +329,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       session.wilayah === 'PROVINSI JAWA BARAT' ||
       !session.wilayah
     ) {
-      if (pillarId === 'peksos') {
+      if (pillarId === 'peksos' || (regionalCounts['Prov. Jabar'] && regionalCounts['Prov. Jabar'].total > 0)) {
         return JABAR_REGIONS; // Includes Prov. Jabar at the top above Kab. Bogor
       }
       return KAB_KOTA_ONLY;
     }
     return [session.wilayah];
-  }, [session.role, session.isDeveloper, session.wilayah, pillarId]);
+  }, [session.role, session.isDeveloper, session.wilayah, pillarId, regionalCounts]);
 
   const maxChartCount = useMemo(() => {
     let max = 1;
@@ -351,13 +351,20 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     return max;
   }, [chartRegions, regionalCounts, pillarId]);
 
-  // Regions for modal dropdown
+  // Regions for modal dropdown - includes Prov. Jabar for Superadmin & Developer across all pillars
   const regionOptions = useMemo(() => {
-    if (pillarId === 'peksos') {
+    const isSuperOrDev =
+      session.role === 'superadmin' ||
+      session.role === 'developer' ||
+      session.isDeveloper ||
+      session.wilayah === 'Prov. Jabar' ||
+      session.wilayah === 'Semua Wilayah';
+
+    if (isSuperOrDev || pillarId === 'peksos') {
       return JABAR_REGIONS; // Includes Prov. Jabar
     }
     return KAB_KOTA_ONLY;
-  }, [pillarId]);
+  }, [pillarId, session.role, session.isDeveloper, session.wilayah]);
 
   // Summary counts
   const totalCount = filteredByRoleRecords.length;

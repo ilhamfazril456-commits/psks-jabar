@@ -860,13 +860,13 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    // Only subscribe to admin_accounts if the user is an active logged in admin
-    if (session.statusActive !== 'SAH_TERDAFTAR') {
+    // Subscribe to admin_accounts if the user is an active logged in admin OR if the gate modal is open
+    if (session.statusActive !== 'SAH_TERDAFTAR' && !gateModalOpen) {
       return;
     }
 
     let unsubscribe: (() => void) | null = null;
-    const delay = session.statusActive === 'SAH_TERDAFTAR' ? 100 : 2500;
+    const delay = (session.statusActive === 'SAH_TERDAFTAR' || gateModalOpen) ? 100 : 2500;
     const timer = setTimeout(() => {
       unsubscribe = subscribeToCollection(
         'admin_accounts',

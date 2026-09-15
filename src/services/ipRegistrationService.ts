@@ -353,7 +353,7 @@ export async function recordAccountRegistration(
 }
 
 /**
- * Prune account when deleted by Admin so quota is refunded/decremented.
+ * Prune account when deleted by Admin so quota is refunded/decremented in real time.
  */
 export async function removeAccountFromQuota(
   username: string,
@@ -365,7 +365,7 @@ export async function removeAccountFromQuota(
 
   const hasValidPublicIp = Boolean(ip && !isPrivateOrLocalIp(ip));
 
-  // 1. Update localStorage
+  // 1. Update localStorage immediately on current device
   try {
     const raw = localStorage.getItem('simpsks_device_registered_accounts');
     if (raw) {
@@ -375,43 +375,92 @@ export async function removeAccountFromQuota(
     }
   } catch {}
 
-  // 2. Remove from Firestore
-  if (deviceId || (hasValidPublicIp && ip)) {
+  // 2. Real-time broadcast and Firestore synchronization
+  try {
+    const [{ doc, getDoc, setDoc, collection, query, where, getDocs }, { db }] = await Promise.all([
+      import('firebase/firestore'),
+      import('../lib/firebase')
+    ]);
+
+    // 2.1 Broadcast deletion to system_deleted_accounts so ALL devices listening receive instant refund
     try {
-      const [{ doc, getDoc, setDoc }, { db }] = await Promise.all([
-        import('firebase/firestore'),
-        import('../lib/firebase')
-      ]);
-
-      if (deviceId) {
-        try {
-          const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
-          const devSnap = await getDoc(devDocRef);
-          if (devSnap.exists()) {
-            const existing: string[] = devSnap.data().registeredAccounts || [];
-            const filtered = existing.filter((u) => u.toLowerCase() !== uname);
-            await setDoc(
-              devDocRef,
-              {
-                registeredAccounts: filtered,
-                count: filtered.length,
-                updatedAt: new Date().toISOString(),
-              },
-              { merge: true }
-            );
-          }
-        } catch {}
+      const deletedDocRef = doc(db, 'ip_registrations', 'system_deleted_accounts');
+      const deletedSnap = await getDoc(deletedDocRef);
+      let existingDeleted: string[] = [];
+      if (deletedSnap.exists()) {
+        existingDeleted = deletedSnap.data().deletedAccounts || [];
       }
+      if (!existingDeleted.some((s: string) => String(s || '').toLowerCase().trim() === uname)) {
+        existingDeleted.push(uname);
+      }
+      await setDoc(
+        deletedDocRef,
+        {
+          deletedAccounts: existingDeleted,
+          lastDeletedUsername: uname,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('[Quota Pruning] Error broadcasting system_deleted_accounts:', err);
+    }
 
-      if (hasValidPublicIp && ip) {
+    // 2.2 Prune specific device doc if provided
+    if (deviceId) {
+      try {
+        const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
+        const devSnap = await getDoc(devDocRef);
+        if (devSnap.exists()) {
+          const existing: string[] = devSnap.data().registeredAccounts || [];
+          const filtered = existing.filter((u) => u.toLowerCase() !== uname);
+          await setDoc(
+            devDocRef,
+            {
+              registeredAccounts: filtered,
+              count: filtered.length,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      } catch {}
+    }
+
+    // 2.3 Prune specific IP doc if provided
+    if (hasValidPublicIp && ip) {
+      try {
+        const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
+        const ipSnap = await getDoc(ipDocRef);
+        if (ipSnap.exists()) {
+          const existing: string[] = ipSnap.data().registeredAccounts || [];
+          const filtered = existing.filter((u) => u.toLowerCase() !== uname);
+          await setDoc(
+            ipDocRef,
+            {
+              registeredAccounts: filtered,
+              count: filtered.length,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      } catch {}
+    }
+
+    // 2.4 Deep-prune: Search ANY ip_registrations docs containing this username (covers unknown or changed deviceId)
+    try {
+      const variants = Array.from(new Set([uname, username.trim()]));
+      for (const cand of variants) {
         try {
-          const ipDocRef = doc(db, 'ip_registrations', getSafeIpDocId(ip));
-          const ipSnap = await getDoc(ipDocRef);
-          if (ipSnap.exists()) {
-            const existing: string[] = ipSnap.data().registeredAccounts || [];
+          const q = query(collection(db, 'ip_registrations'), where('registeredAccounts', 'array-contains', cand));
+          const querySnap = await getDocs(q);
+          for (const docSnap of querySnap.docs) {
+            const data = docSnap.data();
+            const existing: string[] = data.registeredAccounts || [];
             const filtered = existing.filter((u) => u.toLowerCase() !== uname);
             await setDoc(
-              ipDocRef,
+              docSnap.ref,
               {
                 registeredAccounts: filtered,
                 count: filtered.length,
@@ -423,6 +472,9 @@ export async function removeAccountFromQuota(
         } catch {}
       }
     } catch {}
+
+  } catch (err) {
+    console.warn('[Quota Pruning] Firestore dynamic load error:', err);
   }
 
   if (typeof window !== 'undefined') {
@@ -444,13 +496,14 @@ export async function reconcileDeviceAndIpQuota(
 
 /**
  * Real-time Quota Subscription
- * Listens to Firestore ip_registrations documents for THIS client's specific Device ONLY.
+ * Listens to Firestore ip_registrations documents for THIS client's specific Device ONLY,
+ * combined with instant real-time listening to deleted accounts broadcast.
  * Ensures strict device-level quota isolation:
  * - Device with 2 accounts shows 2/3 (Tersedia 1)
  * - Device with 1 account shows 1/3 (Tersedia 2)
  * - Device with 0 accounts shows 0/3 (Tersedia 3)
  * - Device with 3 accounts shows 3/3 (Maksimal)
- * Completely prevents race condition wiping and cross-device quota leakage.
+ * When Superadmin deletes an account, quota refunds automatically in real time without refreshing or deleting browser history.
  */
 export function subscribeToClientQuota(
   _ip: string,
@@ -460,18 +513,25 @@ export function subscribeToClientQuota(
 ): () => void {
   let deviceRegisteredAccounts: string[] = [];
   let isSubscribed = true;
+  let systemDeletedAccounts: string[] = [];
+  let isDevDocLoaded = false;
 
   const evaluate = () => {
     if (!isSubscribed) return;
 
-    // 1. Read deleted accounts list so deleted accounts don't consume quota
-    let deletedList: string[] = [];
+    // 1. Read deleted accounts list from system broadcast + local tombstone
+    let deletedList: string[] = [...systemDeletedAccounts];
     try {
       const rawDeleted = localStorage.getItem('psks_deleted_admin_ids');
       if (rawDeleted) {
         const parsed = JSON.parse(rawDeleted);
         if (Array.isArray(parsed)) {
-          deletedList = parsed.map((s) => String(s || '').toLowerCase().trim());
+          parsed.forEach((s) => {
+            const clean = String(s || '').toLowerCase().trim();
+            if (clean && !deletedList.includes(clean)) {
+              deletedList.push(clean);
+            }
+          });
         }
       }
     } catch {}
@@ -495,7 +555,7 @@ export function subscribeToClientQuota(
       const clean = String(rawName || '').trim();
       const lower = clean.toLowerCase();
       if (!lower) return;
-      if (deletedList.includes(lower)) return; // Exclude deleted accounts
+      if (deletedList.includes(lower)) return; // Exclude deleted accounts (local + system-wide real-time)
 
       // If accounts list is loaded from database, confirm this account is still active in database
       if (adminAccounts && adminAccounts.length > 0) {
@@ -503,7 +563,7 @@ export function subscribeToClientQuota(
           (a) => (a.username || '').toLowerCase().trim() === lower
         );
         if (!existsInDb) {
-          return; // Account was deleted/removed from database, release slot!
+          return; // Account was deleted/removed from database, release slot immediately!
         }
       }
 
@@ -512,11 +572,19 @@ export function subscribeToClientQuota(
       }
     };
 
-    // Add local accounts from this device
-    localList.forEach(tryAddAccount);
-
-    // Add Firestore device accounts for THIS specific device doc (dev_${deviceId})
-    deviceRegisteredAccounts.forEach(tryAddAccount);
+    // If Firestore device document has loaded, it is authoritative for registered accounts
+    if (isDevDocLoaded) {
+      deviceRegisteredAccounts.forEach(tryAddAccount);
+      localList.forEach((acc) => {
+        const lower = acc.toLowerCase().trim();
+        if (deviceRegisteredAccounts.some((d) => d.toLowerCase().trim() === lower)) {
+          tryAddAccount(acc);
+        }
+      });
+    } else {
+      // Before Firestore connects, use local accounts as fast fallback
+      localList.forEach(tryAddAccount);
+    }
 
     // Add DB accounts explicitly tagged with THIS deviceId
     if (deviceId && adminAccounts && adminAccounts.length > 0) {
@@ -530,7 +598,7 @@ export function subscribeToClientQuota(
     const validAccounts = Array.from(normalizedMap.values()).slice(0, 3);
     const count = validAccounts.length;
 
-    // Keep localStorage in sync with active valid accounts
+    // Automatically clean & synchronize localStorage so deleted accounts don't linger
     try {
       localStorage.setItem('simpsks_device_registered_accounts', JSON.stringify(validAccounts));
     } catch {}
@@ -541,26 +609,31 @@ export function subscribeToClientQuota(
       isQuotaFull: count >= 3,
       ip: '',
       deviceId,
-      isRealtimeSynced: true,
+      isRealtimeSynced: isDevDocLoaded,
     });
   };
 
   // Initial evaluation with zero network delay
   evaluate();
 
-  // Subscribe to THIS Device document in Firestore asynchronously without blocking main thread
   let unsubDev: (() => void) | null = null;
-  if (deviceId) {
-    Promise.all([
-      import('firebase/firestore'),
-      import('../lib/firebase')
-    ]).then(([{ doc, onSnapshot }, { db }]) => {
-      if (!isSubscribed) return;
+  let unsubDeleted: (() => void) | null = null;
+
+  // Asynchronously connect Firestore listeners without blocking PageSpeed or main thread
+  Promise.all([
+    import('firebase/firestore'),
+    import('../lib/firebase')
+  ]).then(([{ doc, onSnapshot }, { db }]) => {
+    if (!isSubscribed) return;
+
+    // A. Listen to THIS device document
+    if (deviceId) {
       try {
         const devDocRef = doc(db, 'ip_registrations', getSafeDeviceDocId(deviceId));
         unsubDev = onSnapshot(
           devDocRef,
           (snap) => {
+            isDevDocLoaded = true;
             if (snap.exists()) {
               deviceRegisteredAccounts = snap.data().registeredAccounts || [];
             } else {
@@ -573,8 +646,26 @@ export function subscribeToClientQuota(
           }
         );
       } catch {}
-    }).catch(() => {});
-  }
+    }
+
+    // B. Real-time Subscription to system_deleted_accounts: Instant refund of quota when any account is deleted
+    try {
+      const deletedDocRef = doc(db, 'ip_registrations', 'system_deleted_accounts');
+      unsubDeleted = onSnapshot(
+        deletedDocRef,
+        (snap) => {
+          if (snap.exists()) {
+            const raw = snap.data().deletedAccounts || [];
+            if (Array.isArray(raw)) {
+              systemDeletedAccounts = raw.map((s: string) => String(s || '').toLowerCase().trim());
+            }
+          }
+          evaluate();
+        },
+        () => {}
+      );
+    } catch {}
+  }).catch(() => {});
 
   // Listen to local window events
   const handleLocalChange = () => {
@@ -588,6 +679,7 @@ export function subscribeToClientQuota(
   return () => {
     isSubscribed = false;
     if (unsubDev) unsubDev();
+    if (unsubDeleted) unsubDeleted();
     if (typeof window !== 'undefined') {
       window.removeEventListener('simpsks_device_accounts_changed', handleLocalChange);
       window.removeEventListener('storage', handleLocalChange);

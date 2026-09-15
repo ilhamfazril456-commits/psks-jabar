@@ -167,9 +167,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, [view]);
 
-  // Subscribe to real-time Firestore quota updates for this device only when user is on registration view
+  // Subscribe to real-time Firestore quota updates for this device whenever modal is open
   useEffect(() => {
-    if (!isOpen || view !== 'register') return;
+    if (!isOpen) return;
 
     const unsubscribe = subscribeToClientQuota(
       detectedIp,
@@ -626,31 +626,31 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         {/* Split-Screen Card */}
         <div className="relative w-full h-full max-h-[92vh] sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
           
-          {/* ================= LEFT COLUMN: BIRU JABAR GRADIENT BRANDING (DESKTOP / LAPTOP) ================= */}
-          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#143b7d] via-[#0f2b5c] to-[#091f42] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0">
+          {/* ================= LEFT COLUMN: DISTINCT ROYAL BLUE BRANDING (DESKTOP / LAPTOP) ================= */}
+          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#1d63d2] via-[#1a53b5] to-[#113a84] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/30 shadow-lg">
             
-            {/* Organic Curved Decorative Circles */}
-            <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-blue-500/15 blur-[2px] pointer-events-none" />
-            <div className="absolute top-1/2 -left-20 w-40 h-40 rounded-full bg-blue-400/10 blur-[1px] pointer-events-none" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
+            {/* Organic Curved Decorative Accents with clean contrast */}
+            <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-[1px] pointer-events-none" />
+            <div className="absolute top-1/2 -left-20 w-40 h-40 rounded-full bg-blue-300/20 pointer-events-none" />
+            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
 
             {/* Top Brand Logo & Title */}
             <div className="relative z-10 flex flex-col items-center text-center">
-              <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-12 h-12 mb-1.5" />
-              <span className="text-xs font-black tracking-widest text-blue-200 uppercase">
+              <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-12 h-12 mb-1.5 drop-shadow-md" />
+              <span className="text-xs font-black tracking-widest text-white uppercase drop-shadow-xs">
                 PSKS JABAR
               </span>
-              <span className="text-[9.5px] text-blue-200 font-medium">
+              <span className="text-[9.5px] text-blue-100 font-semibold">
                 Pilar Sosial Jawa Barat
               </span>
             </div>
 
             {/* Middle Welcome Statement */}
             <div className="relative z-10 my-auto py-1 text-center flex flex-col items-center">
-              <h2 className="text-lg lg:text-xl font-black text-white tracking-tight leading-tight mb-1">
+              <h2 className="text-lg lg:text-xl font-black text-white tracking-tight leading-tight mb-1 drop-shadow-xs">
                 Welcome Back!
               </h2>
-              <p className="text-[10.5px] lg:text-[11px] text-blue-100 font-medium leading-relaxed max-w-xs mx-auto mb-3">
+              <p className="text-[10.5px] lg:text-[11px] text-blue-50 font-medium leading-relaxed max-w-xs mx-auto mb-3">
                 Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.
               </p>
 
@@ -662,9 +662,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     setErrorMessage('');
                     setView('register');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
+                  className="inline-flex items-center justify-center gap-1.5 border border-white/60 hover:border-white bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  <UserPlus className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <UserPlus className="w-3.5 h-3.5 text-[#ffd700]" />
                   <span>Daftar Akun Baru</span>
                 </button>
               ) : (
@@ -674,65 +674,61 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     setErrorMessage('');
                     setView('main');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-blue-300/80 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
+                  className="inline-flex items-center justify-center gap-1.5 border border-white/60 hover:border-white bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 text-blue-200" />
+                  <ArrowLeft className="w-3.5 h-3.5 text-blue-100" />
                   <span>Menu Utama</span>
                 </button>
               )}
             </div>
 
             {/* Bottom Sub-Links */}
-            <div className="relative z-10 pt-1.5 border-t border-blue-700/40 text-center">
-              <p className="text-[8.5px] text-blue-200/70 font-bold tracking-wider uppercase">
+            <div className="relative z-10 pt-1.5 border-t border-white/20 text-center">
+              <p className="text-[8.5px] text-blue-100/90 font-bold tracking-wider uppercase">
                 DINAS SOSIAL PROVINSI JAWA BARAT
               </p>
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: CLEAN WHITE FORM SECTION ================= */}
-          <div className="w-full md:w-[62%] lg:w-[60%] bg-white px-4 py-3 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0">
+          {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
+          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-4 py-3 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 transition-colors duration-300`}>
             
             {/* Top Right Curved Blue Accent Wave */}
-            <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-blue-600/10 pointer-events-none" />
-            <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-blue-700/15 pointer-events-none" />
+            <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-blue-400/15 bg-blue-600/10' : 'bg-blue-600/10'} pointer-events-none`} />
+            <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-[#d4af37]/10 bg-blue-700/15' : 'bg-blue-700/15'} pointer-events-none`} />
 
             {/* ========================================================================= */}
-            {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (INTRO SELAMAT DATANG & BUTTON MULAI) */}
+            {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (INTRO BIRU SELAMAT DATANG & BUTTON MULAI) */}
             {/* ========================================================================= */}
             {showMobileIntro && view === 'main' && (
-              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center py-2 px-1 animate-fadeIn">
+              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center py-2 px-1 animate-fadeIn text-white">
                 {/* Bagian Atas: Logo Resmi & Badge Provinsi Jawa Barat */}
                 <div className="flex flex-col items-center pt-1">
-                  <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-50 to-amber-50/40 border border-blue-200/80 shadow-xs mb-2">
+                  <div className="p-2.5 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-2">
                     <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 sm:w-16 sm:h-16" />
                   </div>
-                  <span className="text-[9.5px] font-black uppercase tracking-widest text-[#0f2b5c] bg-blue-100/90 px-3 py-0.5 rounded-full border border-blue-200">
+                  <span className="text-[9.5px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-3 py-0.5 rounded-full border border-white/20">
                     PEMERINTAH PROVINSI JAWA BARAT
                   </span>
-                  <span className="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                  <span className="text-[8.5px] font-bold text-blue-200 uppercase tracking-wider mt-1">
                     Dinas Sosial Provinsi Jawa Barat
                   </span>
                 </div>
 
                 {/* Bagian Tengah: Teks Sambutan & Identitas Sistem */}
                 <div className="my-auto py-1.5 flex flex-col items-center">
-                  <h2 className="text-xl sm:text-2xl font-black text-[#0f2b5c] tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
                     Selamat Datang
                   </h2>
-                  <p className="text-[11px] sm:text-xs font-bold text-slate-700 leading-snug mt-1 max-w-[280px]">
+                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 leading-snug mt-1 max-w-xs px-2">
                     Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial (PSKS)
                   </p>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-[#043e2e] text-[10px] font-black mt-2 shadow-2xs">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>PORTAL 10 PILAR SOSIAL JABAR</span>
+                  <div className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[10px] sm:text-[10.5px] font-bold mt-2.5 shadow-2xs max-w-xs text-center leading-relaxed">
+                    <span>Layanan integrasi satu data, registrasi mandiri, dan verifikasi pilar sosial se-Jawa Barat.</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed mt-2 max-w-[270px]">
-                    Layanan integrasi satu data, registrasi mandiri, dan verifikasi pilar sosial se-Jawa Barat.
-                  </p>
                 </div>
 
-                {/* Bagian Bawah: Button MULAI */}
+                {/* Bagian Bawah: Button MULAI & Copyright Lapisan 1 (Satu-Satunya) */}
                 <div className="w-full space-y-2 pt-1 pb-0.5">
                   <button
                     type="button"
@@ -743,9 +739,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     <span>MULAI</span>
                     <ArrowRight className="w-5 h-5 text-[#043e2e] stroke-[2.5]" />
                   </button>
-                  <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-slate-400 font-semibold">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-blue-200/80 font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span>Portal Resmi Terverifikasi • 27 Kab/Kota</span>
+                  </div>
+                  {/* Copyright Resmi Lapisan 1 (Satu-Satunya) */}
+                  <div className="pt-2 border-t border-blue-400/25 w-full">
+                    <p className="text-[8px] sm:text-[8.5px] text-blue-100 font-semibold tracking-tight text-center leading-snug break-words px-1">
+                      © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1673,34 +1675,41 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Form Footer Links */}
-            <div className="relative z-10 pt-1.5 border-t border-slate-200 flex items-center justify-between text-[9.5px] text-slate-600 font-semibold shrink-0">
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPrivacyTermsInitialTab('privacy');
-                    setIsPrivacyTermsOpen(true);
-                  }}
-                  className="hover:text-blue-700 hover:underline cursor-pointer font-semibold"
-                >
-                  Kebijakan Privasi
-                </button>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPrivacyTermsInitialTab('terms');
-                    setIsPrivacyTermsOpen(true);
-                  }}
-                  className="hover:text-blue-700 hover:underline cursor-pointer font-semibold"
-                >
-                  Syarat Layanan
-                </button>
+            <div className={`relative z-10 pt-1.5 border-t border-slate-200 flex flex-col gap-1 text-[9.5px] text-slate-600 font-semibold shrink-0 ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrivacyTermsInitialTab('privacy');
+                      setIsPrivacyTermsOpen(true);
+                    }}
+                    className="hover:text-blue-700 hover:underline cursor-pointer font-semibold"
+                  >
+                    Kebijakan Privasi
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrivacyTermsInitialTab('terms');
+                      setIsPrivacyTermsOpen(true);
+                    }}
+                    className="hover:text-blue-700 hover:underline cursor-pointer font-semibold"
+                  >
+                    Syarat Layanan
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1 text-blue-800 font-bold">
+                  <ShieldAlert className="w-3 h-3 text-[#d4af37]" />
+                  <span>Enkripsi PBKDF2</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1 text-blue-800 font-bold">
-                <ShieldAlert className="w-3 h-3 text-[#d4af37]" />
-                <span>Enkripsi PBKDF2</span>
+              {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) */}
+              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-medium text-center leading-snug break-words px-1 pt-0.5">
+                © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
 
@@ -1710,13 +1719,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
       </main>
 
-      {/* Bottom Page Footer */}
-      <footer className="relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto px-3 sm:px-4 py-1 sm:py-1.5 flex flex-col sm:flex-row items-center justify-between text-[9.5px] sm:text-[10px] text-blue-100/75 border border-blue-800/40 bg-[#071733]/80 backdrop-blur-md shrink-0 rounded-xl shadow-lg">
-        <div className="flex items-center gap-1.5 font-medium">
-          <Building2 className="w-3.5 h-3.5 text-[#d4af37]" />
-          <span>© Dinas Sosial Provinsi Jawa Barat • Hak Cipta Dilindungi</span>
+      {/* Bottom Page Footer (Khusus Desktop - Satu-Satunya Copyright di Layar Desktop) */}
+      <footer className="hidden md:flex relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto px-4 py-1.5 items-center justify-between text-[10px] text-blue-100/90 border border-blue-800/40 bg-[#071733]/85 backdrop-blur-md shrink-0 rounded-xl shadow-lg">
+        <div className="flex items-center gap-1.5 font-semibold">
+          <Building2 className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+          <span>© Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang</span>
         </div>
-        <div className="text-[9.5px] sm:text-[10px] text-blue-300 font-semibold mt-0.5 sm:mt-0">
+        <div className="text-[9.5px] text-blue-300 font-semibold">
           Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)
         </div>
       </footer>
