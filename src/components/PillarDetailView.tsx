@@ -301,19 +301,22 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const regionalCounts = useMemo(() => {
     const counts: Record<string, { total: number; gov: number; swasta: number }> = {};
     JABAR_REGIONS.forEach((r) => (counts[r] = { total: 0, gov: 0, swasta: 0 }));
-    dataRecords.forEach((r) => {
-      if (!counts[r.wilayah]) {
-        counts[r.wilayah] = { total: 0, gov: 0, swasta: 0 };
+    const safeRecords = Array.isArray(dataRecords) ? dataRecords : [];
+    safeRecords.forEach((r) => {
+      if (!r || typeof r !== 'object') return;
+      const wil = r.wilayah || 'Kota Bandung';
+      if (!counts[wil]) {
+        counts[wil] = { total: 0, gov: 0, swasta: 0 };
       }
-      counts[r.wilayah].total++;
-      if (isPeksosGov(r)) {
-        counts[r.wilayah].gov++;
+      counts[wil].total++;
+      if (typeof isPeksosGov === 'function' && isPeksosGov(r)) {
+        counts[wil].gov++;
       } else {
-        counts[r.wilayah].swasta++;
+        counts[wil].swasta++;
       }
     });
     return counts;
-  }, [dataRecords]);
+  }, [dataRecords, isPeksosGov]);
 
   // Chart regions to display
   const chartRegions = useMemo(() => {

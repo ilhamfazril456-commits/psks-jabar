@@ -414,10 +414,16 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       stats[region] = { total: 0, byPillar: {} };
     });
 
+    if (!allPillarData || typeof allPillarData !== 'object') {
+      return stats;
+    }
+
     Object.entries(allPillarData).forEach(([pillarKey, records]) => {
       if (pillarFilter !== 'ALL' && pillarKey !== pillarFilter) return;
+      if (!Array.isArray(records)) return;
 
       records.forEach((record) => {
+        if (!record || typeof record !== 'object') return;
         const rawWil = (record.wilayah || '').trim();
         const matchedRegion =
           KAB_KOTA_ONLY.find((k) => k.toLowerCase() === rawWil.toLowerCase()) ||
@@ -425,7 +431,10 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
           'Kota Bandung';
 
         if (matchedRegion && stats[matchedRegion]) {
-          stats[matchedRegion].total += 1;
+          stats[matchedRegion].total = (stats[matchedRegion].total || 0) + 1;
+          if (!stats[matchedRegion].byPillar) {
+            stats[matchedRegion].byPillar = {};
+          }
           stats[matchedRegion].byPillar[pillarKey] = (stats[matchedRegion].byPillar[pillarKey] || 0) + 1;
         }
       });
@@ -436,7 +445,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
 
   // Overall Statistics
   const grandTotalCount = useMemo(() => {
-    return Object.values(regionalStats).reduce((acc, curr) => acc + curr.total, 0);
+    return Object.values(regionalStats || {}).reduce((acc, curr) => acc + (curr?.total || 0), 0);
   }, [regionalStats]);
 
   // Filtered regions list
@@ -453,16 +462,18 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
 
   const activeRegionData = useMemo(() => {
     if (isAllSelected) {
-      const total = grandTotalCount;
+      const total = grandTotalCount || 0;
       const byPillar: Record<string, number> = {};
-      Object.values(regionalStats).forEach((reg) => {
-        Object.entries(reg.byPillar).forEach(([pk, count]) => {
-          byPillar[pk] = (byPillar[pk] || 0) + count;
-        });
+      Object.values(regionalStats || {}).forEach((reg) => {
+        if (reg?.byPillar) {
+          Object.entries(reg.byPillar).forEach(([pk, count]) => {
+            byPillar[pk] = (byPillar[pk] || 0) + (count || 0);
+          });
+        }
       });
       return { total, byPillar };
     }
-    return regionalStats[selectedKabKota] || { total: 0, byPillar: {} };
+    return regionalStats?.[selectedKabKota] || { total: 0, byPillar: {} };
   }, [isAllSelected, selectedKabKota, regionalStats, grandTotalCount]);
 
   const hoveredRegionData = hoveredKabKota ? regionalStats[hoveredKabKota] : null;
@@ -1230,13 +1241,13 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                   TOTAL PERSONIL PSKS TERDATA
                 </div>
                 <div className="text-3xl font-black text-amber-300 tracking-tight">
-                  {activeRegionData.total.toLocaleString('id-ID')}
+                  {(activeRegionData?.total ?? 0).toLocaleString('id-ID')}
                 </div>
                 <div className="text-[10px] text-emerald-200 font-medium mt-0.5">
                   {grandTotalCount > 0
                     ? isAllSelected
                       ? '100% data terakumulasi dari seluruh Jawa Barat'
-                      : `Menyumbang ${((activeRegionData.total / grandTotalCount) * 100).toFixed(1)}% dari total PSKS Jabar`
+                      : `Menyumbang ${(((activeRegionData?.total ?? 0) / grandTotalCount) * 100).toFixed(1)}% dari total PSKS Jabar`
                     : 'Belum ada data'}
                 </div>
               </div>
@@ -1252,7 +1263,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
 
                 <div className="space-y-1.5 max-h-[230px] overflow-y-auto pr-1 custom-scrollbar">
                   {Object.entries(PILLARS_CONFIG).map(([pillarKey, config]) => {
-                    const pillarCount = activeRegionData.byPillar[pillarKey] || 0;
+                    const pillarCount = activeRegionData?.byPillar?.[pillarKey] || 0;
                     return (
                       <div
                         key={pillarKey}

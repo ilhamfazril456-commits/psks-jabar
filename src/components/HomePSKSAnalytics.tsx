@@ -40,16 +40,17 @@ interface HomePSKSAnalyticsProps {
 
 // Ultra-fast and smooth animated number counter for real-time numeric climbing
 export function useFastAnimatedCounter(targetValue: number, durationMs: number = 650): number {
-  const [displayValue, setDisplayValue] = useState(targetValue);
-  const prevTargetRef = useRef(targetValue);
+  const safeTarget = Number.isFinite(targetValue) ? Math.max(0, targetValue) : 0;
+  const [displayValue, setDisplayValue] = useState(safeTarget);
+  const prevTargetRef = useRef(safeTarget);
 
   useEffect(() => {
     let startTimestamp: number | null = null;
     const startValue = prevTargetRef.current;
-    const change = targetValue - startValue;
+    const change = safeTarget - startValue;
 
     if (change === 0) {
-      setDisplayValue(targetValue);
+      setDisplayValue(safeTarget);
       return;
     }
 
@@ -69,8 +70,8 @@ export function useFastAnimatedCounter(targetValue: number, durationMs: number =
       if (progress < 1) {
         frameId = requestAnimationFrame(step);
       } else {
-        setDisplayValue(targetValue);
-        prevTargetRef.current = targetValue;
+        setDisplayValue(safeTarget);
+        prevTargetRef.current = safeTarget;
       }
     };
 
@@ -78,9 +79,9 @@ export function useFastAnimatedCounter(targetValue: number, durationMs: number =
 
     return () => {
       cancelAnimationFrame(frameId);
-      prevTargetRef.current = targetValue;
+      prevTargetRef.current = safeTarget;
     };
-  }, [targetValue, durationMs]);
+  }, [safeTarget, durationMs]);
 
   return displayValue;
 }
@@ -170,12 +171,14 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
 
   // 1. Calculate Donut Chart Data (Distribution across 10 Pillars)
   const pillarDistributionData = useMemo(() => {
+    if (!allPillarData || typeof allPillarData !== 'object') return [];
+
     const list = Object.entries(PILLARS_CONFIG).map(([key, config]) => {
-      const records = allPillarData[key] || [];
+      const records = allPillarData && Array.isArray(allPillarData[key]) ? allPillarData[key] : [];
       return {
         id: key,
-        name: config.title,
-        shortName: config.shortName || config.title,
+        name: config.title || key,
+        shortName: config.shortName || config.title || key,
         icon: config.icon || '📌',
         count: records.length,
         color: PILLAR_COLORS[key]?.hex || '#059669',
@@ -183,16 +186,17 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       };
     });
 
-    const total = list.reduce((acc, curr) => acc + curr.count, 0) || 1;
+    const total = list.reduce((acc, curr) => acc + curr.count, 0);
+    const safeTotal = total > 0 ? total : 1;
 
     return list.map((item) => ({
       ...item,
-      percent: Math.round((item.count / total) * 100),
+      percent: total > 0 ? Math.round((item.count / safeTotal) * 100) : 0,
     }));
   }, [allPillarData]);
 
   const totalAllPillars = useMemo(() => {
-    return pillarDistributionData.reduce((acc, curr) => acc + curr.count, 0);
+    return pillarDistributionData.reduce((acc, curr) => acc + (Number.isFinite(curr.count) ? curr.count : 0), 0);
   }, [pillarDistributionData]);
 
   // Fast animated climb for accumulation total
@@ -200,14 +204,16 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
 
   // Determine if active slice is positioned on the left or right side of the donut to float the card on the opposite side
   const activePositionOnRight = useMemo(() => {
-    if (activeDonutIndex === null) return false;
+    if (activeDonutIndex === null || activeDonutIndex < 0 || activeDonutIndex >= pillarDistributionData.length) {
+      return false;
+    }
     let cumulative = 0;
     for (let i = 0; i < activeDonutIndex; i++) {
       cumulative += pillarDistributionData[i]?.count || 0;
     }
     const currentCount = pillarDistributionData[activeDonutIndex]?.count || 0;
     const midCount = cumulative + currentCount / 2;
-    const total = totalAllPillars || 1;
+    const total = totalAllPillars > 0 ? totalAllPillars : 1;
     const fraction = midCount / total; // 0 to 1
     // If slice center is in the left arc (0.25 to 0.75), float card on RIGHT.
     // Otherwise in the right arc, float card on LEFT.
@@ -227,21 +233,23 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       countsMap[wil] = 0;
     });
 
-    // Populate data
-    if (selectedPillarFilter === 'ALL') {
-      Object.entries(allPillarData).forEach(([_, records]) => {
-        if (!Array.isArray(records)) return;
-        records.forEach((rec) => {
-          const wil = normalizeRegion(rec.wilayah || '');
-          if (countsMap[wil] !== undefined) {
-            countsMap[wil] += 1;
-          }
+    // Populate data safely
+    if (allPillarData && typeof allPillarData === 'object') {
+      if (selectedPillarFilter === 'ALL') {
+        Object.entries(allPillarData).forEach(([_, records]) => {
+          if (!Array.isArray(records)) return;
+          records.forEach((rec) => {
+            if (!rec || typeof rec !== 'object') return;
+            const wil = normalizeRegion(rec.wilayah || '');
+            if (countsMap[wil] !== undefined) {
+              countsMap[wil] += 1;
+            }
+          });
         });
-      });
-    } else {
-      const records = allPillarData[selectedPillarFilter] || [];
-      if (Array.isArray(records)) {
+      } else {
+        const records = Array.isArray(allPillarData[selectedPillarFilter]) ? allPillarData[selectedPillarFilter] : [];
         records.forEach((rec) => {
+          if (!rec || typeof rec !== 'object') return;
           const wil = normalizeRegion(rec.wilayah || '');
           if (countsMap[wil] !== undefined) {
             countsMap[wil] += 1;

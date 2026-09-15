@@ -30,6 +30,7 @@ import { PillarsGrid } from './components/PillarsGrid';
 import { Footer } from './components/Footer';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const FloatingAnnouncementModal = React.lazy(() => import('./components/FloatingAnnouncementModal').then(m => ({ default: m.FloatingAnnouncementModal })));
 const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
@@ -749,7 +750,9 @@ export default function App() {
             for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
               fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
             }
-            setAllPillarData(fallback);
+            React.startTransition(() => {
+              setAllPillarData(fallback);
+            });
             try {
               localStorage.setItem('psks_all_pillar_data', JSON.stringify(fallback));
               localStorage.setItem('psks_cache_timestamp', String(Date.now()));
@@ -759,24 +762,25 @@ export default function App() {
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => (loaded[k] = []));
 
             docs.forEach(({ id: docId, data }) => {
+              if (!data || typeof data !== 'object') return;
               if (deletedIds.includes(docId)) return;
 
               const record = data as PSKSDataRecord & { pillarId?: string };
-              const pKey = record.pillarId || 'peksos';
+              const pKey = record.pillarId && DEFAULT_PILLAR_DATA[record.pillarId] ? record.pillarId : 'peksos';
               if (!loaded[pKey]) {
                 loaded[pKey] = [];
               }
               loaded[pKey].push({
                 ...record,
                 id: docId,
-                wilayah: record.wilayah || 'Kota Bandung',
-                kec: record.kec || 'Kecamatan Pusat',
-                nama: record.nama || '',
-                nik: record.nik || '',
-                sertifikasi: record.sertifikasi || 'CERT-2026',
-                hp: record.hp || '081234567890',
-                lembaga: record.lembaga || 'Lembaga Pemerintah',
-                status: record.status || 'Aktif',
+                wilayah: typeof record.wilayah === 'string' ? record.wilayah : 'Kota Bandung',
+                kec: typeof record.kec === 'string' ? record.kec : 'Kecamatan Pusat',
+                nama: typeof record.nama === 'string' ? record.nama : 'Anggota PSKS',
+                nik: typeof record.nik === 'string' ? record.nik : '',
+                sertifikasi: typeof record.sertifikasi === 'string' ? record.sertifikasi : 'CERT-2026',
+                hp: typeof record.hp === 'string' ? record.hp : '081234567890',
+                lembaga: typeof record.lembaga === 'string' ? record.lembaga : 'Lembaga Pemerintah',
+                status: typeof record.status === 'string' ? record.status : 'Aktif',
               });
             });
 
@@ -788,7 +792,9 @@ export default function App() {
               }
             });
 
-            setAllPillarData(loaded);
+            React.startTransition(() => {
+              setAllPillarData(loaded);
+            });
             try {
               localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
               localStorage.setItem('psks_cache_timestamp', String(Date.now()));
@@ -811,7 +817,9 @@ export default function App() {
             if (cached) {
               const parsed = JSON.parse(cached);
               if (parsed && typeof parsed === 'object') {
-                setAllPillarData(parsed);
+                React.startTransition(() => {
+                  setAllPillarData(parsed);
+                });
                 return;
               }
             }
@@ -821,7 +829,9 @@ export default function App() {
           for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
             fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
           }
-          setAllPillarData(fallback);
+          React.startTransition(() => {
+            setAllPillarData(fallback);
+          });
         }
       );
     }, 400);
@@ -1373,23 +1383,50 @@ export default function App() {
       'registration_submissions',
       (docs) => {
         if (!docs || docs.length === 0) {
-          setSubmissions([]);
+          React.startTransition(() => {
+            setSubmissions([]);
+          });
           try {
             localStorage.setItem('psks_registration_submissions', JSON.stringify([]));
           } catch {}
         } else {
           const loaded: PillarRegistrationSubmission[] = [];
           docs.forEach(({ id: docId, data }) => {
+            if (!data || typeof data !== 'object') return;
+            const sub = data as any;
             loaded.push({
               id: docId,
-              ...(data as Omit<PillarRegistrationSubmission, 'id'>),
-            });
+              nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar Baru',
+              nik: typeof sub.nik === 'string' ? sub.nik : '',
+              hp: typeof sub.hp === 'string' ? sub.hp : '',
+              wilayah: typeof sub.wilayah === 'string' ? sub.wilayah : 'Kota Bandung',
+              kec: typeof sub.kec === 'string' ? sub.kec : (typeof sub.kecamatan === 'string' ? sub.kecamatan : ''),
+              pillarId: (typeof sub.pillarId === 'string' && sub.pillarId) ? sub.pillarId : 'peksos',
+              status: sub.status || 'PENDING',
+              submittedByName: typeof sub.submittedByName === 'string' ? sub.submittedByName : (typeof sub.nama === 'string' ? sub.nama : 'Pemohon'),
+              submittedByRole: typeof sub.submittedByRole === 'string' ? sub.submittedByRole : 'user',
+              submittedAt: sub.submittedAt || new Date().toISOString(),
+              submittedAtFormatted: typeof sub.submittedAtFormatted === 'string' ? sub.submittedAtFormatted : '',
+              recordData: sub.recordData || {
+                wilayah: typeof sub.wilayah === 'string' ? sub.wilayah : 'Kota Bandung',
+                kec: typeof sub.kec === 'string' ? sub.kec : '',
+                nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar',
+                nik: typeof sub.nik === 'string' ? sub.nik : '',
+                sertifikasi: 'CERT-2026',
+                hp: typeof sub.hp === 'string' ? sub.hp : '',
+                status: 'Aktif',
+              },
+              ...sub,
+            } as PillarRegistrationSubmission);
           });
-          loaded.sort(
-            (a, b) =>
-              new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-          );
-          setSubmissions(loaded);
+          loaded.sort((a, b) => {
+            const timeA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+            const timeB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+            return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
+          });
+          React.startTransition(() => {
+            setSubmissions(loaded);
+          });
           try {
             localStorage.setItem('psks_registration_submissions', JSON.stringify(loaded));
           } catch {}
@@ -1437,16 +1474,29 @@ export default function App() {
         } else {
           const loaded: TaskItem[] = [];
           docs.forEach(({ id: docId, data }) => {
+            if (!data || typeof data !== 'object') return;
+            const task = data as any;
             loaded.push({
               id: docId,
-              ...(data as Omit<TaskItem, 'id'>),
-            });
+              title: typeof task.title === 'string' ? task.title : 'Tugas PSKS',
+              description: typeof task.description === 'string' ? task.description : '',
+              targetWilayah: typeof task.targetWilayah === 'string' ? task.targetWilayah : (typeof task.wilayah === 'string' ? task.wilayah : 'Semua Wilayah'),
+              priority: task.priority || 'NORMAL',
+              status: task.status || 'PENDING',
+              assignedBy: typeof task.assignedBy === 'string' ? task.assignedBy : 'Superadmin Jabar',
+              createdAt: typeof task.createdAt === 'string' ? task.createdAt : new Date().toISOString(),
+              createdAtFormatted: typeof task.createdAtFormatted === 'string' ? task.createdAtFormatted : '',
+              ...task,
+            } as TaskItem);
           });
-          loaded.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setTaskItems(loaded);
+          loaded.sort((a, b) => {
+            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
+          });
+          React.startTransition(() => {
+            setTaskItems(loaded);
+          });
           try {
             localStorage.setItem('psks_task_items', JSON.stringify(loaded));
           } catch {}
@@ -2896,14 +2946,16 @@ export default function App() {
             isTabActive={currentTab === 'beranda'}
           />
           <AboutSection />
-            <React.Suspense fallback={null}>
-              <HomePSKSAnalytics
-                allPillarData={allPillarData}
-                session={session}
-                onSelectPillar={handleSelectPillar}
-                onScrollToGrid={handleScrollToGrid}
-              />
-            </React.Suspense>
+            <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData]}>
+              <React.Suspense fallback={null}>
+                <HomePSKSAnalytics
+                  allPillarData={allPillarData}
+                  session={session}
+                  onSelectPillar={handleSelectPillar}
+                  onScrollToGrid={handleScrollToGrid}
+                />
+              </React.Suspense>
+            </ErrorBoundary>
             <BannerBadge session={session} />
             <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} />
 
@@ -2981,9 +3033,11 @@ export default function App() {
               </section>
             )}
 
-            <React.Suspense fallback={null}>
-              <JabarRegionalMap allPillarData={allPillarData} />
-            </React.Suspense>
+            <ErrorBoundary fallbackMode="inline" fallbackTitle="Peta Sebaran Wilayah PSKS" resetKeys={[allPillarData]}>
+              <React.Suspense fallback={null}>
+                <JabarRegionalMap allPillarData={allPillarData} />
+              </React.Suspense>
+            </ErrorBoundary>
 
             {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && session.statusActive === 'SAH_TERDAFTAR' && (
               <React.Suspense fallback={null}>

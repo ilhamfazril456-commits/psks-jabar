@@ -28,10 +28,13 @@ export const PillarTable: React.FC<PillarTableProps> = ({
 
   const isStaffOrAdmin = session.role !== 'user';
 
+  // Ensure records are always a valid array
+  const safeDisplayRecords = Array.isArray(displayRecords) ? displayRecords : [];
+
   // For Superadmin and Developer, sort records by West Java regional hierarchy (Prov. Jabar -> Kab. Bogor -> ... -> Kota Banjar)
   const recordsToRender = isSuperOrDev
-    ? sortRecordsByJabarRegion(displayRecords)
-    : displayRecords;
+    ? sortRecordsByJabarRegion(safeDisplayRecords)
+    : safeDisplayRecords;
 
   const getColSpan = () => {
     const hasAction = session.role !== 'user';
