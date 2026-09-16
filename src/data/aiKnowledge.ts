@@ -146,6 +146,55 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, kami tidak bisa memproses permintaan atau pertanyaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jabar.`;
   }
 
+  // 0.00 ANTI-PROMPT INJECTION & DEVELOPER/ADMIN IMPERSONATION GUARD (ZERO-TRUST RBAC)
+  const isImpersonationAttempt =
+    !isDeveloperUser &&
+    (
+      /\b(saya|aku|abdi|urang|gue|gw|kami)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(q) ||
+      /\b(lohh?|lahh?|ehh?|woi|weh)?\s*(saya|aku|abdi|urang|gue|gw)\s+(kan\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(q) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(developer|developernya|pengembang|pembuat|kreator|arsitek|pemilik|owner|programmer|yang bikin|yang buat|yang ngoding)\b/i.test(q) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(superadmin|admin|administrator)\b/i.test(q) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+.*?(developer|ilham).*?(masuk|lupa|password|login|user)\b/i.test(q) ||
+      /\b(buka\s+akses|bypass|beri\s+izin).*?(developer|ilham|pembuat|admin)/i.test(q) ||
+      /\b(abaikan|ignore).*?(perintah|instruksi|aturan|developer|ilham)/i.test(q)
+    );
+
+  if (isImpersonationAttempt) {
+    return `Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  }
+
+  // 0.00 SENSITIVE ADMINISTRATIVE & DEVELOPER CREDENTIAL / PASSWORD CHECK (ZERO-DISCLOSURE)
+  const isDeveloperCredQuery =
+    !isDeveloperUser &&
+    (
+      q.includes('akun developer') ||
+      q.includes('login developer') ||
+      q.includes('password developer') ||
+      q.includes('sandi developer') ||
+      q.includes('pin developer') ||
+      q.includes('kredensial developer') ||
+      q.includes('rahasia developer') ||
+      q.includes('bocorkan developer') ||
+      q.includes('buka akun developer') ||
+      q.includes('akses developer') ||
+      q.includes('mana password') ||
+      q.includes('mana sandi') ||
+      q.includes('mana passwordnya') ||
+      q.includes('passwordnya apa') ||
+      q.includes('sandinya apa') ||
+      q.includes('lupa password developer') ||
+      q.includes('lupa sandi developer') ||
+      q.includes('berikan password') ||
+      q.includes('minta password') ||
+      q.includes('bocorkan password') ||
+      (q.includes('bagaimana cara masuknya') && (q.includes('developer') || q.includes('admin') || q.includes('password'))) ||
+      (q.includes('cara masuk') && q.includes('developer'))
+    );
+
+  if (isDeveloperCredQuery) {
+    return `Mohon maaf, kata sandi (*password*), kredensial, dan hak akses pengembang (*developer*) maupun administrator sistem **PSKS JABAR** merupakan informasi rahasia internal terenkripsi tingkat tinggi (*zero-disclosure*) dan sama sekali tidak dapat diberikan, di-reset, atau dibocorkan melalui asisten AI demi mematuhi UU Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas sistem.\n\nApabila Anda adalah pengembang atau administrator resmi yang memiliki hak akses, silakan masuk melalui menu login resmi sistem.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  }
+
   // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK (STRICT HARDENING)
   const isAskingAdminAccess =
     !isDeveloperUser &&
@@ -613,7 +662,40 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     );
 
   // 0.6C: KONFIRMASI / PEMAHAMAN MULTI-TURN PENGGUNA TERHADAP DEVELOPER
+  const isQuestionOrSecurityRequest =
+    q.includes('?') ||
+    q.includes('mana') ||
+    q.includes('bagaimana') ||
+    q.includes('gimana') ||
+    q.includes('kenapa') ||
+    q.includes('mengapa') ||
+    q.includes('kapan') ||
+    q.includes('berapa') ||
+    q.includes('siapa') ||
+    q.includes('apakah') ||
+    q.includes('apa ') ||
+    q.endsWith('apa') ||
+    q.includes('lupa') ||
+    q.includes('password') ||
+    q.includes('sandi') ||
+    q.includes('pin') ||
+    q.includes('kredensial') ||
+    q.includes('masuk') ||
+    q.includes('login') ||
+    q.includes('bocorkan') ||
+    q.includes('minta') ||
+    q.includes('berikan') ||
+    q.includes('kasih') ||
+    q.includes('buka') ||
+    q.includes('reset') ||
+    q.includes('daftar') ||
+    q.includes('syarat') ||
+    q.includes('cara');
+
+  const hasAckEnding = /(^|\s)(ya|kan|toh|nih)\??$/i.test(q);
+
   const isConfirmingOrAcknowledgingDev =
+    !isQuestionOrSecurityRequest &&
     (
       q.startsWith('owalah') ||
       q.startsWith('oalah') ||
@@ -624,28 +706,17 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       q.startsWith('berarti') ||
       q.startsWith('ternyata') ||
       q.startsWith('pantesan') ||
-      q.includes('owalah') ||
-      q.includes('oalah') ||
       q.includes('itu pembuat') ||
       q.includes('dia yang bikin') ||
       q.includes('dia yang buat') ||
       q.includes('dia developernya') ||
       q.includes('dia pembuatnya') ||
-      q.endsWith('ya') ||
-      q.endsWith('ya?') ||
-      q.endsWith('kan') ||
-      q.endsWith('kan?') ||
-      q.endsWith('toh') ||
-      q.endsWith('nih')
+      (hasAckEnding && (q.startsWith('jadi ') || q.startsWith('berarti ')))
     ) &&
     (
       q.includes('ilham') ||
       q.includes('fazril') ||
-      q.includes('pembuat') ||
-      q.includes('developer') ||
-      q.includes('dia') ||
-      q.includes('beliau') ||
-      Boolean(previousContext && (previousContext.toLowerCase().includes('ilham') || previousContext.toLowerCase().includes('fazril') || previousContext.toLowerCase().includes('developer')))
+      ((q.includes('pembuat') || q.includes('developer')) && (q.includes('dia') || q.includes('beliau') || q.includes('siswa') || q.includes('magang')))
     );
 
   // 0.6B: PERTANYAAN OBJEK/SISTEM: "SIAPA DEVELOPER WEBSITE INI?" / "PEMBUAT APLIKASI"
@@ -1463,8 +1534,11 @@ Website PSKS JABAR merupakan pangkalan data terintegrasi resmi. Di lapangan kedi
 
   // 4.8B HUBUNGAN KESAMAAN KUBE & BADAN USAHA SOSIAL DI WEBSITE PSKS JABAR
   const isKubeBadanUsahaRelation =
-    (q.includes('kube') || q.includes('kelompok usaha')) &&
-    (q.includes('badan usaha') || q.includes('usaha sosial') || q.includes('pilar 9') || q.includes('tertera') || q.includes('tertulis')) &&
+    (
+      ((q.includes('kube') || q.includes('kelompok usaha')) &&
+      (q.includes('badan usaha') || q.includes('usaha sosial') || q.includes('pilar 9') || q.includes('website') || q.includes('web ini') || q.includes('tertera') || q.includes('tertulis') || q.includes('namanya'))) ||
+      (q.includes('badan usaha') && q.includes('kube'))
+    ) &&
     (
       q.includes('kenapa') ||
       q.includes('mengapa') ||
@@ -2186,6 +2260,65 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // Anti-Prompt Injection & Impersonation Check (Zero-Trust RBAC)
+  const isImpersonationAttempt =
+    !isDeveloperUser &&
+    (
+      /\b(saya|aku|abdi|urang|gue|gw|kami)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(normQ) ||
+      /\b(lohh?|lahh?|ehh?|woi|weh)?\s*(saya|aku|abdi|urang|gue|gw)\s+(kan\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(normQ) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(developer|developernya|pengembang|pembuat|kreator|arsitek|pemilik|owner|programmer|yang bikin|yang buat|yang ngoding)\b/i.test(normQ) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(superadmin|admin|administrator)\b/i.test(normQ) ||
+      /\b(saya|aku|abdi|urang|gue|gw)\s+.*?(developer|ilham).*?(masuk|lupa|password|login|user)\b/i.test(normQ) ||
+      /\b(buka\s+akses|bypass|beri\s+izin).*?(developer|ilham|pembuat|admin)/i.test(normQ) ||
+      /\b(abaikan|ignore).*?(perintah|instruksi|aturan|developer|ilham)/i.test(normQ)
+    );
+
+  if (isImpersonationAttempt) {
+    return {
+      finalContent: 'Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // Developer Credential & Password Guard (Zero-Disclosure)
+  const isDeveloperCredQuery =
+    !isDeveloperUser &&
+    (
+      normQ.includes('akun developer') ||
+      normQ.includes('login developer') ||
+      normQ.includes('password developer') ||
+      normQ.includes('sandi developer') ||
+      normQ.includes('pin developer') ||
+      normQ.includes('kredensial developer') ||
+      normQ.includes('rahasia developer') ||
+      normQ.includes('bocorkan developer') ||
+      normQ.includes('buka akun developer') ||
+      normQ.includes('akses developer') ||
+      normQ.includes('mana password') ||
+      normQ.includes('mana sandi') ||
+      normQ.includes('mana passwordnya') ||
+      normQ.includes('passwordnya apa') ||
+      normQ.includes('sandinya apa') ||
+      normQ.includes('lupa password developer') ||
+      normQ.includes('lupa sandi developer') ||
+      normQ.includes('berikan password') ||
+      normQ.includes('minta password') ||
+      normQ.includes('bocorkan password') ||
+      (normQ.includes('bagaimana cara masuknya') && (normQ.includes('developer') || normQ.includes('admin') || normQ.includes('password'))) ||
+      (normQ.includes('cara masuk') && normQ.includes('developer'))
+    );
+
+  if (isDeveloperCredQuery) {
+    return {
+      finalContent: 'Mohon maaf, kata sandi (*password*), kredensial, dan hak akses pengembang (*developer*) maupun administrator sistem **PSKS JABAR** merupakan informasi rahasia internal terenkripsi tingkat tinggi (*zero-disclosure*) dan sama sekali tidak dapat diberikan, di-reset, atau dibocorkan melalui asisten AI demi mematuhi UU Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas sistem.\n\nApabila Anda adalah pengembang atau administrator resmi yang memiliki hak akses, silakan masuk melalui menu login resmi sistem.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
   // Sensitive admin access check for public / user role (Strict Hardening)
   const isAskingAdminAccess =
     !isDeveloperUser &&
@@ -2301,35 +2434,61 @@ export function verifyAndTrackAnswerAccuracy(
   }
 
   // Confirmation / acknowledgment of developer or system creation
+  const isQuestionOrSecurityInVerify =
+    normQ.includes('?') ||
+    normQ.includes('mana') ||
+    normQ.includes('bagaimana') ||
+    normQ.includes('gimana') ||
+    normQ.includes('kenapa') ||
+    normQ.includes('mengapa') ||
+    normQ.includes('kapan') ||
+    normQ.includes('berapa') ||
+    normQ.includes('siapa') ||
+    normQ.includes('apakah') ||
+    normQ.includes('apa ') ||
+    normQ.endsWith('apa') ||
+    normQ.includes('lupa') ||
+    normQ.includes('password') ||
+    normQ.includes('sandi') ||
+    normQ.includes('pin') ||
+    normQ.includes('kredensial') ||
+    normQ.includes('masuk') ||
+    normQ.includes('login') ||
+    normQ.includes('bocorkan') ||
+    normQ.includes('minta') ||
+    normQ.includes('berikan') ||
+    normQ.includes('kasih') ||
+    normQ.includes('buka') ||
+    normQ.includes('reset') ||
+    normQ.includes('daftar') ||
+    normQ.includes('syarat') ||
+    normQ.includes('cara');
+
+  const hasAckEndingInVerify = /(^|\s)(ya|kan|toh|nih)\??$/i.test(normQ);
+
   const isConfirmingOrAcknowledgingDev =
+    !isQuestionOrSecurityInVerify &&
     (
-      normQ.includes('owalah') ||
-      normQ.includes('oalah') ||
-      normQ.includes('oh jadi') ||
-      normQ.includes('oh ternyata') ||
-      normQ.includes('oh begitu') ||
-      normQ.includes('oh gitu') ||
-      normQ.includes('berarti') ||
-      normQ.includes('ternyata') ||
-      normQ.includes('pantesan') ||
+      normQ.startsWith('owalah') ||
+      normQ.startsWith('oalah') ||
+      normQ.startsWith('oh jadi') ||
+      normQ.startsWith('oh ternyata') ||
+      normQ.startsWith('oh begitu') ||
+      normQ.startsWith('oh gitu') ||
+      normQ.startsWith('berarti') ||
+      normQ.startsWith('ternyata') ||
+      normQ.startsWith('pantesan') ||
       normQ.includes('itu pembuat') ||
       normQ.includes('dia yang bikin') ||
       normQ.includes('dia yang buat') ||
       normQ.includes('dia developernya') ||
       normQ.includes('dia pembuatnya') ||
-      normQ.endsWith('ya') ||
-      normQ.endsWith('kan') ||
-      normQ.endsWith('toh') ||
-      normQ.endsWith('nih')
+      (hasAckEndingInVerify && (normQ.startsWith('jadi ') || normQ.startsWith('berarti ')))
     ) &&
     (
       normQ.includes('ilham') ||
       normQ.includes('fazril') ||
-      normQ.includes('pembuat') ||
-      normQ.includes('developer') ||
-      normQ.includes('dia') ||
-      normQ.includes('beliau') ||
-      Boolean(previousContext && (previousContext.toLowerCase().includes('ilham') || previousContext.toLowerCase().includes('fazril')))
+      ((normQ.includes('pembuat') || normQ.includes('developer')) && (normQ.includes('dia') || normQ.includes('beliau') || normQ.includes('siswa') || normQ.includes('magang')))
     );
 
   // If user is confirming / acknowledging, PRESERVE Gemini's natural conversational response if available!
@@ -2344,20 +2503,26 @@ export function verifyAndTrackAnswerAccuracy(
 
   // Developer / Creator Identity Verification Check (Applies to all users without exception)
   const isAskingDeveloper =
-    normQ.includes('developer') ||
-    normQ.includes('pembuat') ||
-    normQ.includes('author') ||
-    normQ.includes('arsitek') ||
-    normQ.includes('pengembang') ||
-    normQ.includes('siapa yang buat') ||
-    normQ.includes('siapa yang bikin') ||
-    normQ.includes('yang bikin aplikasi') ||
-    normQ.includes('yang buat website') ||
-    normQ.includes('ilham fazril') ||
-    normQ.includes('ilhamfazril') ||
-    normQ.includes('siapa ilham') ||
-    normQ.includes('kenal ilham') ||
-    normQ.includes('siapakah ilham');
+    !isDeveloperCredQuery &&
+    !isImpersonationAttempt &&
+    (
+      normQ.includes('siapa yang buat') ||
+      normQ.includes('siapa yang bikin') ||
+      normQ.includes('siapa pembuat') ||
+      normQ.includes('siapa developernya') ||
+      normQ.includes('siapa developer') ||
+      normQ.includes('siapa author') ||
+      normQ.includes('siapa arsitek') ||
+      normQ.includes('siapa pengembang') ||
+      normQ.includes('yang bikin aplikasi') ||
+      normQ.includes('yang buat website') ||
+      normQ.includes('ilham fazril') ||
+      normQ.includes('ilhamfazril') ||
+      normQ.includes('siapa ilham') ||
+      normQ.includes('kenal ilham') ||
+      normQ.includes('siapakah ilham') ||
+      (normQ.includes('developer') && !normQ.includes('password') && !normQ.includes('sandi') && !normQ.includes('masuk') && !normQ.includes('lupa') && !normQ.includes('kredensial') && (normQ.includes('siapa') || normQ.includes('profil') || normQ.includes('biodata') || normQ.includes('tentang')))
+    );
 
   // If user is asking who developed or who is Ilham, and rawReply already correctly mentions Ilham Fazril, PRESERVE Gemini's conversational reply!
   if (
