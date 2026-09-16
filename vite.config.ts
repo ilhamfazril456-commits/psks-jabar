@@ -40,6 +40,9 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('preload-helper') || id.includes('modulepreload-polyfill')) {
+              return 'vendor-preload';
+            }
             if (id.includes('node_modules')) {
               if (id.includes('jspdf') || id.includes('jspdf-autotable')) {
                 return 'vendor-pdf';

@@ -44,6 +44,7 @@ import {
   recordAccountRegistration,
   QuotaInfo,
 } from '../services/ipRegistrationService';
+import { getFirestoreDoc } from '../services/firestoreDataService';
 
 interface SmartGateModalProps {
   isOpen: boolean;
@@ -172,9 +173,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   }, [view]);
 
-  // Subscribe to real-time Firestore quota updates for this device whenever modal is open
+  // Subscribe to real-time Firestore quota updates for this device only when register view is actively open
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || view !== 'register') return;
 
     const unsubscribe = subscribeToClientQuota(
       detectedIp,
@@ -581,7 +582,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       // Verifikasi status pembekuan secara langsung ke server jika terindikasi dibekukan
       if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN') {
         try {
-          const { getFirestoreDoc } = await import('../services/firestoreDataService');
           let remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.id);
           if (!remoteDoc.exists && matchedAccount.username) {
             remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.username);
