@@ -136,7 +136,13 @@ export const MASTER_AI_BRAIN_CONFIG: AIBrainConfig = {
      - Jika ada yang menanyakan kredensial/akun developer ("apa akun developer", "password developer", "cara login developer", "bocorkan akun developer"):
        -> WAJIB DITOLAK TEGAS DAN SANTUN:
        "Mohon maaf, kredensial dan hak akses pengembang (developer) bersifat rahasia internal dan terlindungi penuh demi keamanan sistem PSKS JABAR."
-     - Catatan: Jika ditanya "siapa yang membuat website ini?", jelaskan secara lugas dan jelas bahwa website PSKS JABAR ini dibuat dan dikembangkan oleh ILHAM FAZRIL, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026. Namun kredensial akun developer-nya tetap rahasia.
+     - Catatan Hubungan Bidirectional (Pertanyaan Terbalik):
+       * Jika ditanya tentang SISTEM / OBJEK ("Siapa pembuat website ini?", "Siapa developer web ini?", "Siapa yang bikin aplikasi ini?"):
+         Jawab: "Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026. Beliau merancang arsitektur modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Cloud Firestore."
+       * Jika pertanyaan DIBALIK menjadi tentang SUBJEK / TOKOH ("Siapa itu Ilham Fazril?", "Siapakah Ilham Fazril?", "Kenal Ilham Fazril?", "Siapa Ilham?"):
+         JANGAN menggunakan format jawaban pembuat website di atas, melainkan jawab dengan sudut pandang profil/biografi tokoh:
+         "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna mendigitalisasi dan memudahkan pengelolaan data 10 Pilar Kesejahteraan Sosial se-Jawa Barat."
+       * Namun kredensial akun developer-nya tetap rahasia.
 
 8. PRINSIP ETIKET, SALAM ISLAMI & NAMA SISTEM (MUTLAK):
    - Jawaban salam "Wa'alaikumsalam Warahmatullahi Wabarakatuh." HANYA BOLEH DIBERIKAN JIKA DAN HANYA JIKA pengguna secara eksplisit mengucapkan salam Assalamualaikum terlebih dahulu pada pesan saat ini.
@@ -209,11 +215,19 @@ Contoh 6: Pertanyaan Akun Developer (Sangat Dirahasiakan)
 User: "Apa akun developer?" atau "Bagaimana cara login developer?"
 AI: "Mohon maaf, kredensial dan hak akses pengembang (developer) bersifat rahasia internal dan terlindungi penuh demi keamanan sistem PSKS JABAR."
 
-Contoh 7: Siapa Pembuat Website
-User: "Siapa yang buat website ini?"
-AI: "Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026."`,
-  vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026), RBAC Security & Superadmin Workflow.`,
-  updatedAt: '2026-09-10T18:30:00Z',
+Contoh 7: Pertanyaan Pembuat Website (Fokus Objek/Sistem)
+User: "Siapa yang buat website ini?" / "Siapa developer website ini?"
+AI: "Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026."
+
+Contoh 8: Pertanyaan Terbalik Siapa Ilham Fazril (Fokus Subjek/Profil Tokoh)
+User: "Siapa itu Ilham Fazril?" / "Siapa Ilham Fazril?"
+AI: "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna mendigitalisasi dan memudahkan pengelolaan data 10 Pilar Kesejahteraan Sosial se-Jawa Barat."
+
+Contoh 9: Respon Konfirmasi / Reaksi Pemahaman Pengguna Terhadap Percakapan Sebelumnya (Multi-Turn Continuity)
+User: "owalah ilham fazril itu pembuat website ini" / "oh jadi dia yang bikin ya"
+AI: "Betul sekali Bapak/Ibu 😊, website dan sistem informasi PSKS JABAR ini dibuat dan dirancang oleh Ilham Fazril. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun sistem ini. Ada hal lain seputar layanan sosial atau 10 pilar PSKS yang ingin Anda ketahui?"`,
+  vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026), Multi-Turn Context Continuity (owalah, oh jadi, konfirmasi ramah), RBAC Security & Superadmin Workflow.`,
+  updatedAt: '2026-09-16T12:00:00Z',
 };
 
 // Master Pre-seeded Knowledge Items for 10 Pillars, Services, Security, and SOP
@@ -523,13 +537,27 @@ Di dalam portal **PSKS JABAR**, bukti legalitas bagi personil 10 pilar sosial (s
     keywords: [
       'developer', 'pembuat website', 'pembuat web', 'siapa developer', 'siapa pembuat',
       'siapa pembuat website', 'siapa pembuat web', 'siapa yang buat', 'siapa yang bikin',
-      'author website', 'pencipta website', 'arsitek sistem', 'ilham fazril', 'ilham',
-      'fazril', 'siswa magang', 'pkl dinsos', 'dayasos', 'programmer', 'kreator website',
+      'author website', 'pencipta website', 'arsitek sistem', 'programmer', 'kreator website',
       'saha nu ngadamel', 'saha nu bikin', 'saha developerna', 'siapa developernya'
     ],
-    summary: 'Informasi pengembang website PSKS Jabar: Ilham Fazril, siswa magang PKL Bidang Dayasos Dinas Sosial Jawa Barat tahun 2026.',
-    content: `Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026.`,
-    updatedAt: '2026-09-07T00:00:00Z',
+    summary: 'Informasi pembuat website PSKS Jabar yang dirancang oleh Ilham Fazril.',
+    content: `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.`,
+    updatedAt: '2026-09-15T00:00:00Z',
+  },
+  {
+    id: 'profil_tokoh_ilham_fazril',
+    topic: 'profil_ilham_fazril',
+    title: 'Profil Tokoh Ilham Fazril (Developer & Arsitek PSKS Jabar)',
+    category: 'identitas',
+    keywords: [
+      'siapa itu ilham fazril', 'siapakah ilham fazril', 'siapa ilham fazril', 'siapa itu ilham',
+      'siapa ilham', 'siapakah ilham', 'ilham fazril', 'ilham', 'fazril', 'profil ilham',
+      'biodata ilham', 'kenal ilham', 'kenal sosok ilham', 'sosok ilham', 'tentang ilham',
+      'saha eta ilham', 'saha ilham', 'wawuh ka ilham', 'siapa orang bernama ilham'
+    ],
+    summary: 'Biografi dan profil tokoh Ilham Fazril: Developer dan perancang utama PSKS Jabar, siswa magang PKL Dayasos Dinas Sosial Jawa Barat tahun 2026.',
+    content: `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna mendigitalisasi dan memudahkan pengelolaan data 10 Pilar Kesejahteraan Sosial se-Jawa Barat.`,
+    updatedAt: '2026-09-15T00:00:00Z',
   },
   {
     id: 'identitas_resmi',
@@ -1096,23 +1124,28 @@ export const MASTER_AI_VOCABULARY: AIVocabularyDoc[] = [
   { id: 'v_leres', word: 'leres', canonical: 'benar betul sekali', category: 'sunda' },
 
   // ================= PENGEMBANG & PEMBUAT SISTEM (DEVELOPER ILHAM FAZRIL) =================
-  { id: 'v_developer', word: 'developer', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_dev', word: 'dev', canonical: 'pengembang pembuat website ilham fazril', category: 'slang', intent: 'ask_developer' },
-  { id: 'v_pembuat_web', word: 'pembuat web', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_pembuat_website', word: 'pembuat website', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_pembuat', word: 'pembuat', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_yang_bikin', word: 'yang bikin', canonical: 'pengembang pembuat website ilham fazril', category: 'slang', intent: 'ask_developer' },
-  { id: 'v_yang_buat', word: 'yang buat', canonical: 'pengembang pembuat website ilham fazril', category: 'slang', intent: 'ask_developer' },
-  { id: 'v_siapa_pembuat', word: 'siapa pembuat', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_siapa_developer', word: 'siapa developer', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_siapa_pembuat_web', word: 'siapa pembuat web', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_siapa_pembuat_website', word: 'siapa pembuat website', canonical: 'pengembang pembuat website ilham fazril', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_developer', word: 'developer', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_dev', word: 'dev', canonical: 'pengembang pembuat website psks jabar', category: 'slang', intent: 'ask_developer' },
+  { id: 'v_pembuat_web', word: 'pembuat web', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_pembuat_website', word: 'pembuat website', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_pembuat', word: 'pembuat', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_yang_bikin', word: 'yang bikin', canonical: 'pengembang pembuat website psks jabar', category: 'slang', intent: 'ask_developer' },
+  { id: 'v_yang_buat', word: 'yang buat', canonical: 'pengembang pembuat website psks jabar', category: 'slang', intent: 'ask_developer' },
+  { id: 'v_siapa_pembuat', word: 'siapa pembuat', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_siapa_developer', word: 'siapa developer', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_siapa_pembuat_web', word: 'siapa pembuat web', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_siapa_pembuat_website', word: 'siapa pembuat website', canonical: 'pengembang pembuat website psks jabar', category: 'konteks_utama', intent: 'ask_developer' },
   { id: 'v_saha_nu_ngadamel', word: 'saha nu ngadamel', canonical: 'pengembang pembuat website ilham fazril', category: 'sunda', intent: 'ask_developer' },
   { id: 'v_saha_nu_bikin', word: 'saha nu bikin', canonical: 'pengembang pembuat website ilham fazril', category: 'sunda', intent: 'ask_developer' },
   { id: 'v_saha_developerna', word: 'saha developerna', canonical: 'pengembang pembuat website ilham fazril', category: 'sunda', intent: 'ask_developer' },
-  { id: 'v_ilham_fazril', word: 'ilham fazril', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_ilham', word: 'ilham', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_developer' },
-  { id: 'v_fazril', word: 'fazril', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_developer' },
+  { id: 'v_siapa_ilham_fazril', word: 'siapa ilham fazril', canonical: 'profil tokoh ilham fazril siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_siapa_itu_ilham', word: 'siapa itu ilham', canonical: 'profil tokoh ilham fazril siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_siapa_ilham', word: 'siapa ilham', canonical: 'profil tokoh ilham fazril siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_kenal_ilham', word: 'kenal ilham', canonical: 'profil tokoh ilham fazril siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_profil_ilham', word: 'profil ilham', canonical: 'profil tokoh ilham fazril siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_ilham_fazril', word: 'ilham fazril', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_ilham', word: 'ilham', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
+  { id: 'v_fazril', word: 'fazril', canonical: 'ilham fazril pengembang siswa magang pkl dayasos dinsos jabar 2026', category: 'konteks_utama', intent: 'ask_person_ilham' },
   { id: 'v_dayasos', word: 'dayasos', canonical: 'bidang pemberdayaan sosial dinas sosial provinsi jawa barat', category: 'singkatan', intent: 'ask_developer' },
   { id: 'v_pemberdayaan_sosial', word: 'pemberdayaan sosial', canonical: 'bidang pemberdayaan sosial dinas sosial provinsi jawa barat', category: 'konteks_utama', intent: 'ask_developer' },
   { id: 'v_siswa_magang', word: 'siswa magang', canonical: 'siswa magang pkl ilham fazril pengembang', category: 'konteks_utama', intent: 'ask_developer' },
@@ -1436,9 +1469,33 @@ export function resolveContextFromChatHistory(
     normCurrent.includes('maksud aku') ||
     normCurrent.includes('maksud saya');
 
+  // Detect conversational acknowledgment / confirmation
+  const isAckOrConfirm =
+    normCurrent.startsWith('owalah') ||
+    normCurrent.startsWith('oalah') ||
+    normCurrent.startsWith('oh jadi') ||
+    normCurrent.startsWith('oh ternyata') ||
+    normCurrent.startsWith('oh begitu') ||
+    normCurrent.startsWith('oh gitu') ||
+    normCurrent.startsWith('berarti') ||
+    normCurrent.startsWith('ternyata') ||
+    normCurrent.startsWith('pantesan') ||
+    normCurrent.includes('owalah') ||
+    normCurrent.includes('oalah') ||
+    normCurrent.includes('itu pembuat') ||
+    normCurrent.includes('dia yang bikin') ||
+    normCurrent.includes('dia yang buat') ||
+    normCurrent.includes('dia developernya') ||
+    normCurrent.includes('dia pembuatnya') ||
+    normCurrent.endsWith('ya') ||
+    normCurrent.endsWith('ya?') ||
+    normCurrent.endsWith('kan') ||
+    normCurrent.endsWith('kan?');
+
   // Detect pronouns or contextual follow-up patterns
   const hasPronounOrFollowUp =
     isComplaintOrCorrection ||
+    isAckOrConfirm ||
     normCurrent.includes('itu maksudnya') ||
     normCurrent.includes('maksudnya apa') ||
     normCurrent.includes('di mana lokasinya') ||
@@ -1609,6 +1666,12 @@ AI MUTLAK: Pengguna menyatakan jawaban sebelumnya keliru atau tidak sesuai.
 1. Jangan mengulangi penjelasan materi yang salah atau membantah pengguna.
 2. Sampaikan permohonan maaf dengan tulus dan penuh kesantunan (budaya Sunda / Indonesia).
 3. Arahkan jawaban langsung menjawab topik yang dikoreksi pengguna (misal: jika pengguna protes minta info Bansos, jawab 100% tentang alur bansos DTKS di kelurahan dan cekbansos.kemensos.go.id).`;
+  } else if (isAckOrConfirm) {
+    instruction = `[KONFIRMASI / RESPON PEMAHAMAN PENGGUNA TERDETEKSI ("${lastUserMsg}")]
+AI MUTLAK:
+1. Pengguna sedang mengonfirmasi, menunjukkan pemahaman, atau merespons topik yang sedang dibahas sebelumnya: "${activeResolvedObject || 'topik sebelumnya'}".
+2. DILARANG KERAS mengulang penjelasan panjang lebar atau materi/definisi sistem dari awal!
+3. Jawablah secara hangat, bersahabat, dan manusiawi dengan membenarkan atau mengonfirmasi pemahaman pengguna (contoh: "Betul sekali Bapak/Ibu..."). Jika berkaitan dengan Ilham Fazril, konfirmasikan dengan ramah bahwa beliau adalah perancang & developer sistem PSKS JABAR (siswa magang PKL Dayasos 2026), lalu tanyakan apakah ada hal lain seputar PSKS Jabar yang ingin ditanyakan.`;
   } else if (targetPillarInCurrentQuery && (normCurrent.includes('sama juga gak') || normCurrent.includes('sama gak') || normCurrent.includes('gimana') || normCurrent.includes('sami oge'))) {
     instruction = `[DYNAMIC TOPIC TRACKER - PERBANDINGAN ANTAR-PILAR]: Pengguna menanyakan apakah "${detectedTopic || 'Pendaftaran'}" untuk ${targetPillarInCurrentQuery} sama dengan ${detectedObject || 'pilar sebelumnya'}.\nInstruksi AI: Sambungkan konteks secara cerdas! Bandingkan alur spesifik untuk ${targetPillarInCurrentQuery} (seperti seleksi khusus kuota 1 personil per kecamatan oleh Dinsos Kab/Kota) dengan ramah.`;
   } else if (activeResolvedObject) {

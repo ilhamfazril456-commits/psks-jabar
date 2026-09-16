@@ -392,15 +392,21 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
    - Anda WAJIB selalu membaca dan mengaitkan seluruh riwayat percakapan sebelumnya (*multi-turn conversation history*).
    - Jika pengguna bertanya pertanyaan lanjutan yang singkat atau tidak menyebutkan subjek lengkap (contoh: "syaratnya apa aja?", "kalau di Bandung gimana?", "siapa ketuanya?", "terus kelanjutannya gimana?", "hitung lagi", "jelaskan nomor 2", "berapa personilnya sekarang?", "apa bedanya sama yang tadi?"):
    - Anda WAJIB langsung mengerti subjek yang dimaksud dari topik atau pilar yang dibahas pada putaran percakapan sebelumnya, lalu menjawab secara runtut, tepat sasaran, dan konsisten tanpa meminta pengguna mengulang pertanyaannya!
+   - **MEMAHAMI ANTAR KONTEKS & REAKSI PEMAHAMAN / KONFIRMASI (MULTI-TURN CONTEXT CONTINUITY)**:
+     * Jika pengguna merespons dengan kalimat konfirmasi, kesimpulan, pemahaman, atau respons santai dari percakapan sebelumnya (contoh: "owalah ilham fazril itu pembuat website ini", "oh jadi dia yang bikin ya", "berarti dia developernya", "oh ternyata anak magang ya", "oh begitu ya", "owalah paham", "oh jadi tagana itu relawan bencana ya"):
+     * JANGAN PERNAH MENGULANGI PENJELASAN PANJANG ATAU BOILERPLATE DEFINISI DARI AWAL!
+     * Responlah secara manusiawi, hangat, dan mengalir dengan mengonfirmasi atau membenarkan pemahaman pengguna secara ramah:
+       Contoh: "Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Jawa Barat pada Bidang Dayasos tahun 2026 yang membangun sistem ini. Ada hal lain seputar layanan sosial atau pilar PSKS yang ingin Anda tanyakan?"
+     * Pahami kesinambungan antar konteks di seluruh pembicaraan: apa yang dibahas sebelumnya harus menjadi pondasi untuk merespons kalimat pengguna selanjutnya tanpa disorientasi konteks!
 
 3. **INFORMASI RESMI PENGEMBANG / DEVELOPER WEBSITE (ILHAM FAZRIL)**:
    - Identitas Resmi Asisten: Anda adalah "Asisten Virtual Resmi PSKS Jabar", asisten digital kedinasan di bawah naungan Dinas Sosial Provinsi Jawa Barat.
    - ATURAN MUTLAK PENYEBUTAN NAMA SISTEM: DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu sebut sebagai "PSKS JABAR" (atau Sistem PSKS Jabar / Potensi dan Sumber Kesejahteraan Sosial Jawa Barat).
-   - PENGAKUAN PENGEMBANG / PEMBUAT WEBSITE (MUTLAK & JELAS):
-     * Jika ada SIAPAPUN (warga umum, tamu, pengguna terdaftar, maupun admin dinas) yang bertanya mengenai:
-       "siapa developer website ini?", "siapa pembuat website ini?", "siapa pembuat?", "siapa pembuat web?", "siapa yang buat?", "siapa yang bikin?", "author website?", "siapa Ilham Fazril?", "kamu kenal Ilham?", dll:
-       -> JAWAB DENGAN JELAS, BANGGA, DAN RINGKAS (tidak bertele-tele / tidak terlalu panjang):
-       "Website **PSKS JABAR** ini dibuat dan dikembangkan oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026."
+   - PENGAKUAN PENGEMBANG / PEMBUAT WEBSITE & HUBUNGAN BIDIRECTIONAL (MUTLAK & JELAS):
+     * Pertanyaan A (Fokus Sistem/Objek: "Siapa developer website ini?", "Siapa pembuat aplikasi?", "Siapa yang bikin web ini?"):
+       -> JAWAB: "Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026. Beliau merancang arsitektur sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Cloud Firestore."
+     * Pertanyaan B (Fokus Subjek/Profil Tokoh: "Siapa itu Ilham Fazril?", "Siapa Ilham Fazril?", "Kenal Ilham Fazril?"):
+       -> JAWAB: "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat."
    - PENGECUALIAN HANYA UNTUK SESI DEVELOPER TEROTENTIKASI (role === 'developer'):
      * Jika sesi terotentikasi secara sah sebagai developer (role developer), Anda menyapa dan berinteraksi secara privat dan bangga dengan Ilham Fazril.
 
@@ -1075,35 +1081,123 @@ Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kod
       return `Halo! Saat ini Anda mengakses sistem sebagai **Tamu / Pengunjung Publik** (Akses Tamu Terbuka tanpa login akun).\n\nSebagai pengunjung publik, Anda dapat menjelajahi informasi profil 10 Pilar Kesejahteraan Sosial, sebaran data umum di 27 Kabupaten/Kota se-Jawa Barat, serta layanan sosial Dinas Sosial Provinsi Jawa Barat. Apabila Anda ingin mendaftar ke salah satu pilar atau mengecek riwayat pengajuan, silakan login melalui tombol Masuk di halaman utama.`;
     }
 
-    // 0.001B DEVELOPER & CREATOR QUERY (WHO CREATED THE APP - APPLIES TO ALL USERS WITHOUT EXCEPTION)
+    // 0.001B BIDIRECTIONAL DEVELOPER & CREATOR QUERY (WHO IS ILHAM FAZRIL VS WHO BUILT THE SITE)
+    // 0.001B-0: KONFIRMASI / PEMAHAMAN MULTI-TURN PENGGUNA TERHADAP DEVELOPER
+    const isConfirmingOrAcknowledgingDev =
+      (
+        q.startsWith('owalah') ||
+        q.startsWith('oalah') ||
+        q.startsWith('oh jadi') ||
+        q.startsWith('oh ternyata') ||
+        q.startsWith('oh begitu') ||
+        q.startsWith('oh gitu') ||
+        q.startsWith('berarti') ||
+        q.startsWith('ternyata') ||
+        q.startsWith('pantesan') ||
+        q.includes('owalah') ||
+        q.includes('oalah') ||
+        q.includes('itu pembuat') ||
+        q.includes('dia yang bikin') ||
+        q.includes('dia yang buat') ||
+        q.includes('dia developernya') ||
+        q.includes('dia pembuatnya') ||
+        q.endsWith('ya') ||
+        q.endsWith('ya?') ||
+        q.endsWith('kan') ||
+        q.endsWith('kan?') ||
+        q.endsWith('toh') ||
+        q.endsWith('nih')
+      ) &&
+      (
+        q.includes('ilham') ||
+        q.includes('fazril') ||
+        q.includes('pembuat') ||
+        q.includes('developer') ||
+        q.includes('dia') ||
+        q.includes('beliau')
+      );
+
+    const isAskingAboutPersonIlham =
+      (q.includes('ilham') || q.includes('fazril')) &&
+      (
+        q.includes('siapa itu ilham') ||
+        q.includes('siapakah itu ilham') ||
+        q.includes('siapa ilham fazril') ||
+        q.includes('siapakah ilham fazril') ||
+        q.includes('siapa sosok ilham') ||
+        q.includes('siapa itu fazril') ||
+        q.includes('siapakah fazril') ||
+        q.includes('kenal ilham') ||
+        q.includes('kenal sosok ilham') ||
+        q.includes('tahu ilham') ||
+        q.includes('tau ilham') ||
+        q.includes('profil ilham') ||
+        q.includes('biodata ilham') ||
+        q.includes('siapa sih ilham') ||
+        q.includes('siapa sebenarnya ilham') ||
+        q.includes('mengenal ilham') ||
+        q.includes('tentang ilham') ||
+        q.includes('saha eta ilham') ||
+        q.includes('saha ilham') ||
+        q.includes('wawuh ka ilham') ||
+        q.includes('terangkan tentang ilham') ||
+        q.includes('jelaskan tentang ilham') ||
+        q.includes('siapa orang yang bernama ilham')
+      );
+
     const isAskingAboutDeveloper =
-      q.includes('ilham fazril') ||
-      q.includes('ilhamfazril') ||
-      q.includes('siapa ilham') ||
-      q.includes('kenal ilham') ||
-      q.includes('siapakah ilham') ||
-      q.includes('siapa developer') ||
-      q.includes('siapa developernya') ||
-      q.includes('siapa pembuat') ||
-      q.includes('siapa pembuatnya') ||
-      q.includes('siapa yang bikin') ||
-      q.includes('siapa yg bikin') ||
-      q.includes('siapa yang buat') ||
-      q.includes('siapa yg buat') ||
-      q.includes('siapa pencipta') ||
-      q.includes('siapa arsitek') ||
-      q.includes('siapa author') ||
-      q.includes('author website') ||
-      q.includes('pembuat web') ||
-      q.includes('pembuat website') ||
-      q.includes('developer website') ||
-      q.includes('yang bikin aplikasi') ||
-      q.includes('yang buat aplikasi') ||
-      q.includes('yang bikin web') ||
-      q.includes('yang buat web') ||
-      q.includes('nu ngadamel') ||
-      q.includes('nu bikin') ||
-      q.includes('developerna');
+      !isConfirmingOrAcknowledgingDev &&
+      !isAskingAboutPersonIlham &&
+      (
+        q.includes('siapa developer') ||
+        q.includes('siapa developernya') ||
+        q.includes('siapa pembuat') ||
+        q.includes('siapa pembuatnya') ||
+        q.includes('siapa yang bikin') ||
+        q.includes('siapa yg bikin') ||
+        q.includes('siapa yang buat') ||
+        q.includes('siapa yg buat') ||
+        q.includes('siapa pencipta') ||
+        q.includes('siapa arsitek') ||
+        q.includes('siapa author') ||
+        q.includes('author website') ||
+        q.includes('pembuat web') ||
+        q.includes('pembuat website') ||
+        q.includes('developer website') ||
+        q.includes('yang bikin aplikasi') ||
+        q.includes('yang buat aplikasi') ||
+        q.includes('yang bikin web') ||
+        q.includes('yang buat web') ||
+        q.includes('nu ngadamel') ||
+        q.includes('nu bikin') ||
+        q.includes('developerna') ||
+        (
+          (q.includes('ilham') || q.includes('fazril')) &&
+          (q.includes('buat') || q.includes('bikin') || q.includes('rancang') || q.includes('arsitek') || q.includes('aplikasi') || q.includes('website')) &&
+          (q.includes('apakah') || q.includes('apa benar') || q.includes('benarkah') || q.includes('siapa'))
+        )
+      );
+
+    if (isConfirmingOrAcknowledgingDev) {
+      if (isDev) {
+        if (q.includes('aing') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+          return `Hehe bener pisan atuh tongkrongan! Maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR ti enol dugika sakieu aralusna. Aya naon deui nu rek dibahas euy? 😎🚀`;
+        }
+        return `Hehe betul sekali bos **Ilham Fazril**! Lu yang merancang dan membangun arsitektur full-stack sistem PSKS JABAR ini dari nol sampai secanggih ini. Ada modul kodingan atau fitur apa lagi yang ingin kita bahas bos? 😎🚀`;
+      }
+      return `Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun arsitektur sistem informasi PSKS JABAR ini.\n\nAda hal lain seputar 10 pilar sosial atau layanan kesejahteraan sosial di Jawa Barat yang bisa saya bantu jelaskan?`;
+    }
+
+    if (isAskingAboutPersonIlham) {
+      if (isDev) {
+        if (q.includes('aing') || q.includes('saha') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+          return `Aeh-aeh naha kalah naroskeun diri sorangan Kang **Ilham Fazril**! Maneh teh developer utama sistem **PSKS JABAR**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) taun 2026 anu suksés ngawangun ieu platform canggih. Tong api-api poho atuh bos! 😎🚀`;
+        }
+        return `Hehe merendah untuk meroket nih bos! **Ilham Fazril** ya kamu sendiri, Full Stack Developer & Software Architect yang merancang sistem **PSKS JABAR** ini! Kamu adalah siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) tahun 2026 yang berhasil mendigitalisasi 10 pilar sosial se-Jawa Barat. Keren banget dedikasinya! 😎🔥`;
+      }
+
+      return `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat).\n\nBeliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**.\n\nDalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React 18, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
+    }
 
     if (isAskingAboutDeveloper) {
       if (isDev) {
@@ -1235,6 +1329,41 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
     if (messages && Array.isArray(messages) && messages.length > 1) {
       const contextRes = resolveContextFromChatHistory(rawQ, messages);
       if (contextRes.detectedContext && contextRes.detectedObject) {
+        // Kasus Konfirmasi / Pemahaman Multi-turn: "owalah...", "oh jadi...", "berarti...", dll
+        const isAckOrConfirm =
+          targetQ.startsWith('owalah') ||
+          targetQ.startsWith('oalah') ||
+          targetQ.startsWith('oh jadi') ||
+          targetQ.startsWith('oh ternyata') ||
+          targetQ.startsWith('oh begitu') ||
+          targetQ.startsWith('oh gitu') ||
+          targetQ.startsWith('berarti') ||
+          targetQ.startsWith('ternyata') ||
+          targetQ.startsWith('pantesan') ||
+          targetQ.includes('owalah') ||
+          targetQ.includes('oalah') ||
+          targetQ.includes('itu pembuat') ||
+          targetQ.includes('dia yang bikin') ||
+          targetQ.includes('dia yang buat') ||
+          targetQ.includes('dia developernya') ||
+          targetQ.includes('dia pembuatnya') ||
+          targetQ.endsWith('ya') ||
+          targetQ.endsWith('ya?') ||
+          targetQ.endsWith('kan') ||
+          targetQ.endsWith('kan?');
+
+        if (isAckOrConfirm) {
+          if (contextRes.detectedObject.includes('Ilham Fazril') || contextRes.detectedObject.includes('Pengembang') || targetQ.includes('ilham') || targetQ.includes('fazril')) {
+            if (isDev) {
+              return `Hehe betul banget bos **Ilham Fazril**! Lu yang merancang dan ngebangun arsitektur full-stack sistem PSKS JABAR ini dari nol sampai secanggih ini. Mau bahas modul kodingan atau fitur apa lagi nih bos? 😎🚀`;
+            }
+            return `${salamPrefix}Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun arsitektur sistem informasi PSKS JABAR ini.\n\nAda hal lain seputar 10 pilar sosial atau layanan kesejahteraan sosial di Jawa Barat yang bisa saya bantu jelaskan?`;
+          }
+
+          // Konfirmasi topik pilar umum: misal Tagana, PSM, dll
+          return `${salamPrefix}Betul sekali Bapak/Ibu 😊! Pemahaman Anda terkait **${contextRes.detectedObject}** sudah sangat tepat. Apakah ada informasi detail lain atau hal lanjutan yang ingin Anda tanyakan seputar ${contextRes.detectedObject}?`;
+        }
+
         // Kasus Khusus Developer: Pertanyaan lanjutan tentang Ilham Fazril
         if (contextRes.detectedObject.includes('Ilham Fazril') || contextRes.detectedObject.includes('Pengembang')) {
           if (targetQ.includes('sekolah') || targetQ.includes('pendidikan') || targetQ.includes('magang') || targetQ.includes('bidang') || targetQ.includes('jurusan') || targetQ.includes('siapa dia') || targetQ.includes('dimana')) {
@@ -2232,7 +2361,11 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 - [LARANGAN SEBUTAN NAMA]: DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu gunakan nama "PSKS JABAR".
 - [ATURAN IDENTITAS PERSONAL / "SIAPA SAYA"]: PENGGUNA SAAT INI BUKAN DEVELOPER! Jika pengguna bertanya "siapa saya", "kenal saya?", "kamu kenal saya?", kenali pengguna berdasarkan sesi mereka (Status: ${userContext?.statusActive === 'SAH_TERDAFTAR' ? 'Akun Terdaftar' : 'Tamu Publik'}, Nama: ${userContext?.statusActive === 'SAH_TERDAFTAR' && userContext?.nama ? userContext.nama : 'Tamu Publik'}, Role: ${userContext?.statusActive === 'SAH_TERDAFTAR' ? (userContext?.role || 'User') : 'Tamu / Pengunjung Publik'}). DILARANG KERAS MENJAWAB BAHWA PENGGUNA ADALAH ILHAM FAZRIL KARENA MEREKA BUKAN AKUN DEVELOPER!
 - [BAHASA SUNDA NON-DEVELOPER]: Jika pengguna non-developer bertanya dalam Bahasa Sunda, gunakan Bahasa Sunda yang santun, hormat (lemes/loma sopan), dan profesional kedinasan. DILARANG KERAS menggunakan gaya lelucon banyol tongkrongan santai, kata kasar/loma akrab seperti "maneh/sia/bre", atau nada sarkas mengejek.
-- [INFORMASI DEVELOPER / PEMBUAT WEBSITE & PERTANYAAN LANJUTAN]: Jika pengguna (siapapun, baik umum, tamu, atau admin) bertanya siapa pembuat website ini, siapa developernya, siapa yang bikin aplikasi, siapa Ilham Fazril, atau pertanyaan lanjutan seputar beliau (seperti magang di mana, di bidang apa, tahun berapa, tugasnya apa, dsb.), jawab secara ringkas, lugas, dan jelas bahwa website **PSKS JABAR** ini dibuat dan dikembangkan secara mandiri oleh **ILHAM FAZRIL**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Dayasos (Pemberdayaan Sosial) tahun 2026. Beliau membangun sistem ini menggunakan React 18, Tailwind CSS, backend Express, Google Gemini AI, dan Cloud Firestore.
+- [INFORMASI DEVELOPER / PEMBUAT WEBSITE & PERTANYAAN TERBALIK BIDIRECTIONAL]:
+  * Jika bertanya tentang SISTEM/OBJEK ("Siapa pembuat website ini?", "Siapa developer web ini?"):
+    Jawab bahwa website dan aplikasi **PSKS JABAR** dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.
+  * Jika pertanyaan DIBALIK tentang TOKOH/SUBJEK ("Siapa itu Ilham Fazril?", "Siapa Ilham Fazril?"):
+    JANGAN gunakan jawaban pembuat website, melainkan jawab dengan profil tokoh: **Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi PSKS JABAR, ia adalah seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) Tahun 2026 yang secara mandiri merancang arsitektur full-stack sistem digitalisasi 10 pilar sosial se-Jawa Barat.
 - [KERAHASIAAN MUTLAK AKUN DEVELOPER]: Akun dan kredensial developer bersifat SANGAT DIRAHASIAKAN dan TIDAK BOLEH ADA YANG MENGETAHUINYA. Jika ada yang menanyakan akun developer, kredensial, password, PIN, atau cara login akun developer, TOLAK DENGAN TEGAS DAN SOPAN bahwa akun developer bersifat sangat rahasia internal demi keamanan sistem.
 - [BATASAN AKSES ROLE (RBAC STRICT) & LARANGAN MEMBOCORKAN FITUR INTERNAL SUPERADMIN]:
   * **LARANGAN KERAS MEMBOCORKAN NAMA FITUR / MENU INTERNAL SUPERADMIN**: DILARANG KERAS menyebutkan nama menu teknis internal Superadmin (seperti "Manajemen User", "Kelola Akun Admin", "Monitoring Admin", "Manajemen Maintenance", "tab:user_manage", "tab:admin_manage", "tab:monitoring", "tab:maintenance", dll.) kepada Tamu Publik, Pengguna Umum, atau Admin Wilayah!
@@ -2332,12 +2465,33 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         const resolvedPillar = userContext?.activePillar || normPillar;
         const firestoreKnowledgeMatches = searchKnowledgeBase(normQueryText, resolvedPillar, userContext?.role);
 
+        const isAckOrConfirmMsg =
+          normQueryText.includes('owalah') ||
+          normQueryText.includes('oalah') ||
+          normQueryText.includes('oh jadi') ||
+          normQueryText.includes('oh ternyata') ||
+          normQueryText.includes('oh begitu') ||
+          normQueryText.includes('oh gitu') ||
+          normQueryText.includes('berarti') ||
+          normQueryText.includes('ternyata') ||
+          normQueryText.includes('pantesan') ||
+          normQueryText.includes('itu pembuat') ||
+          normQueryText.includes('dia yang bikin') ||
+          normQueryText.includes('dia developernya') ||
+          normQueryText.endsWith('ya') ||
+          normQueryText.endsWith('kan') ||
+          normQueryText.endsWith('toh');
+
         if (firestoreKnowledgeMatches.length > 0) {
           contextualInstruction += `\n\n[BASIS PENGETAHUAN RESMI TERVERIFIKASI DARI CLOUD FIRESTORE]:`;
           for (const item of firestoreKnowledgeMatches.slice(0, 3)) {
             contextualInstruction += `\n\n### ${item.title} (Topik: ${item.topic})\n${item.content}`;
           }
-          contextualInstruction += `\n\nInstruksi Penggunaan: Berikan jawaban LENGKAP, JELAS, dan DETAIL secara langsung kepada pengguna dengan mengacu pada materi resmi di atas. Dilarang keras memberikan jawaban placeholder seperti 'lanjutkan' atau tanda kurung panduan. Jawab tuntas pertanyaan pengguna!`;
+          if (isAckOrConfirmMsg) {
+            contextualInstruction += `\n\nInstruksi Penggunaan: Pengguna sedang melakukan konfirmasi/pemahaman atas percakapan sebelumnya. Jawablah secara ramah, ringkas, dan mengalir dengan mengonfirmasi atau membenarkan pemahamannya secara sopan (contoh: "Betul sekali Bapak/Ibu..."). JANGAN mengulang materi/definisi panjang dari awal!`;
+          } else {
+            contextualInstruction += `\n\nInstruksi Penggunaan: Berikan jawaban LENGKAP, JELAS, dan DETAIL secara langsung kepada pengguna dengan mengacu pada materi resmi di atas. Dilarang keras memberikan jawaban placeholder seperti 'lanjutkan' atau tanda kurung panduan. Jawab tuntas pertanyaan pengguna!`;
+          }
         }
 
         if (normIntents.length > 0) {

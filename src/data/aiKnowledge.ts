@@ -582,47 +582,179 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     return `Halo! Saat ini Anda mengakses sistem sebagai **Tamu / Pengunjung Publik** (Akses Tamu Terbuka tanpa akun login).\n\nSebagai pengunjung publik, Anda dapat menjelajahi informasi profil 10 Pilar Kesejahteraan Sosial, sebaran data umum di 27 Kabupaten/Kota se-Jawa Barat, serta layanan sosial Dinas Sosial Provinsi Jawa Barat. Apabila Anda ingin mendaftar ke salah satu pilar atau memantau riwayat pengajuan Anda, silakan login melalui tombol Masuk di halaman utama.`;
   }
 
-  // 0.6 WHO IS THE DEVELOPER / CREATOR / ILHAM FAZRIL (APPLIES TO ALL USERS WITHOUT EXCEPTION)
-  const isAskingDeveloperOrCreator =
-    q.includes('ilham fazril') ||
-    q.includes('ilhamfazril') ||
-    q.includes('fazril') ||
-    q.includes('siapa ilham') ||
-    q.includes('kenal ilham') ||
-    q.includes('siapakah ilham') ||
-    q.includes('siapa developer') ||
-    q.includes('siapa developernya') ||
-    q.includes('siapa pembuat') ||
-    q.includes('siapa pembuatnya') ||
-    q.includes('siapa yang buat') ||
-    q.includes('siapa yg buat') ||
-    q.includes('siapa yang bikin') ||
-    q.includes('siapa yg bikin') ||
-    q.includes('siapa pencipta') ||
-    q.includes('siapa arsitek') ||
-    q.includes('siapa pengembang') ||
-    q.includes('siapa author') ||
-    q.includes('siapa coder') ||
-    q.includes('siapa yang merancang') ||
-    q.includes('siapa yg merancang') ||
-    q.includes('yang bikin aplikasi') ||
-    q.includes('yang buat aplikasi') ||
-    q.includes('yang bikin website') ||
-    q.includes('yang buat website') ||
-    q.includes('developer website') ||
-    q.includes('pembuat website') ||
-    q.includes('developer aplikasi') ||
-    q.includes('pembuat aplikasi') ||
-    q.includes('nu ngadamel') ||
-    q.includes('nu bikin') ||
-    q.includes('developerna');
+  // 0.6 BIDIRECTIONAL INTENT: WHO IS ILHAM FAZRIL (SUBJECT FOCUS) VS WHO DEVELOPED THE SYSTEM (OBJECT FOCUS)
+  // 0.6A: PERTANYAAN SUBJEK TERBALIK: "SIAPA ITU ILHAM FAZRIL?" / "SIAPA ILHAM?" / PROFIL PRIBADI TOKOH
+  const isAskingAboutPersonIlham =
+    (q.includes('ilham') || q.includes('fazril')) &&
+    (
+      q.includes('siapa itu ilham') ||
+      q.includes('siapakah itu ilham') ||
+      q.includes('siapa ilham fazril') ||
+      q.includes('siapakah ilham fazril') ||
+      q.includes('siapa sosok ilham') ||
+      q.includes('siapa itu fazril') ||
+      q.includes('siapakah fazril') ||
+      q.includes('kenal ilham') ||
+      q.includes('kenal sosok ilham') ||
+      q.includes('tahu ilham') ||
+      q.includes('tau ilham') ||
+      q.includes('profil ilham') ||
+      q.includes('biodata ilham') ||
+      q.includes('siapa sih ilham') ||
+      q.includes('siapa sebenarnya ilham') ||
+      q.includes('mengenal ilham') ||
+      q.includes('tentang ilham') ||
+      q.includes('saha eta ilham') ||
+      q.includes('saha ilham') ||
+      q.includes('wawuh ka ilham') ||
+      q.includes('terangkan tentang ilham') ||
+      q.includes('jelaskan tentang ilham') ||
+      q.includes('siapa orang yang bernama ilham')
+    );
 
+  // 0.6C: KONFIRMASI / PEMAHAMAN MULTI-TURN PENGGUNA TERHADAP DEVELOPER
+  const isConfirmingOrAcknowledgingDev =
+    (
+      q.startsWith('owalah') ||
+      q.startsWith('oalah') ||
+      q.startsWith('oh jadi') ||
+      q.startsWith('oh ternyata') ||
+      q.startsWith('oh begitu') ||
+      q.startsWith('oh gitu') ||
+      q.startsWith('berarti') ||
+      q.startsWith('ternyata') ||
+      q.startsWith('pantesan') ||
+      q.includes('owalah') ||
+      q.includes('oalah') ||
+      q.includes('itu pembuat') ||
+      q.includes('dia yang bikin') ||
+      q.includes('dia yang buat') ||
+      q.includes('dia developernya') ||
+      q.includes('dia pembuatnya') ||
+      q.endsWith('ya') ||
+      q.endsWith('ya?') ||
+      q.endsWith('kan') ||
+      q.endsWith('kan?') ||
+      q.endsWith('toh') ||
+      q.endsWith('nih')
+    ) &&
+    (
+      q.includes('ilham') ||
+      q.includes('fazril') ||
+      q.includes('pembuat') ||
+      q.includes('developer') ||
+      q.includes('dia') ||
+      q.includes('beliau') ||
+      Boolean(previousContext && (previousContext.toLowerCase().includes('ilham') || previousContext.toLowerCase().includes('fazril') || previousContext.toLowerCase().includes('developer')))
+    );
+
+  // 0.6B: PERTANYAAN OBJEK/SISTEM: "SIAPA DEVELOPER WEBSITE INI?" / "PEMBUAT APLIKASI"
+  const isAskingDeveloperOrCreator =
+    !isConfirmingOrAcknowledgingDev &&
+    !isAskingAboutPersonIlham &&
+    (
+      q.includes('siapa developer') ||
+      q.includes('siapa developernya') ||
+      q.includes('siapa pembuat') ||
+      q.includes('siapa pembuatnya') ||
+      q.includes('siapa yang buat') ||
+      q.includes('siapa yg buat') ||
+      q.includes('siapa yang bikin') ||
+      q.includes('siapa yg bikin') ||
+      q.includes('siapa pencipta') ||
+      q.includes('siapa arsitek') ||
+      q.includes('siapa pengembang') ||
+      q.includes('siapa author') ||
+      q.includes('siapa coder') ||
+      q.includes('siapa yang merancang') ||
+      q.includes('siapa yg merancang') ||
+      q.includes('yang bikin aplikasi') ||
+      q.includes('yang buat aplikasi') ||
+      q.includes('yang bikin website') ||
+      q.includes('yang buat website') ||
+      q.includes('developer website') ||
+      q.includes('pembuat website') ||
+      q.includes('developer aplikasi') ||
+      q.includes('pembuat aplikasi') ||
+      q.includes('nu ngadamel') ||
+      q.includes('nu bikin') ||
+      q.includes('developerna') ||
+      (
+        (q.includes('ilham') || q.includes('fazril')) &&
+        (q.includes('buat') || q.includes('bikin') || q.includes('rancang') || q.includes('arsitek') || q.includes('aplikasi') || q.includes('website')) &&
+        (q.includes('apakah') || q.includes('apa benar') || q.includes('benarkah') || q.includes('siapa'))
+      )
+    );
+
+  // Response for 0.6C (Konfirmasi / Pemahaman Multi-turn Pengguna)
+  if (isConfirmingOrAcknowledgingDev) {
+    if (isDeveloperUser) {
+      if (q.includes('aing') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+        return `Hehe bener pisan atuh tongkrongan! Maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR ti enol dugika sakieu aralusna. Aya naon deui nu rek dibahas euy? 😎🚀`;
+      }
+      return `Hehe betul sekali bos **Ilham Fazril**! Lu yang merancang dan membangun arsitektur full-stack sistem PSKS JABAR ini dari nol sampai secanggih ini. Ada modul kodingan atau fitur apa lagi yang ingin kita bahas bos? 😎🚀`;
+    }
+    return `Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun arsitektur sistem informasi PSKS JABAR ini.\n\nAda hal lain seputar 10 pilar sosial atau layanan kesejahteraan sosial di Jawa Barat yang bisa saya bantu jelaskan?`;
+  }
+
+  // Response for 0.6A (Pertanyaan Terbalik Fokus Profil Tokoh)
+  if (isAskingAboutPersonIlham) {
+    if (isDeveloperUser) {
+      if (q.includes('aing') || q.includes('saha') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+        return `Aeh-aeh naha kalah naroskeun diri sorangan Kang **Ilham Fazril**! Maneh teh developer utama sistem **PSKS JABAR**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) taun 2026 anu suksés ngawangun ieu platform canggih. Tong api-api poho atuh bos, kodingan arsitektur karyana geus mantap pisan! 😎🚀`;
+      }
+      return `Hehe merendah untuk meroket nih bos! **Ilham Fazril** ya kamu sendiri, Full Stack Developer & Software Architect yang merancang sistem **PSKS JABAR** ini! Kamu adalah siswa magang PKL di Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) tahun 2026 yang berhasil mendigitalisasi 10 pilar sosial se-Jawa Barat. Keren banget dedikasinya! 😎🔥`;
+    }
+
+    return `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat).\n\nBeliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**.\n\nDalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
+  }
+
+  // Response for 0.6B (Pertanyaan Objek/Sistem Pembuat Website)
   if (isAskingDeveloperOrCreator) {
     if (isDeveloperUser) {
       return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** ini adalah mahakarya yang kamu bangun dan arsitekturkan sendiri bos, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nArsitektur yang kamu buat di sini sangat rapi — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini AI, serta Cloud Firestore** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*! Ada modul yang mau kita cek lagi?`;
     }
 
     return `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.\n\nBeliau merancang arsitektur full-stack modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, serta Cloud Firestore untuk mendigitalisasi data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
+  }
+
+  // 0.6D: GENERAL MULTI-TURN ACKNOWLEDGMENT / CONFIRMATION FOR PREVIOUS CONTEXT TOPIC
+  const isGeneralAcknowledgment =
+    (
+      q.startsWith('owalah') ||
+      q.startsWith('oalah') ||
+      q.startsWith('oh jadi') ||
+      q.startsWith('oh begitu') ||
+      q.startsWith('oh gitu') ||
+      q.startsWith('oh ternyata') ||
+      q.startsWith('berarti') ||
+      q.startsWith('paham') ||
+      q.startsWith('ngerti') ||
+      q.startsWith('oh pantesan') ||
+      q.startsWith('iya ya')
+    ) &&
+    !hasQuestion &&
+    q.length < 60;
+
+  if (isGeneralAcknowledgment && previousContext && previousContext.trim().length > 10) {
+    const prev = previousContext.toLowerCase();
+    let prevTopic = 'informasi tersebut';
+    if (prev.includes('tagana')) prevTopic = 'TAGANA';
+    else if (prev.includes('psm')) prevTopic = 'PSM';
+    else if (prev.includes('tksk')) prevTopic = 'TKSK';
+    else if (prev.includes('karang taruna')) prevTopic = 'Karang Taruna';
+    else if (prev.includes('peksos') || prev.includes('pksp')) prevTopic = 'Pekerja Sosial Profesional (PEKSOS)';
+    else if (prev.includes('lks')) prevTopic = 'LKS';
+    else if (prev.includes('lk3')) prevTopic = 'LK3';
+    else if (prev.includes('pensos')) prevTopic = 'Penyuluh Sosial';
+    else if (prev.includes('kube')) prevTopic = 'KUBE';
+    else if (prev.includes('slrt') || prev.includes('puskesos')) prevTopic = 'SLRT / Puskesos';
+    else if (prev.includes('bansos') || prev.includes('dtks')) prevTopic = 'Bansos DTKS';
+
+    if (isDeveloperUser) {
+      return `Sip mantap bos **Ilham Fazril**! Senang penjelasannya nyambung dan jelas. Ada hal lain yang mau kita bahas atau kulik lagi? 😎🚀`;
+    }
+    return `Betul sekali Bapak/Ibu 😊! Senang bisa membantu memperjelas pemahaman Anda terkait ${prevTopic}. Apakah ada hal lain atau pertanyaan lanjutan yang ingin Anda tanyakan seputar layanan PSKS Jawa Barat?`;
   }
 
   // 0.7 Nama Web / Nama Aplikasi
@@ -2135,6 +2267,48 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // Confirmation / acknowledgment of developer or system creation
+  const isConfirmingOrAcknowledgingDev =
+    (
+      normQ.includes('owalah') ||
+      normQ.includes('oalah') ||
+      normQ.includes('oh jadi') ||
+      normQ.includes('oh ternyata') ||
+      normQ.includes('oh begitu') ||
+      normQ.includes('oh gitu') ||
+      normQ.includes('berarti') ||
+      normQ.includes('ternyata') ||
+      normQ.includes('pantesan') ||
+      normQ.includes('itu pembuat') ||
+      normQ.includes('dia yang bikin') ||
+      normQ.includes('dia yang buat') ||
+      normQ.includes('dia developernya') ||
+      normQ.includes('dia pembuatnya') ||
+      normQ.endsWith('ya') ||
+      normQ.endsWith('kan') ||
+      normQ.endsWith('toh') ||
+      normQ.endsWith('nih')
+    ) &&
+    (
+      normQ.includes('ilham') ||
+      normQ.includes('fazril') ||
+      normQ.includes('pembuat') ||
+      normQ.includes('developer') ||
+      normQ.includes('dia') ||
+      normQ.includes('beliau') ||
+      Boolean(previousContext && (previousContext.toLowerCase().includes('ilham') || previousContext.toLowerCase().includes('fazril')))
+    );
+
+  // If user is confirming / acknowledging, PRESERVE Gemini's natural conversational response if available!
+  if (isConfirmingOrAcknowledgingDev && rawReply && rawReply.trim().length > 0) {
+    return {
+      finalContent: rawReply.trim(),
+      isAccurate: true,
+      confidence: 0.99,
+      source: 'ai_model_verified',
+    };
+  }
+
   // Developer / Creator Identity Verification Check (Applies to all users without exception)
   const isAskingDeveloper =
     normQ.includes('developer') ||
@@ -2151,6 +2325,20 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('siapa ilham') ||
     normQ.includes('kenal ilham') ||
     normQ.includes('siapakah ilham');
+
+  // If user is asking who developed or who is Ilham, and rawReply already correctly mentions Ilham Fazril, PRESERVE Gemini's conversational reply!
+  if (
+    isAskingDeveloper &&
+    rawReply &&
+    (rawReply.toLowerCase().includes('ilham') || rawReply.toLowerCase().includes('fazril'))
+  ) {
+    return {
+      finalContent: rawReply.trim(),
+      isAccurate: true,
+      confidence: 0.99,
+      source: 'ai_model_verified',
+    };
+  }
 
   if (isAskingDeveloper) {
     const accurateDevAnswer = getComprehensiveSmartAnswer(
