@@ -1461,6 +1461,39 @@ Website PSKS JABAR merupakan pangkalan data terintegrasi resmi. Di lapangan kedi
   * **Advokasi Sosial Inklusif**: Menghapus stigma negatif terhadap penyandang disabilitas dan mantan warga binaan sosial, serta mengampanyekan kesetiakawanan sosial.`;
   }
 
+  // 4.8B HUBUNGAN KESAMAAN KUBE & BADAN USAHA SOSIAL DI WEBSITE PSKS JABAR
+  const isKubeBadanUsahaRelation =
+    (q.includes('kube') || q.includes('kelompok usaha')) &&
+    (q.includes('badan usaha') || q.includes('usaha sosial') || q.includes('pilar 9') || q.includes('tertera') || q.includes('tertulis')) &&
+    (
+      q.includes('kenapa') ||
+      q.includes('mengapa') ||
+      q.includes('kok') ||
+      q.includes('naha') ||
+      q.includes('bukannya') ||
+      q.includes('bukan nya') ||
+      q.includes('bukan') ||
+      q.includes('tertera') ||
+      q.includes('tertulis') ||
+      q.includes('namanya') ||
+      q.includes('disebut') ||
+      q.includes('sama gak') ||
+      q.includes('sama ga') ||
+      q.includes('sama keneh') ||
+      q.includes('sama juga') ||
+      q.includes('sama aja') ||
+      q.includes('sama saja') ||
+      q.includes('apakah sama') ||
+      q.includes('apa bedanya') ||
+      q.includes('perbedaan') ||
+      q.includes('hubungannya') ||
+      q.includes('hubungan')
+    );
+
+  if (isKubeBadanUsahaRelation) {
+    return `${opening}Pertanyaan yang sangat tepat dan jeli Bapak/Ibu! Terkait penyebutan di dalam website **PSKS JABAR**, **KUBE (Kelompok Usaha Bersama)** dan **Badan Usaha (Badan Usaha Kesejahteraan Sosial)** pada hakikatnya adalah **SAMA SAJA** dan berada dalam satu kesatuan pilar pemberdayaan sosial yang sama (Pilar ke-9 PSKS Jawa Barat).\n\nBerikut penjelasan profesionalnya:\n\n1. **Payung Kelembagaan Sistem (*Institutional Umbrella*)**:\n   Di dalam pangkalan data dan modul website **PSKS JABAR**, penamaan **"Badan Usaha"** (atau *Badan Usaha Sosial*) digunakan sebagai payung kelembagaan terpadu untuk menaungi seluruh aktivitas ekonomi produktif di bidang kesejahteraan sosial, yang program dan kegiatan intinya di lapangan adalah **KUBE (Kelompok Usaha Bersama)**.\n\n2. **Karakteristik & Sasaran Program yang Sama**:\n   Keduanya beranggotakan 5 hingga 10 Kepala Keluarga (KK) pra-sejahtera binaan yang terdaftar di DTKS/KPM. Mereka dihimpun dalam kelompok usaha bersama untuk mengelola Usaha Ekonomi Produktif (UEP)—seperti budidaya peternakan, perikanan, warung sembako, kerajinan lokal, maupun olahan pangan—melalui bantuan stimulan modal usaha agar dapat mandiri secara finansial dan bergraduasi dari garis kemiskinan.\n\n3. **Integrasi Formulir & Data Wilayah**:\n   Ketika Anda membuka modul beranda, melihat peta sebaran data, atau mengisi formulir pendaftaran **Badan Usaha** di website ini, modul tersebut secara otomatis diperuntukkan bagi pencatatan, verifikasi berkas, dan legalitas kelompok **KUBE** di 27 Kabupaten/Kota se-Jawa Barat.\n\nJadi, Anda tidak perlu bingung; penyebutan Badan Usaha di website ini sama sekali tidak berbeda tujuannya dengan KUBE, melainkan untuk standardisasi administrasi kelembagaan potensi sumber kesejahteraan sosial di Jawa Barat. 😊\n\n[[action:tab:beranda:Lihat Modul di Beranda]] [[action:pillar:badanusaha:Buka Modul Badan Usaha / KUBE]]`;
+  }
+
   // 4.9 KUBE & BADAN USAHA SOSIAL
   if (q.includes('kube') || q.includes('badan usaha') || q.includes('kelompok usaha')) {
     return `${opening}**Kelompok Usaha Bersama (KUBE) & Badan Usaha Sosial**:
@@ -2396,6 +2429,61 @@ export function verifyAndTrackAnswerAccuracy(
       isAccurate: true,
       confidence: 0.99,
       source: 'ai_model_verified',
+    };
+  }
+
+  // 1.05 KUBE vs Badan Usaha Nomenclature / Equivalence Verification
+  const isKubeBadanUsahaQuery =
+    (normQ.includes('kube') || normQ.includes('kelompok usaha')) &&
+    (normQ.includes('badan usaha') || normQ.includes('usaha sosial') || normQ.includes('pilar 9') || normQ.includes('tertera') || normQ.includes('tertulis') || normQ.includes('bukannya') || normQ.includes('bukan nya')) &&
+    (
+      normQ.includes('kenapa') ||
+      normQ.includes('mengapa') ||
+      normQ.includes('kok') ||
+      normQ.includes('naha') ||
+      normQ.includes('bukannya') ||
+      normQ.includes('bukan nya') ||
+      normQ.includes('bukan') ||
+      normQ.includes('tertera') ||
+      normQ.includes('tertulis') ||
+      normQ.includes('namanya') ||
+      normQ.includes('disebut') ||
+      normQ.includes('sama') ||
+      normQ.includes('beda') ||
+      normQ.includes('hubungan')
+    );
+
+  if (isKubeBadanUsahaQuery) {
+    const rawLower = (rawReply || '').toLowerCase();
+    const hasProperExplanation =
+      (rawLower.includes('sama saja') || rawLower.includes('sama aja') || rawLower.includes('payung') || rawLower.includes('nomenklatur') || rawLower.includes('kesatuan pilar')) &&
+      !rawReply?.startsWith('**Kelompok Usaha Bersama (KUBE) & Badan Usaha Sosial**:\n- **Definisi**:');
+
+    if (hasProperExplanation && rawReply) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+
+    const accurateKubeAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: accurateKubeAnswer,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
     };
   }
 
