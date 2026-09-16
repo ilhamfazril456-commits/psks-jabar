@@ -126,6 +126,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const captchaInputRef = useRef<HTMLInputElement>(null);
   const regUsernameRef = useRef<HTMLInputElement>(null);
 
+  // Bot Honeypot Traps & Request Throttling (Zero layout impact, eliminates automated bots)
+  const [regHoneypot, setRegHoneypot] = useState('');
+  const [loginHoneypot, setLoginHoneypot] = useState('');
+  const lastSubmitTimestampRef = useRef<number>(0);
+
   // Client IP and Stable Device ID detection
   const [detectedIp, setDetectedIp] = useState<string>(() => {
     return sessionStorage.getItem('simpsks_client_ip') || '';
@@ -278,6 +283,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+
+    // Bot Honeypot Trap Detection (Catches automated scripts instantly before database calls)
+    if (regHoneypot.trim()) {
+      setErrorMessage('❌ Aktivitas bot otomatis terdeteksi. Permintaan pendaftaran ditolak demi keamanan sistem.');
+      return;
+    }
+
+    // Rate-limit click spamming (Minimum 1.5s interval between submissions)
+    const now = Date.now();
+    if (now - lastSubmitTimestampRef.current < 1500) {
+      setErrorMessage('⚠️ Mohon tunggu sejenak sebelum menekan tombol kembali.');
+      return;
+    }
+    lastSubmitTimestampRef.current = now;
 
     // Check device quota limitation (Max 3 accounts per device)
     const currentDeviceAccounts = getDeviceRegisteredAccounts();
@@ -441,6 +460,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // --- JALUR 2: LOGIN MANUAL SUBMIT (UNIVERSAL ROLE SORTING) ---
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Bot Honeypot Trap Detection (Catches automated scripts instantly before database calls)
+    if (loginHoneypot.trim()) {
+      setErrorMessage('❌ Aktivitas bot otomatis terdeteksi. Akses login ditolak demi keamanan sistem.');
+      return;
+    }
+
+    // Rate-limit click spamming (Minimum 1.5s interval between submissions)
+    const now = Date.now();
+    if (now - lastSubmitTimestampRef.current < 1500) {
+      setErrorMessage('⚠️ Mohon tunggu sejenak sebelum mencoba kembali.');
+      return;
+    }
+    lastSubmitTimestampRef.current = now;
 
     if (lockoutRemaining > 0 || isLoggingIn) return;
 
@@ -911,6 +944,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     onSubmit={handleRegisterSubmit}
                     className="space-y-1.5 sm:space-y-1.5 my-auto animate-scaleUp"
                   >
+                    {/* Bot Honeypot Trap (Completely hidden from humans, traps automated scrapers & bots) */}
+                    <div className="opacity-0 absolute -left-[9999px] -top-[9999px] h-0 w-0 pointer-events-none select-none overflow-hidden" aria-hidden="true" tabIndex={-1}>
+                      <label htmlFor="reg-honeypot-trap">Do not fill this field</label>
+                      <input
+                        type="text"
+                        id="reg-honeypot-trap"
+                        name="website_url_verification"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={regHoneypot}
+                        onChange={(e) => setRegHoneypot(e.target.value)}
+                      />
+                    </div>
+
                     {/* Device Quota Info Badge */}
                     <div className={`p-2 rounded-xl border flex flex-wrap items-center justify-between gap-1.5 text-[9.5px] font-black ${
                       isDeviceQuotaFull 
@@ -1230,6 +1277,19 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     onSubmit={handleLoginSubmit}
                     className="space-y-1 sm:space-y-1.5 flex-1 flex flex-col justify-center min-h-0 py-0.5 animate-scaleUp"
                   >
+                    {/* Bot Honeypot Trap (Completely hidden from humans, traps automated bot attempts) */}
+                    <div className="opacity-0 absolute -left-[9999px] -top-[9999px] h-0 w-0 pointer-events-none select-none overflow-hidden" aria-hidden="true" tabIndex={-1}>
+                      <label htmlFor="login-honeypot-trap">Do not fill this field</label>
+                      <input
+                        type="text"
+                        id="login-honeypot-trap"
+                        name="company_fax_verification"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={loginHoneypot}
+                        onChange={(e) => setLoginHoneypot(e.target.value)}
+                      />
+                    </div>
                     
                     {/* Rate Limiting & Account Lockout Banner */}
                     {lockoutRemaining > 0 && (

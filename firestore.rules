@@ -2,114 +2,161 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for security validation
-    function isNotEmpty(val) {
-      return val is string && val.size() > 0;
+    // Helper functions for security validation & anti-bot payload protection
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isReasonableString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
     }
 
     // Collection: app_settings (Global System Configuration & Settings)
     match /app_settings/{documentId} {
       allow read: if true;
-      allow write: if request.resource.data.keys().size() > 0;
+      allow write: if isValidId(documentId)
+                   && request.resource.data.keys().size() > 0
+                   && request.resource.data.keys().size() <= 30
+                   && (!('bgVideoUrl' in request.resource.data) || isReasonableString(request.resource.data.bgVideoUrl, 2000))
+                   && (!('floatingWaNumber' in request.resource.data) || isReasonableString(request.resource.data.floatingWaNumber, 50));
     }
 
-    // Collection: system_video_chunks (Realtime Multi-part Video Storage for Zero-configuration Background Video Sync)
+    // Collection: system_video_chunks (Realtime Multi-part Video Storage)
     match /system_video_chunks/{chunkId} {
       allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow write: if isValidId(chunkId)
+                   && request.resource.data.keys().size() <= 10
+                   && (!('data' in request.resource.data) || (request.resource.data.data is string && request.resource.data.data.size() <= 900000));
+      allow delete: if isValidId(chunkId);
     }
 
     // Collection: psks_records (Data Rekapitulasi PSKS 27 Kab/Kota)
     match /psks_records/{recordId} {
       allow read: if true;
-      allow create, update: if request.resource.data.nama is string 
-                            || request.resource.data.wilayah is string
-                            || request.resource.data.pillarId is string;
-      allow delete: if true;
+      allow create, update: if isValidId(recordId)
+                            && request.resource.data.keys().size() <= 60
+                            && (!('nama' in request.resource.data) || isReasonableString(request.resource.data.nama, 200))
+                            && (!('wilayah' in request.resource.data) || isReasonableString(request.resource.data.wilayah, 100))
+                            && (!('pillarId' in request.resource.data) || isReasonableString(request.resource.data.pillarId, 50))
+                            && (!('nik' in request.resource.data) || isReasonableString(request.resource.data.nik, 30));
+      allow delete: if isValidId(recordId);
     }
 
-    // Collection: admin_messages (Kotak Masuk Pengaduan Publik & Pesan Aspirasi)
+    // Collection: admin_messages (Kotak Masuk Pengaduan Publik & Aspirasi)
     match /admin_messages/{messageId} {
       allow read: if true;
-      // Allow public to submit messages/aspirations with validation
-      allow create: if request.resource.data.namaPengirim is string
-                    || request.resource.data.isiPesan is string
-                    || request.resource.data.subject is string;
-      allow update, delete: if true;
+      allow create: if isValidId(messageId)
+                    && request.resource.data.keys().size() <= 20
+                    && (!('namaPengirim' in request.resource.data) || isReasonableString(request.resource.data.namaPengirim, 150))
+                    && (!('isiPesan' in request.resource.data) || isReasonableString(request.resource.data.isiPesan, 5000))
+                    && (!('subject' in request.resource.data) || isReasonableString(request.resource.data.subject, 200));
+      allow update, delete: if isValidId(messageId);
     }
 
     // Collection: admin_accounts (Manajemen Akun Admin Daerah & Provinsi)
     match /admin_accounts/{accountId} {
       allow read: if true;
-      allow create, update: if request.resource.data.keys().size() > 0;
-      allow delete: if true;
+      allow create: if isValidId(accountId)
+                    && request.resource.data.keys().size() <= 20
+                    && request.resource.data.username is string
+                    && request.resource.data.username.size() >= 3
+                    && request.resource.data.username.size() <= 50
+                    && request.resource.data.role in ['user', 'admin', 'superadmin', 'developer']
+                    && request.resource.data.wilayahTugas is string
+                    && request.resource.data.wilayahTugas.size() <= 100;
+      allow update: if isValidId(accountId)
+                    && request.resource.data.keys().size() <= 20
+                    && request.resource.data.username == resource.data.username;
+      // Safeguard: Forbid bot/script from deleting developer or primary regional administrator
+      allow delete: if isValidId(accountId)
+                    && resource.data.role != 'developer'
+                    && resource.data.username != 'admin_provinsi'
+                    && resource.data.role != 'superadmin_system';
     }
 
     // Collection: system_logs (Catatan Riwayat Audit Aktivitas & Log Forensik)
     match /system_logs/{logId} {
       allow read: if true;
-      allow create: if request.resource.data.action is string 
-                    || request.resource.data.actionType is string 
-                    || request.resource.data.timestamp is string 
-                    || request.resource.data.timestamp is int
-                    || request.resource.data.createdAt is int
-                    || request.resource.data.createdAt is number;
-      allow update: if false;
-      allow delete: if true;
+      allow create: if isValidId(logId)
+                    && request.resource.data.keys().size() <= 20
+                    && (!('action' in request.resource.data) || isReasonableString(request.resource.data.action, 300));
+      allow update: if false; // Audit logs are strictly immutable
+      allow delete: if isValidId(logId);
     }
 
     // Collection: registration_submissions (Pengajuan Pendaftaran Mandiri Anggota PSKS)
     match /registration_submissions/{submissionId} {
       allow read: if true;
-      allow create: if request.resource.data.namaLengkap is string || request.resource.data.nama is string;
-      allow update, delete: if true;
+      allow create: if isValidId(submissionId)
+                    && request.resource.data.keys().size() <= 25
+                    && (!('nama' in request.resource.data) || isReasonableString(request.resource.data.nama, 200))
+                    && (!('wilayah' in request.resource.data) || isReasonableString(request.resource.data.wilayah, 100))
+                    && (!('pillarId' in request.resource.data) || isReasonableString(request.resource.data.pillarId, 50));
+      allow update, delete: if isValidId(submissionId);
     }
 
     // Collection: task_items (Manajemen Tugas Operasional & Penugasan Wilayah)
     match /task_items/{taskId} {
       allow read: if true;
-      allow create, update: if request.resource.data.title is string || request.resource.data.judul is string;
-      allow delete: if true;
+      allow create, update: if isValidId(taskId)
+                            && request.resource.data.keys().size() <= 25
+                            && (!('title' in request.resource.data) || isReasonableString(request.resource.data.title, 300))
+                            && (!('targetWilayah' in request.resource.data) || isReasonableString(request.resource.data.targetWilayah, 100));
+      allow delete: if isValidId(taskId);
     }
 
-    // Collection: security_signals (Realtime Instant Broadcast Security Signals & Remote Kickout)
+    // Collection: security_signals (Realtime Instant Broadcast Security Signals)
     match /security_signals/{signalId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isValidId(signalId)
+                   && request.resource.data.keys().size() <= 15
+                   && (!('action' in request.resource.data) || isReasonableString(request.resource.data.action, 50));
     }
 
-    // Collection: ai_knowledge_base (Basis Pengetahuan Cerdas & Otak Asisten AI)
+    // Collection: ai_knowledge_base (Basis Pengetahuan Cerdas Asisten AI)
     match /ai_knowledge_base/{docId} {
       allow read: if true;
-      allow write: if request.resource.data.keys().size() > 0;
+      allow write: if isValidId(docId)
+                   && request.resource.data.keys().size() <= 25
+                   && (!('title' in request.resource.data) || isReasonableString(request.resource.data.title, 300))
+                   && (!('content' in request.resource.data) || isReasonableString(request.resource.data.content, 25000));
+      allow delete: if isValidId(docId);
     }
 
-    // Collection: ai_config (Otak Asisten AI, System Instruction & Aturan Konteks Firestore)
+    // Collection: ai_config (Otak Asisten AI & System Instruction)
     match /ai_config/{configId} {
       allow read: if true;
-      allow write: if request.resource.data.keys().size() > 0;
+      allow write: if isValidId(configId)
+                   && request.resource.data.keys().size() <= 20
+                   && (!('systemInstruction' in request.resource.data) || isReasonableString(request.resource.data.systemInstruction, 25000));
     }
 
-    // Collection: ai_vocabulary (Kamus Kosakata Baku, Non-Baku, Sunda & Slang)
+    // Collection: ai_vocabulary (Kamus Kosakata Baku, Non-Baku & Sunda)
     match /ai_vocabulary/{vocabId} {
       allow read: if true;
-      allow write: if request.resource.data.keys().size() > 0;
+      allow write: if isValidId(vocabId)
+                   && request.resource.data.keys().size() <= 15
+                   && (!('word' in request.resource.data) || isReasonableString(request.resource.data.word, 100))
+                   && (!('canonical' in request.resource.data) || isReasonableString(request.resource.data.canonical, 100));
+      allow delete: if isValidId(vocabId);
     }
 
-    // Collection: ip_registrations (Pelacakan Kuota Pendaftaran Akun Realtime per Alamat IP & Device)
+    // Collection: ip_registrations (Pelacakan Kuota Pendaftaran Realtime per IP & Device)
     match /ip_registrations/{ipDocId} {
       allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow write: if isValidId(ipDocId)
+                   && request.resource.data.keys().size() <= 20
+                   && (!('registeredAccounts' in request.resource.data) || (request.resource.data.registeredAccounts is list && request.resource.data.registeredAccounts.size() <= 30));
+      allow delete: if isValidId(ipDocId);
     }
 
-    // Collection: ai_unmatched_logs (Log Percakapan Anonim & Kosakata Baru untuk Active Learning)
+    // Collection: ai_unmatched_logs (Log Percakapan Anonim untuk Active Learning)
     match /ai_unmatched_logs/{logId} {
       allow read: if true;
-      allow write: if true;
-      allow delete: if true;
+      allow write: if isValidId(logId) && request.resource.data.keys().size() <= 15;
+      allow delete: if isValidId(logId);
     }
   }
 }
+
 
