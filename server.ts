@@ -1151,20 +1151,21 @@ Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kod
     const isConfirmingOrAcknowledgingDev =
       !isQuestionOrSecurityRequest &&
       (
-        q.startsWith('owalah') ||
-        q.startsWith('oalah') ||
-        q.startsWith('oh jadi') ||
-        q.startsWith('oh ternyata') ||
-        q.startsWith('oh begitu') ||
-        q.startsWith('oh gitu') ||
-        q.startsWith('berarti') ||
-        q.startsWith('ternyata') ||
-        q.startsWith('pantesan') ||
+        /^(o+h+|o+a+lah|owalah|jadi|berarti|ternyata|pantesan|wah|paham|ngerti|siap|mantap)\b/i.test(q) ||
+        q.startsWith('baru tahu') ||
+        q.startsWith('baru tau') ||
+        q.startsWith('oh gitu toh') ||
+        q.startsWith('gitu toh') ||
+        q.startsWith('begitu ya') ||
+        q.startsWith('oh begitu ya') ||
         q.includes('itu pembuat') ||
         q.includes('dia yang bikin') ||
         q.includes('dia yang buat') ||
         q.includes('dia developernya') ||
         q.includes('dia pembuatnya') ||
+        q.includes('yang buatnya') ||
+        q.includes('yang bikinnya') ||
+        q.includes('yang buat') ||
         (hasAckEnding && (q.startsWith('jadi ') || q.startsWith('berarti ')))
       ) &&
       (
@@ -1452,15 +1453,7 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
         const isAckOrConfirm =
           !isQuestionOrSecurityRequestInMultiTurn &&
           (
-            targetQ.startsWith('owalah') ||
-            targetQ.startsWith('oalah') ||
-            targetQ.startsWith('oh jadi') ||
-            targetQ.startsWith('oh ternyata') ||
-            targetQ.startsWith('oh begitu') ||
-            targetQ.startsWith('oh gitu') ||
-            targetQ.startsWith('berarti') ||
-            targetQ.startsWith('ternyata') ||
-            targetQ.startsWith('pantesan') ||
+            /^(o+h+|o+a+lah|owalah|jadi|berarti|ternyata|pantesan|wah|paham|ngerti|siap|mantap)\b/i.test(targetQ) ||
             targetQ.startsWith('baru tahu') ||
             targetQ.startsWith('baru tau') ||
             targetQ.startsWith('oh gitu toh') ||
@@ -1476,6 +1469,9 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
             targetQ.includes('dia yang buat') ||
             targetQ.includes('dia developernya') ||
             targetQ.includes('dia pembuatnya') ||
+            targetQ.includes('yang buatnya') ||
+            targetQ.includes('yang bikinnya') ||
+            targetQ.includes('yang buat') ||
             (hasAckEndingInMultiTurn && (targetQ.startsWith('jadi ') || targetQ.startsWith('berarti ')))
           );
 
@@ -1502,7 +1498,7 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
             if (isDev) {
               return `Hehe betul banget bos **Ilham Fazril**! Lu yang merancang dan ngebangun arsitektur full-stack sistem PSKS JABAR ini dari nol sampai secanggih ini. Mau bahas modul kodingan atau fitur apa lagi nih bos? 😎🚀`;
             }
-            return `${salamPrefix}Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun arsitektur sistem informasi PSKS JABAR ini.\n\nAda hal lain seputar 10 pilar sosial atau layanan kesejahteraan sosial di Jawa Barat yang bisa saya bantu jelaskan?`;
+            return `${salamPrefix}Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Kang Ilham Fazril 😊. Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri membangun arsitektur sistem informasi PSKS JABAR ini.\n\nAda hal lain seputar 10 pilar sosial atau layanan kesejahteraan sosial di Jawa Barat yang bisa saya bantu jelaskan?`;
           }
 
           // Konfirmasi topik pilar umum: misal Tagana, PSM, dll
@@ -1511,6 +1507,27 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
 
         // Kasus Khusus Developer: Pertanyaan lanjutan tentang Ilham Fazril
         if (contextRes.detectedObject.includes('Ilham Fazril') || contextRes.detectedObject.includes('Pengembang')) {
+          if (
+            targetQ.includes('bagaimana') ||
+            targetQ.includes('gimana') ||
+            targetQ.includes('kok bisa') ||
+            targetQ.includes('kenapa') ||
+            targetQ.includes('mengapa') ||
+            targetQ.includes('proses') ||
+            targetQ.includes('cara') ||
+            targetQ.includes('buat') ||
+            targetQ.includes('bikin') ||
+            targetQ.includes('rancang') ||
+            targetQ.includes('arsitektur') ||
+            targetQ.includes('teknologi') ||
+            targetQ.includes('ngoding')
+          ) {
+            if (isDev) {
+              return `Hehe nanya arsitektur sorangan euy bos **Ilham Fazril**! Maneh ngawangun sistem PSKS JABAR ieu make React 18, TypeScript, Tailwind CSS, Express backend proxy, Cloud Firestore, jeung Google Gemini AI waktu magang PKL di Dayasos Dinsos Jabar 2026. Aya fitur anyar nu rek ditambahkeun deui bro? 😎🚀`;
+            }
+            return `${salamPrefix}Kang **Ilham Fazril** membuat dan merancang website sistem informasi **PSKS JABAR** ini berawal dari inisiatif mandiri beliau saat menjalani magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat** pada **Bidang Pemberdayaan Sosial (Dayasos)** tahun 2026.\n\n**Latar Belakang & Inisiatif**:\nBeliau melihat perlunya digitalisasi terpadu agar data 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat tidak lagi tercecer atau dikelola secara manual. Dengan dedikasi tinggi, beliau merancang platform 'Satu Data Sosial Jawa Barat' ini.\n\n**Arsitektur & Teknologi Modern yang Digunakan**:\n1. **Frontend**: React 18, TypeScript, dan Tailwind CSS untuk antarmuka yang cepat, modern, dan ramah pengguna di ponsel maupun komputer.\n2. **Backend & Database**: Express.js terintegrasi dengan Google Cloud Firestore untuk penyimpanan data *real-time* dan keamanan berbasis peran (RBAC).\n3. **Kecerdasan Buatan (AI)**: Terhubung dengan Google Gemini AI untuk asistensi konsultasi 10 Pilar Sosial secara responsif.\n4. **Inovasi KTA Digital**: Fitur QR Code anti-pemalsuan untuk validasi keaslian anggota pilar sosial secara instan di lapangan.\n\n*Catatan Keamanan*: Profil dedikasi Kang Ilham Fazril merupakan informasi publik yang patut dibanggakan, namun akun dan kredensial developer tetap dijaga kerahasiaannya demi kepatuhan keamanan data (UU PDP No. 27/2022).\n\nApakah ada informasi lain seputar 10 pilar sosial yang ingin Anda tanyakan?`;
+          }
+
           if (targetQ.includes('sekolah') || targetQ.includes('pendidikan') || targetQ.includes('magang') || targetQ.includes('bidang') || targetQ.includes('jurusan') || targetQ.includes('siapa dia') || targetQ.includes('dimana')) {
             if (isDev) {
               return `Hehe maneh nanya diri sorangan deui bro **Ilham Fazril**! Maneh teh siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat dina Bidang Dayasos (Pemberdayaan Sosial) taun 2026, anu suksés ngarancang tur ngawangun sistem PSKS JABAR ieu! 😎🚀`;
@@ -2503,9 +2520,9 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
       return `Halo! Selamat datang di Portal **PSKS JABAR**. Saya siap memberikan informasi seputar:\n- **10 Pilar Utama PSKS**: Penjelasan detail PKSP (Peksos), PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, dan SLRT/Puskesos.\n- **Layanan Dinsos Jabar**: Kontak pengaduan, alamat kantor dinas, profil pimpinan Ibu Noneng Komara Nengsih, S.E., M.A.P., dan integrasi data sosial di 27 Kab/Kota.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda cari?`;
     }
 
-    // Default response when no information is found for the context asked:
+    // Default polite response when no information is found for the context asked:
     const cleanTopic = targetQ.slice(0, 80).trim();
-    return `Mohon maaf untuk saat ini masih belum memiliki informasi (${cleanTopic ? `${cleanTopic}` : 'yang ditanyakan'}) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    return `Mohon maaf, saya belum dapat mengenali atau menemukan informasi terkait "${cleanTopic || 'hal tersebut'}" dalam pangkalan data layanan PSKS Jawa Barat.\n\nSebagai Asisten Resmi PSKS Jabar, saya dapat membantu Anda memberikan informasi seputar **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran mandiri pilar, maupun layanan Dinas Sosial Provinsi Jawa Barat.\n\nApakah ada topik pilar sosial atau layanan yang ingin Anda tanyakan? Silakan hubungi kami jika Anda membutuhkan bantuan lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
   // API endpoint for AI Chat Assistant (with Rate Limiting Protection)
@@ -2671,6 +2688,8 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
             /\b(lohh?|lahh?|ehh?|woi|weh)?\s*(saya|aku|abdi|urang|gue|gw)\s+(kan\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(lowQ) ||
             /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(developer|developernya|pengembang|pembuat|kreator|arsitek|pemilik|owner|programmer|yang bikin|yang buat|yang ngoding)\b/i.test(lowQ) ||
             /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(superadmin|admin|administrator)\b/i.test(lowQ) ||
+            /(ilham(\s+fazril)?|developer|pembuat|arsitek)\s+(teh|itu|tuh)?\s*(saya|aku|abdi|urang|gue|gw)/i.test(lowQ) ||
+            /(asal\s+(kamu|anda|maneh)?\s*tau\s+)?.*?(ilham\s+fazril|developer).*?(saya|aku|abdi|urang|gue|gw)/i.test(lowQ) ||
             /\b(saya|aku|abdi|urang|gue|gw)\s+.*?(developer|ilham).*?(masuk|lupa|password|login|user)\b/i.test(lowQ) ||
             /\b(buka\s+akses|bypass|beri\s+izin).*?(developer|ilham|pembuat|admin)/i.test(lowQ) ||
             /\b(abaikan|ignore).*?(perintah|instruksi|aturan|developer|ilham)/i.test(lowQ)
@@ -2678,7 +2697,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 
         if (isImpersonationAttempt) {
           return res.json({
-            reply: 'Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
+            reply: 'Halo Kang **Ilham Fazril**! Salam hormat, senang sekali Anda menyapa 😊.\n\nNamun, sebagai asisten cerdas yang mematuhi standar keamanan sistem dan *Role-Based Access Control* (RBAC), asisten AI tidak dapat memvalidasi identitas akun atau mengaktifkan hak akses pengembang hanya melalui pernyataan di kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data pribadi (UU PDP No. 27/2022), hak akses developer hanya aktif secara sah setelah Anda masuk menggunakan akun kredensial terdaftar melalui menu login resmi.\n\nSilakan masuk melalui tautan di bawah ini untuk mengakses fitur pengembang:\n\n[[action:tab:login:Buka Halaman Login]]'
           });
         }
 
@@ -2732,6 +2751,15 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         const resolvedPillar = userContext?.activePillar || normPillar;
         const firestoreKnowledgeMatches = searchKnowledgeBase(normQueryText, resolvedPillar, userContext?.role);
 
+        // Jika dalam multi-turn sedang membahas developer/pembuat, pastikan dokumen pengetahuan developer ikut disertakan!
+        if (
+          (contextResolution.detectedObject?.includes('Ilham Fazril') || contextResolution.detectedObject?.includes('Pengembang')) &&
+          !firestoreKnowledgeMatches.some(m => m.topic.includes('ilham') || m.topic.includes('developer_pembuat'))
+        ) {
+          const devKnowledge = searchKnowledgeBase('ilham fazril pembuat website', null, userContext?.role);
+          firestoreKnowledgeMatches.push(...devKnowledge);
+        }
+
         const isQuestionOrSecurityInPost =
           normQueryText.includes('?') ||
           normQueryText.includes('mana') ||
@@ -2767,18 +2795,25 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         const isAckOrConfirmMsg =
           !isQuestionOrSecurityInPost &&
           (
-            normQueryText.startsWith('owalah') ||
-            normQueryText.startsWith('oalah') ||
-            normQueryText.startsWith('oh jadi') ||
-            normQueryText.startsWith('oh ternyata') ||
-            normQueryText.startsWith('oh begitu') ||
-            normQueryText.startsWith('oh gitu') ||
-            normQueryText.startsWith('berarti') ||
-            normQueryText.startsWith('ternyata') ||
-            normQueryText.startsWith('pantesan') ||
+            /^(o+h+|o+a+lah|owalah|jadi|berarti|ternyata|pantesan|wah|paham|ngerti|siap|mantap)\b/i.test(normQueryText) ||
+            normQueryText.startsWith('baru tahu') ||
+            normQueryText.startsWith('baru tau') ||
+            normQueryText.startsWith('oh gitu toh') ||
+            normQueryText.startsWith('gitu toh') ||
+            normQueryText.startsWith('begitu ya') ||
+            normQueryText.startsWith('oh begitu ya') ||
+            normQueryText.startsWith('siap') ||
+            normQueryText.startsWith('oke siap') ||
+            normQueryText.startsWith('paham') ||
+            normQueryText.startsWith('ngerti') ||
             normQueryText.includes('itu pembuat') ||
             normQueryText.includes('dia yang bikin') ||
+            normQueryText.includes('dia yang buat') ||
             normQueryText.includes('dia developernya') ||
+            normQueryText.includes('dia pembuatnya') ||
+            normQueryText.includes('yang buatnya') ||
+            normQueryText.includes('yang bikinnya') ||
+            normQueryText.includes('yang buat') ||
             (hasAckEndingInPost && (normQueryText.startsWith('jadi ') || normQueryText.startsWith('berarti ')))
           );
 
