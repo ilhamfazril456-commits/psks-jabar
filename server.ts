@@ -1418,6 +1418,37 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
 
         const hasAckEndingInMultiTurn = /(^|\s)(ya|kan|toh|nih)\??$/i.test(targetQ);
 
+        // Kasus Pujian, Apresiasi, dan Rasa Kagum Multi-turn ("hebat juga beliau", "keren ya", "mantap", "salut")
+        const isComplimentOrAppreciationInMultiTurn =
+          !isQuestionOrSecurityRequestInMultiTurn &&
+          (
+            targetQ.includes('hebat') ||
+            targetQ.includes('keren') ||
+            targetQ.includes('mantap') ||
+            targetQ.includes('mantul') ||
+            targetQ.includes('salut') ||
+            targetQ.includes('luar biasa') ||
+            targetQ.includes('patut diacungi') ||
+            targetQ.includes('diacungi jempol') ||
+            targetQ.includes('pinter') ||
+            targetQ.includes('pintar') ||
+            targetQ.includes('cerdas') ||
+            targetQ.includes('jenius') ||
+            targetQ.includes('bagus banget') ||
+            targetQ.includes('bagus sekali') ||
+            targetQ.includes('top banget') ||
+            targetQ.includes('jos') ||
+            targetQ.includes('joss') ||
+            targetQ.includes('gokil') ||
+            targetQ.includes('sae pisan') ||
+            targetQ.includes('alus pisan') ||
+            targetQ.includes('hade pisan') ||
+            targetQ.includes('hade euy') ||
+            targetQ.includes('hebat euy') ||
+            targetQ.includes('keren euy') ||
+            targetQ.includes('edun')
+          );
+
         const isAckOrConfirm =
           !isQuestionOrSecurityRequestInMultiTurn &&
           (
@@ -1430,6 +1461,16 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
             targetQ.startsWith('berarti') ||
             targetQ.startsWith('ternyata') ||
             targetQ.startsWith('pantesan') ||
+            targetQ.startsWith('baru tahu') ||
+            targetQ.startsWith('baru tau') ||
+            targetQ.startsWith('oh gitu toh') ||
+            targetQ.startsWith('gitu toh') ||
+            targetQ.startsWith('begitu ya') ||
+            targetQ.startsWith('oh begitu ya') ||
+            targetQ.startsWith('siap') ||
+            targetQ.startsWith('oke siap') ||
+            targetQ.startsWith('paham') ||
+            targetQ.startsWith('ngerti') ||
             targetQ.includes('itu pembuat') ||
             targetQ.includes('dia yang bikin') ||
             targetQ.includes('dia yang buat') ||
@@ -1437,6 +1478,24 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
             targetQ.includes('dia pembuatnya') ||
             (hasAckEndingInMultiTurn && (targetQ.startsWith('jadi ') || targetQ.startsWith('berarti ')))
           );
+
+        if (isComplimentOrAppreciationInMultiTurn) {
+          if (
+            contextRes.detectedObject.includes('Ilham Fazril') ||
+            contextRes.detectedObject.includes('Pengembang') ||
+            targetQ.includes('ilham') ||
+            targetQ.includes('fazril') ||
+            targetQ.includes('beliau') ||
+            targetQ.includes('dia')
+          ) {
+            if (isDev) {
+              return `Hehe nuhun pisan euy pujianna kang **Ilham Fazril**! Mantap pisan karya maneh nga-build arsitektur full-stack PSKS JABAR ieu keur Dinsos Jabar. Aya ide atanapi fitur naon deui nu bade di-upgrade ayeuna bro? 😎🔥`;
+            }
+            return `${salamPrefix}Betul sekali Bapak/Ibu! Terima kasih banyak atas apresiasinya 😊. Dedikasi Kang **Ilham Fazril** memang sangat patut diacungi jempol. Meskipun masih berstatus sebagai siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) pada tahun 2026, beliau secara mandiri dan tekun berhasil merancang arsitektur full-stack serta mendigitalisasi sistem informasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) se-Jawa Barat ini dari awal.\n\nApakah ada informasi lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?`;
+          }
+
+          return `${salamPrefix}Terima kasih banyak atas apresiasi positifnya Bapak/Ibu 😊! Dedikasi dan kerja keras para personil serta relawan **${contextRes.detectedObject}** memang sangat luar biasa dalam mengabdi bagi kemaslahatan masyarakat Jawa Barat.\n\nApakah ada hal lain seputar ${contextRes.detectedObject} yang ingin Anda ketahui lebih lanjut?`;
+        }
 
         if (isAckOrConfirm) {
           if (contextRes.detectedObject.includes('Ilham Fazril') || contextRes.detectedObject.includes('Pengembang') || targetQ.includes('ilham') || targetQ.includes('fazril')) {
@@ -2565,9 +2624,10 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     4. Tindak Lanjut: Jika melebihi batas waktu tersebut belum ada pembaruan status, silakan berkoordinasi langsung dengan pihak Dinas Sosial Kabupaten/Kota domisili Anda atau Dinas Sosial Provinsi Jawa Barat.
     Sertakan action tags: [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
 - [KEBIJAKAN KETIKA TIDAK MEMILIKI INFORMASI / PERTANYAAN DI LUAR KNOWLEDGE BASE]:
-  * Jika ada pertanyaan lain yang informasinya tidak Anda miliki dalam sistem atau basis data, WAJIB dijawab dengan sopan dan santun mengikuti format:
+  * Jika ada pertanyaan spesifik yang informasinya benar-benar tidak Anda miliki dalam sistem atau basis data, WAJIB dijawab dengan sopan dan santun mengikuti format:
     "Mohon maaf untuk saat ini masih belum memiliki informasi ([sebutkan konteks/topik yang ditanyakan secara singkat]) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut."
-    Sertakan tombol: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    Sertakan tombol: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
+  * PERINGATAN PENTING (DILARANG SALAH MENERAPKAN): Format penolakan "Mohon maaf..." di atas DILARANG KERAS digunakan untuk tanggapan percakapan alami, obrolan santai, apresiasi/pujian (misal: "hebat juga beliau", "keren ya", "mantap", "salut", "luar biasa"), konfirmasi/reaksi (misal: "owalah", "oh gitu", "berarti", "pantesan", "baru tahu"), maupun ucapan terima kasih/salam. Untuk kalimat-kalimat tersebut, sambutlah secara hangat, bersahabat, kontekstual, dan mengalir!`;
           }
 
           if (userContext.liveSummary) {

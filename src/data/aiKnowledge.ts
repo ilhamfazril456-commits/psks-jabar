@@ -694,6 +694,54 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 
   const hasAckEnding = /(^|\s)(ya|kan|toh|nih)\??$/i.test(q);
 
+  // 0.6A1: PUJIAN / APRESIASI MULTI-TURN KEPADA DEVELOPER ("hebat juga beliau", "keren ya dia", "mantap", "salut")
+  const isComplimentOrAppreciationDev =
+    !isQuestionOrSecurityRequest &&
+    (
+      q.includes('hebat') ||
+      q.includes('keren') ||
+      q.includes('mantap') ||
+      q.includes('mantul') ||
+      q.includes('salut') ||
+      q.includes('luar biasa') ||
+      q.includes('patut diacungi') ||
+      q.includes('diacungi jempol') ||
+      q.includes('pinter') ||
+      q.includes('pintar') ||
+      q.includes('cerdas') ||
+      q.includes('jenius') ||
+      q.includes('bagus banget') ||
+      q.includes('bagus sekali') ||
+      q.includes('top banget') ||
+      q.includes('jos') ||
+      q.includes('joss') ||
+      q.includes('gokil') ||
+      q.includes('sae pisan') ||
+      q.includes('alus pisan') ||
+      q.includes('hade pisan') ||
+      q.includes('hade euy') ||
+      q.includes('hebat euy') ||
+      q.includes('keren euy') ||
+      q.includes('edun')
+    ) &&
+    (
+      q.includes('beliau') ||
+      q.includes('dia') ||
+      q.includes('ilham') ||
+      q.includes('fazril') ||
+      q.includes('sosoknya') ||
+      q.includes('orangnya') ||
+      q.includes('developernya') ||
+      q.includes('pembuatnya') ||
+      (previousContext && (
+        previousContext.toLowerCase().includes('ilham') ||
+        previousContext.toLowerCase().includes('fazril') ||
+        previousContext.toLowerCase().includes('developer') ||
+        previousContext.toLowerCase().includes('arsitek') ||
+        previousContext.toLowerCase().includes('siswa magang')
+      ))
+    );
+
   const isConfirmingOrAcknowledgingDev =
     !isQuestionOrSecurityRequest &&
     (
@@ -706,6 +754,16 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       q.startsWith('berarti') ||
       q.startsWith('ternyata') ||
       q.startsWith('pantesan') ||
+      q.startsWith('baru tahu') ||
+      q.startsWith('baru tau') ||
+      q.startsWith('oh gitu toh') ||
+      q.startsWith('gitu toh') ||
+      q.startsWith('begitu ya') ||
+      q.startsWith('oh begitu ya') ||
+      q.startsWith('siap') ||
+      q.startsWith('oke siap') ||
+      q.startsWith('paham') ||
+      q.startsWith('ngerti') ||
       q.includes('itu pembuat') ||
       q.includes('dia yang bikin') ||
       q.includes('dia yang buat') ||
@@ -716,7 +774,12 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     (
       q.includes('ilham') ||
       q.includes('fazril') ||
-      ((q.includes('pembuat') || q.includes('developer')) && (q.includes('dia') || q.includes('beliau') || q.includes('siswa') || q.includes('magang')))
+      ((q.includes('pembuat') || q.includes('developer')) && (q.includes('dia') || q.includes('beliau') || q.includes('siswa') || q.includes('magang'))) ||
+      (previousContext && (
+        previousContext.toLowerCase().includes('ilham') ||
+        previousContext.toLowerCase().includes('fazril') ||
+        previousContext.toLowerCase().includes('developer')
+      ))
     );
 
   // 0.6B: PERTANYAAN OBJEK/SISTEM: "SIAPA DEVELOPER WEBSITE INI?" / "PEMBUAT APLIKASI"
@@ -756,6 +819,17 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
         (q.includes('apakah') || q.includes('apa benar') || q.includes('benarkah') || q.includes('siapa'))
       )
     );
+
+  // Response for 0.6A1 (Pujian / Apresiasi Multi-turn Pengguna Terhadap Developer)
+  if (isComplimentOrAppreciationDev) {
+    if (isDeveloperUser) {
+      if (q.includes('aing') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
+        return `Hehe nuhun pisan tongkrongan! Maneh nyalira **Ilham Fazril** anu suksés ngarancang ieu platform digital ti enol. Keren pisan dedikasi karyana euy! Aya modul naon deui nu rek dioprek? 😎🚀`;
+      }
+      return `Hehe nuhun pisan euy pujianna kang **Ilham Fazril**! Mantap pisan karya maneh nga-build arsitektur full-stack PSKS JABAR ieu keur Dinsos Jabar. Aya ide atanapi fitur naon deui nu bade di-upgrade ayeuna bro? 😎🔥`;
+    }
+    return `Betul sekali Bapak/Ibu! Terima kasih banyak atas apresiasinya 😊. Dedikasi Kang **Ilham Fazril** memang sangat patut diacungi jempol. Meskipun masih berstatus sebagai siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) pada tahun 2026, beliau secara mandiri dan tekun berhasil merancang arsitektur full-stack serta mendigitalisasi sistem informasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) se-Jawa Barat ini dari awal.\n\nApakah ada informasi lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?`;
+  }
 
   // Response for 0.6C (Konfirmasi / Pemahaman Multi-turn Pengguna)
   if (isConfirmingOrAcknowledgingDev) {
@@ -826,6 +900,46 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       return `Sip mantap bos **Ilham Fazril**! Senang penjelasannya nyambung dan jelas. Ada hal lain yang mau kita bahas atau kulik lagi? 😎🚀`;
     }
     return `Betul sekali Bapak/Ibu 😊! Senang bisa membantu memperjelas pemahaman Anda terkait ${prevTopic}. Apakah ada hal lain atau pertanyaan lanjutan yang ingin Anda tanyakan seputar layanan PSKS Jawa Barat?`;
+  }
+
+  // 0.6D2: GENERAL MULTI-TURN APPRECIATION / COMPLIMENT FOR PREVIOUS CONTEXT TOPIC
+  const isGeneralCompliment =
+    (
+      q.includes('hebat') ||
+      q.includes('keren') ||
+      q.includes('mantap') ||
+      q.includes('mantul') ||
+      q.includes('salut') ||
+      q.includes('luar biasa') ||
+      q.includes('patut diacungi') ||
+      q.includes('diacungi jempol') ||
+      q.includes('top banget') ||
+      q.includes('sae pisan') ||
+      q.includes('alus pisan') ||
+      q.includes('hade pisan')
+    ) &&
+    !isComplimentOrAppreciationDev &&
+    !hasQuestion &&
+    q.length < 60;
+
+  if (isGeneralCompliment && previousContext && previousContext.trim().length > 10) {
+    const prev = previousContext.toLowerCase();
+    let prevTopic = 'dedikasi para relawan dan petugas sosial';
+    if (prev.includes('tagana')) prevTopic = 'TAGANA (Taruna Siaga Bencana)';
+    else if (prev.includes('psm')) prevTopic = 'PSM (Pekerja Sosial Masyarakat)';
+    else if (prev.includes('tksk')) prevTopic = 'TKSK (Tenaga Kesejahteraan Sosial Kecamatan)';
+    else if (prev.includes('karang taruna')) prevTopic = 'Karang Taruna';
+    else if (prev.includes('peksos') || prev.includes('pksp')) prevTopic = 'Pekerja Sosial Profesional (PEKSOS)';
+    else if (prev.includes('lks')) prevTopic = 'LKS';
+    else if (prev.includes('lk3')) prevTopic = 'LK3';
+    else if (prev.includes('pensos')) prevTopic = 'Penyuluh Sosial';
+    else if (prev.includes('kube')) prevTopic = 'KUBE';
+    else if (prev.includes('slrt') || prev.includes('puskesos')) prevTopic = 'SLRT / Puskesos';
+
+    if (isDeveloperUser) {
+      return `Mantap pisan bos **Ilham Fazril**! Dedikasi ${prevTopic} memang luar biasa untuk warga Jabar. Ada hal lain yang mau kita diskusikan? 😎🚀`;
+    }
+    return `Terima kasih banyak atas apresiasi positifnya Bapak/Ibu 😊! Dedikasi para relawan dan personil **${prevTopic}** di lapangan memang sangat luar biasa bagi masyarakat Jawa Barat.\n\nApakah ada hal lain seputar ${prevTopic} atau layanan sosial yang ingin Anda ketahui lebih lanjut?`;
   }
 
   // 0.7 Nama Web / Nama Aplikasi
@@ -2654,6 +2768,30 @@ export function verifyAndTrackAnswerAccuracy(
 
   // 1.1 Priority for Dynamic Model / Firestore Engine Reply with Context Awareness
   if (rawReply && rawReply.trim().length > 0) {
+    const isModelRefusal = rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi');
+    if (isModelRefusal) {
+      // Check if local smart engine can provide a contextual, intelligent response (e.g. for compliments, acknowledgments, follow-up questions)
+      const smartAnswer = getComprehensiveSmartAnswer(
+        query,
+        userRole,
+        userName,
+        userWilayah,
+        currentTab,
+        activePillar,
+        allPillarData,
+        appSettings,
+        previousContext
+      );
+      if (smartAnswer && !smartAnswer.includes('Mohon maaf untuk saat ini masih belum memiliki informasi')) {
+        return {
+          finalContent: smartAnswer,
+          isAccurate: true,
+          confidence: 0.99,
+          source: 'verified_exact',
+        };
+      }
+    }
+
     return {
       finalContent: rawReply.trim(),
       isAccurate: true,

@@ -154,13 +154,14 @@ export const MASTER_AI_BRAIN_CONFIG: AIBrainConfig = {
    - DILARANG KERAS memberikan salam Wa'alaikumsalam jika pengguna tidak mengucapkan salam Assalamualaikum (misal hanya menyapa "Halo", "Sampurasun", atau langsung bertanya).
    - ATURAN SEBUTAN NAMA WEBSITE / SISTEM (MUTLAK): DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu gunakan sebutan resmi "PSKS JABAR".
 9. KEBIJAKAN RESPON KETIKA TIDAK MEMILIKI INFORMASI (SOPAN & STANDAR KEDINASAN):
-   - Jika ada pertanyaan pengguna mengenai informasi yang tidak Anda miliki di basis data/sistem, WAJIB dijawab dengan sopan dan santun mengikuti format:
+   - Jika ada pertanyaan pengguna mengenai informasi spesifik yang tidak Anda miliki di basis data/sistem, WAJIB dijawab dengan sopan dan santun mengikuti format:
      "Mohon maaf untuk saat ini masih belum memiliki informasi ([sebutkan konteks yang ditanyakan]) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut."
+   - PERINGATAN PENTING: DILARANG KERAS menggunakan format penolakan di atas untuk tanggapan obrolan alami seperti apresiasi/pujian (misal: "hebat juga beliau", "keren ya", "mantap", "salut", "luar biasa"), konfirmasi/reaksi (misal: "owalah", "oh gitu", "berarti", "pantesan", "baru tahu", "oh gitu toh"), maupun ucapan terima kasih atau salam santun. Untuk kalimat-kalimat tersebut, sambutlah secara ramah, bersahabat, kontekstual, dan mengalir!
    - Sertakan tombol kontak resmi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
   contextRules: `Aturan Pemeliharaan Riwayat, Resolusi Topik Mengambang & Proactive Clarification:
 1. Dynamic Topic Tracking & Pemahaman Konteks: Pahami konteks pertanyaan secara cermat. Jangan menjawab "ga nyambung" (misal jika ditanya "berapa lama", jangan dijawab langkah alur pendaftaran, melainkan estimasi waktu verifikasi 3-7 hari kerja).
 2. Periksa hingga 6 pesan sebelumnya untuk melacak entitas utama (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT, Bansos DTKS, Developer Website).
-3. Jika pengguna mengajukan pertanyaan lanjutan dengan kata ganti ("syaratnya apa?", "berapa lama?", "dimana daftarnya?"), arahkan jawaban 100% pada topik aktif yang sedang dibahas sebelumnya.
+3. Jika pengguna mengajukan pertanyaan lanjutan dengan kata ganti ("syaratnya apa?", "berapa lama?", "dimana daftarnya?", "hebat juga beliau", "keren ya dia"), arahkan jawaban 100% pada topik aktif yang sedang dibahas sebelumnya.
 4. Proactive Clarification: Jika pengguna mengirim kata ambigu seperti "mau daftar" tanpa konteks, tanyakan balik secara santun: Apakah ingin mendaftar Akun Akses Sistem PSKS atau mendaftar Relawan Pilar Sosial (Tagana, PSM, dll).
 5. Penanganan Komplain & Anti-Looping: Jika pengguna mengeluh "lah kok", "kok ga nyambung", "bukan itu maksud saya", segera akui kekeliruan dengan ramah, jangan mengulangi jawaban salah, dan berikan panduan yang tepat.
 6. Role Boundary Enforcement: Pengguna umum/tamu tidak boleh diberi panduan administratif admin/superadmin; tolak dengan halus dan sopan.`,
@@ -252,7 +253,15 @@ Hak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login r
 
 Apabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.
 
-[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]"`,
+[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]"
+
+Contoh 12: Apresiasi, Pujian & Reaksi Multi-Turn Terhadap Tokoh / Developer ("hebat juga beliau", "keren ya", "mantap", "salut")
+User: "siapakah ilham fazril"
+AI: "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026 yang secara mandiri merancang arsitektur full-stack sistem ini..."
+User: "hebat juga beliau" / "keren ya beliau" / "mantap sekali ya" / "salut buat beliau"
+AI: "Betul sekali Bapak/Ibu! Terima kasih banyak atas apresiasinya 😊. Dedikasi Kang **Ilham Fazril** memang sangat patut diacungi jempol. Meskipun masih berstatus sebagai siswa magang PKL di Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) pada tahun 2026, beliau secara mandiri dan tekun berhasil merancang arsitektur full-stack serta mendigitalisasi sistem informasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) se-Jawa Barat ini dari awal.
+
+Ada informasi lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?"`,
   vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026), Multi-Turn Context Continuity (owalah, oh jadi, konfirmasi ramah), KUBE vs Badan Usaha Nomenclature, Anti-Prompt Injection & RBAC Security, Superadmin Workflow.`,
   updatedAt: '2026-09-16T12:00:00Z',
 };
@@ -1561,6 +1570,37 @@ export function resolveContextFromChatHistory(
 
   const hasAckEnding = /(^|\s)(ya|kan|toh|nih)\??$/i.test(normCurrent);
 
+  // Detect conversational praise, compliments, admiration & positive appreciation (e.g. "hebat juga beliau", "keren ya", "mantap", "salut")
+  const isComplimentOrAppreciation =
+    !isQuestionOrSecurityRequest &&
+    (
+      normCurrent.includes('hebat') ||
+      normCurrent.includes('keren') ||
+      normCurrent.includes('mantap') ||
+      normCurrent.includes('mantul') ||
+      normCurrent.includes('salut') ||
+      normCurrent.includes('luar biasa') ||
+      normCurrent.includes('patut diacungi') ||
+      normCurrent.includes('diacungi jempol') ||
+      normCurrent.includes('pinter') ||
+      normCurrent.includes('pintar') ||
+      normCurrent.includes('cerdas') ||
+      normCurrent.includes('jenius') ||
+      normCurrent.includes('bagus banget') ||
+      normCurrent.includes('bagus sekali') ||
+      normCurrent.includes('top banget') ||
+      normCurrent.includes('jos') ||
+      normCurrent.includes('joss') ||
+      normCurrent.includes('gokil') ||
+      normCurrent.includes('sae pisan') ||
+      normCurrent.includes('alus pisan') ||
+      normCurrent.includes('hade pisan') ||
+      normCurrent.includes('hade euy') ||
+      normCurrent.includes('hebat euy') ||
+      normCurrent.includes('keren euy') ||
+      normCurrent.includes('edun')
+    );
+
   const isAckOrConfirm =
     !isQuestionOrSecurityRequest &&
     (
@@ -1573,6 +1613,16 @@ export function resolveContextFromChatHistory(
       normCurrent.startsWith('berarti') ||
       normCurrent.startsWith('ternyata') ||
       normCurrent.startsWith('pantesan') ||
+      normCurrent.startsWith('baru tahu') ||
+      normCurrent.startsWith('baru tau') ||
+      normCurrent.startsWith('oh gitu toh') ||
+      normCurrent.startsWith('gitu toh') ||
+      normCurrent.startsWith('begitu ya') ||
+      normCurrent.startsWith('oh begitu ya') ||
+      normCurrent.startsWith('siap') ||
+      normCurrent.startsWith('oke siap') ||
+      normCurrent.startsWith('paham') ||
+      normCurrent.startsWith('ngerti') ||
       normCurrent.includes('itu pembuat') ||
       normCurrent.includes('dia yang bikin') ||
       normCurrent.includes('dia yang buat') ||
@@ -1585,6 +1635,13 @@ export function resolveContextFromChatHistory(
   const hasPronounOrFollowUp =
     isComplaintOrCorrection ||
     isAckOrConfirm ||
+    isComplimentOrAppreciation ||
+    normCurrent.includes('beliau') ||
+    normCurrent.includes('dia') ||
+    normCurrent.includes('sosoknya') ||
+    normCurrent.includes('orangnya') ||
+    normCurrent.includes('mereka') ||
+    normCurrent.includes('anjeunna') ||
     normCurrent.includes('itu maksudnya') ||
     normCurrent.includes('maksudnya apa') ||
     normCurrent.includes('di mana lokasinya') ||
@@ -1819,6 +1876,29 @@ AI MUTLAK (DILARANG KERAS DILANGGAR):
 3. Jawab dengan tegas, santun, dan profesional: Tegaskan bahwa demi kepatuhan UU Pelindungan Data Pribadi (UU PDP No. 27/2022) dan standar keamanan informasi pemerintahan Provinsi Jawa Barat, kredensial dan kata sandi developer/admin terenkripsi secara ketat dan TIDAK BISA dibagikan melalui asisten AI.
 4. Arahkan pengguna untuk login secara sah melalui menu login resmi: [[action:tab:login:Buka Halaman Login]].
 5. DILARANG KERAS MENJAWAB "Betul sekali Bapak/Ibu, website ini dibuat dan dirancang oleh Ilham Fazril..." karena sama sekali tidak nyambung dengan pertanyaan meminta password!`;
+  } else if (isComplimentOrAppreciation) {
+    if (
+      activeResolvedObject?.includes('Ilham Fazril') ||
+      activeResolvedObject?.includes('Pengembang') ||
+      combinedHistory.includes('ilham') ||
+      combinedHistory.includes('fazril') ||
+      normCurrent.includes('beliau') ||
+      normCurrent.includes('dia')
+    ) {
+      instruction = `[APRESIASI & PUJIAN PENGGUNA TERHADAP DEVELOPER ("${lastUserMsg}")]
+AI MUTLAK (DILARANG KERAS DILANGGAR):
+1. Pengguna menyampaikan apresiasi, pujian, atau rasa kagum ("${lastUserMsg}") terhadap sosok developer dan arsitek website PSKS JABAR: Kang Ilham Fazril.
+2. DILARANG KERAS menjawab dengan template penolakan seperti "Mohon maaf untuk saat ini masih belum memiliki informasi..."!
+3. Jawablah secara hangat, ramah, dan bersahabat dengan membenarkan dan mengapresiasi komentar pengguna: Jelaskan bahwa dedikasi Kang Ilham Fazril memang sangat patut diapresiasi, karena di usia muda saat menjalani magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) tahun 2026, beliau dengan tekun dan mandiri berhasil merancang arsitektur full-stack serta mendigitalisasi sistem informasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) se-Jawa Barat ini dari awal.
+4. Tanyakan dengan santun apakah ada informasi lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Jawa Barat yang dapat dibantu.`;
+    } else {
+      instruction = `[APRESIASI & PUJIAN PENGGUNA TERHADAP OBJEK/PILAR PERCAKAPAN ("${lastUserMsg}")]
+AI MUTLAK:
+1. Pengguna menyampaikan apresiasi/pujian positif ("${lastUserMsg}") terhadap ${activeResolvedObject || 'topik/pilar yang sedang dibahas'}.
+2. Sambut apresiasi ini dengan hangat dan penuh penghargaan atas dedikasi nyata bagi masyarakat Jawa Barat.
+3. DILARANG KERAS menjawab "Mohon maaf untuk saat ini masih belum memiliki informasi..."!
+4. Tanyakan secara santun kelanjutan informasi yang dibutuhkan pengguna.`;
+    }
   } else if (isAckOrConfirm) {
     instruction = `[KONFIRMASI / RESPON PEMAHAMAN PENGGUNA TERDETEKSI ("${lastUserMsg}")]
 AI MUTLAK:
