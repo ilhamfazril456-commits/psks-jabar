@@ -66,7 +66,8 @@ const AnnouncementManagementPage = React.lazy(() => import('./components/Announc
 const AnnouncementDetailPage = React.lazy(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
 const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
 const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
-import { Inbox, ArrowRight, ClipboardList, Lock, LogIn } from 'lucide-react';
+import { Inbox, ArrowRight, ClipboardList, Lock, LogIn, Check } from 'lucide-react';
+import { isSubmissionPendingWilayah } from './utils/submissionStatus';
 
 const LoginSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
 const LogoutConfirmModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
@@ -1444,6 +1445,21 @@ export default function App() {
 
     return () => unsubscribe();
   }, [session.statusActive]);
+
+  // Perhitungan status sensor pending untuk tombol Verifikasi Berkas Wilayah (Admin Wilayah)
+  const pendingWilayahCount = React.useMemo(() => {
+    if (session.role !== 'admin') return 0;
+    const isAllRegionAdmin =
+      session.wilayah === 'Prov. Jabar' ||
+      session.wilayah === 'Semua Wilayah' ||
+      Boolean(session.isDeveloper);
+
+    return submissions.filter((sub) =>
+      isSubmissionPendingWilayah(sub, session.wilayah, isAllRegionAdmin)
+    ).length;
+  }, [submissions, session.wilayah, session.role, session.isDeveloper]);
+
+  const hasPendingWilayah = pendingWilayahCount > 0;
 
   // 3c. Task Items State (Manajemen Tugas Operasional Wilayah) with Real-time Firestore Listener
   const [taskItems, setTaskItems] = useState<TaskItem[]>(() => {
@@ -3146,11 +3162,34 @@ export default function App() {
 
                   <button
                     type="button"
+                    id="btn-buka-verifikasi-wilayah"
                     onClick={() => {
                       navigateToTab('terima_pendaftaran');
                     }}
                     className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#0f2b5c] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
                   >
+                    {/* Sensor Lampu di Pojok Kanan Atas Button (Berkedip Jika Ada Pending, Centang Jika Selesai) */}
+                    <div className="absolute -top-2 -right-2 z-20">
+                      {hasPendingWilayah ? (
+                        <div
+                          className="relative flex items-center justify-center cursor-pointer"
+                          title={`Sensor Status: ${pendingWilayahCount} berkas menunggu verifikasi wilayah`}
+                        >
+                          <span className="animate-ping absolute inline-flex h-5 w-5 rounded-full bg-rose-500 opacity-80 duration-1000" />
+                          <span className="relative inline-flex items-center justify-center rounded-full h-5 w-5 bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 border-2 border-white shadow-md shadow-rose-500/60">
+                            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          className="inline-flex items-center justify-center rounded-full h-5 w-5 bg-emerald-500 text-white border-2 border-white shadow-md shadow-emerald-500/40"
+                          title="Sensor Status: Tidak ada berkas pending (Semua berkas wilayah telah diverifikasi)"
+                        >
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+
                     <Inbox className="w-5 h-5 text-[#0f2b5c]" />
                     <span>Buka Verifikasi Berkas Wilayah</span>
                     <ArrowRight className="w-4 h-4 text-[#0f2b5c] transform group-hover:translate-x-1 transition-transform" />
@@ -3169,6 +3208,7 @@ export default function App() {
               <React.Suspense fallback={null}>
                 <Section11Admin
                   session={session}
+                  submissions={submissions}
                   onOpenAccountConsole={handleOpenAccountConsole}
                   onOpenMonitoringConsole={handleOpenMonitoringConsole}
                   onOpenActivityLogConsole={handleOpenActivityLogConsole}

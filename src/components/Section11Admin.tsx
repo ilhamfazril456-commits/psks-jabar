@@ -1,5 +1,6 @@
 import React from 'react';
-import { UserSession } from '../types';
+import { UserSession, PillarRegistrationSubmission } from '../types';
+import { isSubmissionPendingSuperadmin } from '../utils/submissionStatus';
 import {
   Wrench,
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   ClipboardList,
   Volume2,
   MessageSquare,
+  Check,
 } from 'lucide-react';
 
 interface Section11AdminProps {
@@ -28,6 +30,8 @@ interface Section11AdminProps {
   onOpenTaskManagerConsole: () => void;
   onOpenAnnouncementConsole: () => void;
   onOpenFloatingWaConsole?: () => void;
+  submissions?: PillarRegistrationSubmission[];
+  pendingCount?: number;
 }
 
 export const Section11Admin: React.FC<Section11AdminProps> = ({
@@ -40,10 +44,20 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   onOpenTaskManagerConsole,
   onOpenAnnouncementConsole,
   onOpenFloatingWaConsole,
+  submissions = [],
+  pendingCount,
 }) => {
   const isMasterAdmin =
     (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) &&
     session.statusActive === 'SAH_TERDAFTAR';
+
+  const pendingSuperadminCount = React.useMemo(() => {
+    if (typeof pendingCount === 'number') return pendingCount;
+    if (!submissions || submissions.length === 0) return 0;
+    return submissions.filter(isSubmissionPendingSuperadmin).length;
+  }, [submissions, pendingCount]);
+
+  const hasPendingSuperadmin = pendingSuperadminCount > 0;
 
   if (!isMasterAdmin) {
     return null;
@@ -304,9 +318,32 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             {/* Top Accent Gradient Bar */}
             <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-purple-600 via-fuchsia-400 to-violet-700 absolute top-0 left-0" />
 
+            {/* Sensor Lampu di Pojok Kanan Atas Kotak Fitur (Berkedip Jika Ada Pending, Centang Jika Selesai) */}
+            <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-20">
+              {hasPendingSuperadmin ? (
+                <div
+                  className="relative flex items-center justify-center cursor-pointer group/sensor"
+                  onClick={onOpenTaskManagerConsole}
+                  title={`Sensor Status: ${pendingSuperadminCount} berkas menunggu pengesahan & penerimaan`}
+                >
+                  <span className="animate-ping absolute inline-flex h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-rose-500 opacity-75 duration-1000" />
+                  <span className="relative inline-flex items-center justify-center rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 border-2 border-white shadow-md shadow-rose-500/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="inline-flex items-center justify-center rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 bg-emerald-500 text-white border-2 border-white shadow-sm"
+                  title="Sensor Status: Tidak ada berkas pending (Semua selesai disahkan)"
+                >
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" />
+                </div>
+              )}
+            </div>
+
             <div>
               {/* Icon Box & Badge Header */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4 pr-6 sm:pr-7">
                 <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-purple-700 to-violet-900 text-purple-100 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-purple-400/30 shrink-0">
                   <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-purple-200" />
                 </div>
