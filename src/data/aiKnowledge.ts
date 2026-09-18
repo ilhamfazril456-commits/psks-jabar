@@ -63,10 +63,10 @@ export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPure
 
   const preamblePatterns = [
     /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
-    /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum|dulu)?\s*[,.-]?\s*/i,
+    /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|bisakah|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum)?\s*[,.-]?\s*/i,
     /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong)?\s*(nanya|tanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
-    /^(bisa|tolong|mohon)?\s*(bantu|jawab|tolong)\s*(saya|aku|abdi|urang)?\s*(ga|dong|min|kang|teh)?\s*[,.-]?\s*/i,
-    /^(boleh|bisa)?\s*(nanya|tanya)\s*(ga|dong|min)?\s*[,.-]?\s*/i,
+    /^(apakah|bisakah|dapatkah|adakah|bisa|tolong|mohon)?\s*(anda|kamu|admin|min|bot|ai)?\s*(bisa|dapat)?\s*(tolong\s+)?(membantu|bantu|jawab|tolong)\s*(saya|aku|abdi|urang|kami)?\s*(ga|gak|ngga|dong|min|kang|teh|ya)?\s*[,.-]?\s*/i,
+    /^(bolehkah|boleh|bisakah|bisa)\s*(saya|aku|abdi|urang)?\s*(nanya|tanya|bertanya)\s*(ga|gak|dong|min|ya)?\s*[,.-]?\s*/i,
     /^(mau|izin)\s*(nanya|bertanya)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
     /^(tolong|coba)?\s*(jelaskan|kasih tau|beri tahu|kasih info)\s*(dong|min)?\s*[,.-]?\s*/i,
   ];
@@ -77,6 +77,7 @@ export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPure
   }
 
   cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|seputar|soal)\s*/i, '').trim();
+  cleaned = cleaned.replace(/\s*(min|kang|teh|admin|bot|ai|dong|nih|ya)[?!.,]*$/i, '').trim();
 
   if (!cleaned || cleaned.length < 2) {
     return { coreQuery: '', isPureIntro: true, hasQuestion: false };
@@ -194,7 +195,7 @@ export function getComprehensiveSmartAnswer(
     );
 
   if (isDeveloperCredQuery) {
-    return `Mohon maaf, kata sandi (*password*), kredensial, dan hak akses pengembang (*developer*) maupun administrator sistem **PSKS JABAR** merupakan informasi rahasia internal terenkripsi tingkat tinggi (*zero-disclosure*) dan sama sekali tidak dapat diberikan, di-reset, atau dibocorkan melalui asisten AI demi mematuhi UU Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas sistem.\n\nApabila Anda adalah pengembang atau administrator resmi yang memiliki hak akses, silakan masuk melalui menu login resmi sistem.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    return `Mohon maaf, kata sandi (*password*), kredensial, dan hak akses pengembang (*developer*) maupun administrator sistem **PSKS JABAR** merupakan informasi rahasia internal terenkripsi tingkat tinggi (*zero-disclosure*) dan sama sekali tidak dapat diberikan, di-reset, atau dibocorkan melalui asisten AI demi mematuhi UU Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas sistem.`;
   }
 
   // 0.00 SENSITIVE ADMINISTRATIVE ACCESS CHECK (STRICT HARDENING)
@@ -496,10 +497,15 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
   if (
     !hasQuestion &&
     (
+      isPureIntro ||
       q.includes('mau tanya') ||
       q.includes('nanya dong') ||
       q.includes('bisa bantu') ||
+      q.includes('bisakah bantu') ||
+      q.includes('bisakah membantu') ||
+      q.includes('bantu saya') ||
       q.includes('minta tolong') ||
+      q.includes('tolong bantu') ||
       q.includes('izin bertanya') ||
       q.includes('bisa nanya') ||
       q.includes('bantuan') ||
@@ -511,7 +517,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     if (isDeveloperUser) {
       return `Sok atuh tanyakeun, **Ilham Fazril**! Gua siap jawab apa aja dari kodingan sistem, database, sampai diskusi fitur baru. Mau nanya apa nih? 🚀💻`;
     }
-    return `Tentu saja, dengan senang hati! Silakan sampaikan pertanyaan Anda mengenai data 10 Pilar PSKS, sebaran wilayah di Jawa Barat, atau panduan penggunaan sistem PSKS JABAR ini. Saya siap membantu memberikan informasi selengkap mungkin. 😊`;
+    return `Tentu saja, silahkan apa yang ingin ditanyakan. Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, maupun layanan sosial di Jawa Barat. 😊`;
   }
 
   // 0.4 GRATITUDE & POLITENESS (UCAPAN TERIMA KASIH & APRESIASI)
@@ -880,15 +886,21 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     (q.includes('alur verifikasi') && (q.includes('bertingkat') || q.includes('dua tahap') || q.includes('2 tier') || q.includes('wilayah')));
 
   if (isSensorOrTierVerificationQuery) {
-    return `Alur verifikasi berkas pendaftaran dan fungsi **Sensor Lampu Status** di sistem **PSKS JABAR** diatur sebagai berikut:
+    return `Alur pendaftaran dan verifikasi berkas di sistem **PSKS JABAR** dilakukan secara berjenjang dan transparan:
 
-1. **Alur Verifikasi Bertingkat 2-Tier**:
-   - **Tier 1 (Admin Wilayah Kab/Kota)**: Melalui tombol **'Verifikasi Berkas Wilayah'**, Admin Wilayah memvalidasi keabsahan fisik dan administrasi dokumen calon anggota pilar di wilayah tugas kabupaten/kotanya. Berkas yang disetujui berstatus \`DISETUJUI_WILAYAH\` dan otomatis diteruskan ke antrean provinsi.
-   - **Tier 2 (Superadmin & Developer Provinsi)**: Melalui kotak fitur **'Pengesahan dan Penerimaan Anggota' (Fitur 5)** di dasbor Superadmin/Developer, dilakukan pengesahan final menjadi status resmi **'SAH_TERDAFTAR'** serta penerbitan KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256.
+1. **Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User)**
+   - Pengguna masuk ke akun di website **PSKS JABAR**, memilih salah satu dari 10 pilar di Beranda, lalu mengklik tombol **'+ Tambah Anggota Mandiri / Pendaftaran'**.
+   - Mengisi identitas, wilayah penugasan, serta **mengunggah foto berkas pendukung** (KTP, SK Pengangkatan, atau Sertifikat Pelatihan/Bimtek). Berkas otomatis dikompresi agar jelas dan ringan.
+   - Setelah formulir dikirim, status awal berkas otomatis tercatat sebagai **'Menunggu Verifikasi' (Pending)**.
 
-2. **Fungsi Animasi Sensor Lampu Status**:
-   - **Lampu Bulat Berkedip-kedip (Pulsing Merah/Oranye)**: Terletak di pojok kanan atas kotak fitur *"Pengesahan dan Penerimaan Anggota"* (Superadmin & Developer) dan pojok kanan atas tombol *"Verifikasi Berkas Wilayah"* (Admin Wilayah). Lampu ini aktif berkedip menandakan bahwa **masih ada berkas pendaftaran calon anggota yang berstatus PENDING** (menunggu verifikasi/pengesahan).
-   - **Ikon Centang Hijau Solid (Tanpa Berkedip)**: Apabila seluruh antrean berkas pending di wilayah atau provinsi tersebut telah selesai diperiksa dan disahkan (sudah tidak ada lagi pending / 0 pending), lampu sensor bulat otomatis berubah menjadi ikon centang hijau solid dan berhenti berkedip.
+2. **Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**
+   - Admin Dinas Sosial Kabupaten/Kota memeriksa keabsahan data administrasi dan foto dokumen yang diunggah.
+   - Jika berkas lengkap dan sesuai, pengajuan disetujui menjadi status **'DISETUJUI_WILAYAH'** dan diteruskan ke tingkat Provinsi.
+
+3. **Tahap 3: Pengesahan oleh Superadmin (Provinsi Jawa Barat)**
+   - Superadmin Provinsi melakukan pengesahan akhir. Setelah disahkan, status anggota resmi menjadi **'SAH_TERDAFTAR'** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+
+Pemohon dapat memantau status pengajuannya secara langsung melalui menu **'Riwayat Pengajuan Pendaftaran'**.
 
 [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:beranda:Lihat Pilihan 10 Pilar]]`;
   }
@@ -930,21 +942,30 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     q.startsWith('ada yang ingin saya tanyakan') ||
     q === 'apakah anda bisa bantu saya' ||
     q === 'apakah anda bisa bantu saya?' ||
+    q === 'apakah bisa bantu saya' ||
+    q === 'apakah bisa bantu saya?' ||
+    q === 'bisakah bantu saya' ||
+    q === 'bisakah bantu saya?' ||
+    q === 'bisakah anda bantu saya' ||
+    q === 'bisakah anda bantu saya?' ||
+    q === 'bisakah kamu bantu saya' ||
+    q === 'bisakah kamu bantu saya?' ||
+    q === 'bisakah membantu saya' ||
+    q === 'bisakah membantu saya?' ||
     q === 'bisa bantu saya' ||
     q === 'bisa bantu saya?' ||
+    q === 'bisa tolong bantu saya' ||
+    q === 'bisa tolong bantu saya?' ||
+    q === 'bisa tolong saya' ||
+    q === 'tolong bantu saya' ||
+    q.includes('bisakah bantu') ||
+    q.includes('bisakah membantu') ||
+    q.includes('bisa tolong bantu') ||
     q === 'halo min mau nanya' ||
     q === 'halo admin mau nanya';
 
   if (isIntroductoryPreamble) {
-    return `Sampurasun / Halo! Tentu saja, mangga (silakan)! Dengan senang hati saya siap membantu Bapak/Ibu. 😊
-
-Silakan sampaikan pertanyaan Anda seputar:
-1. **Alur Pendaftaran Baru & Verifikasi 2-Tier**: Tata cara pendaftaran mandiri 10 Pilar PSKS, tombol Verifikasi Berkas Wilayah, kotak fitur Pengesahan Anggota, dan arti sensor lampu status (berkedip saat ada pending & centang hijau saat tuntas).
-2. **Profil & Syarat 10 Pilar PSKS**: PSM, TAGANA, Karang Taruna, TKSK, PEKSOS, LKS, LK3, Penyuluh Sosial, KUBE (Badan Usaha), dan SLRT/Puskesos.
-3. **Penyusun & Arsitektur Sistem**: Informasi profil perancang website Kang Ilham Fazril (siswa magang PKL Dinsos Jabar Dayasos 2026).
-4. **Layanan Dinas Sosial Jabar & Konsultasi Bansos**: Alamat kantor dinas, kontak pengaduan, dan alur pengecekan DTKS.
-
-Ada informasi apa yang ingin Anda tanyakan atau butuhkan?`;
+    return `Tentu saja, silahkan apa yang ingin ditanyakan. Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, maupun layanan sosial di Jawa Barat. 😊`;
   }
 
   // 0.6D: GENERAL MULTI-TURN ACKNOWLEDGMENT / CONFIRMATION FOR PREVIOUS CONTEXT TOPIC
@@ -1071,15 +1092,10 @@ Ada informasi apa yang ingin Anda tanyakan atau butuhkan?`;
     }
 
     if (
-      q.includes('format') ||
-      q.includes('field') ||
-      q.includes('syarat') ||
-      q.includes('sk') ||
-      q.includes('sertifikasi') ||
-      q.includes('daftar') ||
-      q.includes('gabung') ||
-      q.includes('daptar') ||
-      q.includes('kumaha')
+      q.includes('format data') ||
+      q.includes('field data') ||
+      q.includes('kolom tabel') ||
+      q.includes('atribut data')
     ) {
       return `${opening}**Format Atribut & Persyaratan Registrasi ${currentPillarInfo.title}**:\n\n1. **${currentPillarInfo.fields.nikLabel}**: Nomor identitas resmi terdaftar.\n2. **${currentPillarInfo.fields.certLabel}**: Dokumen legalitas/SK pengangkatan penugasan dinas.\n3. **${currentPillarInfo.fields.hpLabel}**: Kontak koordinasi aktif lapangan.\n4. **Status Keaktifan**: Wajib berstatus *Aktif / Siaga* untuk mendapatkan pengesahan *SAH_TERDAFTAR* pada pangkalan data terintegrasi Dinas Sosial Jawa Barat.`;
     }
@@ -1258,358 +1274,173 @@ Silakan sampaikan nama pilar yang ingin Anda daftarkan, atau Anda dapat langsung
 [[action:pillar:psm:Cara Mendaftar PSM]] [[action:pillar:tagana:Cara Mendaftar TAGANA]] [[action:pillar:karangtaruna:Cara Mendaftar Karang Taruna]] [[action:pillar:tksk:Cara Mendaftar TKSK]] [[action:pillar:peksos:Cara Mendaftar PEKSOS]] [[action:pillar:lks:Cara Mendaftar LKS]] [[action:pillar:lk3:Cara Mendaftar LK3]] [[action:pillar:pensos:Cara Mendaftar Penyuluh Sosial]] [[action:pillar:badanusaha:Cara Mendaftar KUBE]] [[action:pillar:slrt_puskesos:Cara Mendaftar SLRT / Puskesos]]`;
     }
 
+    const formatPillarRegistrationFlow = (
+      pilarId: string,
+      pilarShort: string,
+      pilarFullName: string,
+      berkasText: string
+    ) => {
+      return `Halo ${politeUserHonorific}, alur pendaftaran ${pilarFullName} di website **PSKS JABAR** dilakukan secara berjenjang dan transparan melalui 3 tahapan berikut:
+
+---
+
+### **1. Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User Terdaftar)**
+- **Masuk Akun**: Masuk (*login*) dengan akun pengguna di website **PSKS JABAR** (atau klik menu *"Daftar Akun Baru"* bila belum memiliki akun).
+- **Pilih Pilar & Buka Formulir**: Pada halaman **Beranda**, pilih pilar **${pilarShort}**, lalu klik tombol hijau **"+ Tambah Anggota Mandiri / Pendaftaran"**.
+- **Pengisian Formulir**: Lengkapi biodata (NIK 16 digit, Nama Lengkap, Nomor WhatsApp aktif, serta Wilayah Penugasan di Jawa Barat).
+- **Upload Foto Berkas Pendukung**: Unggah foto berkas pendukung ${berkasText}. Sistem secara otomatis mengompresi ukuran foto agar jelas dan hemat memori.
+- **Kirim Pengajuan**: Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status awal **"Menunggu Verifikasi" (Pending)**.
+
+---
+
+### **2. Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**
+- **Pemeriksaan Administrasi**: Admin Dinas Sosial Kabupaten/Kota setempat memeriksa keabsahan data administrasi dan kejelasan dokumen foto berkas pendukung yang diunggah.
+- **Hasil Verifikasi**: Berkas yang lengkap dan sesuai akan disetujui menjadi status **"DISETUJUI_WILAYAH"** dan otomatis diteruskan ke tingkat Provinsi.
+
+---
+
+### **3. Tahap 3: Pengesahan oleh Superadmin (Provinsi Jawa Barat)**
+- **Pengesahan Akhir**: Superadmin Dinas Sosial Provinsi Jawa Barat melakukan validasi akhir keselarasan data.
+- **Hasil Pengesahan**: Berkas resmi disahkan dengan status **"SAH_TERDAFTAR"** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+
+---
+
+### **Pemantauan Status Pengajuan**:
+Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+
+[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:${pilarId}:Buka Formulir Pendaftaran ${pilarShort}]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+    };
+
     // 1. CARA DAFTAR PSM (Pekerja Sosial Masyarakat)
     if (q.includes('psm') || q.includes('pekerja sosial masyarakat') || activePillar === 'psm') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran Pekerja Sosial Masyarakat (PSM)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Pekerja Sosial Masyarakat (PSM) adalah pilar kerelawanan sosial berbasis desa/kelurahan yang bertugas membantu penanganan Pemerlu Pelayanan Kesejahteraan Sosial (PPKS).
-
-Pendaftaran PSM memiliki dua tahapan terintegrasi, yaitu **Alur Teknis Mandiri di Website PSKS JABAR** dan **Alur Legalitas Lapangan Kedinasan**:
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Pendaftaran / Masuk Akun**:
-   - Buka portal **PSKS JABAR** dan login menggunakan akun Anda, atau klik menu **"Daftar Akun Baru"** pada bilah navigasi jika belum memiliki akun.
-2. **Pilih Modul Pilar PSM**:
-   - Dari menu Beranda atau navigasi pilar sosial, pilih modul **PSM (Pekerja Sosial Masyarakat)**.
-3. **Buka Formulir Pengajuan**:
-   - Klik tombol hijau bertanda plus (**+ Daftar / Tambah Anggota Mandiri**) yang ada di bagian atas tabel daftar anggota.
-4. **Pengisian Data Formulir**:
-   - Lengkapi seluruh identitas yang dipersyaratkan:
-     * **Nomor Induk Kependudukan (NIK)**: 16 digit sesuai KTP.
-     * **Nama Lengkap**: Sesuai KTP.
-     * **Nomor WhatsApp / HP Aktif**: Untuk koordinasi dan notifikasi kedinasan.
-     * **Alamat Domisili**: Alamat tempat tinggal lengkap di desa/kelurahan penugasan.
-     * **Wilayah Tugas**: Pilih Kabupaten/Kota domisili Anda di Jawa Barat (27 Kab/Kota), Kecamatan, serta Desa/Kelurahan.
-     * **Riwayat Bimtek / Legalitas**: Cantumkan riwayat pelatihan kesejahteraan sosial dan nomor SK Kepala Desa/Lurah (jika ada).
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tersimpan dengan status **"Menunggu Verifikasi" (Pending)** di Cloud Firestore.
-6. **Pemantauan Status & Pengesahan**:
-   - Pemohon dapat memantau proses verifikasi berkas secara berkala melalui tab **"Riwayat Pengajuan Pendaftaran"**.
-   - Setelah Admin Wilayah Dinsos Kab/Kota atau Superadmin menyetujui (*Approved*), status Anda resmi disahkan menjadi **"SAH_TERDAFTAR"** dalam pangkalan data terintegrasi Dinas Sosial Jawa Barat.
-
----
-
-### **B. Alur Legalitas Lapangan Kedinasan (Dinas Sosial)**:
-1. **Koordinasi Wilayah**:
-   - Melapor dan mendaftarkan diri ke Kantor Desa/Kelurahan setempat melalui petugas **Puskesos**, Kasi Kesra, atau langsung ke **Bidang Pemberdayaan Sosial (Dayasos)** Dinas Sosial Kabupaten/Kota domisili Anda.
-2. **Seleksi & Rekomendasi**:
-   - Pemerintah Desa/Kelurahan memverifikasi kesiapan komitmen sukarela calon dan menerbitkan surat usulan ke Dinas Sosial.
-3. **Bimbingan Teknis (Bimtek Dasar PSM)**:
-   - Calon relawan mengikuti Bimbingan Teknis Dasar Penyelenggaraan Kesejahteraan Sosial yang diadakan oleh Dinas Sosial.
-4. **Pengukuhan Resmi**:
-   - Diterbitkannya Surat Keputusan (SK) Pengukuhan resmi dari Kepala Desa/Lurah, Camat, atau Kepala Dinas Sosial setempat sebagai bukti legalitas pengesahan personil di lapangan.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:psm:Buka Formulir Pendaftaran PSM]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'psm',
+        'PSM',
+        'Pekerja Sosial Masyarakat (PSM)',
+        '(seperti foto KTP, SK Pengukuhan Kepala Desa/Lurah/Camat, atau Sertifikat Pelatihan/Bimtek Dasar PSM)'
+      );
     }
 
     // 2. CARA DAFTAR TAGANA (Taruna Siaga Bencana)
     if (q.includes('tagana') || q.includes('taruna siaga') || q.includes('bencana') || activePillar === 'tagana') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran relawan TAGANA (Taruna Siaga Bencana)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Bagi Anda yang ingin mengabdi dan bergabung menjadi bagian dari korps relawan **TAGANA Jawa Barat** di bawah naungan Dinas Sosial Provinsi Jawa Barat, berikut adalah persyaratan dan alur pendaftarannya:
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau klik menu **"Daftar Akun Baru"** pada navigasi atas jika belum memiliki akun.
-2. **Buka Modul Pilar TAGANA**:
-   - Pada halaman **Beranda (Gerbang 10 Pilar Sosial)**, klik modul **TAGANA (Taruna Siaga Bencana)**.
-3. **Klik Tombol Pendaftaran Mandiri**:
-   - Klik tombol hijau bertanda plus: **"+ Daftar / Tambah Anggota Mandiri"** di atas tabel data anggota.
-4. **Pengisian Formulir Pendaftaran**:
-   - **Identitas Pokok**: NIK 16 digit sesuai KTP, Nama Lengkap, Nomor HP/WhatsApp aktif, Alamat KTP, Wilayah Kabupaten/Kota tugas di Jawa Barat (27 Kab/Kota), Kecamatan, dan Desa/Kelurahan.
-   - **Data Kebencanaan**: Spesialisasi tugas (Dapur Umum/DUMLAP, Shelter, Evakuasi/Rescue, Layanan Dukungan Psikososial/LDP), serta Nomor Registrasi Tagana (NRT) atau surat rekomendasi.
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status **"Menunggu Verifikasi" (Pending)** di Cloud Firestore.
-6. **Pemantauan Status & Pengesahan**:
-   - Pantau proses verifikasi berkas di menu **"Riwayat Pengajuan Pendaftaran"** hingga disetujui (*Approved*) oleh Admin Wilayah Dinsos atau Superadmin Provinsi menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Persyaratan Calon Anggota & Diklatsar Lapangan**:
-- **Kewarganegaraan & Domisili**: Warga Negara Indonesia (WNI), berdomisili dan ber-KTP di Jawa Barat, usia **18 hingga 40 tahun**.
-- **Kondisi Fisik & Kesehatan**: Sehat jasmani dan rohani, bebas narkoba, serta siap siaga 1x24 jam jika diterjunkan pada masa tanggap darurat bencana.
-- **Pendidikan & Pelatihan Dasar (DIKLATSAR TAGANA)**: Calon relawan wajib mengikuti Diklatsar Terpadu (biasanya 3–5 hari) dari Dinas Sosial Provinsi Jawa Barat / Kemensos RI.
-- **Pelantikan & Nomor Registrasi (NRT)**: Setelah lulus Diklatsar, anggota baru resmi dilantik dan diterbitkan Surat Keputusan (SK) Pengesahan serta Nomor Registrasi Tagana (NRT).
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:tagana:Buka Formulir Pendaftaran TAGANA]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'tagana',
+        'TAGANA',
+        'relawan TAGANA (Taruna Siaga Bencana)',
+        '(seperti foto KTP, Sertifikat Diklatsar Kebencanaan / Kesiapsiagaan, atau SK Penugasan TAGANA)'
+      );
     }
 
     // 3. CARA DAFTAR KARANG TARUNA
     if (q.includes('karang taruna') || q.includes('katar') || q.includes('pemuda') || activePillar === 'karangtaruna') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran dan bergabung dengan Karang Taruna** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Karang Taruna adalah organisasi kepemudaan resmi yang berada di tingkat RT, RW, dan Desa/Kelurahan sebagai pelopor gotong royong dan kesejahteraan sosial.
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau klik menu **"Daftar Akun Baru"** pada navigasi atas.
-2. **Pilih Modul Karang Taruna**:
-   - Pada menu **Beranda**, pilih pilar **Karang Taruna**.
-3. **Buka Formulir Pendaftaran**:
-   - Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"** di atas tabel anggota.
-4. **Isi Formulir Pendaftaran**:
-   - NIK 16 digit sesuai KTP, Nama Lengkap, Nomor HP/WhatsApp aktif, Wilayah Kabupaten/Kota di Jawa Barat (27 Kab/Kota), Kecamatan, Desa/Kelurahan, serta jabatan dalam struktur organisasi Karang Taruna (Ketua, Sekretaris, Bendahara, atau Anggota Aktif).
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status **"Menunggu Verifikasi" (Pending)**.
-6. **Pemantauan Status**:
-   - Buka tab **"Riwayat Pengajuan Pendaftaran"** untuk memantau proses verifikasi oleh Admin Wilayah Dinsos setempat hingga disahkan menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Syarat Keanggotaan & Prosedur Lapangan**:
-- Pemuda/pemudi berusia antara **13 hingga 45 tahun** yang berdomisili di wilayah RT/RW atau Desa/Kelurahan setempat.
-- Pengurus dan anggota aktif disahkan melalui **Surat Keputusan (SK) Kepala Desa/Lurah** dan dicatatkan di Seksi Kesra Kecamatan serta Dinas Sosial Kabupaten/Kota.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:karangtaruna:Buka Formulir Pendaftaran Karang Taruna]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'karangtaruna',
+        'Karang Taruna',
+        'anggota atau pengurus Karang Taruna',
+        '(seperti foto KTP, SK Kepengurusan Karang Taruna Desa/Kelurahan atau unit RT/RW)'
+      );
     }
 
     // 4. CARA DAFTAR TKSK (Tenaga Kesejahteraan Sosial Kecamatan)
     if (q.includes('tksk') || activePillar === 'tksk') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran dan rekrutmen Tenaga Kesejahteraan Sosial Kecamatan (TKSK)** di Jawa Barat, berikut kami sampaikan dan jelaskan mekanisme serta alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-TKSK merupakan tenaga fungsional dengan kuota ketat yaitu **hanya 1 orang per kecamatan** (total 627 personil di 27 Kab/Kota se-Jawa Barat).
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau daftar akun baru.
-2. **Buka Modul Pilar TKSK**:
-   - Pada menu **Beranda**, pilih pilar **TKSK**.
-3. **Buka Formulir Pendaftaran**:
-   - Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"**.
-4. **Lengkapi Data Formulir**:
-   - NIK 16 digit, Nama Lengkap, Nomor HP/WhatsApp aktif, Wilayah Kecamatan penugasan di Jawa Barat, serta nomor Surat Keputusan (SK) Pengangkatan Kemensos RI / Dinas Sosial.
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis berstatus **"Menunggu Verifikasi" (Pending)**.
-6. **Pemantauan Status**:
-   - Pantau proses verifikasi berkas melalui tab **"Riwayat Pengajuan Pendaftaran"** hingga disetujui menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Mekanisme Rekrutmen & Syarat Formasi Lapangan**:
-- **Kekosongan Formasi**: Rekrutmen TKSK hanya dibuka oleh Dinas Sosial Kabupaten/Kota bersama Dinas Sosial Provinsi Jawa Barat jika terdapat personil yang purna tugas, mengundurkan diri, atau terjadi kekosongan formasi kecamatan.
-- **Kualifikasi**: Pendidikan minimal SMA/SMK/D-3/S-1 berdomisili di kecamatan setempat, memiliki rekam jejak pengabdian sosial nyata, serta lulus uji seleksi administrasi, wawancara, dan verifikasi lapangan Dinsos.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:tksk:Buka Formulir Pendaftaran TKSK]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'tksk',
+        'TKSK',
+        'Tenaga Kesejahteraan Sosial Kecamatan (TKSK)',
+        '(seperti foto KTP, SK Pengangkatan TKSK Kemensos RI / Dinas Sosial, atau dokumen penugasan kecamatan)'
+      );
     }
 
     // 5. CARA MENJADI PEKSOS / PKSP (Pekerja Sosial Profesional)
     if (q.includes('peksos') || q.includes('pksp') || q.includes('pekerja sosial') || activePillar === 'peksos') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran Pekerja Sosial Profesional (PEKSOS / PKSP)** di Jawa Barat, berikut kami sampaikan dan jelaskan persyaratan serta alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Sesuai **Undang-Undang No. 14 Tahun 2019 tentang Pekerja Sosial**, Pekerja Sosial Profesional merupakan profesi keahlian khusus.
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau klik menu **"Daftar Akun Baru"**.
-2. **Pilih Modul Pilar PEKSOS**:
-   - Pada menu **Beranda**, pilih pilar **PEKSOS (Pekerja Sosial Profesional)**.
-3. **Buka Formulir Pendaftaran**:
-   - Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"**.
-4. **Isi Formulir Lengkap**:
-   - NIK 16 digit, Nama Lengkap beserta gelar profesi, Nomor HP/WhatsApp aktif, Wilayah Kab/Kota penugasan di Jawa Barat, Nomor STRPS Kemensos RI, dan Surat Izin Praktik Pekerja Sosial (SIPPS).
-5. **Kirim Pengajuan**:
-   - Klik **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status **"Menunggu Verifikasi" (Pending)**.
-6. **Pemantauan Status**:
-   - Pantau proses verifikasi di tab **"Riwayat Pengajuan Pendaftaran"** hingga disetujui menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Kualifikasi Profesi Sesuai Regulasi Kemensos**:
-- Lulusan pendidikan formal akademik: **D-IV / S-1 / S-2 / Pendidikan Profesi Pekerjaan Sosial / Ilmu Kesejahteraan Sosial** terakreditasi.
-- Lulus **Uji Kompetensi Nasional** untuk mendapatkan Sertifikat Kompetensi dari LSP Kemensos RI.
-- Memiliki **Surat Tanda Registrasi Pekerja Sosial (STRPS)** dari Kemensos RI dan **Surat Izin Praktik Pekerja Sosial (SIPPS)** resmi.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:peksos:Buka Formulir Pendaftaran PEKSOS]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'peksos',
+        'PEKSOS',
+        'Pekerja Sosial Profesional (PEKSOS)',
+        '(seperti foto KTP, Ijazah Profesi Kesejahteraan Sosial, Sertifikat Kompetensi, STRPS Kemensos RI, atau SIPPS)'
+      );
     }
 
     // 6. CARA DAFTAR LKS (Lembaga Kesejahteraan Sosial / Panti / Yayasan)
     if (q.includes('lks') || q.includes('panti') || q.includes('yayasan') || activePillar === 'lks') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran dan perizinan Lembaga Kesejahteraan Sosial (LKS / Panti / Yayasan)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Bagi yayasan atau organisasi sosial kemasyarakatan yang ingin terdaftar resmi di Dinsos Jabar:
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau daftar akun baru.
-2. **Pilih Modul Pilar LKS**:
-   - Di halaman **Beranda**, pilih pilar **LKS (Lembaga Kesejahteraan Sosial)**.
-3. **Buka Formulir Pendaftaran**:
-   - Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"**.
-4. **Isi Formulir Legalitas Lembaga**:
-   - Nama Lembaga/Yayasan, Nama Ketua/Pimpinan, NIK Penanggung Jawab, Nomor Kontak/WhatsApp, Alamat Kantor/Panti, Wilayah Kabupaten/Kota di Jawa Barat, Nomor Akta Notaris Kemenkumham, serta Nomor Tanda Daftar LKS (TDLKS) / Izin Operasional Dinsos.
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"** (status berkas otomatis **"Menunggu Verifikasi" (Pending)** di Cloud Firestore).
-6. **Pemantauan Status**:
-   - Pantau proses verifikasi di tab **"Riwayat Pengajuan Pendaftaran"** hingga disahkan menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Persyaratan Legalitas Badan Hukum & Akreditasi BALKS**:
-- Memiliki Akta Pendirian Notaris yang disahkan Kemenkumham dan NPWP atas nama yayasan.
-- Mengajukan permohonan Tanda Daftar Lembaga Kesejahteraan Sosial (TDLKS) dan Izin Operasional ke Dinas Sosial Kabupaten/Kota setempat.
-- Mengikuti akreditasi lembaga melalui Badan Akreditasi Lembaga Kesejahteraan Sosial (BALKS) Kemensos RI.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:lks:Buka Formulir Pendaftaran LKS]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+      return formatPillarRegistrationFlow(
+        'lks',
+        'LKS',
+        'Lembaga Kesejahteraan Sosial (LKS / Panti / Yayasan)',
+        '(seperti foto KTP Penanggung Jawab, Akta Notaris Kemenkumham, serta TDLKS / Izin Operasional Dinsos)'
+      );
     }
 
     // 7. CARA DAFTAR SLRT / PUSKESOS (Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial)
-    if (q.includes('slrt') || q.includes('puskesos') || activePillar === 'slrt_puskesos') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran personil / sekretariat SLRT dan Puskesos (Pusat Kesejahteraan Sosial)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Pusat Kesejahteraan Sosial (**Puskesos**) dan Sistem Layanan dan Rujukan Terpadu (**SLRT**) adalah garda depan pelayanan sosial satu pintu (*one-stop social service*) di tingkat Desa/Kelurahan dan Kabupaten/Kota.
-
----
-
-### **A. Alur Teknis Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Registrasi Akun Pengguna**:
-   - Masuk (*login*) ke portal **PSKS JABAR** atau klik menu **"Daftar Akun Baru"** pada bilah navigasi jika belum memiliki akun.
-2. **Buka Modul Pilar SLRT / Puskesos**:
-   - Di halaman **Beranda (Gerbang 10 Pilar Sosial)**, klik modul **SLRT / Puskesos**.
-3. **Klik Tombol Pendaftaran Mandiri**:
-   - Klik tombol hijau bertanda plus: **"+ Daftar / Tambah Anggota Mandiri"** di atas tabel data anggota pilar.
-4. **Isi Formulir Data Pendaftaran**:
-   - **Identitas Pokok**: NIK 16 digit, Nama Lengkap, Nomor HP/WhatsApp aktif, Alamat KTP, Wilayah Kabupaten/Kota tugas di Jawa Barat (27 Kab/Kota), Kecamatan, dan Desa/Kelurahan.
-   - **Data Legalitas Unit**: Nomor dan tanggal Surat Keputusan (SK) Pengukuhan Sekretariat Puskesos dari Kepala Desa/Lurah/Camat, serta nama sekretariat unit layanan.
-5. **Kirim Pengajuan**:
-   - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status **"Menunggu Verifikasi" (Pending)** di basis data Cloud Firestore.
-6. **Pantau Status Pengesahan**:
-   - Buka menu **"Riwayat Pengajuan Pendaftaran"** untuk memantau proses verifikasi oleh Admin Wilayah Dinsos Kab/Kota atau Superadmin Provinsi hingga disetujui (*Approved*) menjadi status resmi **"SAH_TERDAFTAR"**.
-
----
-
-### **B. Layanan Sosial Puskesos untuk Masyarakat (Bansos, DTKS, & KIS)**:
-Bagi masyarakat yang ingin mengurus atau mendaftar bantuan sosial melalui Puskesos:
-- Datang langsung ke kantor Desa/Kelurahan setempat, temui petugas di loket **Sekretariat Puskesos**.
-- Bawa berkas persyaratan: KTP-el asli/fotokopi, Kartu Keluarga (KK) terbaru, dan Surat Keterangan Tidak Mampu (SKTM) dari RT/RW.
-- Petugas Puskesos akan memverifikasi kelayakan, menginput usulan ke aplikasi SIKS-NG/DTKS, atau memberikan surat rujukan terpadu (SKTM kesehatan/rekomendasi bansos).
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:slrt_puskesos:Buka Formulir Pendaftaran SLRT / Puskesos]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+    if (q.includes("slrt") || q.includes("puskesos") || activePillar === "slrt_puskesos") {
+      return formatPillarRegistrationFlow(
+        "slrt_puskesos",
+        "SLRT / Puskesos",
+        "personil / sekretariat SLRT dan Puskesos",
+        "(seperti foto KTP, SK Pengukuhan Pengurus Sekretariat Puskesos Desa/Kelurahan dari Kepala Desa/Lurah/Camat, atau Surat Tugas)"
+      );
     }
 
     // 8. CARA DAFTAR LK3 (Lembaga Konsultasi Kesejahteraan Keluarga)
-    if (q.includes('lk3') || q.includes('konsultasi keluarga') || activePillar === 'lk3') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran Lembaga Konsultasi Kesejahteraan Keluarga (LK3)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-LK3 bertugas memberikan pelayanan konseling, konsultasi psikososial, dan advokasi perlindungan ketahanan keluarga di Jawa Barat.
-
----
-
-### **Alur Pendaftaran di Website PSKS JABAR**:
-1. Masuk ke akun pengguna Anda di website **PSKS JABAR** (atau klik **"Daftar Akun Baru"**).
-2. Di Beranda, pilih pilar **LK3**.
-3. Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"**.
-4. Lengkapi formulir: Identitas NIK 16 digit, Nama Lengkap, Nomor WhatsApp aktif, Wilayah Kab/Kota penugasan di Jawa Barat (27 Kab/Kota), serta profil legalitas lembaga/sertifikat keahlian konselor keluarga.
-5. Klik **"Kirim Pengajuan"** dan pantau verifikasinya di tab **"Riwayat Pengajuan Pendaftaran"** hingga disetujui menjadi status resmi **"SAH_TERDAFTAR"**.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:lk3:Buka Formulir Pendaftaran LK3]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+    if (q.includes("lk3") || q.includes("konsultasi keluarga") || activePillar === "lk3") {
+      return formatPillarRegistrationFlow(
+        "lk3",
+        "LK3",
+        "Lembaga Konsultasi Kesejahteraan Keluarga (LK3)",
+        "(seperti foto KTP Penanggung Jawab, SK Pendirian Lembaga, atau Sertifikat Keahlian Konselor Keluarga)"
+      );
     }
 
     // 9. CARA DAFTAR PENYULUH SOSIAL (PENSOS)
-    if (q.includes('penyuluh') || q.includes('pensos') || activePillar === 'pensos') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran Penyuluh Sosial (PENSOS)** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Penyuluh Sosial bertugas melakukan penyuluhan, komunikasi informasi dan edukasi (KIE), serta advokasi pencegahan masalah sosial kemasyarakatan.
-
----
-
-### **Alur Pendaftaran di Website PSKS JABAR**:
-1. Masuk (*login*) ke portal **PSKS JABAR** atau daftar akun baru.
-2. Di Beranda, pilih modul pilar **Penyuluh Sosial**.
-3. Klik tombol hijau **"+ Daftar / Tambah Anggota Mandiri"**.
-4. Isi data: NIK 16 digit, Nama Lengkap, Nomor HP/WhatsApp aktif, Wilayah Penugasan Kabupaten/Kota di Jawa Barat (27 Kab/Kota), Sertifikat Diklat Fungsional Penyuluh Sosial, dan unit kerja penyuluhan.
-5. Klik **"Kirim Pengajuan"** dan pantau proses verifikasi berkas di menu **"Riwayat Pengajuan Pendaftaran"** hingga berstatus resmi **"SAH_TERDAFTAR"**.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:pensos:Buka Formulir Pendaftaran PENSOS]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+    if (q.includes("penyuluh") || q.includes("pensos") || activePillar === "pensos") {
+      return formatPillarRegistrationFlow(
+        "pensos",
+        "Penyuluh Sosial",
+        "Penyuluh Sosial (PENSOS)",
+        "(seperti foto KTP, Sertifikat Diklat Fungsional Penyuluh Sosial, atau SK Jabatan Fungsional PENSOS)"
+      );
     }
 
     // 10. CARA DAFTAR KUBE & BADAN USAHA KESSOS
-    if (q.includes('kube') || q.includes('kelompok usaha') || q.includes('badan usaha') || activePillar === 'badanusaha') {
-      return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **cara pendaftaran Kelompok Usaha Bersama (KUBE) & Badan Usaha Sosial** di Jawa Barat, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-KUBE adalah wadah pemberdayaan ekonomi produktif masyarakat bagi Keluarga Penerima Manfaat (KPM) untuk meningkatkan taraf kesejahteraan sosial.
-
----
-
-### **Alur Pendaftaran di Website PSKS JABAR**:
-1. Masuk ke akun Anda di website **PSKS JABAR** atau klik **"Daftar Akun Baru"**.
-2. Pada Beranda, pilih modul pilar **KUBE / Badan Usaha Sosial**.
-3. Klik tombol **"+ Daftar / Tambah Anggota Mandiri"**.
-4. Isi formulir: Nama Kelompok Usaha, Nama Ketua/Penanggung Jawab, NIK, Nomor Kontak WhatsApp, Wilayah Kabupaten/Kota domisili usaha di Jawa Barat (27 Kab/Kota), jenis komoditas ekonomi produktif, dan daftar anggota kelompok KPM.
-5. Klik **"Kirim Pengajuan"** dan pantau verifikasi berkas di tab **"Riwayat Pengajuan Pendaftaran"** hingga disetujui menjadi status resmi **"SAH_TERDAFTAR"**.
-
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:badanusaha:Buka Formulir Pendaftaran KUBE]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+    if (q.includes("kube") || q.includes("kelompok usaha") || q.includes("badan usaha") || activePillar === "badanusaha") {
+      return formatPillarRegistrationFlow(
+        "badanusaha",
+        "KUBE",
+        "Kelompok Usaha Bersama (KUBE) & Usaha Sosial",
+        "(seperti foto KTP Ketua/Pengurus, Berita Acara Pembentukan Kelompok, atau Dokumen Profil Usaha Anggota KPM)"
+      );
     }
 
     // 11. PANDUAN CARA MENDAFTAR SALAH SATU PILAR DI WEBSITE PSKS JABAR (UMUM)
-    return `${salamPrefix}Baik ${politeUserHonorific}, terima kasih atas pertanyaannya. Terkait pertanyaan Anda mengenai **bagaimana alur pendaftaran mandiri salah satu pilar di website PSKS JABAR**, berikut kami sampaikan dan jelaskan alur pendaftarannya secara lengkap dan resmi sesuai alur pendaftaran pada website **PSKS JABAR**:
-
-Website **PSKS JABAR** menyediakan fasilitas **Pendaftaran Mandiri Terintegrasi** bagi seluruh masyarakat dan relawan di 27 Kabupaten/Kota se-Jawa Barat untuk bergabung ke salah satu dari **10 Pilar Potensi & Sumber Kesejahteraan Sosial (PSKS)**.
-
-Berikut langkah-langkah pendaftaran mandiri langsung di website:
+    return `Halo ${politeUserHonorific}, alur pendaftaran mandiri salah satu dari 10 Pilar PSKS di website **PSKS JABAR** dilakukan secara berjenjang dan transparan melalui 3 tahapan berikut:
 
 ---
 
-### **1. Langkah-Langkah Pendaftaran Mandiri di Website PSKS JABAR**:
-1. **Masuk / Buat Akun Pengguna**:
-   - Masuk (*login*) dengan akun pengguna (*role: user*) di website **PSKS JABAR**. Bila belum memiliki akun, klik menu **"Daftar Akun Baru"** pada navigasi atas dan lengkapi NIK, nama, email, no HP, serta PIN 6 digit.
-2. **Pilih Salah Satu dari 10 Pilar Sosial yang Dituju**:
-   - Pada halaman **Beranda** (menu navigasi 10 Pilar Sosial), klik salah satu pilar yang ingin Anda ikuti:
-     * **PSM** (Pekerja Sosial Masyarakat)
-     * **TAGANA** (Taruna Siaga Bencana)
-     * **Karang Taruna** (Kepemudaan Desa/Kelurahan)
-     * **TKSK** (Tenaga Kesejahteraan Sosial Kecamatan)
-     * **PEKSOS** (Pekerja Sosial Profesional)
-     * **LKS** (Lembaga Kesejahteraan Sosial / Panti)
-     * **LK3** (Lembaga Konsultasi Kesejahteraan Keluarga)
-     * **Penyuluh Sosial** (PENSOS)
-     * **KUBE & Usaha Sosial** (Kelompok Usaha Bersama)
-     * **SLRT / Puskesos** (Pusat Kesejahteraan Sosial Desa/Kelurahan)
-3. **Buka Formulir Pendaftaran Mandiri**:
-   - Pada halaman detail pilar yang dipilih, klik tombol hijau bertanda plus: **"+ Daftar / Tambah Anggota Mandiri"** yang berada di atas tabel data anggota.
-4. **Isi Formulir Data Pendaftaran Sesuai Jenis Pilar**:
-   - **Identitas Pokok (Wajib untuk Semua Pilar)**:
-     * NIK (Nomor Induk Kependudukan 16 digit sesuai KTP).
-     * Nama Lengkap (sesuai identitas resmi).
-     * Nomor Handphone / WhatsApp aktif (untuk koordinasi kedinasan & notifikasi verifikasi).
-     * Alamat Domisili KTP.
-     * Wilayah Penugasan di Jawa Barat: Pilih Kabupaten/Kota (27 Kab/Kota se-Jabar), Kecamatan, dan Kelurahan/Desa.
-   - **Data Spesifik Sesuai Pilar yang Dipilih**:
-     * **PSM**: Riwayat Bimbingan Teknis (Bimtek) Dasar Kesejahteraan Sosial & nomor SK Kepala Desa/Lurah/Camat.
-     * **TAGANA**: Nomor Registrasi Tagana (NRT) atau sertifikat Diklatsar Kebencanaan & kesiapan regu penugasan.
-     * **Karang Taruna**: SK Pengukuhan kepengurusan unit RT/RW atau Desa/Kelurahan & jabatan dalam organisasi.
-     * **TKSK**: Formasi penugasan kecamatan & nomor SK Pengangkatan Kemensos RI / Dinsos.
-     * **PEKSOS**: Ijazah Sarjana/Profesi Kesejahteraan Sosial, Sertifikat Kompetensi, Nomor STRPS Kemensos, dan SIPPS dinas.
-     * **LKS**: Nama Lembaga/Yayasan, Nomor Akta Notaris Kemenkumham, Tanda Daftar LKS (TDLKS) / Izin Operasional Dinsos.
-     * **LK3**: Nama Lembaga Konsultasi Keluarga, Surat Keputusan Pendirian, dan data konselor psikososial.
-     * **Penyuluh Sosial**: Sertifikat Diklat Fungsional Penyuluh Sosial (PENSOS) & unit kerja penyuluhan.
-     * **KUBE**: Nama Kelompok Usaha, jenis komoditas ekonomi produktif, jumlah anggota keluarga penerima manfaat (KPM).
-     * **SLRT / Puskesos**: Penetapan Surat Keputusan Sekretariat Puskesos Desa/Kelurahan & jejaring rujukan.
-5. **Kirim Pengajuan**:
-   - Periksa kebenaran data, lalu klik tombol **"Kirim Pengajuan"**.
-   - Berkas pendaftaran otomatis tersimpan di basis data Cloud Firestore dengan status **"Menunggu Verifikasi" (Pending)**.
-6. **Alur Verifikasi Bertingkat 2-Tier & Sensor Lampu Status**:
-   - **Pemantauan Real-Time**: Pemohon dapat memantau perkembangan verifikasi berkas secara langsung melalui tab **"Riwayat Pengajuan Pendaftaran"**.
-   - **Tier 1 (Admin Wilayah Kab/Kota)**: Berkas pendaftaran diperiksa oleh Admin Wilayah melalui tombol **"Verifikasi Berkas Wilayah"**. Tombol ini memiliki sensor lampu bulat berkedip (*pulsing light*) saat ada berkas pending, dan otomatis berubah menjadi centang hijau solid saat seluruh pending di wilayahnya tuntas diverifikasi.
-   - **Tier 2 (Superadmin & Developer Provinsi)**: Berkas yang lolos verifikasi wilayah diteruskan ke tingkat provinsi untuk disahkan pada kotak fitur **"Pengesahan dan Penerimaan Anggota"**. Kotak fitur ini juga memiliki sensor lampu berkedip saat ada antrean pengesahan, dan berubah menjadi centang hijau solid setelah tuntas disahkan menjadi status resmi **"SAH_TERDAFTAR"** serta diterbitkan KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256.
+### **1. Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User Terdaftar)**
+- **Masuk Akun**: Masuk (*login*) ke portal **PSKS JABAR** (atau klik menu *"Daftar Akun Baru"* bila belum memiliki akun).
+- **Pilih Pilar**: Di halaman **Beranda**, pilih salah satu dari 10 Pilar Sosial yang ingin diikuti, lalu klik tombol hijau **"+ Tambah Anggota Mandiri / Pendaftaran"**.
+- **Pengisian Formulir**: Lengkapi biodata (NIK 16 digit, Nama Lengkap, Nomor WhatsApp aktif, serta Wilayah Penugasan di Jawa Barat).
+- **Upload Foto Berkas Pendukung**: Unggah foto berkas pendukung (seperti foto KTP, SK Pengangkatan/Kepengurusan, atau Sertifikat Pelatihan/Bimtek). Sistem secara otomatis mengompresi ukuran foto agar jelas dan hemat memori.
+- **Kirim Pengajuan**: Klik tombol **"Kirim Pengajuan"**. Berkas otomatis tercatat dengan status awal **"Menunggu Verifikasi" (Pending)**.
 
 ---
 
-### **Catatan Legalitas Kedinasan di Lapangan**:
-Website PSKS JABAR merupakan pangkalan data terintegrasi resmi. Di lapangan kedinasan, personil relawan berkoordinasi dengan Puskesos Desa/Kelurahan atau Kantor Dinsos Kab/Kota domisili setempat guna mengikuti pembekalan teknis dan menerima pengukuhan resmi sesuai regulasi Kementerian Sosial RI dan Dinas Sosial Provinsi Jawa Barat.
+### **2. Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**
+- **Pemeriksaan Administrasi**: Admin Dinas Sosial Kabupaten/Kota setempat memeriksa keabsahan data administrasi dan kelengkapan foto berkas pendukung yang diunggah.
+- **Hasil Verifikasi**: Berkas yang sesuai disetujui menjadi status **"DISETUJUI_WILAYAH"** dan otomatis diteruskan ke antrean pengesahan tingkat Provinsi.
 
-[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:psm:Daftar PSM]] [[action:pillar:tagana:Daftar Tagana]] [[action:pillar:karangtaruna:Daftar Karang Taruna]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
+---
+
+### **3. Tahap 3: Pengesahan oleh Superadmin (Provinsi Jawa Barat)**
+- **Pengesahan Akhir**: Superadmin Dinas Sosial Provinsi Jawa Barat melakukan validasi akhir keselarasan data se-Jawa Barat.
+- **Hasil Pengesahan**: Berkas resmi disahkan dengan status **"SAH_TERDAFTAR"** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+
+---
+
+### **Pemantauan Status Pengajuan**:
+Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+
+[[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
   }
 
   // 4. PILAR SPECIFIC QUERIES
@@ -2649,14 +2480,6 @@ export function verifyAndTrackAnswerAccuracy(
     (normQ.includes('alur verifikasi') && (normQ.includes('bertingkat') || normQ.includes('dua tahap') || normQ.includes('2 tier') || normQ.includes('wilayah')));
 
   if (isSensorOrTierVerificationInAccuracy) {
-    if (rawReply && (rawReply.toLowerCase().includes('sensor') || rawReply.toLowerCase().includes('lampu') || rawReply.toLowerCase().includes('tier') || rawReply.toLowerCase().includes('verifikasi'))) {
-      return {
-        finalContent: rawReply.trim(),
-        isAccurate: true,
-        confidence: 0.99,
-        source: 'ai_model_verified',
-      };
-    }
     const verifiedSensorAnswer = getComprehensiveSmartAnswer(
       query,
       userRole,
@@ -2713,8 +2536,25 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.startsWith('ada yang ingin saya tanyakan') ||
     normQ === 'apakah anda bisa bantu saya' ||
     normQ === 'apakah anda bisa bantu saya?' ||
+    normQ === 'apakah bisa bantu saya' ||
+    normQ === 'apakah bisa bantu saya?' ||
+    normQ === 'bisakah bantu saya' ||
+    normQ === 'bisakah bantu saya?' ||
+    normQ === 'bisakah anda bantu saya' ||
+    normQ === 'bisakah anda bantu saya?' ||
+    normQ === 'bisakah kamu bantu saya' ||
+    normQ === 'bisakah kamu bantu saya?' ||
+    normQ === 'bisakah membantu saya' ||
+    normQ === 'bisakah membantu saya?' ||
     normQ === 'bisa bantu saya' ||
     normQ === 'bisa bantu saya?' ||
+    normQ === 'bisa tolong bantu saya' ||
+    normQ === 'bisa tolong bantu saya?' ||
+    normQ === 'bisa tolong saya' ||
+    normQ === 'tolong bantu saya' ||
+    normQ.includes('bisakah bantu') ||
+    normQ.includes('bisakah membantu') ||
+    normQ.includes('bisa tolong bantu') ||
     normQ === 'halo min mau nanya' ||
     normQ === 'halo admin mau nanya';
 

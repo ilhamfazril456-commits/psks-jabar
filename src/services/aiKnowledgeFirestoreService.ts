@@ -374,19 +374,13 @@ Jadi, Anda tidak perlu bingung; penyebutan Badan Usaha di website ini sama sekal
     title: 'Penawaran Bantuan Sopan dan Relevan',
     category: 'layanan',
     keywords: [
-      'apakah anda bisa bantu saya', 'bisa bantu saya', 'bisa bantu', 'minta tolong',
-      'bisa nanya', 'tolong bantu saya', 'butuh bantuan', 'bisa bantu gak', 'bisa bantu ngga'
+      'apakah anda bisa bantu saya', 'apakah bisa bantu saya', 'bisakah bantu saya',
+      'bisakah anda bantu saya', 'bisakah kamu bantu saya', 'bisakah membantu saya',
+      'bisa bantu saya', 'bisa bantu', 'minta tolong', 'tolong bantu saya', 'bisa tolong bantu saya',
+      'bisa nanya', 'butuh bantuan', 'bisa bantu gak', 'bisa bantu ngga', 'bantu saya'
     ],
-    summary: 'Respons santun, ramah, dan relevan saat pengguna meminta bantuan atau menanyakan kesiapan AI tanpa menyebut KTA Digital.',
-    content: `Sampurasun / Halo! Tentu saja, dengan senang hati saya siap membantu Anda.
-
-Silakan sampaikan pertanyaan atau informasi apa yang sedang Anda butuhkan seputar:
-1. **10 Pilar PSKS**: Penjelasan tugas pokok, fungsi, kriteria, dan regulasi (seperti PSM, Tagana, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).
-2. **Alur Pendaftaran Mandiri**: Tata cara pengajuan data anggota pilar melalui portal website PSKS JABAR.
-3. **Data Sebaran Sosial**: Peta dan statistik potensi sumber kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat.
-4. **Layanan & Kontak Kedinasan**: Alamat dan saluran komunikasi resmi Dinas Sosial Provinsi Jawa Barat.
-
-Ada hal khusus yang ingin Anda tanyakan atau diskusikan hari ini?`,
+    summary: 'Respons santun, ramah, dan relevan saat pengguna meminta bantuan atau menanyakan kesiapan AI.',
+    content: `Tentu saja, silakan apa yang ingin ditanyakan? Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, dan layanan sosial di Jawa Barat. 😊`,
     updatedAt: '2026-09-09T00:00:00Z',
   },
   {
@@ -485,50 +479,46 @@ Website PSKS JABAR merupakan sistem pangkalan data terintegrasi resmi. Di lapang
   {
     id: 'alur_verifikasi_bertingkat_dan_sensor_status',
     topic: 'verifikasi_bertingkat_sensor_lampu',
-    title: 'Alur Verifikasi Bertingkat 2-Tier dan Sistem Sensor Lampu Berkedip Status Pending',
+    title: 'Alur Pendaftaran dan Verifikasi Berkas Bertingkat (User, Admin Wilayah, Superadmin)',
     category: 'panduan',
     keywords: [
       'alur verifikasi', 'verifikasi berkas wilayah', 'pengesahan dan penerimaan anggota',
-      'sensor lampu', 'lampu berkedip', 'sensor berkedip', 'lampu sensor', 'indikator lampu',
-      'lampu bulat', 'centang hijau', 'arti lampu berkedip', 'sensor lampu berkedip',
-      'pengesahan anggota', 'verifikasi bertingkat', '2 tier verifikasi', 'dua tahap verifikasi',
-      'kenapa lampu berkedip', 'apa maksud lampu berkedip', 'verifikasi pendaftaran'
+      'alur pendaftaran', 'alur pendaftaran baru', 'tahap verifikasi', 'dua tahap verifikasi',
+      'verifikasi bertingkat', 'cara daftar', 'upload berkas', 'admin wilayah', 'superadmin',
+      'pengesahan anggota', 'menunggu verifikasi', 'disetujui wilayah', 'sah terdaftar'
     ],
-    summary: 'Penjelasan detail mengenai alur verifikasi berkas 2-tier (Admin Wilayah & Superadmin Provinsi) serta sistem animasi sensor lampu berkedip ketika ada antrean pending.',
-    content: `**Alur Verifikasi Berkas Bertingkat 2-Tier & Animasi Sensor Lampu Berkedip di Sistem PSKS JABAR**:
+    summary: 'Penjelasan alur pendaftaran dan verifikasi berkas berjenjang secara ringkas dan mudah dipahami: dari User terdaftar, verifikasi Admin Wilayah, hingga pengesahan Superadmin Provinsi.',
+    content: `**Alur Pendaftaran dan Verifikasi Berkas Bertingkat di Sistem PSKS JABAR**:
 
-Sistem Informasi **PSKS JABAR** menerapkan mekanisme penjaminan mutu data pendaftaran personil relawan secara bertingkat 2-Tier yang transparan dan akuntabel, dilengkapi indikator sensor visual lampu pintar (*real-time status sensor*):
-
----
-
-### **1. Tier 1: Verifikasi Berkas Wilayah (Admin Wilayah Kab/Kota)**
-- **Wewenang & Pelaksana**: Admin Dinas Sosial Kabupaten/Kota tempat calon relawan berdomisili atau bertugas.
-- **Akses Fitur**: Tombol **"Verifikasi Berkas Wilayah"**.
-- **Indikator Sensor Lampu**:
-  * Di pojok kanan atas tombol "Verifikasi Berkas Wilayah" terdapat indikator **sensor lampu bulat berkedip-kedip** (*pulsing sensor light*) berwarna merah/oranye apabila masih ada pengajuan calon personil di wilayah tersebut yang berstatus **Pending** (menunggu verifikasi berkas).
-  * Begitu seluruh pengajuan pending di wilayah tersebut selesai diperiksa dan diverifikasi (disetujui atau ditolak dengan catatan), sensor lampu bulat tersebut secara otomatis berhenti berkedip dan berubah menjadi **ikon centang hijau solid (CheckCircle)** yang menandakan antrean verifikasi wilayah telah beres (*zero pending*).
-- **Hasil Verifikasi**: Berkas yang lolos pemeriksaan memperoleh status legalitas \`DISETUJUI_WILAYAH\` dan secara otomatis dialirkan ke antrean pengesahan tingkat Provinsi.
+Proses pendaftaran anggota pilar sosial di portal **PSKS JABAR** dilakukan secara berjenjang dan transparan melalui 3 tahapan utama:
 
 ---
 
-### **2. Tier 2: Pengesahan dan Penerimaan Anggota (Superadmin & Developer Provinsi)**
-- **Wewenang & Pelaksana**: Superadmin & Developer pada Dinas Sosial Provinsi Jawa Barat.
-- **Akses Fitur**: Fitur **"Pengesahan dan Penerimaan Anggota" (Fitur 5)** di Dashboard Manajemen Superadmin & Developer.
-- **Indikator Sensor Lampu**:
-  * Di pojok kanan atas kotak fitur "Pengesahan dan Penerimaan Anggota" terdapat **sensor lampu bulat berkedip-kedip** (*pulsing sensor indicator*) apabila masih ada pengajuan yang telah lolos verifikasi wilayah dan sedang menunggu pengesahan akhir tingkat provinsi.
-  * Begitu Superadmin atau Developer mengesahkan seluruh berkas masuk, lampu berkedip secara otomatis berhenti dan berubah menjadi **ikon centang hijau solid (CheckCircle)**.
-- **Hasil Pengesahan**:
-  * Calon personil resmi disahkan dengan status **"SAH_TERDAFTAR"** dalam Satu Data Sosial Jawa Barat.
-  * Diterbitkan **KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256**.
-  * Keabsahan kartu personil dapat dipindai secara langsung di lapangan menggunakan fitur **Pindai Kartu Anggota (QR / NFC Scanner)** di Section 12 Dashboard Superadmin.
+### **1. Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User Terdaftar)**
+- **Aksi Pemohon**: Pengguna masuk ke akun terdaftar, memilih salah satu dari 10 Pilar PSKS di Beranda, lalu mengklik tombol **"+ Tambah Anggota Mandiri / Pendaftaran"**.
+- **Kelengkapan Data**: Mengisi identitas (NIK, Nama, Nomor WhatsApp, dan Wilayah Penugasan) serta **mengunggah foto berkas pendukung** (seperti foto KTP, SK Pengangkatan, atau Sertifikat Pelatihan/Bimtek). Sistem secara otomatis mengompresi ukuran foto agar jelas dan hemat memori.
+- **Status Awal**: Setelah tombol **"Kirim Pengajuan"** diklik, berkas otomatis berstatus **"Menunggu Verifikasi" (Pending)**.
 
 ---
 
-### **3. Transparansi Pemantauan oleh Pemohon**
-Pemohon pendaftaran mandiri dapat memantau perjalanan berkasnya secara *real-time* di portal melalui menu **"Riwayat Pengajuan Pendaftaran"**:
-- **Pending**: Berkas baru masuk, menunggu pemeriksaan Tier 1 oleh Admin Wilayah.
-- **DISETUJUI_WILAYAH**: Berkas lolos verifikasi kabupaten/kota, sedang menunggu pengesahan Tier 2 Provinsi.
-- **SAH_TERDAFTAR**: Resmi disahkan, KTA Digital terbit dan dapat digunakan.`,
+### **2. Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**
+- **Wewenang & Pelaksana**: Admin Dinas Sosial Kabupaten/Kota sesuai wilayah penugasan atau domisili pemohon.
+- **Pemeriksaan**: Memeriksa keabsahan data administrasi dan foto dokumen pendukung yang diunggah.
+- **Hasil Verifikasi**:
+  * Jika berkas sesuai dan lengkap, status pengajuan disetujui menjadi **"DISETUJUI_WILAYAH"** dan otomatis diteruskan ke tingkat Provinsi.
+  * Jika berkas belum lengkap atau buram, Admin Wilayah memberikan catatan perbaikan.
+
+---
+
+### **3. Tahap 3: Pengesahan oleh Superadmin (Provinsi Jawa Barat)**
+- **Wewenang & Pelaksana**: Superadmin pada Dinas Sosial Provinsi Jawa Barat.
+- **Pemeriksaan**: Melakukan validasi keselarasan data lintas 27 Kabupaten/Kota se-Jawa Barat.
+- **Hasil Pengesahan**: Berkas disahkan dan status final anggota resmi menjadi **"SAH_TERDAFTAR"** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+
+---
+
+### **Pemantauan Status oleh Pengguna**:
+Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung melalui menu **"Riwayat Pengajuan Pendaftaran"**.`,
     actionTag: '[[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:beranda:Pilih Pilar di Beranda]]',
     updatedAt: '2026-09-18T14:00:00Z',
   },
@@ -1757,8 +1747,28 @@ AI MUTLAK (DILARANG KERAS DILANGGAR):
     normCurrent.startsWith('ada yang ingin saya tanyakan') ||
     normCurrent === 'apakah anda bisa bantu saya' ||
     normCurrent === 'apakah anda bisa bantu saya?' ||
+    normCurrent === 'apakah bisa bantu saya' ||
+    normCurrent === 'apakah bisa bantu saya?' ||
+    normCurrent === 'bisakah bantu saya' ||
+    normCurrent === 'bisakah bantu saya?' ||
+    normCurrent === 'bisakah anda bantu saya' ||
+    normCurrent === 'bisakah anda bantu saya?' ||
+    normCurrent === 'bisakah kamu bantu saya' ||
+    normCurrent === 'bisakah kamu bantu saya?' ||
+    normCurrent === 'bisakah membantu saya' ||
+    normCurrent === 'bisakah membantu saya?' ||
     normCurrent === 'bisa bantu saya' ||
     normCurrent === 'bisa bantu saya?' ||
+    normCurrent === 'bisa tolong bantu saya' ||
+    normCurrent === 'bisa tolong bantu saya?' ||
+    normCurrent === 'bisa tolong saya' ||
+    normCurrent === 'tolong bantu saya' ||
+    normCurrent.includes('bisakah bantu') ||
+    normCurrent.includes('bisakah membantu') ||
+    normCurrent.includes('bisa bantu') ||
+    normCurrent.includes('bantu saya') ||
+    normCurrent.includes('tolong bantu') ||
+    normCurrent.includes('bisa tolong') ||
     normCurrent === 'halo min mau nanya' ||
     normCurrent === 'halo admin mau nanya';
 
@@ -1768,24 +1778,15 @@ AI MUTLAK (DILARANG KERAS DILANGGAR):
       detectedObject: 'Sapaan & Pembukaan Konsultasi PSKS',
       detectedTopic: 'Panduan Awal & Izin Bertanya',
       instruction: `[PERTANYAAN AWALAN / PERMISI BERTANYA ("${lastUserMsg}")]
-AI MUTLAK (DILARANG MENOLAK):
-1. Pengguna menyapa atau meminta izin untuk bertanya (seperti "Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros", "Bisakah bantu saya?").
+AI MUTLAK (DILARANG MENOLAK & DILARANG CERAMAH PANJANG):
+1. Pengguna menyapa atau meminta izin/bantuan untuk bertanya (seperti "Bisakah bantu saya?", "Bisa bantu saya?", "Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros").
 2. DILARANG KERAS menjawab dengan penolakan atau template kaku seperti "Mohon maaf untuk saat ini masih belum memiliki informasi..."!
-3. JAWAB DENGAN RAMAH, HANGAT, DAN PENUH KESOPANAN KHAS JAWA BARAT:
-   Sambut dengan gembira dan persilakan pengguna bertanya (contoh: "Sampurasun! Tentu saja, mangga (silakan)! Dengan senang hati saya siap membantu Bapak/Ibu 😊.").
-4. Berikan ikhtisar singkat topik yang siap dibantu:
-   - Informasi lengkap 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) Jawa Barat (PSM, Tagana, Karang Taruna, TKSK, Peksos, LKS, LK3, Pensos, KUBE, SLRT/Puskesos).
-   - Alur pendaftaran mandiri anggota 10 pilar dan 2 tahap verifikasi berkas (Verifikasi Berkas Wilayah & Pengesahan Anggota) serta arti sensor lampu status (berkedip saat ada pending & centang hijau saat tuntas).
-   - Profil perancang sistem Kang Ilham Fazril (siswa magang PKL Dinsos Jabar Dayasos 2026).
-   - Layanan Dinas Sosial Provinsi Jawa Barat dan konsultasi bansos DTKS.
-5. Tanyakan dengan santun: "Ada hal atau informasi apa yang ingin Anda tanyakan seputar PSKS Jawa Barat?"`,
+3. DILARANG KERAS memberikan ceramah panjang atau daftar 4 poin yang tidak diminta pengguna!
+4. JAWAB DENGAN RAMAH, SINGKAT, DAN HANGAT:
+   "Tentu saja, silakan apa yang ingin ditanyakan? Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, dan layanan sosial di Jawa Barat. 😊"`,
       isAmbiguous: false,
       clarificationPrompt: '',
-      suggestedActionTags: [
-        '[[action:tab:beranda:Lihat Pilihan 10 Pilar]]',
-        '[[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]',
-        '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
-      ],
+      suggestedActionTags: [],
     };
   }
 
@@ -1845,25 +1846,23 @@ AI MUTLAK:
   if (isRegistrationOrSensorQuestion) {
     return {
       detectedContext: true,
-      detectedObject: 'Alur Pendaftaran & Verifikasi 2-Tier Sensor Lampu',
-      detectedTopic: 'Alur Pendaftaran Baru & Verifikasi Berkas Bertingkat',
-      instruction: `[ALUR PENDAFTARAN BARU 10 PILAR & SENSOR STATUS VERIFIKASI DUA TAHAP ("${lastUserMsg}")]
-AI MUTLAK:
-1. Pengguna menanyakan alur pendaftaran baru anggota 10 pilar sosial atau menanyakan fungsi sensor lampu berkedip / centang hijau pada tombol verifikasi.
-2. JELASKAN ALUR PENDAFTARAN SECARA SISTEMATIS:
-   - **Langkah 1 (Akun)**: Masuk ke website PSKS JABAR dengan akun terdaftar (atau klik "Daftar Akun Baru" bila belum punya akun).
-   - **Langkah 2 (Pilih Pilar)**: Pada Beranda, pilih salah satu dari 10 Pilar Sosial yang dituju.
-   - **Langkah 3 (Formulir)**: Klik tombol hijau "+ Daftar / Tambah Anggota Mandiri" di atas tabel data.
-   - **Langkah 4 (Pengisian Data)**: Lengkapi NIK, Nama, No WA/HP, Wilayah Kab/Kota (27 Kab/Kota se-Jabar), Kecamatan, Desa/Kelurahan, dan dokumen legalitas/sertifikat pilar.
-   - **Langkah 5 (Kirim)**: Klik "Kirim Pengajuan". Status berkas otomatis tercatat sebagai "Menunggu Verifikasi" (Pending).
-   - **Langkah 6 (Pemantauan)**: Pantau di menu "Riwayat Pengajuan Pendaftaran".
-3. JELASKAN ALUR VERIFIKASI 2 TAHAP & ARTI SENSOR LAMPU:
-   - **Tahap 1 (Admin Wilayah Dinsos Kab/Kota)**: Melakukan pengecekan fisik dan administrasi berkas di tombol **"Verifikasi Berkas Wilayah"**.
-   - **Tahap 2 (Superadmin Provinsi / Developer)**: Melakukan validasi akhir dan penerbitan SK/penetapan di kotak fitur **"Pengesahan dan Penerimaan Anggota"**.
-   - **Arti Sensor Lampu (Indikator Status)**:
-     * **Lampu Bulat Berkedip-kedip (Pulsing Merah/Oranye)**: Menandakan **masih ada berkas pendaftaran yang berstatus PENDING** menunggu untuk diperiksa/diverifikasi.
-     * **Lampu Berubah Menjadi Centang Hijau (Solid Checkmark, tidak berkedip)**: Menandakan **seluruh berkas pendaftaran sudah selesai diverifikasi** (sudah tidak ada lagi berkas yang pending / 0 pending).
-4. Berikan action tags navigasi: [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]].`,
+      detectedObject: 'Alur Pendaftaran & Verifikasi Berkas Bertingkat',
+      detectedTopic: 'Alur Pendaftaran Baru & Verifikasi Berkas',
+      instruction: `[ALUR PENDAFTARAN BARU 10 PILAR & TAHAPAN VERIFIKASI ("${lastUserMsg}")]
+AI:
+1. Jelaskan alur pendaftaran secara sederhana, jelas, dan mudah dipahami dalam 3 tahapan:
+   - **Tahap 1 (Pengguna / Pemohon)**:
+     * Masuk dengan akun terdaftar di website PSKS JABAR, pilih salah satu dari 10 pilar di Beranda, lalu klik "+ Tambah Anggota Mandiri / Pendaftaran".
+     * Isi formulir data diri (NIK, Nama, WhatsApp, Wilayah Penugasan) dan **unggah foto berkas pendukung** (KTP, SK, atau Sertifikat Pelatihan/Bimtek).
+     * Klik "Kirim Pengajuan". Status awal otomatis menjadi "Menunggu Verifikasi" (Pending).
+   - **Tahap 2 (Admin Wilayah Kab/Kota)**:
+     * Admin Dinas Sosial Kabupaten/Kota memeriksa keabsahan administrasi dan dokumen yang diunggah.
+     * Jika sesuai, berkas disetujui menjadi "DISETUJUI_WILAYAH" dan diteruskan ke tingkat Provinsi.
+   - **Tahap 3 (Superadmin Provinsi)**:
+     * Superadmin Provinsi Jawa Barat melakukan pengesahan akhir sehingga data resmi berstatus "SAH_TERDAFTAR" dalam database pangkalan data sosial Jawa Barat.
+   - **Pemantauan**: Pemohon dapat memantau status secara langsung di menu "Riwayat Pengajuan Pendaftaran".
+2. CATATAN PENTING: DILARANG menjelaskan sensor lampu cerdas (karena kurang relevan bagi pendaftar umum) dan DILARANG menyebutkan KTA Digital. Buat penjelasan seadanya, lugas, dan bersahabat.
+3. Berikan action tags navigasi: [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]].`,
       isAmbiguous: false,
       clarificationPrompt: '',
       suggestedActionTags: [
