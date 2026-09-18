@@ -10,6 +10,7 @@ export interface UserSession {
   isDeveloper?: boolean;
   sessionToken?: string;
   loginTimestamp?: number;
+  deviceId?: string;
 }
 
 export interface SocialLinks {
@@ -196,6 +197,7 @@ export interface AdminAccount {
   statusActive?: 'SAH_TERDAFTAR' | 'GUEST' | string;
   registeredIp?: string;
   deviceId?: string;
+  lastLoginDeviceId?: string;
 }
 
 export interface AdminMessage {

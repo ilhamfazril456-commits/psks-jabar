@@ -88,7 +88,7 @@ import {
   isQuotaError,
 } from './services/firestoreDataService';
 import { validateQRCardPayload } from './utils/qrAuth';
-import { removeAccountFromQuota } from './services/ipRegistrationService';
+import { removeAccountFromQuota, getStableDeviceId } from './services/ipRegistrationService';
 
 const recordSystemActivity = (params: any) => {
   import('./lib/activityLogger').then(({ recordSystemActivity: fn }) => {
@@ -108,7 +108,8 @@ export default function App() {
     const loginTimestamp = sessionStorage.getItem('login_timestamp') ? Number(sessionStorage.getItem('login_timestamp')) : undefined;
     const username = sessionStorage.getItem('session_user_username') || undefined;
     const userId = sessionStorage.getItem('session_user_id') || undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId };
+    const deviceId = sessionStorage.getItem('session_device_id') || undefined;
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId };
   });
 
   // 1b. Global App Settings state with Firestore Real-time Sync & Permanent Persistence
@@ -1839,6 +1840,7 @@ export default function App() {
     // Generate unique session token & timestamp for Single Session & 24h Timeout
     const sessionToken = `token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const loginTimestamp = Date.now();
+    const currentDeviceId = getStableDeviceId();
 
     const newSession: UserSession = { 
       role, 
@@ -1849,7 +1851,8 @@ export default function App() {
       userId: resolvedUserId,
       isDeveloper, 
       sessionToken, 
-      loginTimestamp 
+      loginTimestamp,
+      deviceId: currentDeviceId,
     };
     setSession(newSession);
     sessionStorage.setItem('has_entered_gate', 'true');
@@ -1861,6 +1864,7 @@ export default function App() {
     if (resolvedUserId) sessionStorage.setItem('session_user_id', resolvedUserId);
     sessionStorage.setItem('session_token', sessionToken);
     sessionStorage.setItem('login_timestamp', String(loginTimestamp));
+    sessionStorage.setItem('session_device_id', currentDeviceId);
     setGateModalOpen(false);
 
     // Format current login timestamp
@@ -1876,18 +1880,42 @@ export default function App() {
         (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim()
     );
 
+    const loginAccountPayload = {
+      isFrozen: false,
+      statusAkun: 'AKTIF' as const,
+      isOnline: true,
+      statusKoneksi: 'ONLINE' as const,
+      statusLayar: 'AKTIF_LAYAR' as const,
+      terakhirLogin: formattedLogin,
+      sessionToken: sessionToken,
+      loginTimestamp: loginTimestamp,
+      lastLoginDeviceId: currentDeviceId,
+    };
+
     if (matched) {
-      handleUpdateAdminAccount({
+      const updatedAccount: AdminAccount = {
         ...matched,
-        isFrozen: false,
-        statusAkun: 'AKTIF',
-        isOnline: true,
-        statusKoneksi: 'ONLINE',
-        statusLayar: 'AKTIF_LAYAR',
-        terakhirLogin: formattedLogin,
-        sessionToken: sessionToken,
-        loginTimestamp: loginTimestamp,
+        ...loginAccountPayload,
+      };
+
+      // Sinkronkan langsung ke local state & ref agar tidak ada selisih pembacaan token di siklus render berikutnya
+      setAdminAccounts((prev) => {
+        const next = prev.map((a) =>
+          a.id === matched.id ||
+          (a.username && a.username.toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim())
+            ? updatedAccount
+            : a
+        );
+        try {
+          localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+        } catch {}
+        return next;
       });
+
+      handleUpdateAdminAccount(updatedAccount);
+    } else if (resolvedUserId) {
+      // Jika akun baru terdaftar belum ada di currentAccounts, sinkronkan via Firestore doc
+      setFirestoreDoc('admin_accounts', resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
     }
 
     // Show animated checkmark "Login Berhasil" modal for authenticated sessions
@@ -1975,6 +2003,7 @@ export default function App() {
     sessionStorage.removeItem('login_timestamp');
     sessionStorage.removeItem('session_user_username');
     sessionStorage.removeItem('session_user_id');
+    sessionStorage.removeItem('session_device_id');
     setIsFloatingAnnouncementOpen(false);
     hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
@@ -2026,8 +2055,13 @@ export default function App() {
       });
 
       // 2. Check deletion if not matched in adminAccounts (Req 3)
+      const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+      const now = Date.now();
+      const isWithinGracePeriod = loginTime > 0 && (now - loginTime < 8000);
+
       if (!matched && !showAccountDeletedModal) {
-        if (session.role !== 'developer' && session.role !== 'superadmin') {
+        // Jangan langsung menendang akun yang baru saja berhasil login (tunggu masa tenggang 8 detik)
+        if (session.role !== 'developer' && session.role !== 'superadmin' && !isWithinGracePeriod) {
           setShowAccountDeletedModal(true);
           return;
         }
@@ -2043,7 +2077,6 @@ export default function App() {
         }
 
         // 4. Check Account Edited (Req 4) - only when edited by admin while user is actively logged in
-        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
         if (
           session.role !== 'developer' &&
           session.role !== 'superadmin' &&
@@ -2058,12 +2091,42 @@ export default function App() {
         }
 
         // 5. Check Multiple Session Active / Login on another device (Req 5)
+        // Pastikan akun terdeteksi diloginkan HANYA jika akun BENAR-BENAR diloginkan di perangkat lain!
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
-        if (matched.sessionToken && localToken && matched.sessionToken !== localToken) {
-          if (!showMultipleSessionModal) {
-            setShowMultipleSessionModal(true);
+        const currentDeviceId = sessionStorage.getItem('session_device_id') || getStableDeviceId();
+
+        if (
+          session.role !== 'developer' &&
+          !isWithinGracePeriod &&
+          matched.sessionToken &&
+          localToken &&
+          matched.sessionToken !== localToken
+        ) {
+          const remoteLoginTime = matched.loginTimestamp || 0;
+          const remoteDeviceId = matched.lastLoginDeviceId || matched.deviceId;
+
+          // Syarat VALID bahwa akun benar-benar diloginkan di perangkat lain:
+          // 1. Remote login terjadi SETELAH login perangkat ini (ada sesi baru masuk, remoteLoginTime > loginTime + 3000)
+          // 2. DAN remote device ID tercatat berbeda dari perangkat lokal saat ini (bukan perangkat fisik / browser yang sama)
+          const isRemoteLoginLater = remoteLoginTime > (loginTime + 3000);
+          const isDifferentDevice = Boolean(remoteDeviceId && remoteDeviceId !== currentDeviceId);
+
+          if (isRemoteLoginLater && isDifferentDevice) {
+            if (!showMultipleSessionModal) {
+              setShowMultipleSessionModal(true);
+            }
+            return;
+          } else if (remoteLoginTime <= loginTime) {
+            // Sesi di remote ternyata menyimpan token lama dari sesi lampau yang belum ter-overwrite.
+            // Sinkronkan token lokal aktif ke database tanpa memutus sesi user saat ini.
+            if (matched.id) {
+              setFirestoreDoc('admin_accounts', matched.id, {
+                sessionToken: localToken,
+                loginTimestamp: loginTime,
+                lastLoginDeviceId: currentDeviceId,
+              }, { merge: true }).catch(() => {});
+            }
           }
-          return;
         }
       }
     }

@@ -18,7 +18,6 @@ import {
   Building,
   ChevronRight,
   Sparkles,
-  ClipboardList,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -188,26 +187,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full shadow-[0_0_6px_#d4af37]" />
               )}
             </button>
-
-            {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
-              <button
-                onClick={() => handleNav('terima_pendaftaran')}
-                onMouseEnter={() => onPrefetch?.('terima_pendaftaran')}
-                onTouchStart={() => onPrefetch?.('terima_pendaftaran')}
-                className={`relative flex items-center gap-1.5 lg:gap-2 text-sm lg:text-[15px] xl:text-base font-extrabold px-2.5 lg:px-3.5 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap cursor-pointer ${
-                  currentTab === 'terima_pendaftaran'
-                    ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
-                    : 'text-white/95 hover:text-amber-200 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]'
-                }`}
-                title="Verifikasi Berkas Pendaftaran 10 Pilar PSKS Wilayah"
-              >
-                <ClipboardList className={`w-4 h-4 lg:w-4.5 lg:h-4.5 transition-transform duration-200 ${currentTab === 'terima_pendaftaran' ? 'text-amber-300 scale-110' : 'text-amber-300/90'}`} />
-                <span className="whitespace-nowrap tracking-normal">Verifikasi Berkas Wilayah</span>
-                {currentTab === 'terima_pendaftaran' && (
-                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full shadow-[0_0_6px_#d4af37]" />
-                )}
-              </button>
-            )}
 
             {isSuperadminOrDev && (
               <button
@@ -496,34 +475,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ChevronRight className={`w-4 h-4 ${currentTab === 'akun' ? 'text-[#03291e]' : 'text-slate-400'}`} />
             </button>
 
-            {/* 5. Khusus Admin: Terima Pendaftaran */}
-            {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin' && (
-              <button
-                onClick={() => handleNav('terima_pendaftaran')}
-                onTouchStart={() => onPrefetch?.('terima_pendaftaran')}
-                onMouseEnter={() => onPrefetch?.('terima_pendaftaran')}
-                className={`flex items-center justify-between w-full text-left p-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  currentTab === 'terima_pendaftaran'
-                    ? 'bg-gradient-to-r from-[#f7e096] via-[#d4af37] to-[#b8860b] text-[#03291e] font-black shadow-lg shadow-amber-500/20 border border-amber-200/90'
-                    : 'bg-black/30 text-slate-200 hover:bg-white/10 border border-white/5'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${currentTab === 'terima_pendaftaran' ? 'bg-[#03291e] text-amber-300' : 'bg-amber-950 text-amber-300 border border-amber-800'}`}>
-                    <ClipboardList className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-black">Verifikasi Berkas Wilayah</span>
-                    <span className={`text-[10px] ${currentTab === 'terima_pendaftaran' ? 'text-emerald-950 font-semibold' : 'text-amber-300/80'}`}>
-                      Verifikasi 10 Pilar Wilayah
-                    </span>
-                  </div>
-                </div>
-                <ChevronRight className={`w-4 h-4 ${currentTab === 'terima_pendaftaran' ? 'text-[#03291e]' : 'text-slate-400'}`} />
-              </button>
-            )}
-
-            {/* 6. Khusus Superadmin & Dev: Pengaturan Aplikasi */}
+            {/* Khusus Superadmin & Dev: Pengaturan Aplikasi */}
             {isSuperadminOrDev && (
               <button
                 onClick={() => handleNav('superadmin_settings')}
