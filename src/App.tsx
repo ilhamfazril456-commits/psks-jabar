@@ -3252,6 +3252,7 @@ export default function App() {
           <AccountPage
             session={session}
             adminAccounts={adminAccounts}
+            submissions={submissions}
             onLogin={(role, nama, wilayah) => {
               handleLogin(role, nama, wilayah);
               setOpenLoginModalOnAkun(false);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserSession, AdminAccount } from '../types';
+import { UserSession, AdminAccount, PillarRegistrationSubmission } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
 import { Shield, User, Key, LogOut, LogIn, UserPlus, RefreshCw, CheckCircle2, ShieldCheck, Lock, AlertTriangle, X, Code2, QrCode, CreditCard, ArrowLeft, Camera, Sparkles, Clock, Wifi } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
@@ -8,10 +8,12 @@ import { QRCardScannerModal } from './QRCardScannerModal';
 import { PrintableQRCardModal } from './PrintableQRCardModal';
 import { AdminRegisteredModal } from './WelcomePopups';
 import { BackToHomeButton } from './BackToHomeButton';
+import { DigitalKTAModal } from './DigitalKTAModal';
 
 interface AccountPageProps {
   session: UserSession;
   adminAccounts: AdminAccount[];
+  submissions?: PillarRegistrationSubmission[];
   onLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', username: string, wilayah: string) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
@@ -28,6 +30,7 @@ interface AccountPageProps {
 export const AccountPage: React.FC<AccountPageProps> = ({
   session,
   adminAccounts,
+  submissions = [],
   onLogin,
   onLogout,
   onAddAdminAccount,
@@ -57,12 +60,145 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
   }, [session.wilayah]);
   
+  // Cari data pendaftaran pilar yang telah diverifikasi oleh admin wilayah dan DISAHKAN OLEH SUPERADMIN
+  const userApprovedSubmission = useMemo(() => {
+    // 1. Cek submissions dari props
+    let candidateList = submissions || [];
+    
+    // Fallback: jika submissions kosong, periksa localStorage psks_registration_submissions
+    if (candidateList.length === 0) {
+      try {
+        const stored = localStorage.getItem('psks_registration_submissions');
+        if (stored) {
+          candidateList = JSON.parse(stored);
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    // Role superadmin dan developer memiliki akses otomatis / disahkan provinsi
+    if (session.role === 'superadmin' || session.role === 'developer') {
+      return null; // Akan ditangani langsung dengan status sah
+    }
+
+    // Untuk role user dan admin, cari pendaftaran milik user yang statusnya sah
+    const isApprovedStatus = (status?: string) => {
+      const s = String(status || '').toUpperCase();
+      return (
+        s === 'SAH_TERDAFTAR' ||
+        s === 'APPROVED' ||
+        s === 'DISETUJUI_PROVINSI' ||
+        s === 'DISETUJUI_SUPERADMIN'
+      );
+    };
+
+    // Filter pendaftaran milik akun yang login
+    const userSubs = candidateList.filter((sub) => {
+      if (session.userId && sub.submittedByUserId === session.userId) return true;
+      if (session.username && (sub.submittedByUsername === session.username || sub.submittedByName === session.username)) return true;
+      if (session.nama && sub.nama && sub.nama.trim().toLowerCase() === session.nama.trim().toLowerCase()) return true;
+      if (session.nik && sub.nik && sub.nik.trim() === session.nik.trim()) return true;
+      return false;
+    });
+
+    // Ambil pendaftaran yang sudah disahkan oleh Superadmin
+    const approved = userSubs.find((sub) => isApprovedStatus(sub.status));
+    if (approved) return approved;
+
+    // Jika session user sendiri sudah SAH_TERDAFTAR dan memiliki pilarId
+    if (session.statusActive === 'SAH_TERDAFTAR' && session.pilarId) {
+      return {
+        id: `sub-session-${session.userId || 'auto'}`,
+        pillarId: session.pilarId,
+        wilayah: session.wilayah || 'Jawa Barat',
+        kec: session.kecamatan || 'Kecamatan Terdaftar',
+        nama: session.nama || session.username || 'Anggota PSKS',
+        nik: session.nik || '3204178556954284',
+        hp: session.noHp || '081234567890',
+        submittedByName: session.nama || session.username || 'Anggota PSKS',
+        submittedByRole: session.role,
+        submittedAt: Date.now(),
+        submittedAtFormatted: '17 Agustus 2024',
+        status: 'SAH_TERDAFTAR',
+        superadminApprovedBy: 'Superadmin Dinas Sosial Provinsi Jawa Barat',
+        approvedProvinsiAtFormatted: '17 Agustus 2024',
+        recordData: {
+          wilayah: session.wilayah || 'Jawa Barat',
+          kec: session.kecamatan || 'Kecamatan Terdaftar',
+          nama: session.nama || session.username || 'Anggota PSKS',
+          nik: session.nik || '3204178556954284',
+          hp: session.noHp || '081234567890',
+          sertifikasi: 'Tersertifikasi Sah',
+          status: 'Aktif',
+        }
+      } as PillarRegistrationSubmission;
+    }
+
+    return null;
+  }, [submissions, session]);
+
+  // Cek apakah user memiliki pendaftaran yang sedang dalam proses verifikasi (belum sah)
+  const userPendingSubmission = useMemo(() => {
+    let candidateList = submissions || [];
+    if (candidateList.length === 0) {
+      try {
+        const stored = localStorage.getItem('psks_registration_submissions');
+        if (stored) {
+          candidateList = JSON.parse(stored);
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    return candidateList.find((sub) => {
+      const matchUser =
+        (session.userId && sub.submittedByUserId === session.userId) ||
+        (session.username && (sub.submittedByUsername === session.username || sub.submittedByName === session.username)) ||
+        (session.nama && sub.nama && sub.nama.trim().toLowerCase() === session.nama.trim().toLowerCase());
+      
+      const s = String(sub.status || '').toUpperCase();
+      const isPending =
+        s === 'PENDING' ||
+        s === 'MENUNGGU_VERIFIKASI_WILAYAH' ||
+        s === 'DISETUJUI_WILAYAH' ||
+        s === 'MENUNGGU_PENGESAHAN_PROVINSI';
+      return matchUser && isPending;
+    });
+  }, [submissions, session]);
+
+  // Tentukan apakah KTA Digital aktif/dapat ditampilkan
+  const hasKTADigital = useMemo(() => {
+    if (session.role === 'superadmin' || session.role === 'developer') {
+      return true;
+    }
+    if (session.role === 'admin') {
+      // Admin dinas wilayah memiliki identitas admin sah
+      return true;
+    }
+    // User reguler WAJIB disahkan oleh Superadmin
+    return !!userApprovedSubmission;
+  }, [session.role, userApprovedSubmission]);
+
+  const ktaEmptyReason = useMemo(() => {
+    if (userPendingSubmission) {
+      const s = String(userPendingSubmission.status || '').toUpperCase();
+      if (s === 'DISETUJUI_WILAYAH' || s === 'MENUNGGU_PENGESAHAN_PROVINSI') {
+        return `Pendaftaran Anda untuk pilar telah disetujui oleh Admin ${userPendingSubmission.wilayah}, namun saat ini masih menunggu pengesahan dan penerbitan KTA Digital oleh Superadmin Dinas Sosial Provinsi Jawa Barat.`;
+      }
+      return `Pendaftaran Anda untuk pilar masih dalam tahap verifikasi awal oleh Admin ${userPendingSubmission.wilayah}. KTA Digital baru akan aktif setelah disahkan oleh Superadmin Provinsi Jawa Barat.`;
+    }
+    return 'Anda belum mengajukan pendaftaran pilar PSKS atau pendaftaran Anda belum disahkan oleh Superadmin. Silakan lakukan pendaftaran pilar terlebih dahulu di portal PSKS Jabar Juara.';
+  }, [userPendingSubmission]);
+
   // QR Card Scanner & Printable Card Modals
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [scannerDefaultTab, setScannerDefaultTab] = useState<'qr' | 'nfc'>('qr');
   const [scannerMode, setScannerMode] = useState<'login' | 'check'>('check');
   const [isPrintCardsOpen, setIsPrintCardsOpen] = useState(false);
   const [showLoginConfirmModal, setShowLoginConfirmModal] = useState(false);
+  const [isKTAModalOpen, setIsKTAModalOpen] = useState(false);
 
   useEffect(() => {
     if (openLoginOnMount) {
@@ -625,7 +761,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             </div>
 
             {/* Quick Actions Header Buttons inside Profile Card */}
-            <div className="pt-4 sm:pt-6 pb-1 sm:pb-2 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
+            <div className="pt-2 sm:pt-3 pb-1 sm:pb-2 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => {
                   if (onBackToHome) {
@@ -1252,6 +1388,87 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             </div>
           </div>
         )}
+
+        {/* MODAL KARTU PRATINJAU KTA DIGITAL RESMI UNTUK SEMUA ROLE */}
+        <DigitalKTAModal
+          isOpen={isKTAModalOpen}
+          onClose={() => setIsKTAModalOpen(false)}
+          hasKTA={hasKTADigital}
+          emptyReason={ktaEmptyReason}
+          memberData={
+            hasKTADigital
+              ? {
+                  nama:
+                    userApprovedSubmission?.nama ||
+                    userApprovedSubmission?.recordData?.nama ||
+                    session.nama ||
+                    session.username ||
+                    'Pengguna Dinsos Jabar',
+                  nik:
+                    userApprovedSubmission?.nik ||
+                    userApprovedSubmission?.recordData?.nik ||
+                    session.nik ||
+                    '3204' +
+                      (session.userId
+                        ? session.userId.replace(/\D/g, '').slice(0, 12).padStart(12, '178556954284')
+                        : '178556954284'),
+                  pillarId:
+                    userApprovedSubmission?.pillarId ||
+                    (session.role === 'developer'
+                      ? 'slrt_puskesos'
+                      : session.role === 'superadmin'
+                      ? 'tksk'
+                      : session.role === 'admin'
+                      ? 'tagana'
+                      : 'tksk'),
+                  pillarName: userApprovedSubmission?.pillarId
+                    ? undefined
+                    : session.role === 'superadmin'
+                    ? 'Superadmin Dinas Sosial Jabar'
+                    : session.role === 'developer'
+                    ? 'Pengembang Sistem PSKS Jabar'
+                    : session.role === 'admin'
+                    ? `Admin Dinsos ${session.wilayah || 'Jawa Barat'}`
+                    : 'Tenaga Kesejahteraan Sosial Kecamatan (TKSK)',
+                  wilayah:
+                    userApprovedSubmission?.wilayah ||
+                    userApprovedSubmission?.recordData?.wilayah ||
+                    session.wilayah ||
+                    'Provinsi Jawa Barat',
+                  kec:
+                    userApprovedSubmission?.kec ||
+                    userApprovedSubmission?.recordData?.kec ||
+                    session.kecamatan ||
+                    'Wilayah Tugas Jawa Barat',
+                  noHp:
+                    userApprovedSubmission?.hp ||
+                    userApprovedSubmission?.recordData?.hp ||
+                    session.noHp ||
+                    '0812-3456-7890',
+                  statusActive: 'SAH_TERDAFTAR',
+                  registeredAt: userApprovedSubmission?.submittedAtFormatted || '17 Agustus 2024',
+                  approvedAt:
+                    userApprovedSubmission?.approvedProvinsiAtFormatted ||
+                    new Date().toLocaleDateString('id-ID', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    }),
+                  approvedBy:
+                    userApprovedSubmission?.superadminApprovedBy ||
+                    (session.role === 'superadmin'
+                      ? 'Pemerintah Provinsi Jawa Barat'
+                      : 'Superadmin Dinas Sosial Jawa Barat'),
+                  ktaNumber: `KTA-${(
+                    userApprovedSubmission?.pillarId ||
+                    (session.role === 'developer' ? 'DEV' : session.role === 'superadmin' ? 'PVP' : session.role === 'admin' ? 'ADM' : 'PSKS')
+                  ).toUpperCase()}-${(
+                    (userApprovedSubmission?.nik || session.nik || '3204178556954284').slice(-4)
+                  )}-${new Date().getFullYear()}`,
+                }
+              : undefined
+          }
+        />
       </div>
     </div>
   );

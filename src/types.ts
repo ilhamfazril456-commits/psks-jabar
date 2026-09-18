@@ -11,6 +11,10 @@ export interface UserSession {
   sessionToken?: string;
   loginTimestamp?: number;
   deviceId?: string;
+  nik?: string;
+  noHp?: string;
+  kecamatan?: string;
+  pilarId?: string;
 }
 
 export interface SocialLinks {
