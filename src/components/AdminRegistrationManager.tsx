@@ -4,7 +4,7 @@ import {
   UserSession,
 } from '../types';
 import { PILLARS_CONFIG } from '../data/initialData';
-import { isSameWilayah, normalizeStatus } from './TaskManagerPage';
+import { isSameWilayah } from './TaskManagerPage';
 import {
   Inbox,
   CheckCircle2,
@@ -32,6 +32,8 @@ import {
   FolderOpen,
   LayoutList,
   Table2,
+  ZoomIn,
+  Camera,
 } from 'lucide-react';
 
 interface AdminRegistrationManagerProps {
@@ -41,6 +43,17 @@ interface AdminRegistrationManagerProps {
   onRejectSubmission: (submissionId: string, notes?: string) => void;
   onBackToHome?: () => void;
 }
+
+export const normalizeRegionalStatus = (
+  status?: string
+): 'PENDING' | 'DISETUJUI_WILAYAH' | 'SAH_TERDAFTAR' | 'REJECTED' => {
+  if (!status) return 'PENDING';
+  const s = status.toUpperCase().trim();
+  if (s === 'DISETUJUI_WILAYAH') return 'DISETUJUI_WILAYAH';
+  if (s === 'SAH_TERDAFTAR' || s === 'APPROVED' || s === 'SELESAI_SAH') return 'SAH_TERDAFTAR';
+  if (s.includes('REJ') || s.includes('TOLAK') || s.includes('BATAL')) return 'REJECTED';
+  return 'PENDING';
+};
 
 export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> = ({
   session,
@@ -62,6 +75,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
   const [submissionToReject, setSubmissionToReject] =
     useState<PillarRegistrationSubmission | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string; meta?: string } | null>(null);
 
   const adminWilayah = session.wilayah || 'Semua Wilayah';
   const isAllRegionAdmin =
@@ -98,20 +112,21 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
 
   // Pillar statistics counts
   const pillarStats = useMemo(() => {
-    const stats: Record<string, { total: number; pending: number; approved: number; rejected: number }> = {};
+    const stats: Record<string, { total: number; pending: number; approvedWilayah: number; sah: number; rejected: number }> = {};
     tenPillars.forEach((p) => {
-      stats[p.id] = { total: 0, pending: 0, approved: 0, rejected: 0 };
+      stats[p.id] = { total: 0, pending: 0, approvedWilayah: 0, sah: 0, rejected: 0 };
     });
 
     regionSubmissions.forEach((sub) => {
       const pKey = (sub.pillarId || '').toLowerCase().trim();
       if (!stats[pKey]) {
-        stats[pKey] = { total: 0, pending: 0, approved: 0, rejected: 0 };
+        stats[pKey] = { total: 0, pending: 0, approvedWilayah: 0, sah: 0, rejected: 0 };
       }
-      const st = normalizeStatus(sub.status);
+      const st = normalizeRegionalStatus(sub.status);
       stats[pKey].total += 1;
       if (st === 'PENDING') stats[pKey].pending += 1;
-      if (st === 'APPROVED') stats[pKey].approved += 1;
+      if (st === 'DISETUJUI_WILAYAH') stats[pKey].approvedWilayah += 1;
+      if (st === 'SAH_TERDAFTAR') stats[pKey].sah += 1;
       if (st === 'REJECTED') stats[pKey].rejected += 1;
     });
 
@@ -120,16 +135,17 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
 
   // Total statistics across all pillars for this region
   const totalSubmissions = regionSubmissions.length;
-  const totalPending = regionSubmissions.filter((s) => normalizeStatus(s.status) === 'PENDING').length;
-  const totalApproved = regionSubmissions.filter((s) => normalizeStatus(s.status) === 'APPROVED').length;
-  const totalRejected = regionSubmissions.filter((s) => normalizeStatus(s.status) === 'REJECTED').length;
+  const totalPending = regionSubmissions.filter((s) => normalizeRegionalStatus(s.status) === 'PENDING').length;
+  const totalApprovedWilayah = regionSubmissions.filter((s) => normalizeRegionalStatus(s.status) === 'DISETUJUI_WILAYAH').length;
+  const totalSah = regionSubmissions.filter((s) => normalizeRegionalStatus(s.status) === 'SAH_TERDAFTAR').length;
+  const totalRejected = regionSubmissions.filter((s) => normalizeRegionalStatus(s.status) === 'REJECTED').length;
 
   // Submissions filtered by active selected pillar, status, and search
   const filteredSubmissions = useMemo(() => {
     if (!activePillarGrid) return [];
     return regionSubmissions.filter((sub) => {
       const matchPillar = (sub.pillarId || '').toLowerCase().trim() === activePillarGrid.toLowerCase().trim();
-      const st = normalizeStatus(sub.status);
+      const st = normalizeRegionalStatus(sub.status);
       const matchStatus =
         selectedStatus === 'ALL' || st === selectedStatus;
       const q = searchTerm.toLowerCase().trim();
@@ -208,32 +224,32 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 </div>
 
                 <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase">
-                  Terima Pendaftaran 10 Pilar PSKS
+                  Verifikasi Berkas Wilayah
                 </h2>
 
                 <p className="text-xs sm:text-sm text-emerald-100 font-medium max-w-3xl leading-relaxed">
-                  Pusat verifikasi berkas pendaftaran mandiri dari anggota/organisasi 10 Pilar Potensi dan Sumber Kesejahteraan Sosial untuk wilayah{' '}
-                  <strong className="text-amber-300 font-black">{adminWilayah}</strong>.
+                  Pusat verifikasi berkas pendaftaran mandiri calon anggota 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) untuk wilayah{' '}
+                  <strong className="text-amber-300 font-black">{adminWilayah}</strong>. Berkas yang disetujui di tingkat wilayah akan otomatis diteruskan ke Superadmin untuk Pengesahan & Penerimaan Anggota.
                 </p>
               </div>
 
               {/* Wilayah Badge Card */}
               <div className="bg-black/30 border border-emerald-400/30 rounded-2xl p-4 shrink-0 text-left md:text-right">
                 <div className="text-[10px] text-emerald-300 uppercase font-black tracking-wider">
-                  Wilayah Tugas
+                  Otoritas Wilayah
                 </div>
                 <div className="text-lg sm:text-xl font-black text-amber-300 mt-0.5">
                   {adminWilayah}
                 </div>
                 <div className="text-[11px] text-slate-300 mt-1 font-semibold flex items-center justify-start md:justify-end gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  <span>{totalPending} Ajuan Perlu Tindakan</span>
+                  <span>{totalPending} Ajuan Perlu Verifikasi</span>
                 </div>
               </div>
             </div>
 
             {/* Global Stats Counter */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-emerald-800/60">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-emerald-800/60">
               <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-white/10">
                 <div className="flex items-center justify-between text-[11px] sm:text-xs text-emerald-200 font-bold mb-1">
                   <span>Total Semua</span>
@@ -250,12 +266,20 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 <div className="text-xl sm:text-2xl font-black text-amber-300">{totalPending}</div>
               </div>
 
+              <div className="bg-blue-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-blue-400/30">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs text-blue-200 font-bold mb-1">
+                  <span>Disetujui Wilayah</span>
+                  <Send className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-blue-400" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-blue-300">{totalApprovedWilayah}</div>
+              </div>
+
               <div className="bg-emerald-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-emerald-400/30">
                 <div className="flex items-center justify-between text-[11px] sm:text-xs text-emerald-200 font-bold mb-1">
-                  <span>Disetujui</span>
+                  <span>Sah Terdaftar</span>
                   <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-400" />
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-300">{totalApproved}</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-300">{totalSah}</div>
               </div>
 
               <div className="bg-rose-500/15 backdrop-blur-xs rounded-2xl p-3 sm:p-4 border border-rose-400/30">
@@ -283,7 +307,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
           {/* 10 Pillar Grid Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
             {tenPillars.map((pilar, index) => {
-              const stats = pillarStats[pilar.id] || { total: 0, pending: 0, approved: 0, rejected: 0 };
+              const stats = pillarStats[pilar.id] || { total: 0, pending: 0, approvedWilayah: 0, sah: 0, rejected: 0 };
               const hasPending = stats.pending > 0;
 
               return (
@@ -339,8 +363,8 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                       </div>
 
                       <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        <div className="text-[9px] text-emerald-700">Diterima</div>
-                        <div className="text-xs">{stats.approved}</div>
+                        <div className="text-[9px] text-emerald-700">Disetujui</div>
+                        <div className="text-xs">{stats.approvedWilayah + stats.sah}</div>
                       </div>
 
                       <div className="p-1.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200">
@@ -405,8 +429,8 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 </div>
               </div>
 
-              {/* Quick Counter Khusus Pilar Ini (4 Kotak Rapi) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
+              {/* Quick Counter Khusus Pilar Ini (5 Kotak Rapi) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 pt-1">
                 <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-white/10">
                   <div className="text-[10px] sm:text-xs text-emerald-200 font-bold">Total Ajuan</div>
                   <div className="text-lg sm:text-2xl font-black text-white">{pillarStats[activePillarGrid]?.total || 0}</div>
@@ -426,9 +450,14 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                   <div className="text-lg sm:text-2xl font-black text-amber-300">{pillarStats[activePillarGrid]?.pending || 0}</div>
                 </div>
 
+                <div className="bg-blue-500/15 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-blue-400/30">
+                  <div className="text-[10px] sm:text-xs text-blue-200 font-bold">Disetujui Wilayah</div>
+                  <div className="text-lg sm:text-2xl font-black text-blue-300">{pillarStats[activePillarGrid]?.approvedWilayah || 0}</div>
+                </div>
+
                 <div className="bg-emerald-500/15 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-emerald-400/30">
-                  <div className="text-[10px] sm:text-xs text-emerald-200 font-bold">Disetujui</div>
-                  <div className="text-lg sm:text-2xl font-black text-emerald-300">{pillarStats[activePillarGrid]?.approved || 0}</div>
+                  <div className="text-[10px] sm:text-xs text-emerald-200 font-bold">Sah Terdaftar</div>
+                  <div className="text-lg sm:text-2xl font-black text-emerald-300">{pillarStats[activePillarGrid]?.sah || 0}</div>
                 </div>
 
                 <div className="bg-rose-500/15 backdrop-blur-xs rounded-xl p-2.5 sm:p-3 border border-rose-400/30">
@@ -494,16 +523,30 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedStatus('APPROVED')}
+                  onClick={() => setSelectedStatus('DISETUJUI_WILAYAH')}
                   className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                    selectedStatus === 'APPROVED'
+                    selectedStatus === 'DISETUJUI_WILAYAH'
+                      ? 'bg-blue-600 text-white shadow-xs font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Disetujui Wilayah</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
+                    {pillarStats[activePillarGrid]?.approvedWilayah || 0}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatus('SAH_TERDAFTAR')}
+                  className={`px-3 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    selectedStatus === 'SAH_TERDAFTAR'
                       ? 'bg-emerald-700 text-white shadow-xs font-black'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <span>Disetujui</span>
+                  <span>Sah Resmi</span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
-                    {pillarStats[activePillarGrid]?.approved || 0}
+                    {pillarStats[activePillarGrid]?.sah || 0}
                   </span>
                 </button>
                 <button
@@ -588,9 +631,11 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 {/* ========================================================================= */}
                 <div className={`md:hidden p-3 space-y-3.5 ${mobileViewMode === 'cards' ? 'block' : 'hidden'}`}>
                   {filteredSubmissions.map((sub, index) => {
-                    const isPending = sub.status === 'PENDING';
-                    const isApproved = sub.status === 'APPROVED';
-                    const isRejected = sub.status === 'REJECTED';
+                    const st = normalizeRegionalStatus(sub.status);
+                    const isPending = st === 'PENDING';
+                    const isApprovedWilayah = st === 'DISETUJUI_WILAYAH';
+                    const isSah = st === 'SAH_TERDAFTAR';
+                    const isRejected = st === 'REJECTED';
                     const safeName = sub.nama || sub.recordData?.nama || 'Pemohon PSKS';
                     const safeNik = sub.nik || sub.recordData?.nik || '-';
                     const safeKec = sub.kec || sub.recordData?.kec || '-';
@@ -602,7 +647,9 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                         className={`bg-white rounded-2xl p-4 border shadow-xs space-y-3 transition-all ${
                           isPending
                             ? 'border-amber-300 border-l-4 border-l-amber-500 bg-amber-50/20'
-                            : isApproved
+                            : isApprovedWilayah
+                            ? 'border-blue-300 border-l-4 border-l-blue-600 bg-blue-50/20'
+                            : isSah
                             ? 'border-emerald-200 border-l-4 border-l-emerald-600 bg-emerald-50/10'
                             : 'border-rose-200 border-l-4 border-l-rose-500 bg-rose-50/10'
                         }`}
@@ -619,17 +666,23 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                             </div>
                           </div>
 
-                          {/* Status Badge */}
+                          {/* Status Badge 2-Tier */}
                           {isPending && (
                             <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
                               <Clock className="w-2.5 h-2.5 text-amber-700 animate-pulse" />
-                              <span>Menunggu</span>
+                              <span>Menunggu Verifikasi</span>
                             </span>
                           )}
-                          {isApproved && (
+                          {isApprovedWilayah && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
+                              <Send className="w-2.5 h-2.5 text-blue-700" />
+                              <span>Disetujui Wilayah</span>
+                            </span>
+                          )}
+                          {isSah && (
                             <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
                               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
-                              <span>Diterima / Sah</span>
+                              <span>Sah Terdaftar</span>
                             </span>
                           )}
                           {isRejected && (
@@ -641,16 +694,41 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                         </div>
 
                         {/* Identitas Pemohon */}
-                        <div>
-                          <h4 className="text-base font-black text-slate-900 leading-snug break-words">
-                            {safeName}
-                          </h4>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono mt-1">
-                            <span className="font-semibold text-slate-400 text-[11px]">NIK:</span>
-                            <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                              {safeNik}
-                            </span>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h4 className="text-base font-black text-slate-900 leading-snug break-words">
+                              {safeName}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono mt-1">
+                              <span className="font-semibold text-slate-400 text-[11px]">NIK:</span>
+                              <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                                {safeNik}
+                              </span>
+                            </div>
                           </div>
+
+                          {/* Thumbnail Foto Berkas jika ada */}
+                          {sub.berkasFotoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImage({
+                                url: sub.berkasFotoUrl!,
+                                title: `Berkas ${safeName}`,
+                                meta: `${sub.berkasFotoNama || 'Dokumen'} • ${sub.berkasFotoSizeKb || 0} KB`
+                              })}
+                              className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-300 shadow-2xs shrink-0 cursor-pointer group"
+                              title="Klik untuk melihat foto berkas"
+                            >
+                              <img
+                                src={sub.berkasFotoUrl}
+                                alt="Berkas"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ZoomIn className="w-4 h-4 text-white" />
+                              </div>
+                            </button>
+                          )}
                         </div>
 
                         {/* Lokasi & Kontak */}
@@ -686,7 +764,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                           </div>
                         )}
 
-                        {/* Tombol Aksi HP (Touch-Friendly min 44px, 2 Baris Rapi untuk Pending) */}
+                        {/* Tombol Aksi HP (Touch-Friendly min 44px) */}
                         <div className="pt-1 space-y-2">
                           {isPending && (
                             <div className="flex items-center gap-2">
@@ -696,7 +774,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                                 className="flex-1 min-h-[44px] bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 active:scale-95 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all border border-emerald-500/40"
                               >
                                 <Check className="w-4 h-4" />
-                                <span>Terima & Sahkan</span>
+                                <span>Verifikasi & Teruskan</span>
                               </button>
 
                               <button
@@ -713,10 +791,17 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                             </div>
                           )}
 
-                          {isApproved && (
-                            <div className="min-h-[40px] bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-center gap-1.5 text-xs font-black text-emerald-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              <span>Telah Sah Terdaftar & Masuk Database</span>
+                          {isApprovedWilayah && (
+                            <div className="min-h-[40px] bg-blue-50 border border-blue-300 rounded-xl flex items-center justify-center gap-1.5 text-xs font-black text-blue-900 px-3 text-center">
+                              <Send className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span>Telah Disetujui Wilayah • Menunggu Pengesahan Superadmin</span>
+                            </div>
+                          )}
+
+                          {isSah && (
+                            <div className="min-h-[40px] bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-center gap-1.5 text-xs font-black text-emerald-800 px-3 text-center">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Sah Terdaftar Resmi oleh Superadmin</span>
                             </div>
                           )}
 
@@ -757,7 +842,8 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                       <tr>
                         <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap">No</th>
                         <th className="py-3.5 px-3 font-bold whitespace-nowrap">Waktu Submit</th>
-                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Identitas Pemohon / Anggota</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Identitas Pemohon</th>
+                        <th className="py-3.5 px-3 font-bold whitespace-nowrap">Berkas Foto</th>
                         <th className="py-3.5 px-3 font-bold whitespace-nowrap">Kecamatan & Wilayah</th>
                         <th className="py-3.5 px-3 font-bold whitespace-nowrap">Nomor Kontak</th>
                         <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Status Ajuan</th>
@@ -766,9 +852,11 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {filteredSubmissions.map((sub, index) => {
-                        const isPending = sub.status === 'PENDING';
-                        const isApproved = sub.status === 'APPROVED';
-                        const isRejected = sub.status === 'REJECTED';
+                        const st = normalizeRegionalStatus(sub.status);
+                        const isPending = st === 'PENDING';
+                        const isApprovedWilayah = st === 'DISETUJUI_WILAYAH';
+                        const isSah = st === 'SAH_TERDAFTAR';
+                        const isRejected = st === 'REJECTED';
                         const safeName = sub.nama || sub.recordData?.nama || 'Pemohon PSKS';
                         const safeNik = sub.nik || sub.recordData?.nik || '-';
                         const safeKec = sub.kec || sub.recordData?.kec || '-';
@@ -800,6 +888,28 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                               </div>
                             </td>
                             <td className="py-3.5 px-3 whitespace-nowrap">
+                              {sub.berkasFotoUrl ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImage({
+                                    url: sub.berkasFotoUrl!,
+                                    title: `Berkas ${safeName}`,
+                                    meta: `${sub.berkasFotoNama || 'Dokumen'} • ${sub.berkasFotoSizeKb || 0} KB`
+                                  })}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                                >
+                                  <img
+                                    src={sub.berkasFotoUrl}
+                                    alt="Foto"
+                                    className="w-5 h-5 rounded-md object-cover"
+                                  />
+                                  <span>Lihat ({sub.berkasFotoSizeKb || 0} KB)</span>
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">Tanpa Berkas</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap">
                               <div className="font-bold text-slate-800">
                                 {sub.wilayah}
                               </div>
@@ -817,13 +927,19 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                               {isPending && (
                                 <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-black">
                                   <Clock className="w-3 h-3 text-amber-700 animate-pulse" />
-                                  <span>Menunggu Verifikasi</span>
+                                  <span>Menunggu Wilayah</span>
                                 </span>
                               )}
-                              {isApproved && (
+                              {isApprovedWilayah && (
+                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-full text-xs font-black">
+                                  <Send className="w-3 h-3 text-blue-700" />
+                                  <span>Disetujui Wilayah</span>
+                                </span>
+                              )}
+                              {isSah && (
                                 <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-black">
                                   <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                                  <span>Diterima / Sah</span>
+                                  <span>Sah Terdaftar</span>
                                 </span>
                               )}
                               {isRejected && (
@@ -851,7 +967,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                                     <button
                                       type="button"
                                       onClick={() => setSubmissionToApprove(sub)}
-                                      title="Setujui Pendaftaran"
+                                      title="Setujui Berkas & Teruskan ke Superadmin"
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
                                     >
                                       <Check className="w-3.5 h-3.5" />
@@ -873,9 +989,15 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                                   </>
                                 )}
 
-                                {isApproved && (
+                                {isApprovedWilayah && (
+                                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">
+                                    Diteruskan &rarr;
+                                  </span>
+                                )}
+
+                                {isSah && (
                                   <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
-                                    ✓ Tercatat Resmi
+                                    ✓ Sah Resmi
                                   </span>
                                 )}
 
@@ -915,164 +1037,263 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
 
 
       {/* ========================================================================= */}
-      {/* MODAL 1: DETAIL FORMULIR PENDAFTARAN LENGKAP */}
+      {/* MODAL 1: DETAIL FORMULIR PENDAFTARAN LENGKAP & FOTO BERKAS */}
       {/* ========================================================================= */}
-      {selectedSubmissionForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#d4af37] max-w-2xl w-full my-auto max-h-[90vh] flex flex-col text-slate-800 overflow-hidden">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37]">
-              <div>
-                <span className="bg-[#d4af37] text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
-                  Detail Pengajuan Mandiri
-                </span>
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  Pendaftaran {PILLARS_CONFIG[selectedSubmissionForDetail.pillarId]?.title || selectedSubmissionForDetail.pillarId.toUpperCase()}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedSubmissionForDetail(null)}
-                className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {selectedSubmissionForDetail && (() => {
+        const detStatus = normalizeRegionalStatus(selectedSubmissionForDetail.status);
+        const isDetPending = detStatus === 'PENDING';
+        const isDetApprovedWilayah = detStatus === 'DISETUJUI_WILAYAH';
+        const isDetSah = detStatus === 'SAH_TERDAFTAR';
+        const isDetRejected = detStatus === 'REJECTED';
 
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
-              {/* Meta Status */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#d4af37] max-w-2xl w-full my-auto max-h-[90vh] flex flex-col text-slate-800 overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37]">
                 <div>
-                  <span className="text-[11px] text-slate-500 font-bold block">Status Verifikasi</span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full mt-1 ${
-                    selectedSubmissionForDetail.status === 'PENDING'
-                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                      : selectedSubmissionForDetail.status === 'APPROVED'
-                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                      : 'bg-rose-100 text-rose-900 border border-rose-300'
-                  }`}>
-                    {selectedSubmissionForDetail.status === 'PENDING' && 'Menunggu Verifikasi'}
-                    {selectedSubmissionForDetail.status === 'APPROVED' && 'Telah Disetujui & Masuk Rekapitulasi'}
-                    {selectedSubmissionForDetail.status === 'REJECTED' && 'Ditolak'}
+                  <span className="bg-[#d4af37] text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
+                    Verifikasi Berkas Wilayah
                   </span>
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    Pendaftaran {PILLARS_CONFIG[selectedSubmissionForDetail.pillarId]?.title || selectedSubmissionForDetail.pillarId.toUpperCase()}
+                  </h3>
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 font-bold block">Pengaju (User)</span>
-                  <span className="font-bold text-slate-800">{selectedSubmissionForDetail.submittedByName} ({selectedSubmissionForDetail.submittedByUsername})</span>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 font-bold block">Waktu Submit</span>
-                  <span className="font-bold text-slate-800">{selectedSubmissionForDetail.submittedAtFormatted || '-'}</span>
-                </div>
-              </div>
-
-              {/* Data Fields */}
-              <div className="space-y-2">
-                <h4 className="font-black text-[#043e2e] text-xs uppercase tracking-wider">
-                  Rincian Data Formulir
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">Nama Lengkap</span>
-                    <span className="font-black text-slate-900">{selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData?.nama || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">NIK / Nomor Registrasi</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.nik || selectedSubmissionForDetail.recordData?.nik || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">Wilayah Kabupaten/Kota</span>
-                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.wilayah}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">Kecamatan</span>
-                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.kec || selectedSubmissionForDetail.recordData?.kec || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">Nomor Handphone</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.hp || selectedSubmissionForDetail.recordData?.hp || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 font-semibold block">Jenis Kelamin</span>
-                    <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData?.jenisKelamin || '-'}</span>
-                  </div>
-                  {selectedSubmissionForDetail.recordData?.pendidikan && (
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block">Pendidikan</span>
-                      <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.pendidikan}</span>
-                    </div>
-                  )}
-                  {selectedSubmissionForDetail.recordData?.noTglSertifikasi && (
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-semibold block">No / Tgl Sertifikasi / SK</span>
-                      <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.noTglSertifikasi}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Catatan Penolakan jika ada */}
-              {selectedSubmissionForDetail.status === 'REJECTED' && selectedSubmissionForDetail.rejectedReason && (
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                  <span className="font-black block mb-1">Catatan Penolakan dari Admin:</span>
-                  <p>{selectedSubmissionForDetail.rejectedReason}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer Actions */}
-            <div className="bg-slate-100 p-3.5 sm:p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
-              {selectedSubmissionForDetail.status === 'PENDING' ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmissionToReject(selectedSubmissionForDetail);
-                      setRejectReason('');
-                    }}
-                    className="min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-black text-xs cursor-pointer shadow-xs transition-all active:scale-95 text-center"
-                  >
-                    Tolak Pengajuan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSubmissionToApprove(selectedSubmissionForDetail)}
-                    className="min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Setujui & Terbitkan Rekap</span>
-                  </button>
-                </>
-              ) : (
                 <button
                   type="button"
                   onClick={() => setSelectedSubmissionForDetail(null)}
-                  className="min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs cursor-pointer active:scale-95 text-center"
+                  className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer"
                 >
-                  Tutup
+                  <X className="w-5 h-5" />
                 </button>
-              )}
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+                {/* 2-Tier Visual Timeline */}
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Alur Verifikasi 2-Tier:</div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] sm:text-xs">
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 font-bold">
+                      <div className="text-emerald-700 font-black">1. Pemohon</div>
+                      <div>Formulir Terkirim</div>
+                    </div>
+                    <div className={`p-2 rounded-xl border font-bold ${
+                      isDetPending
+                        ? 'bg-amber-100 border-amber-400 text-amber-900 ring-2 ring-amber-300'
+                        : isDetApprovedWilayah || isDetSah
+                        ? 'bg-blue-50 border-blue-300 text-blue-900'
+                        : 'bg-slate-100 border-slate-300 text-slate-600'
+                    }`}>
+                      <div className="font-black">2. Admin Wilayah</div>
+                      <div>{isDetPending ? 'Sedang Ditinjau' : isDetApprovedWilayah || isDetSah ? '✓ Disetujui' : 'Ditolak'}</div>
+                    </div>
+                    <div className={`p-2 rounded-xl border font-bold ${
+                      isDetSah
+                        ? 'bg-emerald-100 border-emerald-400 text-emerald-900 ring-2 ring-emerald-300'
+                        : isDetApprovedWilayah
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-slate-100 border-slate-300 text-slate-400'
+                    }`}>
+                      <div className="font-black">3. Superadmin</div>
+                      <div>{isDetSah ? '✓ Sah Diterima' : isDetApprovedWilayah ? 'Menunggu Pengesahan' : '-'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meta Status */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-bold block">Status Verifikasi</span>
+                    <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full mt-1 ${
+                      isDetPending
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : isDetApprovedWilayah
+                        ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                        : isDetSah
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : 'bg-rose-100 text-rose-900 border border-rose-300'
+                    }`}>
+                      {isDetPending && 'Menunggu Verifikasi Wilayah'}
+                      {isDetApprovedWilayah && 'Disetujui Wilayah (Diteruskan ke Superadmin)'}
+                      {isDetSah && 'Sah Resmi Terdaftar oleh Superadmin'}
+                      {isDetRejected && 'Ditolak'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-bold block">Pengaju (Akun)</span>
+                    <span className="font-bold text-slate-800">{selectedSubmissionForDetail.submittedByName} ({selectedSubmissionForDetail.submittedByUsername})</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-bold block">Waktu Pengajuan</span>
+                    <span className="font-bold text-slate-800">{selectedSubmissionForDetail.submittedAtFormatted || '-'}</span>
+                  </div>
+                </div>
+
+                {/* Section Foto Berkas Lampiran jika ada */}
+                {selectedSubmissionForDetail.berkasFotoUrl && (
+                  <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-emerald-900 font-black text-xs uppercase tracking-wider">
+                        <Camera className="w-4 h-4 text-emerald-700" />
+                        <span>Lampiran Foto Berkas Pendaftaran</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-700 font-bold">
+                        {selectedSubmissionForDetail.berkasFotoSizeKb || 0} KB (Terkonversi Ringan)
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <div
+                        onClick={() => setPreviewImage({
+                          url: selectedSubmissionForDetail.berkasFotoUrl!,
+                          title: `Berkas: ${selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData?.nama || 'Pemohon'}`,
+                          meta: `${selectedSubmissionForDetail.berkasFotoNama || 'Dokumen'} • ${selectedSubmissionForDetail.berkasFotoSizeKb || 0} KB`
+                        })}
+                        className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden border-2 border-emerald-300 shadow-sm cursor-pointer group bg-slate-900 shrink-0"
+                      >
+                        <img
+                          src={selectedSubmissionForDetail.berkasFotoUrl}
+                          alt="Berkas Pendaftaran"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold gap-1">
+                          <ZoomIn className="w-6 h-6 text-amber-300" />
+                          <span>Klik Perbesar</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-slate-600 flex-1">
+                        <p className="font-bold text-slate-800">
+                          Nama Berkas: <span className="font-mono text-slate-900">{selectedSubmissionForDetail.berkasFotoNama || 'Foto Berkas'}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Foto berkas ini telah dikompresi otomatis di sisi browser klien sebelum tersimpan ke sistem, memastikan kuota database Firebase aman dari kepenuhan.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImage({
+                            url: selectedSubmissionForDetail.berkasFotoUrl!,
+                            title: `Berkas: ${selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData?.nama || 'Pemohon'}`,
+                            meta: `${selectedSubmissionForDetail.berkasFotoNama || 'Dokumen'} • ${selectedSubmissionForDetail.berkasFotoSizeKb || 0} KB`
+                          })}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                        >
+                          <ZoomIn className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Perbesar Foto Berkas</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Data Fields */}
+                <div className="space-y-2">
+                  <h4 className="font-black text-[#043e2e] text-xs uppercase tracking-wider">
+                    Rincian Data Formulir
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">Nama Lengkap</span>
+                      <span className="font-black text-slate-900">{selectedSubmissionForDetail.nama || selectedSubmissionForDetail.recordData?.nama || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">NIK / Nomor Registrasi</span>
+                      <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.nik || selectedSubmissionForDetail.recordData?.nik || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">Wilayah Kabupaten/Kota</span>
+                      <span className="font-bold text-slate-900">{selectedSubmissionForDetail.wilayah}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">Kecamatan</span>
+                      <span className="font-bold text-slate-900">{selectedSubmissionForDetail.kec || selectedSubmissionForDetail.recordData?.kec || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">Nomor Handphone</span>
+                      <span className="font-mono font-bold text-slate-900">{selectedSubmissionForDetail.hp || selectedSubmissionForDetail.recordData?.hp || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-slate-500 font-semibold block">Jenis Kelamin</span>
+                      <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData?.jenisKelamin || '-'}</span>
+                    </div>
+                    {selectedSubmissionForDetail.recordData?.pendidikan && (
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-semibold block">Pendidikan</span>
+                        <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.pendidikan}</span>
+                      </div>
+                    )}
+                    {selectedSubmissionForDetail.recordData?.noTglSertifikasi && (
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-semibold block">No / Tgl Sertifikasi / SK</span>
+                        <span className="font-bold text-slate-900">{selectedSubmissionForDetail.recordData.noTglSertifikasi}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Catatan Penolakan jika ada */}
+                {isDetRejected && selectedSubmissionForDetail.rejectedReason && (
+                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+                    <span className="font-black block mb-1">Catatan Penolakan dari Admin:</span>
+                    <p>{selectedSubmissionForDetail.rejectedReason}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="bg-slate-100 p-3.5 sm:p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+                {isDetPending ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmissionToReject(selectedSubmissionForDetail);
+                        setRejectReason('');
+                      }}
+                      className="min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-black text-xs cursor-pointer shadow-xs transition-all active:scale-95 text-center"
+                    >
+                      Tolak Pengajuan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionToApprove(selectedSubmissionForDetail)}
+                      className="min-h-[44px] px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Verifikasi & Teruskan ke Superadmin</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubmissionForDetail(null)}
+                    className="min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs cursor-pointer active:scale-95 text-center"
+                  >
+                    Tutup
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: KONFIRMASI SETUJUI (APPROVE) */}
+      {/* MODAL 2: KONFIRMASI SETUJUI BERKAS WILAYAH & TERUSKAN KE SUPERADMIN */}
       {/* ========================================================================= */}
       {submissionToApprove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl border-2 border-emerald-600 max-w-md w-full p-5 sm:p-6 text-center space-y-4">
             <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center border-2 border-emerald-300">
-              <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
+              <Send className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div className="space-y-1">
               <h3 className="text-base sm:text-lg font-black text-slate-900">
-                Setujui Pendaftaran Anggota?
+                Verifikasi & Teruskan Berkas Wilayah?
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData?.nama || 'Pemohon'}</strong> ({submissionToApprove.wilayah}) akan disahkan dan langsung dimasukkan ke database resmi pilar <strong>{PILLARS_CONFIG[submissionToApprove.pillarId]?.title}</strong>.
+                Pendaftaran atas nama <strong>{submissionToApprove.nama || submissionToApprove.recordData?.nama || 'Pemohon'}</strong> ({submissionToApprove.wilayah}) akan disetujui di tingkat wilayah dan <strong>diteruskan secara realtime ke Superadmin</strong> untuk Pengesahan & Penerimaan Anggota.
               </p>
             </div>
             <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
@@ -1088,7 +1309,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 onClick={handleConfirmApprove}
                 className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95"
               >
-                Ya, Setujui Sekarang
+                Ya, Setujui & Teruskan
               </button>
             </div>
           </div>
@@ -1122,7 +1343,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Contoh: Berkas nomor NIK tidak valid, sertifikat belum dilampirkan..."
+                placeholder="Contoh: Berkas foto KTP/ijazah kurang jelas, sertifikat belum dilampirkan..."
                 rows={3}
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-rose-600 font-medium"
               />
@@ -1142,6 +1363,62 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 className="min-h-[44px] flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer shadow-md transition-all active:scale-95"
               >
                 Tolak Pengajuan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: ZOOM & PRATINJAU FOTO BERKAS PENDAFTARAN */}
+      {/* ========================================================================= */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative bg-slate-900 border-2 border-[#d4af37] rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Preview */}
+            <div className="bg-gradient-to-r from-[#032e22] to-[#043e2e] text-white px-5 py-3.5 flex items-center justify-between border-b border-[#d4af37]/40">
+              <div className="flex items-center gap-2 min-w-0">
+                <Camera className="w-4 h-4 text-amber-300 shrink-0" />
+                <div className="truncate">
+                  <h4 className="font-black text-xs sm:text-sm text-white truncate">{previewImage.title}</h4>
+                  {previewImage.meta && (
+                    <p className="text-[10px] text-emerald-300 font-mono truncate">{previewImage.meta}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Gambar */}
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/50 min-h-[250px]">
+              <img
+                src={previewImage.url}
+                alt={previewImage.title}
+                className="max-w-full max-h-[70vh] object-contain rounded-xl border border-white/10 shadow-lg"
+              />
+            </div>
+
+            {/* Footer Preview */}
+            <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span className="text-[11px]">Foto Berkas Terkompresi Aman</span>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl cursor-pointer text-xs transition-colors"
+              >
+                Tutup
               </button>
             </div>
           </div>

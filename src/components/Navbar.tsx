@@ -199,10 +199,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'text-amber-300 font-black drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
                     : 'text-white/95 hover:text-amber-200 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]'
                 }`}
-                title="Penerimaan & Verifikasi Pendaftaran 10 Pilar PSKS Wilayah"
+                title="Verifikasi Berkas Pendaftaran 10 Pilar PSKS Wilayah"
               >
                 <ClipboardList className={`w-4 h-4 lg:w-4.5 lg:h-4.5 transition-transform duration-200 ${currentTab === 'terima_pendaftaran' ? 'text-amber-300 scale-110' : 'text-amber-300/90'}`} />
-                <span className="whitespace-nowrap tracking-normal">Terima Pendaftaran</span>
+                <span className="whitespace-nowrap tracking-normal">Verifikasi Berkas Wilayah</span>
                 {currentTab === 'terima_pendaftaran' && (
                   <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full shadow-[0_0_6px_#d4af37]" />
                 )}
@@ -513,7 +513,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <ClipboardList className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="block text-xs font-black">Terima Pendaftaran</span>
+                    <span className="block text-xs font-black">Verifikasi Berkas Wilayah</span>
                     <span className={`text-[10px] ${currentTab === 'terima_pendaftaran' ? 'text-emerald-950 font-semibold' : 'text-amber-300/80'}`}>
                       Verifikasi 10 Pilar Wilayah
                     </span>

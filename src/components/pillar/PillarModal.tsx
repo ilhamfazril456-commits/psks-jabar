@@ -1,6 +1,19 @@
-import React from 'react';
-import { X, Lock, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import {
+  X,
+  Lock,
+  CheckCircle2,
+  UploadCloud,
+  FileImage,
+  Trash2,
+  Eye,
+  Sparkles,
+  AlertCircle,
+  Loader2,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { UserSession } from '../../types';
+import { compressBerkasImage } from '../../lib/imageCompressor';
 
 interface FormDataState {
   wilayah: string;
@@ -29,6 +42,12 @@ interface FormDataState {
   bimtekDiikuti: string[];
   sertifikasi: string;
   lembaga: string;
+
+  // Foto Berkas Pendukung (Kompresi Client-side Canvas Ultra Hemat Memori)
+  berkasFotoUrl?: string;
+  berkasFotoNama?: string;
+  berkasFotoSizeKb?: number;
+  berkasFotoOriginalSizeKb?: number;
 
   // Specific 9 pillars fields
   masaBakti: string;
@@ -86,6 +105,74 @@ export const PillarModal: React.FC<PillarModalProps> = ({
   const isUserCimahi = isUserRole && (session.wilayah || '').toLowerCase().trim() === 'kota cimahi';
   const isRegionalAdmin = session.role === 'admin' && session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah';
   const isLockedRegionUser = isUserRole && !isUserCimahi && !!session.wilayah && session.wilayah !== 'Semua Wilayah' && session.wilayah !== 'Prov. Jabar';
+
+  // Photo Berkas Upload & Compression State (Canvas Client-side)
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressError, setCompressError] = useState<string | null>(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleProcessFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setCompressError('Format file harus berupa gambar (JPG, PNG, atau WebP).');
+      return;
+    }
+    setCompressError(null);
+    setIsCompressing(true);
+    try {
+      const result = await compressBerkasImage(file, 1200, 1200, 0.75);
+      setFormData((prev) => ({
+        ...prev,
+        berkasFotoUrl: result.dataUrl,
+        berkasFotoNama: result.name,
+        berkasFotoSizeKb: result.compressedSizeKb,
+        berkasFotoOriginalSizeKb: result.originalSizeKb,
+      }));
+    } catch (err: any) {
+      setCompressError(err?.message || 'Gagal memproses dan mengompresi gambar.');
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleProcessFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleProcessFile(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setFormData((prev) => ({
+      ...prev,
+      berkasFotoUrl: undefined,
+      berkasFotoNama: undefined,
+      berkasFotoSizeKb: undefined,
+      berkasFotoOriginalSizeKb: undefined,
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const renderWilayahSelect = (options?: { label?: string; placeholder?: string; isWilayahKerja?: boolean }) => {
     const label = options?.label || 'Kabupaten/Kota';
@@ -1427,6 +1514,209 @@ export const PillarModal: React.FC<PillarModalProps> = ({
                 <p className="text-[10px] text-slate-500 mt-1 font-medium">
                   * Pendaftaran baru ditetapkan berstatus "Aktif" secara otomatis oleh sistem.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* UPLOAD FOTO BERKAS PENDUKUNG (KOMPRESI CLIENT-SIDE ULTRA HEMAT FIREBASE) */}
+          <div className="bg-gradient-to-br from-slate-50 to-emerald-50/40 border-2 border-dashed border-emerald-300/80 rounded-2xl p-4 sm:p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                  <FileImage className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5">
+                    <span>Foto Berkas Pendukung (KTP / SK / Surat Tugas)</span>
+                    <span className="text-[10px] font-bold text-slate-500 font-normal">(Opsional)</span>
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-slate-600 font-medium">
+                    Otomatis dikompresi di browser (Client-Side Canvas) sehingga hemat penyimpanan Firebase dan upload instan.
+                  </p>
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-300 text-[10px] font-black text-emerald-900 self-start sm:self-auto shrink-0 shadow-2xs">
+                <Sparkles className="w-3 h-3 text-emerald-700" />
+                <span>Ultra Hemat Kuota</span>
+              </div>
+            </div>
+
+            {compressError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs font-bold text-rose-700">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{compressError}</span>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {!formData.berkasFotoUrl ? (
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !isCompressing && fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-5 sm:p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                  isDragging
+                    ? 'border-emerald-600 bg-emerald-100/70 scale-[0.99]'
+                    : 'border-emerald-300/80 bg-white hover:bg-emerald-50/50 hover:border-emerald-500'
+                }`}
+              >
+                {isCompressing ? (
+                  <div className="flex flex-col items-center gap-2 py-3">
+                    <Loader2 className="w-8 h-8 text-emerald-700 animate-spin" />
+                    <span className="text-xs font-black text-emerald-900">
+                      Mengompresi foto berkas di browser...
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Memadatkan resolusi & ukuran agar hemat penyimpanan cloud
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs">
+                      <UploadCloud className="w-6 h-6 text-emerald-700" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs sm:text-sm font-black text-slate-800">
+                        Klik untuk Pilih Foto Berkas, atau Seret & Lepas ke sini
+                      </p>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        Mendukung format JPG, PNG, atau WebP. Ukuran bebas (otomatis dikompresi menjadi ~50-80 KB).
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-emerald-200 p-3 sm:p-4 shadow-xs space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      onClick={() => setShowPhotoModal(true)}
+                      className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-slate-200 shrink-0 cursor-pointer group shadow-2xs"
+                      title="Klik untuk memperbesar"
+                    >
+                      <img
+                        src={formData.berkasFotoUrl}
+                        alt="Berkas Pendaftaran"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        <Eye className="w-4 h-4" />
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 space-y-1">
+                      <div className="text-xs font-black text-slate-800 truncate flex items-center gap-1.5">
+                        <span className="truncate">{formData.berkasFotoNama || 'Foto Berkas Terkompresi'}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold shrink-0">
+                          Tersimpan
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                        {formData.berkasFotoOriginalSizeKb && formData.berkasFotoOriginalSizeKb > 0 && (
+                          <span className="text-slate-500 line-through">
+                            Asli: {formData.berkasFotoOriginalSizeKb} KB
+                          </span>
+                        )}
+                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-black">
+                          Kompresi: {formData.berkasFotoSizeKb || 50} KB
+                        </span>
+                        {formData.berkasFotoOriginalSizeKb && formData.berkasFotoSizeKb && (
+                          <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-black flex items-center gap-0.5">
+                            <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                            Hemat {Math.max(1, Math.round((1 - formData.berkasFotoSizeKb / formData.berkasFotoOriginalSizeKb) * 100))}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowPhotoModal(true)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Perbesar Foto"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Lihat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1 cursor-pointer border border-emerald-200 transition-colors"
+                      title="Ganti Foto"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      <span>Ganti</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1 cursor-pointer border border-rose-200 transition-colors"
+                      title="Hapus Foto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Modal Preview Zoom Foto Berkas */}
+          {showPhotoModal && formData.berkasFotoUrl && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+              onClick={() => setShowPhotoModal(false)}
+            >
+              <div
+                className="bg-white rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-black text-slate-800">
+                      Pratinjau Berkas: {formData.berkasFotoNama || 'Dokumen Pendukung'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoModal(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-900 rounded-xl p-2">
+                  <img
+                    src={formData.berkasFotoUrl}
+                    alt="Pratinjau Berkas Pendaftaran"
+                    className="max-h-[65vh] w-auto object-contain rounded-lg shadow-lg"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-600 font-medium pt-1">
+                  <span>Ukuran Terkompresi: {formData.berkasFotoSizeKb || 50} KB (Aman Memori Firebase)</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoModal(false)}
+                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-slate-700 cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
               </div>
             </div>
           )}

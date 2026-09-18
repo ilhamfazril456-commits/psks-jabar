@@ -2184,7 +2184,7 @@ export default function App() {
     const pillarKey = targetPillarId || activePillar;
     if (!pillarKey) return;
     const recordId = `${pillarKey}-${Date.now()}`;
-    const fullRecord = { ...newRecord, id: recordId, pillarId: pillarKey };
+    const fullRecord: PSKSDataRecord = { ...newRecord, id: recordId, pillarId: pillarKey };
 
     setAllPillarData((prev) => {
       const updated = {
@@ -2234,11 +2234,17 @@ export default function App() {
   const handleAddSubmission = async (
     newSubmission: Omit<
       PillarRegistrationSubmission,
-      'id' | 'submittedAt' | 'submittedAtFormatted' | 'status'
-    >
+      'id' | 'submittedAt' | 'submittedAtFormatted'
+    > & { status?: string }
   ) => {
     const newId = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date();
+    const isProvJabar =
+      newSubmission.wilayah === 'Prov. Jabar' ||
+      (newSubmission.wilayah || '').toLowerCase().includes('provinsi');
+    const initialStatus =
+      newSubmission.status || (isProvJabar ? 'MENUNGGU_PENGESAHAN_PROVINSI' : 'MENUNGGU_VERIFIKASI_WILAYAH');
+
     const submissionData: PillarRegistrationSubmission = {
       ...newSubmission,
       id: newId,
@@ -2250,7 +2256,7 @@ export default function App() {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      status: 'PENDING',
+      status: initialStatus,
     };
 
     setSubmissions((prev) => {
@@ -2264,35 +2270,76 @@ export default function App() {
     }
   };
 
-  const handleApproveSubmission = async (submission: PillarRegistrationSubmission) => {
-    const updatedSubmission: PillarRegistrationSubmission = {
-      ...submission,
-      status: 'APPROVED',
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: session.nama || session.username || 'Admin Wilayah',
-    };
+  const handleApproveSubmission = async (submission: PillarRegistrationSubmission, adminNotes?: string) => {
+    const isSuperadminOrDev =
+      session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
+    const nowIso = new Date().toISOString();
+    const reviewerName = session.nama || session.username || (isSuperadminOrDev ? 'Superadmin Jabar' : 'Admin Wilayah');
+
+    let updatedSubmission: PillarRegistrationSubmission;
+
+    if (!isSuperadminOrDev) {
+      // TIER 1: Admin Wilayah Approval
+      // Set status: 'DISETUJUI_WILAYAH' (diteruskan ke Superadmin Jabar)
+      // Tidak langsung didaftarkan ke data rekapitulasi aktif sampai disahkan Superadmin
+      updatedSubmission = {
+        ...submission,
+        status: 'DISETUJUI_WILAYAH',
+        regionalApprovedBy: reviewerName,
+        regionalApprovedAt: nowIso,
+        regionalNotes: adminNotes || 'Disetujui oleh Admin Wilayah, berkas diteruskan ke Superadmin Jabar untuk Pengesahan & Penerimaan Anggota.',
+        reviewedBy: reviewerName,
+        reviewedAt: nowIso,
+      };
+    } else {
+      // TIER 2: Superadmin Jabar Final Approval
+      // Set status: 'SAH_TERDAFTAR' (resmi sah diterima sebagai anggota 10 Pilar PSKS)
+      // Langsung didaftarkan ke allPillarData & Firestore psks_records!
+      updatedSubmission = {
+        ...submission,
+        status: 'SAH_TERDAFTAR',
+        superadminApprovedBy: reviewerName,
+        superadminApprovedAt: nowIso,
+        superadminNotes: adminNotes || 'Telah disahkan dan diterima secara resmi sebagai anggota 10 Pilar PSKS Jawa Barat.',
+        reviewedBy: reviewerName,
+        reviewedAt: nowIso,
+      };
+    }
 
     setSubmissions((prev) => {
       return prev.map((s) => (s.id === submission.id ? updatedSubmission : s));
     });
 
     // Audit Log for Approval
-    const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
     const memberName = submission.nama || submission.recordData?.nama || 'Pemohon';
     const pilarTitle = (PILLARS_CONFIG[submission.pillarId]?.title || submission.pillarId).toUpperCase();
     const wilLabel = submission.wilayah || session.wilayah || 'Jawa Barat';
 
-    recordSystemActivity({
-      session,
-      category: 'PSKS',
-      actionType: 'APPROVE',
-      targetCollection: 'registration_submissions',
-      targetId: submission.id,
-      targetName: memberName,
-      targetPillar: pilarTitle,
-      targetWilayah: wilLabel,
-      details: `${actorLabel} MENERIMA "${memberName}" sebagai anggota ${pilarTitle} (Wilayah: ${wilLabel})`,
-    });
+    if (!isSuperadminOrDev) {
+      recordSystemActivity({
+        session,
+        category: 'PSKS',
+        actionType: 'APPROVE',
+        targetCollection: 'registration_submissions',
+        targetId: submission.id,
+        targetName: memberName,
+        targetPillar: pilarTitle,
+        targetWilayah: wilLabel,
+        details: `Admin Wilayah [${reviewerName}] MENYETUJUI berkas pendaftaran "${memberName}" (Wilayah: ${wilLabel}) - Otomatis diteruskan ke Superadmin Jabar untuk Pengesahan.`,
+      });
+    } else {
+      recordSystemActivity({
+        session,
+        category: 'PSKS',
+        actionType: 'APPROVE',
+        targetCollection: 'registration_submissions',
+        targetId: submission.id,
+        targetName: memberName,
+        targetPillar: pilarTitle,
+        targetWilayah: wilLabel,
+        details: `Superadmin [${reviewerName}] MENGESAHKAN & MENERIMA "${memberName}" sebagai anggota resmi Pilar ${pilarTitle} (Wilayah: ${wilLabel})`,
+      });
+    }
 
     // 1. Update status in Firestore
     try {
@@ -2301,8 +2348,8 @@ export default function App() {
       console.error('Failed to approve submission in Firestore:', error);
     }
 
-    // 2. Register record into pillar data in Firestore and local state
-    if (submission.recordData) {
+    // 2. Register record into pillar data in Firestore and local state ONLY when approved by Superadmin/Dev
+    if (isSuperadminOrDev && submission.recordData) {
       const targetPillar = submission.pillarId;
       const cleanRecord: Omit<PSKSDataRecord, 'id'> = {
         ...submission.recordData,
@@ -2314,18 +2361,25 @@ export default function App() {
   };
 
   const handleRejectSubmission = async (submissionId: string, notes?: string) => {
+    const isSuperadminOrDev =
+      session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
+    const nowIso = new Date().toISOString();
+    const reviewerName = session.nama || session.username || (isSuperadminOrDev ? 'Superadmin Jabar' : 'Admin Wilayah');
+    const rejectStatus = isSuperadminOrDev ? 'DITOLAK_PROVINSI' : 'DITOLAK_WILAYAH';
+
     const updatedSubmission = {
-      status: 'REJECTED' as const,
-      reviewNotes: notes || 'Berkas pengajuan belum memenuhi syarat verifikasi administrasi.',
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: session.nama || session.username || 'Admin Wilayah',
+      status: rejectStatus,
+      rejectedReason: notes || (isSuperadminOrDev ? 'Pengesahan ditolak oleh Superadmin Dinsos Jabar.' : 'Berkas pengajuan belum memenuhi syarat verifikasi administrasi wilayah.'),
+      reviewNotes: notes || (isSuperadminOrDev ? 'Pengesahan ditolak oleh Superadmin Dinsos Jabar.' : 'Berkas pengajuan belum memenuhi syarat verifikasi administrasi wilayah.'),
+      reviewedAt: nowIso,
+      reviewedBy: reviewerName,
     };
 
     const targetSub = submissions.find((s) => s.id === submissionId);
     const memberName = targetSub?.nama || targetSub?.recordData?.nama || 'Pemohon';
     const pilarTitle = (PILLARS_CONFIG[targetSub?.pillarId || 'peksos']?.title || targetSub?.pillarId || 'PSKS').toUpperCase();
     const wilLabel = targetSub?.wilayah || session.wilayah || 'Jawa Barat';
-    const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
+    const actorLabel = isSuperadminOrDev ? `Superadmin [${reviewerName}]` : `Admin Wilayah [${reviewerName}]`;
     const reasonText = notes ? ` Alasan: ${notes}` : '';
 
     setSubmissions((prev) => {
@@ -2356,16 +2410,22 @@ export default function App() {
 
   const handleBatchApproveSubmissions = async (submissionIds: string[]) => {
     if (!submissionIds.length) return;
+    const isSuperadminOrDev =
+      session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
     const now = new Date().toISOString();
-    const reviewer = session.nama || session.username || 'Superadmin Jabar';
+    const reviewer = session.nama || session.username || (isSuperadminOrDev ? 'Superadmin Jabar' : 'Admin Wilayah');
+    const targetStatus = isSuperadminOrDev ? 'SAH_TERDAFTAR' : 'DISETUJUI_WILAYAH';
 
     const updatedList = submissions.map((s) => {
       if (submissionIds.includes(s.id)) {
         return {
           ...s,
-          status: 'APPROVED' as const,
+          status: targetStatus,
           reviewedAt: now,
           reviewedBy: reviewer,
+          ...(isSuperadminOrDev
+            ? { superadminApprovedBy: reviewer, superadminApprovedAt: now }
+            : { regionalApprovedBy: reviewer, regionalApprovedAt: now }),
         };
       }
       return s;
@@ -2382,13 +2442,16 @@ export default function App() {
             id,
             cleanFirestoreData({
               ...sub,
-              status: 'APPROVED',
+              status: targetStatus,
               reviewedAt: now,
               reviewedBy: reviewer,
+              ...(isSuperadminOrDev
+                ? { superadminApprovedBy: reviewer, superadminApprovedAt: now }
+                : { regionalApprovedBy: reviewer, regionalApprovedAt: now }),
             }),
             { merge: true }
           );
-          if (sub.recordData) {
+          if (isSuperadminOrDev && sub.recordData) {
             await handleAddRecord(
               {
                 ...sub.recordData,
@@ -3011,10 +3074,10 @@ export default function App() {
                       <span>OTORITAS ADMIN WILAYAH • {(session.wilayah || 'Jawa Barat').toUpperCase()}</span>
                     </div>
                     <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase tracking-tight">
-                      Terima Pendaftaran 10 Pilar PSKS
+                      Verifikasi Berkas Wilayah
                     </h3>
                     <p className="text-xs sm:text-sm text-blue-100/90 font-medium max-w-2xl">
-                      Akses modul verifikasi berkas dan pengesahan anggota baru dari 10 Pilar Potensi dan Sumber Kesejahteraan Sosial khusus untuk wilayah <strong className="text-amber-300">{session.wilayah || 'Jawa Barat'}</strong>.
+                      Akses modul verifikasi berkas pendaftaran anggota baru 10 Pilar Potensi dan Sumber Kesejahteraan Sosial khusus untuk wilayah <strong className="text-amber-300">{session.wilayah || 'Jawa Barat'}</strong> sebelum diteruskan ke Superadmin.
                     </p>
                   </div>
 
@@ -3026,7 +3089,7 @@ export default function App() {
                     className="relative z-10 shrink-0 w-full md:w-auto bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:scale-105 active:scale-95 text-[#0f2b5c] font-black text-xs sm:text-sm px-6 sm:px-8 py-4 sm:py-5 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-3 border border-amber-200 uppercase tracking-wider group"
                   >
                     <Inbox className="w-5 h-5 text-[#0f2b5c]" />
-                    <span>Buka Terima Pendaftaran 10 Pilar</span>
+                    <span>Buka Verifikasi Berkas Wilayah</span>
                     <ArrowRight className="w-4 h-4 text-[#0f2b5c] transform group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>

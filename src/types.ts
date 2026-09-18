@@ -162,6 +162,13 @@ export interface PSKSDataRecord {
   bidangBantuan?: string; // Badan Usaha: Bidang Bantuan Sosial
   namaSlrt?: string; // SLRT PUSKESOS: Nama SLRT / Sekretariat Puskesos
   operator?: string; // SLRT PUSKESOS: Nama Operator Puskesos
+
+  // Berkas Foto Pendukung
+  berkasFotoUrl?: string;
+  berkasFotoNama?: string;
+  berkasFotoSize?: number;
+  berkasFotoSizeKb?: number;
+  berkasFotoOriginalSizeKb?: number;
 }
 
 export interface AdminAccount {
@@ -254,8 +261,39 @@ export interface PillarRegistrationSubmission {
   submittedByRole: string; // 'user'
   submittedAt: number | string; // epoch ms or ISO string
   submittedAtFormatted: string; // e.g. '21 Agustus 2026, 14:30 WIB'
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status:
+    | 'PENDING'
+    | 'MENUNGGU_VERIFIKASI_WILAYAH'
+    | 'DISETUJUI_WILAYAH'
+    | 'MENUNGGU_PENGESAHAN_PROVINSI'
+    | 'SAH_TERDAFTAR'
+    | 'APPROVED'
+    | 'DITOLAK_WILAYAH'
+    | 'DITOLAK_PROVINSI'
+    | 'REJECTED'
+    | string;
   recordData: Omit<PSKSDataRecord, 'id'>;
+  // Foto Berkas Pendukung (Kompresi Client-side Canvas Ultra Hemat Memori)
+  berkasFotoUrl?: string; // Data URL Base64 hasil kompresi (< 100KB)
+  berkasFotoNama?: string; // Nama file dokumen asli
+  berkasFotoSizeKb?: number; // Ukuran hasil kompresi (KB)
+  berkasFotoOriginalSizeKb?: number; // Ukuran asli sebelum kompresi (KB)
+  // Approval Tier 1: Admin Wilayah
+  regionalApprovedBy?: string;
+  regionalApprovedAt?: string | number;
+  regionalNotes?: string;
+  verifiedWilayahAt?: string | number | null;
+  verifiedWilayahAtFormatted?: string | null;
+  verifiedWilayahBy?: string | null;
+  catatanWilayah?: string | null;
+  // Approval Tier 2: Superadmin Jabar
+  superadminApprovedBy?: string;
+  superadminApprovedAt?: string | number;
+  superadminNotes?: string;
+  approvedProvinsiAt?: string | number | null;
+  approvedProvinsiAtFormatted?: string | null;
+  catatanProvinsi?: string | null;
+  // General Legacy / Compatibility Fields
   adminNotes?: string;
   reviewNotes?: string;
   rejectedReason?: string;

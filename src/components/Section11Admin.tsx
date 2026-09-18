@@ -317,21 +317,21 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
 
               {/* Title & Description */}
               <h4 className="text-[11px] sm:text-base font-black text-purple-950 mb-1 sm:mb-2 group-hover:text-purple-800 transition-colors leading-snug">
-                Verifikasi Pendaftaran
+                Pengesahan & Penerimaan Anggota
               </h4>
               <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
-                Pusat verifikasi dan persetujuan (Acc) ajuan pendaftaran 10 pilar PSKS 27 Kab/Kota secara realtime.
+                Pusat pengesahan akhir, persetujuan rekomendasi admin wilayah, dan penerimaan sah anggota 10 Pilar PSKS se-Jawa Barat.
               </p>
 
               {/* Highlight Bullets */}
               <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-600 shrink-0" />
-                  <span>Ajuan 27 Kab/Kota</span>
+                  <span>Rekomendasi 27 Kab/Kota</span>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0 hidden sm:block" />
-                  <span>Verifikasi 10 Pilar Realtime</span>
+                  <span>Pengesahan Sah Realtime</span>
                 </div>
               </div>
             </div>
@@ -341,7 +341,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
               onClick={onOpenTaskManagerConsole}
               className="w-full bg-gradient-to-r from-purple-700 to-violet-800 hover:from-purple-800 hover:to-violet-900 text-white font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-purple-700/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer"
             >
-              <span className="truncate">Verifikasi Pendaftaran</span>
+              <span className="truncate">Pengesahan Anggota</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
             </button>
           </div>

@@ -75,8 +75,8 @@ interface PillarDetailViewProps {
   onAddSubmission?: (
     newSubmission: Omit<
       PillarRegistrationSubmission,
-      'id' | 'submittedAt' | 'submittedAtFormatted' | 'status'
-    >
+      'id' | 'submittedAt' | 'submittedAtFormatted'
+    > & { status?: string }
   ) => void;
   onOpenGateModal?: () => void;
 }
@@ -205,6 +205,10 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       bidangBantuan: '',
       namaSlrt: '',
       operator: '',
+      berkasFotoUrl: '',
+      berkasFotoNama: '',
+      berkasFotoSizeKb: 0,
+      berkasFotoOriginalSizeKb: 0,
     };
   };
 
@@ -428,10 +432,14 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
     const saveRecordOrSubmission = (recordPayload: Omit<PSKSDataRecord, 'id'>) => {
       if (session.role === 'user') {
+        const subWilayah = recordPayload.wilayah || session.wilayah || 'Kota Cimahi';
+        const isProvJabar = subWilayah === 'Prov. Jabar' || subWilayah.toLowerCase().includes('provinsi');
+        const initialStatus = isProvJabar ? 'MENUNGGU_PENGESAHAN_PROVINSI' : 'MENUNGGU_VERIFIKASI_WILAYAH';
+
         if (onAddSubmission) {
           onAddSubmission({
             pillarId,
-            wilayah: recordPayload.wilayah || session.wilayah || 'Kota Cimahi',
+            wilayah: subWilayah,
             kec: recordPayload.kec || '-',
             nama: recordPayload.nama || '-',
             nik: recordPayload.nik || '-',
@@ -440,12 +448,19 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             submittedByName: session.nama || session.username || 'User Terdaftar',
             submittedByUsername: session.username,
             submittedByRole: 'user',
+            status: initialStatus,
             recordData: recordPayload,
+            berkasFotoUrl: formData.berkasFotoUrl,
+            berkasFotoNama: formData.berkasFotoNama,
+            berkasFotoSizeKb: formData.berkasFotoSizeKb,
+            berkasFotoOriginalSizeKb: formData.berkasFotoOriginalSizeKb,
           });
         }
         setAlertInfo({
           title: 'Pendaftaran Berhasil Diajukan',
-          message: `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan dan telah dikirimkan ke antrean verifikasi Admin Wilayah (${recordPayload.wilayah}).`,
+          message: isProvJabar
+            ? `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan langsung ke antrean Superadmin Provinsi Jawa Barat untuk Pengesahan & Penerimaan Anggota.`
+            : `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan dan dikirim ke Admin Wilayah (${subWilayah}) untuk Verifikasi Berkas Wilayah. Setelah disetujui wilayah, otomatis diteruskan ke Superadmin Jabar untuk Pengesahan & Penerimaan Anggota.`,
           type: 'success',
         });
       } else {
