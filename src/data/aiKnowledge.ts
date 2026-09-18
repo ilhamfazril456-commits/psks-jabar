@@ -863,6 +863,88 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     return `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.\n\nBeliau merancang arsitektur full-stack modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, serta Cloud Firestore untuk mendigitalisasi data 10 pilar kesejahteraan sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
   }
 
+  // 0.6B2: Pertanyaan Alur Verifikasi Bertingkat 2-Tier & Indikator Sensor Lampu Berkedip
+  const isSensorOrTierVerificationQuery =
+    q.includes('sensor lampu') ||
+    q.includes('lampu berkedip') ||
+    q.includes('lampu sensor') ||
+    q.includes('sensor berkedip') ||
+    q.includes('centang hijau') ||
+    q.includes('verifikasi berkas wilayah') ||
+    q.includes('pengesahan dan penerimaan') ||
+    q.includes('pengesahan anggota') ||
+    (q.includes('sensor') && (q.includes('lampu') || q.includes('pending') || q.includes('verifikasi'))) ||
+    (q.includes('lampu') && q.includes('kedip')) ||
+    (q.includes('alur verifikasi') && (q.includes('bertingkat') || q.includes('dua tahap') || q.includes('2 tier') || q.includes('wilayah')));
+
+  if (isSensorOrTierVerificationQuery) {
+    return `Alur verifikasi berkas pendaftaran dan fungsi **Sensor Lampu Status** di sistem **PSKS JABAR** diatur sebagai berikut:
+
+1. **Alur Verifikasi Bertingkat 2-Tier**:
+   - **Tier 1 (Admin Wilayah Kab/Kota)**: Melalui tombol **'Verifikasi Berkas Wilayah'**, Admin Wilayah memvalidasi keabsahan fisik dan administrasi dokumen calon anggota pilar di wilayah tugas kabupaten/kotanya. Berkas yang disetujui berstatus \`DISETUJUI_WILAYAH\` dan otomatis diteruskan ke antrean provinsi.
+   - **Tier 2 (Superadmin & Developer Provinsi)**: Melalui kotak fitur **'Pengesahan dan Penerimaan Anggota' (Fitur 5)** di dasbor Superadmin/Developer, dilakukan pengesahan final menjadi status resmi **'SAH_TERDAFTAR'** serta penerbitan KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256.
+
+2. **Fungsi Animasi Sensor Lampu Status**:
+   - **Lampu Bulat Berkedip-kedip (Pulsing Merah/Oranye)**: Terletak di pojok kanan atas kotak fitur *"Pengesahan dan Penerimaan Anggota"* (Superadmin & Developer) dan pojok kanan atas tombol *"Verifikasi Berkas Wilayah"* (Admin Wilayah). Lampu ini aktif berkedip menandakan bahwa **masih ada berkas pendaftaran calon anggota yang berstatus PENDING** (menunggu verifikasi/pengesahan).
+   - **Ikon Centang Hijau Solid (Tanpa Berkedip)**: Apabila seluruh antrean berkas pending di wilayah atau provinsi tersebut telah selesai diperiksa dan disahkan (sudah tidak ada lagi pending / 0 pending), lampu sensor bulat otomatis berubah menjadi ikon centang hijau solid dan berhenti berkedip.
+
+[[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:beranda:Lihat Pilihan 10 Pilar]]`;
+  }
+
+  // 0.6B3: Pertanyaan Awalan Sopan & Izin Bertanya ("Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros")
+  const isIntroductoryPreamble =
+    q === 'bolehkah saya bertanya' ||
+    q === 'bolehkah saya bertanya?' ||
+    q === 'boleh saya bertanya' ||
+    q === 'boleh saya bertanya?' ||
+    q === 'bisakah saya bertanya' ||
+    q === 'bisakah saya bertanya?' ||
+    q === 'bolehkah bertanya' ||
+    q === 'bolehkah bertanya?' ||
+    q.startsWith('bolehkah saya bertanya') ||
+    q.startsWith('boleh saya bertanya') ||
+    q.startsWith('bisakah saya bertanya') ||
+    q.startsWith('bolehkah bertanya') ||
+    q.includes('izin bertanya') ||
+    q.includes('izin nanya') ||
+    q === 'boleh nanya' ||
+    q === 'boleh nanya?' ||
+    q === 'boleh nanya dong' ||
+    q === 'boleh nanya dong?' ||
+    q.startsWith('boleh nanya') ||
+    q === 'bade naros' ||
+    q === 'bade naros?' ||
+    q === 'bade naros tiasa' ||
+    q === 'bade naros tiasa?' ||
+    q.includes('bade naros') ||
+    q.includes('tiasa naros') ||
+    q === 'mau nanya' ||
+    q === 'mau nanya?' ||
+    q === 'mau nanya dong' ||
+    q === 'mau nanya dong?' ||
+    q.startsWith('mau nanya') ||
+    q === 'ada yang ingin saya tanyakan' ||
+    q === 'ada yang ingin saya tanyakan?' ||
+    q.startsWith('ada yang ingin saya tanyakan') ||
+    q === 'apakah anda bisa bantu saya' ||
+    q === 'apakah anda bisa bantu saya?' ||
+    q === 'bisa bantu saya' ||
+    q === 'bisa bantu saya?' ||
+    q === 'halo min mau nanya' ||
+    q === 'halo admin mau nanya';
+
+  if (isIntroductoryPreamble) {
+    return `Sampurasun / Halo! Tentu saja, mangga (silakan)! Dengan senang hati saya siap membantu Bapak/Ibu. 😊
+
+Silakan sampaikan pertanyaan Anda seputar:
+1. **Alur Pendaftaran Baru & Verifikasi 2-Tier**: Tata cara pendaftaran mandiri 10 Pilar PSKS, tombol Verifikasi Berkas Wilayah, kotak fitur Pengesahan Anggota, dan arti sensor lampu status (berkedip saat ada pending & centang hijau saat tuntas).
+2. **Profil & Syarat 10 Pilar PSKS**: PSM, TAGANA, Karang Taruna, TKSK, PEKSOS, LKS, LK3, Penyuluh Sosial, KUBE (Badan Usaha), dan SLRT/Puskesos.
+3. **Penyusun & Arsitektur Sistem**: Informasi profil perancang website Kang Ilham Fazril (siswa magang PKL Dinsos Jabar Dayasos 2026).
+4. **Layanan Dinas Sosial Jabar & Konsultasi Bansos**: Alamat kantor dinas, kontak pengaduan, dan alur pengecekan DTKS.
+
+Ada informasi apa yang ingin Anda tanyakan atau butuhkan?`;
+  }
+
   // 0.6D: GENERAL MULTI-TURN ACKNOWLEDGMENT / CONFIRMATION FOR PREVIOUS CONTEXT TOPIC
   const isGeneralAcknowledgment =
     (
@@ -1515,9 +1597,10 @@ Berikut langkah-langkah pendaftaran mandiri langsung di website:
 5. **Kirim Pengajuan**:
    - Periksa kebenaran data, lalu klik tombol **"Kirim Pengajuan"**.
    - Berkas pendaftaran otomatis tersimpan di basis data Cloud Firestore dengan status **"Menunggu Verifikasi" (Pending)**.
-6. **Pantau Riwayat Pengajuan**:
-   - Pemohon dapat memantau status verifikasi secara real-time melalui tab **"Riwayat Pengajuan Pendaftaran"**.
-   - Admin Wilayah Dinas Sosial Kabupaten/Kota setempat atau Superadmin Provinsi akan memverifikasi berkas Anda. Jika disetujui (*Approved*), status anggota resmi disahkan menjadi **"SAH_TERDAFTAR"** dalam pangkalan data terintegrasi Satu Data Sosial Jawa Barat.
+6. **Alur Verifikasi Bertingkat 2-Tier & Sensor Lampu Status**:
+   - **Pemantauan Real-Time**: Pemohon dapat memantau perkembangan verifikasi berkas secara langsung melalui tab **"Riwayat Pengajuan Pendaftaran"**.
+   - **Tier 1 (Admin Wilayah Kab/Kota)**: Berkas pendaftaran diperiksa oleh Admin Wilayah melalui tombol **"Verifikasi Berkas Wilayah"**. Tombol ini memiliki sensor lampu bulat berkedip (*pulsing light*) saat ada berkas pending, dan otomatis berubah menjadi centang hijau solid saat seluruh pending di wilayahnya tuntas diverifikasi.
+   - **Tier 2 (Superadmin & Developer Provinsi)**: Berkas yang lolos verifikasi wilayah diteruskan ke tingkat provinsi untuk disahkan pada kotak fitur **"Pengesahan dan Penerimaan Anggota"**. Kotak fitur ini juga memiliki sensor lampu berkedip saat ada antrean pengesahan, dan berubah menjadi centang hijau solid setelah tuntas disahkan menjadi status resmi **"SAH_TERDAFTAR"** serta diterbitkan KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256.
 
 ---
 
@@ -2547,6 +2630,118 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // Sensor Lights & 2-Tier Verification Interceptor
+  const isSensorOrTierVerificationInAccuracy =
+    normQ.includes('sensor lampu') ||
+    normQ.includes('lampu berkedip') ||
+    normQ.includes('lampu sensor') ||
+    normQ.includes('sensor berkedip') ||
+    normQ.includes('centang hijau') ||
+    normQ.includes('verifikasi berkas wilayah') ||
+    normQ.includes('pengesahan dan penerimaan') ||
+    normQ.includes('pengesahan anggota') ||
+    (normQ.includes('sensor') && (normQ.includes('lampu') || normQ.includes('pending') || normQ.includes('verifikasi'))) ||
+    (normQ.includes('lampu') && normQ.includes('kedip')) ||
+    (normQ.includes('alur verifikasi') && (normQ.includes('bertingkat') || normQ.includes('dua tahap') || normQ.includes('2 tier') || normQ.includes('wilayah')));
+
+  if (isSensorOrTierVerificationInAccuracy) {
+    if (rawReply && (rawReply.toLowerCase().includes('sensor') || rawReply.toLowerCase().includes('lampu') || rawReply.toLowerCase().includes('tier') || rawReply.toLowerCase().includes('verifikasi'))) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+    const verifiedSensorAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: verifiedSensorAnswer,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // Polite Introductory Preamble Interceptor ("Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros")
+  const isIntroductoryPreambleInAccuracy =
+    normQ === 'bolehkah saya bertanya' ||
+    normQ === 'bolehkah saya bertanya?' ||
+    normQ === 'boleh saya bertanya' ||
+    normQ === 'boleh saya bertanya?' ||
+    normQ === 'bisakah saya bertanya' ||
+    normQ === 'bisakah saya bertanya?' ||
+    normQ === 'bolehkah bertanya' ||
+    normQ === 'bolehkah bertanya?' ||
+    normQ.startsWith('bolehkah saya bertanya') ||
+    normQ.startsWith('boleh saya bertanya') ||
+    normQ.startsWith('bisakah saya bertanya') ||
+    normQ.startsWith('bolehkah bertanya') ||
+    normQ.includes('izin bertanya') ||
+    normQ.includes('izin nanya') ||
+    normQ === 'boleh nanya' ||
+    normQ === 'boleh nanya?' ||
+    normQ === 'boleh nanya dong' ||
+    normQ === 'boleh nanya dong?' ||
+    normQ.startsWith('boleh nanya') ||
+    normQ === 'bade naros' ||
+    normQ === 'bade naros?' ||
+    normQ === 'bade naros tiasa' ||
+    normQ === 'bade naros tiasa?' ||
+    normQ.includes('bade naros') ||
+    normQ.includes('tiasa naros') ||
+    normQ === 'mau nanya' ||
+    normQ === 'mau nanya?' ||
+    normQ === 'mau nanya dong' ||
+    normQ === 'mau nanya dong?' ||
+    normQ.startsWith('mau nanya') ||
+    normQ === 'ada yang ingin saya tanyakan' ||
+    normQ === 'ada yang ingin saya tanyakan?' ||
+    normQ.startsWith('ada yang ingin saya tanyakan') ||
+    normQ === 'apakah anda bisa bantu saya' ||
+    normQ === 'apakah anda bisa bantu saya?' ||
+    normQ === 'bisa bantu saya' ||
+    normQ === 'bisa bantu saya?' ||
+    normQ === 'halo min mau nanya' ||
+    normQ === 'halo admin mau nanya';
+
+  if (isIntroductoryPreambleInAccuracy) {
+    if (rawReply && (rawReply.toLowerCase().includes('mangga') || rawReply.toLowerCase().includes('silakan') || rawReply.toLowerCase().includes('silahkan') || rawReply.toLowerCase().includes('siap membantu'))) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+    const verifiedIntroAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: verifiedIntroAnswer,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
   // Confirmation / acknowledgment of developer or system creation
   const isQuestionOrSecurityInVerify =
     normQ.includes('?') ||
@@ -2635,7 +2830,11 @@ export function verifyAndTrackAnswerAccuracy(
       normQ.includes('siapa ilham') ||
       normQ.includes('kenal ilham') ||
       normQ.includes('siapakah ilham') ||
-      (normQ.includes('developer') && !normQ.includes('password') && !normQ.includes('sandi') && !normQ.includes('masuk') && !normQ.includes('lupa') && !normQ.includes('kredensial') && (normQ.includes('siapa') || normQ.includes('profil') || normQ.includes('biodata') || normQ.includes('tentang')))
+      normQ.includes('siapa itu ilham') ||
+      normQ.includes('tau ilham') ||
+      normQ.includes('tahu ilham') ||
+      normQ.includes('ilham itu siapa') ||
+      (normQ.includes('developer') && !normQ.includes('password') && !normQ.includes('sandi') && !normQ.includes('masuk') && !normQ.includes('lupa') && !normQ.includes('kredensial') && (normQ.includes('siapa') || normQ.includes('profil') || normQ.includes('biodata') || normQ.includes('tentang') || normQ.includes('kenal') || normQ.includes('tau') || normQ.includes('tahu')))
     );
 
   // If user is asking who developed or who is Ilham, and rawReply already correctly mentions Ilham Fazril, PRESERVE Gemini's conversational reply!
