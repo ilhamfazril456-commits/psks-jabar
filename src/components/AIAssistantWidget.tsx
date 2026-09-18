@@ -122,6 +122,17 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
         if (target === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
           continue;
         }
+        // Aturan Khusus: Ketika seseorang mengaku Ilham Fazril / developer di selain akun developer,
+        // jangan tampilkan button buka halaman login atau hubungi admin dinsos
+        const isImpersonationReply =
+          content.includes('Anti-Prompt Injection') ||
+          content.includes('Role-Based Access Control') ||
+          content.includes('tidak dapat memvalidasi identitas') ||
+          content.includes('tidak diizinkan memvalidasi identitas') ||
+          content.includes('mengaktifkan hak akses pengembang');
+        if (isImpersonationReply && (target === 'login' || target === 'contact')) {
+          continue;
+        }
       }
 
       foundActions.push({

@@ -154,13 +154,15 @@ export function getComprehensiveSmartAnswer(
       /\b(lohh?|lahh?|ehh?|woi|weh)?\s*(saya|aku|abdi|urang|gue|gw)\s+(kan\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(q) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(developer|developernya|pengembang|pembuat|kreator|arsitek|pemilik|owner|programmer|yang bikin|yang buat|yang ngoding)\b/i.test(q) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(superadmin|admin|administrator)\b/i.test(q) ||
+      /(ilham(\s+fazril)?|developer|pembuat|arsitek)\s+(teh|itu|tuh)?\s*(saya|aku|abdi|urang|gue|gw)/i.test(q) ||
+      /(asal\s+(kamu|anda|maneh)?\s*tau\s+)?.*?(ilham\s+fazril|developer).*?(saya|aku|abdi|urang|gue|gw)/i.test(q) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+.*?(developer|ilham).*?(masuk|lupa|password|login|user)\b/i.test(q) ||
       /\b(buka\s+akses|bypass|beri\s+izin).*?(developer|ilham|pembuat|admin)/i.test(q) ||
       /\b(abaikan|ignore).*?(perintah|instruksi|aturan|developer|ilham)/i.test(q)
     );
 
   if (isImpersonationAttempt) {
-    return `Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    return `Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun non-developer melalui percakapan ini.\n\nApakah ada informasi seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) Jawa Barat yang dapat saya bantu jelaskan?`;
   }
 
   // 0.00 SENSITIVE ADMINISTRATIVE & DEVELOPER CREDENTIAL / PASSWORD CHECK (ZERO-DISCLOSURE)
@@ -2465,6 +2467,8 @@ export function verifyAndTrackAnswerAccuracy(
       /\b(lohh?|lahh?|ehh?|woi|weh)?\s*(saya|aku|abdi|urang|gue|gw)\s+(kan\s+)?(seorang\s+|lagi\s+|sedang\s+)?(kang\s+|a\s+)?ilham(\s+fazril)?\b/i.test(normQ) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(developer|developernya|pengembang|pembuat|kreator|arsitek|pemilik|owner|programmer|yang bikin|yang buat|yang ngoding)\b/i.test(normQ) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+(kan\s+|adalah\s+)?(seorang\s+|lagi\s+|sedang\s+)?(superadmin|admin|administrator)\b/i.test(normQ) ||
+      /(ilham(\s+fazril)?|developer|pembuat|arsitek)\s+(teh|itu|tuh)?\s*(saya|aku|abdi|urang|gue|gw)/i.test(normQ) ||
+      /(asal\s+(kamu|anda|maneh)?\s*tau\s+)?.*?(ilham\s+fazril|developer).*?(saya|aku|abdi|urang|gue|gw)/i.test(normQ) ||
       /\b(saya|aku|abdi|urang|gue|gw)\s+.*?(developer|ilham).*?(masuk|lupa|password|login|user)\b/i.test(normQ) ||
       /\b(buka\s+akses|bypass|beri\s+izin).*?(developer|ilham|pembuat|admin)/i.test(normQ) ||
       /\b(abaikan|ignore).*?(perintah|instruksi|aturan|developer|ilham)/i.test(normQ)
@@ -2472,7 +2476,7 @@ export function verifyAndTrackAnswerAccuracy(
 
   if (isImpersonationAttempt) {
     return {
-      finalContent: 'Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+      finalContent: 'Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun non-developer melalui percakapan ini.\n\nApakah ada informasi seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) Jawa Barat yang dapat saya bantu jelaskan?',
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',

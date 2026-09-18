@@ -755,7 +755,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       );
 
     if (isImpersonationAttempt) {
-      return `Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun Tamu Publik ataupun Pengguna Biasa.\n\nApabila Anda adalah Kang **Ilham Fazril** (Developer) atau Administrator resmi, silakan masuk (*login*) terlebih dahulu melalui menu login resmi dengan akun kredensial terdaftar Anda.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+      return `Mohon maaf, sistem informasi **PSKS JABAR** menerapkan protokol keamanan ketat berbasis otentikasi peran (*Role-Based Access Control / RBAC*) serta perlindungan dari rekayasa perintah (*Anti-Prompt Injection*).\n\nHak akses dan identitas pengguna ditentukan secara mutlak melalui **sesi login resmi terenkripsi**, bukan melalui pernyataan atau klaim identitas di dalam kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data (UU PDP No. 27/2022), asisten AI tidak diizinkan memvalidasi identitas atau memberikan hak akses administratif kepada akun non-developer melalui percakapan ini.\n\nApakah ada informasi seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) Jawa Barat yang dapat saya bantu jelaskan?`;
     }
 
     // 0.00 SENSITIVE ADMINISTRATIVE & DEVELOPER CREDENTIAL / PASSWORD CHECK
@@ -2697,7 +2697,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 
         if (isImpersonationAttempt) {
           return res.json({
-            reply: 'Halo Kang **Ilham Fazril**! Salam hormat, senang sekali Anda menyapa 😊.\n\nNamun, sebagai asisten cerdas yang mematuhi standar keamanan sistem dan *Role-Based Access Control* (RBAC), asisten AI tidak dapat memvalidasi identitas akun atau mengaktifkan hak akses pengembang hanya melalui pernyataan di kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data pribadi (UU PDP No. 27/2022), hak akses developer hanya aktif secara sah setelah Anda masuk menggunakan akun kredensial terdaftar melalui menu login resmi.\n\nSilakan masuk melalui tautan di bawah ini untuk mengakses fitur pengembang:\n\n[[action:tab:login:Buka Halaman Login]]'
+            reply: 'Halo Kang **Ilham Fazril**! Salam hormat, senang sekali Anda menyapa 😊.\n\nNamun, sebagai asisten cerdas yang mematuhi standar keamanan sistem dan *Role-Based Access Control* (RBAC), asisten AI tidak dapat memvalidasi identitas akun atau mengaktifkan hak akses pengembang hanya melalui pernyataan di kolom percakapan chat. Demi integritas sistem dan kepatuhan perlindungan data pribadi (UU PDP No. 27/2022), hak akses developer hanya aktif secara sah pada sesi akun yang telah terautentikasi.\n\nAda informasi seputar 10 Pilar PSKS atau pangkalan data sosial Jawa Barat yang ingin kita diskusikan?'
           });
         }
 
