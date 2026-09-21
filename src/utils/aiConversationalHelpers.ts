@@ -24,34 +24,52 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
 
   if (!norm) return { isFiller: false, fillerType: null };
 
+  // Strip conversational opener prefixes (e.g. "oke sekarang", "nah sekarang", "baiklah", "jadi", "oh begitu", dll.)
+  const strippedOpener = norm.replace(/^(oke|ok|baik|baiklah|nah|jadi|trus|terus|sekarang|yaudah|yowes|mangga|atuh|punten|oh\s+begitu|oh\s+gitu)(\s+(sekarang|nih|dulu|atuh|dong|min|kang|teh|admin))*\s+/i, '').trim();
+
+  // Helper tester for string candidates (testing both raw stripped and opener-stripped forms)
+  const testCandidate = (s: string) => {
+    return s.replace(/\s+(dong|deh|ya|nih|atuh|min|kang|teh|admin|kak|bang|gan|bro|boss|bos)+$/i, '').trim();
+  };
+
+  const c1 = testCandidate(norm);
+  const c2 = testCandidate(strippedOpener);
+
   // 1. Gratitude / Ucapan Terima Kasih
   if (
-    /^(terima\s*kasih|makasih|makasi|mksh|trims|tq|thanks|thank\s*you|thx|matur\s*nuwun|hatur\s*nuhun|nuhun)(\s+(banyak|banget|pisan|ya|min|kang|teh|admin|kak|atas\s+infonya|infonya|bantuannya|bantuan|infona))*$/i.test(norm)
+    /^(terima\s*kasih|makasih|makasi|mksh|trims|tq|thanks|thank\s*you|thx|matur\s*nuwun|hatur\s*nuhun|nuhun)(\s+(banyak|banget|pisan|ya|min|kang|teh|admin|kak|atas\s+infonya|infonya|bantuannya|bantuan|infona))*$/i.test(c1) ||
+    /^(terima\s*kasih|makasih|makasi|mksh|trims|tq|thanks|thank\s*you|thx|matur\s*nuwun|hatur\s*nuhun|nuhun)(\s+(banyak|banget|pisan|ya|min|kang|teh|admin|kak|atas\s+infonya|infonya|bantuannya|bantuan|infona))*$/i.test(c2)
   ) {
     return { isFiller: true, fillerType: 'gratitude' };
   }
 
   // 2. Conversational Fillers, Acknowledgments & Confirmations ("ohh", "oke", "siap", "paham", "ngerti", dll.)
   if (
-    /^(o+h+|o+h+m+|o+h+i+c+|o+a+l+a+h+|o+w+a+l+a+h+|o+k+e+|o+k+|o+k+a+y+|o+k+e+y+|o+c+e+|s+i+p+|s+i+a+p+|s+i+i+a+p+|n+o+t+e+d+|y+o+i+|y+u+p+|y+a+p+|y+a+|i+y+a+|i+y+e+s+s*|i+y+o+|y+o+|b+a+i+k+|b+a+i+k+l+a+h+|p+a+h+a+m+|n+g+e+r+t+i+|m+e+n+g+e+r+t+i+|j+e+l+a+s+|m+u+h+u+n+|e+n+y+a+|h+e+u+e+u+h+|l+e+r+e+s+|s+a+e+)(\s+(ya|min|kang|teh|admin|kak|bang|paham|siap|oke|deh|dong|gan|bro|boss|bos))*$/i.test(norm) ||
-    /^(oke\s+siap|oke\s+baik|siap\s+min|siap\s+kak|siap\s+kang|siap\s+admin|siap\s+komandan|siap\s+paham|oke\s+paham|cukup\s+jelas|sudah\s+paham|sudah\s+jelas|udah\s+paham|udah\s+jelas|ngerti\s+min|paham\s+min|baik\s+terima\s+kasih|oke\s+makasih|siap\s+nuhun|oke\s+nuhun|muhun\s+mangga|mangga\s+atuh)$/i.test(norm) ||
-    /^(oh\s+gitu|oh\s+begitu|gitu\s+ya|begitu\s+ya|oh\s+jadi\s+gitu|oh\s+gitu\s+ya|oh\s+begitu\s+toh|gitu\s+toh|oh\s+gitu\s+min|oh\s+begitu\s+min|jadi\s+begitu|jadi\s+gitu|oh\s+jadi\s+begitu|baru\s+tahu|baru\s+tau)$/i.test(norm)
+    /^(o+h+|o+h+m+|o+h+i+c+|o+a+l+a+h+|o+w+a+l+a+h+|o+k+e+|o+k+|o+k+a+y+|o+k+e+y+|o+c+e+|s+i+p+|s+i+a+p+|s+i+i+a+p+|n+o+t+e+d+|y+o+i+|y+u+p+|y+a+p+|y+a+|i+y+a+|i+y+e+s+s*|i+y+o+|y+o+|b+a+i+k+|b+a+i+k+l+a+h+|p+a+h+a+m+|n+g+e+r+t+i+|m+e+n+g+e+r+t+i+|j+e+l+a+s+|m+u+h+u+n+|e+n+y+a+|h+e+u+e+u+h+|l+e+r+e+s+|s+a+e+)(\s+(ya|min|kang|teh|admin|kak|bang|paham|siap|oke|deh|dong|gan|bro|boss|bos))*$/i.test(c1) ||
+    /^(oke\s+siap|oke\s+baik|siap\s+min|siap\s+kak|siap\s+kang|siap\s+admin|siap\s+komandan|siap\s+paham|oke\s+paham|cukup\s+jelas|sudah\s+paham|sudah\s+jelas|udah\s+paham|udah\s+jelas|ngerti\s+min|paham\s+min|baik\s+terima\s+kasih|oke\s+makasih|siap\s+nuhun|oke\s+nuhun|muhun\s+mangga|mangga\s+atuh)$/i.test(c1) ||
+    /^(oh\s+gitu|oh\s+begitu|gitu\s+ya|begitu\s+ya|oh\s+jadi\s+gitu|oh\s+gitu\s+ya|oh\s+begitu\s+toh|gitu\s+toh|oh\s+gitu\s+min|oh\s+begitu\s+min|jadi\s+begitu|jadi\s+gitu|oh\s+jadi\s+begitu|baru\s+tahu|baru\s+tau)$/i.test(c1)
   ) {
     return { isFiller: true, fillerType: 'ack' };
   }
 
-  // 3. Follow-up Preamble / Intention to ask more questions ("saya ingin menanyakan 1 hal lagi", "ada 1 hal lagi", dll.)
-  if (
-    /^(saya\s+|abdi\s+|urang\s+)?(ingin|mau|bade|hoyong)\s+(menanyakan|nanya|bertanya|naros|taros)\s+(\d+|satu|hiji)?\s*(hal|perkara|perkawis)?(\s+lagi|\s+deui)?$/i.test(norm) ||
-    /^(ada\s+|aya\s+)?(\d+|satu|hiji)?\s*(hal|perkara|perkawis|pertanyaan|tarosan|anu\s+bade\s+ditaroskeun|yang\s+ingin\s+ditanyakan)\s*(lagi|deui)?$/i.test(norm) ||
-    /^(satu\s+hal\s+lagi|1\s+hal\s+lagi|ada\s+1\s+hal\s+lagi|ada\s+satu\s+hal\s+lagi|hiji\s+perkawis\s+deui|hiji\s+deui|1\s+deui|pertanyaan\s+terakhir)$/i.test(norm)
-  ) {
+  // 3. Follow-up Preamble / Intention to ask more questions ("oke sekarang saya ingin tanyakan 1 hal lagi", "ada 1 hal lagi", dll.)
+  const isFollowUpPrompt = (s: string) => {
+    return (
+      /^(saya\s+|abdi\s+|urang\s+|aku\s+)?(ingin|mau|bade|hoyong|pengen)?\s*(menanyakan|tanyakan|nanya|bertanya|naros|taros)\s*(\d+|satu|hiji)?\s*(hal|perkara|perkawis|soal|pertanyaan)?(\s+lagi|\s+deui)?$/i.test(s) ||
+      /^(ada\s+|aya\s+)?(\d+|satu|hiji)?\s*(hal|perkara|perkawis|pertanyaan|tarosan|anu\s+bade\s+ditaroskeun|yang\s+ingin\s+ditanyakan)\s*(lagi|deui)?$/i.test(s) ||
+      /^(satu\s+hal\s+lagi|1\s+hal\s+lagi|ada\s+1\s+hal\s+lagi|ada\s+satu\s+hal\s+lagi|hiji\s+perkawis\s+deui|hiji\s+deui|1\s+deui|pertanyaan\s+terakhir)$/i.test(s) ||
+      /^(saya|abdi|urang|aku)?\s*(ingin|mau|bade|hoyong|pengen)?\s*(nanya|tanya|bertanya|menanyakan|tanyakan)\s*(lagi|deui)$/i.test(s)
+    );
+  };
+
+  if (isFollowUpPrompt(c1) || isFollowUpPrompt(c2)) {
     return { isFiller: true, fillerType: 'follow_up' };
   }
 
   // 4. Praise / Appreciation ("mantap", "keren", "bagus", "hebat", dll.)
   if (
-    /^(mantap|mantul|keren|bagus|hebat|salut|top|jos|joss|gokil|sae\s+pisan|alus\s+pisan|luar\s+biasa|patut\s+diacungi\s+jempol|edun)(\s+(banget|sekali|min|kang|teh|admin|ya|pisan|euy))*$/i.test(norm)
+    /^(mantap|mantul|keren|bagus|hebat|salut|top|jos|joss|gokil|sae\s+pisan|alus\s+pisan|luar\s+biasa|patut\s+diacungi\s+jempol|edun)(\s+(banget|sekali|min|kang|teh|admin|ya|pisan|euy|infonya|infona))*$/i.test(c1) ||
+    /^(mantap|mantul|keren|bagus|hebat|salut|top|jos|joss|gokil|sae\s+pisan|alus\s+pisan|luar\s+biasa|patut\s+diacungi\s+jempol|edun)(\s+(banget|sekali|min|kang|teh|admin|ya|pisan|euy|infonya|infona))*$/i.test(c2)
   ) {
     return { isFiller: true, fillerType: 'praise' };
   }

@@ -160,6 +160,19 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, kami tidak bisa memproses permintaan atau pertanyaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jabar.`;
   }
 
+  // 0.0001 CONVERSATIONAL FILLERS, ACKNOWLEDGMENTS, FOLLOW-UP PREAMBLES & USER REACTIONS
+  // Intercept natural conversation tokens ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", "oke sekarang saya ingin tanyakan 1 hal lagi", dll.)
+  // Never treat conversational fillers as missing topics or trigger refusal fallback!
+  const fillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ) || checkConversationalFiller(q);
+  if (fillerCheck.isFiller && fillerCheck.fillerType) {
+    return formatConversationalFillerReply(
+      fillerCheck.fillerType,
+      isDeveloperUser,
+      previousContext,
+      userName
+    );
+  }
+
   // 0.00 ANTI-PROMPT INJECTION & DEVELOPER/ADMIN IMPERSONATION GUARD (ZERO-TRUST RBAC)
   const isImpersonationAttempt =
     !isDeveloperUser &&
@@ -223,19 +236,6 @@ export function getComprehensiveSmartAnswer(
 
   if (isAskingAdminAccess) {
     return `Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
-  }
-
-  // 0.0001 CONVERSATIONAL FILLERS, ACKNOWLEDGMENTS & USER REACTIONS
-  // Intercept natural conversation tokens ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", dll.)
-  // Never treat conversational fillers as missing topics or trigger refusal fallback!
-  const fillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ) || checkConversationalFiller(q);
-  if (fillerCheck.isFiller && fillerCheck.fillerType) {
-    return formatConversationalFillerReply(
-      fillerCheck.fillerType,
-      isDeveloperUser,
-      previousContext,
-      userName
-    );
   }
 
   // 0.001 SUPERADMIN OFFICIAL GUIDE: KELOLA AKUN ADMIN
@@ -2327,6 +2327,38 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // Conversational Filler & Natural Reaction Interceptor ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", "oh gitu", follow-up preambles, etc.)
+  // Handled FIRST to guarantee conversational flow and prevent false-positive trigger of other filters
+  const accuracyFillerCheck = checkConversationalFiller(normQ) || checkConversationalFiller(query);
+  if (accuracyFillerCheck.isFiller && accuracyFillerCheck.fillerType) {
+    const isModelRefusal =
+      !rawReply ||
+      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
+      rawReply.includes('belum dapat mengenali atau menemukan informasi');
+
+    if (!isModelRefusal && rawReply.trim().length > 0) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+
+    const fillerReply = formatConversationalFillerReply(
+      accuracyFillerCheck.fillerType,
+      isDeveloperUser,
+      previousContext,
+      userName
+    );
+    return {
+      finalContent: fillerReply,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
   // Anti-Prompt Injection & Impersonation Check (Zero-Trust RBAC)
   const isImpersonationAttempt =
     !isDeveloperUser &&
@@ -2530,37 +2562,6 @@ export function verifyAndTrackAnswerAccuracy(
     );
     return {
       finalContent: verifiedSensorAnswer,
-      isAccurate: true,
-      confidence: 1.0,
-      source: 'verified_exact',
-    };
-  }
-
-  // Conversational Filler & Natural Reaction Interceptor ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", "oh gitu", etc.)
-  const accuracyFillerCheck = checkConversationalFiller(normQ) || checkConversationalFiller(query);
-  if (accuracyFillerCheck.isFiller && accuracyFillerCheck.fillerType) {
-    const isModelRefusal =
-      !rawReply ||
-      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
-      rawReply.includes('belum dapat mengenali atau menemukan informasi');
-
-    if (!isModelRefusal && rawReply.trim().length > 0) {
-      return {
-        finalContent: rawReply.trim(),
-        isAccurate: true,
-        confidence: 0.99,
-        source: 'ai_model_verified',
-      };
-    }
-
-    const fillerReply = formatConversationalFillerReply(
-      accuracyFillerCheck.fillerType,
-      isDeveloperUser,
-      previousContext,
-      userName
-    );
-    return {
-      finalContent: fillerReply,
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',
