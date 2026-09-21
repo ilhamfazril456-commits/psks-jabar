@@ -75,22 +75,33 @@ export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPure
   }
 
   const preamblePatterns = [
-    /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
+    /^((oke|ok|siap|baik|baiklah|nah|jadi|trus|terus|sekarang|yaudah|mangga|atuh|punten)\b\s*[,.-]?\s*)+/i,
+    /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\b\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
     /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|bisakah|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum)?\s*[,.-]?\s*/i,
-    /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong)?\s*(nanya|tanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
+    /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong|ingin)?\s*(nanya|tanya|bertanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi|mengenai|tentang|soal|seputar)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
     /^(apakah|bisakah|dapatkah|adakah|bisa|tolong|mohon)?\s*(anda|kamu|admin|min|bot|ai)?\s*(bisa|dapat)?\s*(tolong\s+)?(membantu|bantu|jawab|tolong)\s*(saya|aku|abdi|urang|kami)?\s*(ga|gak|ngga|dong|min|kang|teh|ya)?\s*[,.-]?\s*/i,
     /^(bolehkah|boleh|bisakah|bisa)\s*(saya|aku|abdi|urang)?\s*(nanya|tanya|bertanya)\s*(ga|gak|dong|min|ya)?\s*[,.-]?\s*/i,
-    /^(mau|izin)\s*(nanya|bertanya)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
+    /^(mau|izin|bade)\s*(nanya|bertanya|naros)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
     /^(tolong|coba)?\s*(jelaskan|kasih tau|beri tahu|kasih info)\s*(dong|min)?\s*[,.-]?\s*/i,
   ];
 
   let cleaned = trimmed;
-  for (const pattern of preamblePatterns) {
-    cleaned = cleaned.replace(pattern, '').trim();
+  let changed = true;
+  let iterations = 0;
+  while (changed && iterations < 5) {
+    changed = false;
+    iterations++;
+    for (const pattern of preamblePatterns) {
+      const next = cleaned.replace(pattern, '').trim();
+      if (next !== cleaned) {
+        cleaned = next;
+        changed = true;
+      }
+    }
   }
 
-  cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|seputar|soal)\s*/i, '').trim();
-  cleaned = cleaned.replace(/\s*(min|kang|teh|admin|bot|ai|dong|nih|ya)[?!.,]*$/i, '').trim();
+  cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|mengenai|seputar|soal|pami|terkait)\s*/i, '').trim();
+  cleaned = cleaned.replace(/(\s+|^)\b(min|kang|teh|admin|bot|ai|dong|nih|ya)[?!.,]*$/i, '').trim();
 
   if (!cleaned || cleaned.length < 2) {
     return { coreQuery: '', isPureIntro: true, hasQuestion: false };
@@ -932,63 +943,68 @@ Pemohon dapat memantau status pengajuannya secara langsung melalui menu **'Riway
   }
 
   // 0.6B3: Pertanyaan Awalan Sopan & Izin Bertanya ("Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros")
+  // Only triggers if there is NO substantive follow-up question attached!
   const isIntroductoryPreamble =
-    q === 'bolehkah saya bertanya' ||
-    q === 'bolehkah saya bertanya?' ||
-    q === 'boleh saya bertanya' ||
-    q === 'boleh saya bertanya?' ||
-    q === 'bisakah saya bertanya' ||
-    q === 'bisakah saya bertanya?' ||
-    q === 'bolehkah bertanya' ||
-    q === 'bolehkah bertanya?' ||
-    q.startsWith('bolehkah saya bertanya') ||
-    q.startsWith('boleh saya bertanya') ||
-    q.startsWith('bisakah saya bertanya') ||
-    q.startsWith('bolehkah bertanya') ||
-    q.includes('izin bertanya') ||
-    q.includes('izin nanya') ||
-    q === 'boleh nanya' ||
-    q === 'boleh nanya?' ||
-    q === 'boleh nanya dong' ||
-    q === 'boleh nanya dong?' ||
-    q.startsWith('boleh nanya') ||
-    q === 'bade naros' ||
-    q === 'bade naros?' ||
-    q === 'bade naros tiasa' ||
-    q === 'bade naros tiasa?' ||
-    q.includes('bade naros') ||
-    q.includes('tiasa naros') ||
-    q === 'mau nanya' ||
-    q === 'mau nanya?' ||
-    q === 'mau nanya dong' ||
-    q === 'mau nanya dong?' ||
-    q.startsWith('mau nanya') ||
-    q === 'ada yang ingin saya tanyakan' ||
-    q === 'ada yang ingin saya tanyakan?' ||
-    q.startsWith('ada yang ingin saya tanyakan') ||
-    q === 'apakah anda bisa bantu saya' ||
-    q === 'apakah anda bisa bantu saya?' ||
-    q === 'apakah bisa bantu saya' ||
-    q === 'apakah bisa bantu saya?' ||
-    q === 'bisakah bantu saya' ||
-    q === 'bisakah bantu saya?' ||
-    q === 'bisakah anda bantu saya' ||
-    q === 'bisakah anda bantu saya?' ||
-    q === 'bisakah kamu bantu saya' ||
-    q === 'bisakah kamu bantu saya?' ||
-    q === 'bisakah membantu saya' ||
-    q === 'bisakah membantu saya?' ||
-    q === 'bisa bantu saya' ||
-    q === 'bisa bantu saya?' ||
-    q === 'bisa tolong bantu saya' ||
-    q === 'bisa tolong bantu saya?' ||
-    q === 'bisa tolong saya' ||
-    q === 'tolong bantu saya' ||
-    q.includes('bisakah bantu') ||
-    q.includes('bisakah membantu') ||
-    q.includes('bisa tolong bantu') ||
-    q === 'halo min mau nanya' ||
-    q === 'halo admin mau nanya';
+    !hasQuestion &&
+    (
+      isPureIntro ||
+      q === 'bolehkah saya bertanya' ||
+      q === 'bolehkah saya bertanya?' ||
+      q === 'boleh saya bertanya' ||
+      q === 'boleh saya bertanya?' ||
+      q === 'bisakah saya bertanya' ||
+      q === 'bisakah saya bertanya?' ||
+      q === 'bolehkah bertanya' ||
+      q === 'bolehkah bertanya?' ||
+      q.startsWith('bolehkah saya bertanya') ||
+      q.startsWith('boleh saya bertanya') ||
+      q.startsWith('bisakah saya bertanya') ||
+      q.startsWith('bolehkah bertanya') ||
+      q.includes('izin bertanya') ||
+      q.includes('izin nanya') ||
+      q === 'boleh nanya' ||
+      q === 'boleh nanya?' ||
+      q === 'boleh nanya dong' ||
+      q === 'boleh nanya dong?' ||
+      q.startsWith('boleh nanya') ||
+      q === 'bade naros' ||
+      q === 'bade naros?' ||
+      q === 'bade naros tiasa' ||
+      q === 'bade naros tiasa?' ||
+      q.includes('bade naros') ||
+      q.includes('tiasa naros') ||
+      q === 'mau nanya' ||
+      q === 'mau nanya?' ||
+      q === 'mau nanya dong' ||
+      q === 'mau nanya dong?' ||
+      q.startsWith('mau nanya') ||
+      q === 'ada yang ingin saya tanyakan' ||
+      q === 'ada yang ingin saya tanyakan?' ||
+      q.startsWith('ada yang ingin saya tanyakan') ||
+      q === 'apakah anda bisa bantu saya' ||
+      q === 'apakah anda bisa bantu saya?' ||
+      q === 'apakah bisa bantu saya' ||
+      q === 'apakah bisa bantu saya?' ||
+      q === 'bisakah bantu saya' ||
+      q === 'bisakah bantu saya?' ||
+      q === 'bisakah anda bantu saya' ||
+      q === 'bisakah anda bantu saya?' ||
+      q === 'bisakah kamu bantu saya' ||
+      q === 'bisakah kamu bantu saya?' ||
+      q === 'bisakah membantu saya' ||
+      q === 'bisakah membantu saya?' ||
+      q === 'bisa bantu saya' ||
+      q === 'bisa bantu saya?' ||
+      q === 'bisa tolong bantu saya' ||
+      q === 'bisa tolong bantu saya?' ||
+      q === 'bisa tolong saya' ||
+      q === 'tolong bantu saya' ||
+      q.includes('bisakah bantu') ||
+      q.includes('bisakah membantu') ||
+      q.includes('bisa tolong bantu') ||
+      q === 'halo min mau nanya' ||
+      q === 'halo admin mau nanya'
+    );
 
   if (isIntroductoryPreamble) {
     return `Tentu saja, silahkan apa yang ingin ditanyakan. Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, maupun layanan sosial di Jawa Barat. 😊`;
@@ -2294,6 +2310,7 @@ export function verifyAndTrackAnswerAccuracy(
   const normQ = query.toLowerCase().replace(/[?!.,]/g, '').trim();
   // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
   const isDeveloperUser = userRole === 'developer';
+  const { coreQuery: extractedCoreQ, isPureIntro: accuracyIsPureIntro, hasQuestion: accuracyHasQuestion } = extractCoreQueryIntent(query);
 
   // 0. STRICT SECURITY GUARD CHECK
   const isSecurity =
@@ -2568,73 +2585,78 @@ export function verifyAndTrackAnswerAccuracy(
   }
 
   // Polite Introductory Preamble Interceptor ("Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros")
+  // Only intercepts when user is ONLY asking to ask (no substantive question follows)
   const isIntroductoryPreambleInAccuracy =
-    normQ === 'bolehkah saya bertanya' ||
-    normQ === 'bolehkah saya bertanya?' ||
-    normQ === 'boleh saya bertanya' ||
-    normQ === 'boleh saya bertanya?' ||
-    normQ === 'bisakah saya bertanya' ||
-    normQ === 'bisakah saya bertanya?' ||
-    normQ === 'bolehkah bertanya' ||
-    normQ === 'bolehkah bertanya?' ||
-    normQ.startsWith('bolehkah saya bertanya') ||
-    normQ.startsWith('boleh saya bertanya') ||
-    normQ.startsWith('bisakah saya bertanya') ||
-    normQ.startsWith('bolehkah bertanya') ||
-    normQ.includes('izin bertanya') ||
-    normQ.includes('izin nanya') ||
-    normQ === 'boleh nanya' ||
-    normQ === 'boleh nanya?' ||
-    normQ === 'boleh nanya dong' ||
-    normQ === 'boleh nanya dong?' ||
-    normQ.startsWith('boleh nanya') ||
-    normQ === 'bade naros' ||
-    normQ === 'bade naros?' ||
-    normQ === 'bade naros tiasa' ||
-    normQ === 'bade naros tiasa?' ||
-    normQ.includes('bade naros') ||
-    normQ.includes('tiasa naros') ||
-    normQ === 'mau nanya' ||
-    normQ === 'mau nanya?' ||
-    normQ === 'mau nanya dong' ||
-    normQ === 'mau nanya dong?' ||
-    normQ.startsWith('mau nanya') ||
-    normQ === 'ada yang ingin saya tanyakan' ||
-    normQ === 'ada yang ingin saya tanyakan?' ||
-    normQ.startsWith('ada yang ingin saya tanyakan') ||
-    normQ === 'apakah anda bisa bantu saya' ||
-    normQ === 'apakah anda bisa bantu saya?' ||
-    normQ === 'apakah bisa bantu saya' ||
-    normQ === 'apakah bisa bantu saya?' ||
-    normQ === 'bisakah bantu saya' ||
-    normQ === 'bisakah bantu saya?' ||
-    normQ === 'bisakah anda bantu saya' ||
-    normQ === 'bisakah anda bantu saya?' ||
-    normQ === 'bisakah kamu bantu saya' ||
-    normQ === 'bisakah kamu bantu saya?' ||
-    normQ === 'bisakah membantu saya' ||
-    normQ === 'bisakah membantu saya?' ||
-    normQ === 'bisa bantu saya' ||
-    normQ === 'bisa bantu saya?' ||
-    normQ === 'bisa tolong bantu saya' ||
-    normQ === 'bisa tolong bantu saya?' ||
-    normQ === 'bisa tolong saya' ||
-    normQ === 'tolong bantu saya' ||
-    normQ.includes('bisakah bantu') ||
-    normQ.includes('bisakah membantu') ||
-    normQ.includes('bisa tolong bantu') ||
-    normQ === 'halo min mau nanya' ||
-    normQ === 'halo admin mau nanya' ||
-    normQ.includes('menanyakan 1 hal') ||
-    normQ.includes('menanyakan satu hal') ||
-    normQ.includes('nanya 1 hal') ||
-    normQ.includes('nanya satu hal') ||
-    normQ.includes('1 hal lagi') ||
-    normQ.includes('satu hal lagi') ||
-    normQ.includes('ingin bertanya lagi') ||
-    normQ.includes('mau bertanya lagi') ||
-    normQ.includes('mau nanya lagi') ||
-    normQ.includes('ingin nanya lagi');
+    !accuracyHasQuestion &&
+    (
+      accuracyIsPureIntro ||
+      normQ === 'bolehkah saya bertanya' ||
+      normQ === 'bolehkah saya bertanya?' ||
+      normQ === 'boleh saya bertanya' ||
+      normQ === 'boleh saya bertanya?' ||
+      normQ === 'bisakah saya bertanya' ||
+      normQ === 'bisakah saya bertanya?' ||
+      normQ === 'bolehkah bertanya' ||
+      normQ === 'bolehkah bertanya?' ||
+      normQ.startsWith('bolehkah saya bertanya') ||
+      normQ.startsWith('boleh saya bertanya') ||
+      normQ.startsWith('bisakah saya bertanya') ||
+      normQ.startsWith('bolehkah bertanya') ||
+      normQ.includes('izin bertanya') ||
+      normQ.includes('izin nanya') ||
+      normQ === 'boleh nanya' ||
+      normQ === 'boleh nanya?' ||
+      normQ === 'boleh nanya dong' ||
+      normQ === 'boleh nanya dong?' ||
+      normQ.startsWith('boleh nanya') ||
+      normQ === 'bade naros' ||
+      normQ === 'bade naros?' ||
+      normQ === 'bade naros tiasa' ||
+      normQ === 'bade naros tiasa?' ||
+      normQ.includes('bade naros') ||
+      normQ.includes('tiasa naros') ||
+      normQ === 'mau nanya' ||
+      normQ === 'mau nanya?' ||
+      normQ === 'mau nanya dong' ||
+      normQ === 'mau nanya dong?' ||
+      normQ.startsWith('mau nanya') ||
+      normQ === 'ada yang ingin saya tanyakan' ||
+      normQ === 'ada yang ingin saya tanyakan?' ||
+      normQ.startsWith('ada yang ingin saya tanyakan') ||
+      normQ === 'apakah anda bisa bantu saya' ||
+      normQ === 'apakah anda bisa bantu saya?' ||
+      normQ === 'apakah bisa bantu saya' ||
+      normQ === 'apakah bisa bantu saya?' ||
+      normQ === 'bisakah bantu saya' ||
+      normQ === 'bisakah bantu saya?' ||
+      normQ === 'bisakah anda bantu saya' ||
+      normQ === 'bisakah anda bantu saya?' ||
+      normQ === 'bisakah kamu bantu saya' ||
+      normQ === 'bisakah kamu bantu saya?' ||
+      normQ === 'bisakah membantu saya' ||
+      normQ === 'bisakah membantu saya?' ||
+      normQ === 'bisa bantu saya' ||
+      normQ === 'bisa bantu saya?' ||
+      normQ === 'bisa tolong bantu saya' ||
+      normQ === 'bisa tolong bantu saya?' ||
+      normQ === 'bisa tolong saya' ||
+      normQ === 'tolong bantu saya' ||
+      normQ.includes('bisakah bantu') ||
+      normQ.includes('bisakah membantu') ||
+      normQ.includes('bisa tolong bantu') ||
+      normQ === 'halo min mau nanya' ||
+      normQ === 'halo admin mau nanya' ||
+      normQ.includes('menanyakan 1 hal') ||
+      normQ.includes('menanyakan satu hal') ||
+      normQ.includes('nanya 1 hal') ||
+      normQ.includes('nanya satu hal') ||
+      normQ.includes('1 hal lagi') ||
+      normQ.includes('satu hal lagi') ||
+      normQ.includes('ingin bertanya lagi') ||
+      normQ.includes('mau bertanya lagi') ||
+      normQ.includes('mau nanya lagi') ||
+      normQ.includes('ingin nanya lagi')
+    );
 
   if (isIntroductoryPreambleInAccuracy) {
     if (rawReply && rawReply.trim().length > 0 && !rawReply.includes('Mohon maaf, saya belum dapat mengenali atau menemukan informasi') && !rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi')) {

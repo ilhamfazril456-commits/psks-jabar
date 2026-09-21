@@ -678,27 +678,34 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
 
     // List of common Indonesian & Sundanese conversational preamble regexes
     const preamblePatterns = [
-      /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
-      /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum|dulu)?\s*[,.-]?\s*/i,
-      /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong)?\s*(nanya|tanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
-      /^(bisa|tolong|mohon)?\s*(bantu|jawab|tolong)\s*(saya|aku|abdi|urang)?\s*(ga|dong|min|kang|teh)?\s*[,.-]?\s*/i,
-      /^(boleh|bisa)?\s*(nanya|tanya)\s*(ga|dong|min)?\s*[,.-]?\s*/i,
-      /^(mau|izin)\s*(nanya|bertanya)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
+      /^((oke|ok|siap|baik|baiklah|nah|jadi|trus|terus|sekarang|yaudah|mangga|atuh|punten)\b\s*[,.-]?\s*)+/i,
+      /^(halo|hai|hey|hei|sampurasun|assalamualaikum|assalamu'alaikum|punten|permisi)\b\s*(min|kang|teh|admin|bot|ai)?\s*[,.-]?\s*/i,
+      /^(min|kang|teh|admin|bot|ai)\s*[,.-]?\s*(mau|bisa|bisakah|izin|tolong)?\s*(tanya|nanya|bantu|konsultasi)?\s*(dong|nih|ya|dulu|sebelum)?\s*[,.-]?\s*/i,
+      /^(saya|abdi|urang|kuring|aku)?\s*(mau|pengen|bade|hoyong|ingin)?\s*(nanya|tanya|bertanya|konsultasi|minta bantuan)\s*(dulu|dong|nih|sebelum)?\s*(nanya|tanya|konsultasi|mengenai|tentang|soal|seputar)?\s*(yang lain|hal lain)?\s*[,.-]?\s*/i,
+      /^(apakah|bisakah|dapatkah|adakah|bisa|tolong|mohon)?\s*(anda|kamu|admin|min|bot|ai)?\s*(bisa|dapat)?\s*(tolong\s+)?(membantu|bantu|jawab|tolong)\s*(saya|aku|abdi|urang|kami)?\s*(ga|gak|ngga|dong|min|kang|teh|ya)?\s*[,.-]?\s*/i,
+      /^(bolehkah|boleh|bisakah|bisa)\s*(saya|aku|abdi|urang)?\s*(nanya|tanya|bertanya)\s*(ga|gak|dong|min|ya)?\s*[,.-]?\s*/i,
+      /^(mau|izin|bade)\s*(nanya|bertanya|naros)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
       /^(tolong|coba)?\s*(jelaskan|kasih tau|beri tahu|kasih info)\s*(dong|min)?\s*[,.-]?\s*/i,
     ];
 
     let cleaned = trimmed;
-    let stripped = false;
-    for (const pattern of preamblePatterns) {
-      const next = cleaned.replace(pattern, '').trim();
-      if (next !== cleaned) {
-        cleaned = next;
-        stripped = true;
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 5) {
+      changed = false;
+      iterations++;
+      for (const pattern of preamblePatterns) {
+        const next = cleaned.replace(pattern, '').trim();
+        if (next !== cleaned) {
+          cleaned = next;
+          changed = true;
+        }
       }
     }
 
     // Strip leading punctuation or conjunctions left over
-    cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|seputar|soal)\s*/i, '').trim();
+    cleaned = cleaned.replace(/^([,.\-?!:]|dan|trus|terus|kalo|kalau|tentang|mengenai|seputar|soal|pami|terkait)\s*/i, '').trim();
+    cleaned = cleaned.replace(/(\s+|^)\b(min|kang|teh|admin|bot|ai|dong|nih|ya)[?!.,]*$/i, '').trim();
 
     if (!cleaned || cleaned.length < 2) {
       return { coreQuery: '', isPureIntro: true, hasQuestion: false };
@@ -2712,7 +2719,7 @@ AI WAJIB:
         const sanitizedContents = normalizeGeminiContents(messages);
 
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
-        const candidateModels = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+        const candidateModels = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
         let replyText = '';
 
         for (const modelName of candidateModels) {
