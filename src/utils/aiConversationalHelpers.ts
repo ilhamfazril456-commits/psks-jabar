@@ -24,8 +24,8 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
 
   if (!norm) return { isFiller: false, fillerType: null };
 
-  // Strip conversational opener prefixes (e.g. "oke sekarang", "nah sekarang", "baiklah", "jadi", "oh begitu", dll.)
-  const strippedOpener = norm.replace(/^(oke|ok|baik|baiklah|nah|jadi|trus|terus|sekarang|yaudah|yowes|mangga|atuh|punten|oh\s+begitu|oh\s+gitu)(\s+(sekarang|nih|dulu|atuh|dong|min|kang|teh|admin))*\s+/i, '').trim();
+  // Strip conversational opener prefixes (e.g. "oke sekarang", "oke siap sekarang", "nah sekarang", "baiklah", "jadi", "oh begitu", dll.)
+  const strippedOpener = norm.replace(/^((oke|ok|siap|baik|baiklah|nah|jadi|trus|terus|sekarang|yaudah|yowes|mangga|atuh|punten|oh\s+begitu|oh\s+gitu|halo|hai|min|kang|teh|admin)\s+)+/i, '').trim();
 
   // Helper tester for string candidates (testing both raw stripped and opener-stripped forms)
   const testCandidate = (s: string) => {
@@ -58,7 +58,9 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
       /^(saya\s+|abdi\s+|urang\s+|aku\s+)?(ingin|mau|bade|hoyong|pengen)?\s*(menanyakan|tanyakan|nanya|bertanya|naros|taros)\s*(\d+|satu|hiji)?\s*(hal|perkara|perkawis|soal|pertanyaan)?(\s+lagi|\s+deui)?$/i.test(s) ||
       /^(ada\s+|aya\s+)?(\d+|satu|hiji)?\s*(hal|perkara|perkawis|pertanyaan|tarosan|anu\s+bade\s+ditaroskeun|yang\s+ingin\s+ditanyakan)\s*(lagi|deui)?$/i.test(s) ||
       /^(satu\s+hal\s+lagi|1\s+hal\s+lagi|ada\s+1\s+hal\s+lagi|ada\s+satu\s+hal\s+lagi|hiji\s+perkawis\s+deui|hiji\s+deui|1\s+deui|pertanyaan\s+terakhir)$/i.test(s) ||
-      /^(saya|abdi|urang|aku)?\s*(ingin|mau|bade|hoyong|pengen)?\s*(nanya|tanya|bertanya|menanyakan|tanyakan)\s*(lagi|deui)$/i.test(s)
+      /^(saya|abdi|urang|aku)?\s*(ingin|mau|bade|hoyong|pengen)?\s*(nanya|tanya|bertanya|menanyakan|tanyakan)\s*(lagi|deui)$/i.test(s) ||
+      /\b(ingin|mau|bade|hoyong|pengen)\s+(menanyakan|tanyakan|nanya|bertanya|naros|taros)\s+(\d+|satu|hiji)?\s*(hal|perkara|perkawis|soal|pertanyaan)?\s*(lagi|deui)\b/i.test(s) ||
+      /\b(ada|aya)\s+(\d+|satu|hiji)\s+(hal|perkara|pertanyaan)\s*(lagi|deui)\b/i.test(s)
     );
   };
 

@@ -2502,11 +2502,12 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     3. Status Resmi: Setelah disahkan resmi menjadi status SAH_TERDAFTAR, data personil resmi tercatat dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
     4. Tindak Lanjut: Jika melebihi batas waktu tersebut belum ada pembaruan status, silakan berkoordinasi langsung dengan pihak Dinas Sosial Kabupaten/Kota domisili Anda atau Dinas Sosial Provinsi Jawa Barat.
     Sertakan action tags: [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
-- [KEBIJAKAN KETIKA TIDAK MEMILIKI INFORMASI / PERTANYAAN DI LUAR KNOWLEDGE BASE]:
-  * Jika ada pertanyaan spesifik yang informasinya benar-benar tidak Anda miliki dalam sistem atau basis data, WAJIB dijawab dengan sopan dan santun mengikuti format:
-    "Mohon maaf untuk saat ini masih belum memiliki informasi ([sebutkan konteks/topik yang ditanyakan secara singkat]) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut."
-    Sertakan tombol: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
-  * PERINGATAN PENTING (DILARANG SALAH MENERAPKAN): Format penolakan "Mohon maaf..." di atas DILARANG KERAS digunakan untuk tanggapan percakapan alami, obrolan santai, apresiasi/pujian (misal: "hebat juga beliau", "keren ya", "mantap", "salut", "luar biasa"), konfirmasi/reaksi (misal: "owalah", "oh gitu", "berarti", "pantesan", "baru tahu"), maupun ucapan terima kasih/salam. Untuk kalimat-kalimat tersebut, sambutlah secara hangat, bersahabat, kontekstual, dan mengalir!`;
+- [KEBIJAKAN KETIKA PERTANYAAN DI LUAR KNOWLEDGE BASE / TIDAK RELEVAN]:
+  * Jawablah secara alami, ramah, dan manusiawi layaknya asisten cerdas berwawasan luas.
+  * Jika pertanyaan di luar domain kesejahteraan sosial dan kedinasan (seperti rumus matematika umum, sains, budaya, atau sapaan santai), Anda boleh merespons secara singkat, ramah, dan membantu, lalu secara luwes mengarahkan kembali ke layanan 10 Pilar PSKS Jawa Barat.
+  * Jika pengguna menanyakan data kedinasan internal yang tidak Anda miliki, berikan penjelasan secara wajar dan sopan bahwa data spesifik tersebut saat ini belum tercatat pada basis data sistem kami, dan sarankan untuk menghubungi Dinas Sosial Provinsi Jawa Barat melalui tombol: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
+  * DILARANG KERAS menempelkan masukan pengguna mentah-mentah ke dalam tanda kurung kalimat template kaku!
+  * PERINGATAN PENTING (DILARANG SALAH MENERAPKAN): Tanggapan percakapan alami, obrolan santai, konfirmasi ("oke", "siap", "paham", "baik"), niat bertanya ("ada 1 hal lagi", "ingin bertanya lagi"), apresiasi/pujian (misal: "hebat juga beliau", "keren ya", "mantap", "salut"), maupun ucapan terima kasih/salam HARUS selalu disambut secara hangat, bersahabat, kontekstual, dan mengalir!`;
           }
 
           if (userContext.liveSummary) {
@@ -2711,7 +2712,7 @@ AI WAJIB:
         const sanitizedContents = normalizeGeminiContents(messages);
 
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
-        const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.8-flash'];
+        const candidateModels = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
         let replyText = '';
 
         for (const modelName of candidateModels) {

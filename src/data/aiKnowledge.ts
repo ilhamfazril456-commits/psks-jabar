@@ -2106,9 +2106,8 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
     );
   }
 
-  // Polite unhandled fallback per instructions
-  const cleanTopic = targetQ.slice(0, 80).trim();
-  return `Mohon maaf untuk saat ini masih belum memiliki informasi (${cleanTopic ? `${cleanTopic}` : 'yang ditanyakan'}) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  // Modern, intelligent and polite fallback
+  return `Mohon maaf, saya belum menemukan informasi spesifik mengenai hal tersebut dalam pangkalan data layanan sosial saat ini.\n\nSebagai Asisten Resmi **PSKS JABAR**, saya dapat membantu memberikan panduan terkait:\n- **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).\n- **Alur Pendaftaran Mandiri** & verifikasi berkas berjenjang.\n- **Layanan dan Kontak Pengaduan** Dinas Sosial Provinsi Jawa Barat.\n\nApakah ada hal seputar pilar sosial atau layanan yang ingin Anda tanyakan? Silakan hubungi dinas sosial untuk koordinasi lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
 }
 
 
