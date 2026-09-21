@@ -2711,7 +2711,7 @@ AI WAJIB:
         const sanitizedContents = normalizeGeminiContents(messages);
 
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
-        const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+        const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.8-flash'];
         let replyText = '';
 
         for (const modelName of candidateModels) {

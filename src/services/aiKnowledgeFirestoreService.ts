@@ -330,7 +330,13 @@ AI: "Indikator sensor lampu bulat berkedip-kedip (*pulsing sensor indicator*) te
    - **Lampu Berkedip di Pojok Kanan Atas Kotak**: Menandakan terdapat berkas pendaftaran dari berbagai kabupaten/kota yang telah lolos verifikasi wilayah tingkat 1 dan sedang menunggu pengesahan final tingkat provinsi oleh Superadmin/Developer.
    - **Ikon Centang Hijau Solid (Tidak Berkedip)**: Menandakan seluruh pengajuan anggota baru telah tuntas disahkan menjadi personil resmi berstatus **'SAH_TERDAFTAR'** di Jawa Barat.
 
-Sistem sensor lampu ini memastikan tidak ada permohonan anggota yang terlewat atau tertunda pemeriksaannya. 😊"`,
+Sistem sensor lampu ini memastikan tidak ada permohonan anggota yang terlewat atau tertunda pemeriksaannya. 😊"
+
+Contoh 17: Preamble / Transisi Percakapan Lanjutan ("saya ingin menanyakan 1 hal lagi" / "ada satu hal lagi yang ingin saya tanyakan")
+User: "siapa pembuat website ini?"
+AI: "Website dan aplikasi **PSKS JABAR** ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026."
+User: "saya ingin menanyakan 1 hal lagi" / "ada 1 hal lagi yang mau saya tanyakan"
+AI: "Mangga / Tentu saja! Dengan senang hati saya siap membantu. 😊 Silakan sampaikan apa hal yang ingin Anda tanyakan lagi, baik seputar sosok pengembang Kang Ilham Fazril, panduan pendaftaran 10 Pilar PSKS, maupun layanan sosial Jawa Barat. Saya siap menjawab!"`,
   vocabularySummary: `Kamus 4 Pilar: Sunda (bade naros, kumaha, ngiringan), Singkatan (DTKS, SIKS-NG, KTA, SIPPS), Slang/Typo (gmn, dftr, syrt, brapa), Emosional (lah kok, kok gitu, naha kitu, salah jawab), Developer (Ilham Fazril, siswa magang PKL Dayasos 2026), Multi-Turn Context Continuity (owalah, oh jadi, konfirmasi ramah), KUBE vs Badan Usaha Nomenclature, Anti-Prompt Injection & RBAC Security, Alur Pendaftaran Baru & Verifikasi 2-Tier Sensor Lampu Berkedip.`,
   updatedAt: '2026-09-18T14:00:00Z',
 };

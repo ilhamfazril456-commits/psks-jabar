@@ -1,4 +1,4 @@
-export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise';
+export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up';
 
 export interface ConversationalFillerResult {
   isFiller: boolean;
@@ -40,7 +40,16 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
     return { isFiller: true, fillerType: 'ack' };
   }
 
-  // 3. Praise / Appreciation ("mantap", "keren", "bagus", "hebat", dll.)
+  // 3. Follow-up Preamble / Intention to ask more questions ("saya ingin menanyakan 1 hal lagi", "ada 1 hal lagi", dll.)
+  if (
+    /^(saya\s+|abdi\s+|urang\s+)?(ingin|mau|bade|hoyong)\s+(menanyakan|nanya|bertanya|naros|taros)\s+(\d+|satu|hiji)?\s*(hal|perkara|perkawis)?(\s+lagi|\s+deui)?$/i.test(norm) ||
+    /^(ada\s+|aya\s+)?(\d+|satu|hiji)?\s*(hal|perkara|perkawis|pertanyaan|tarosan|anu\s+bade\s+ditaroskeun|yang\s+ingin\s+ditanyakan)\s*(lagi|deui)?$/i.test(norm) ||
+    /^(satu\s+hal\s+lagi|1\s+hal\s+lagi|ada\s+1\s+hal\s+lagi|ada\s+satu\s+hal\s+lagi|hiji\s+perkawis\s+deui|hiji\s+deui|1\s+deui|pertanyaan\s+terakhir)$/i.test(norm)
+  ) {
+    return { isFiller: true, fillerType: 'follow_up' };
+  }
+
+  // 4. Praise / Appreciation ("mantap", "keren", "bagus", "hebat", dll.)
   if (
     /^(mantap|mantul|keren|bagus|hebat|salut|top|jos|joss|gokil|sae\s+pisan|alus\s+pisan|luar\s+biasa|patut\s+diacungi\s+jempol|edun)(\s+(banget|sekali|min|kang|teh|admin|ya|pisan|euy))*$/i.test(norm)
   ) {
@@ -85,7 +94,18 @@ export function formatConversationalFillerReply(
     if (fillerType === 'praise') {
       return `Hehe nuhun pujianna Kang **Ilham Fazril**! Arsitektur full-stack sistem PSKS JABAR buatan maneh emang patut diacungi jempol. Mau bahas atau kembangin fitur apa lagi nih? 😎⚡`;
     }
+    if (fillerType === 'follow_up') {
+      return `Mangga atuh Kang **Ilham Fazril**, sampaikan saja! Mau nanya atau bahas hal apa lagi nih? Urang siap jawab tuntas! 🚀⚡`;
+    }
     return `Siap santai Kang **Ilham Fazril**! Kodingan dan sistem AI udah sinkron mantap. Ada hal atau fitur apa lagi yang mau kita eksekusi? 🚀⚡`;
+  }
+
+  // Follow-up Preamble ("saya ingin menanyakan 1 hal lagi", "ada 1 hal lagi", dll.)
+  if (fillerType === 'follow_up') {
+    if (topicContext) {
+      return `Tentu saja, silakan sampaikan apa yang ingin Anda tanyakan lebih lanjut seputar **${topicContext}** atau topik lainnya! Saya siap membantu menjawab dengan senang hati 😊.`;
+    }
+    return `Tentu saja, silakan sampaikan pertanyaan Anda! Saya siap membantu menjawab informasi seputar 10 Pilar PSKS, pendaftaran anggota, maupun layanan Dinas Sosial Jawa Barat 😊.`;
   }
 
   // Ucapan Terima Kasih

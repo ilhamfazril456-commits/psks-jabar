@@ -2624,10 +2624,20 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('bisakah membantu') ||
     normQ.includes('bisa tolong bantu') ||
     normQ === 'halo min mau nanya' ||
-    normQ === 'halo admin mau nanya';
+    normQ === 'halo admin mau nanya' ||
+    normQ.includes('menanyakan 1 hal') ||
+    normQ.includes('menanyakan satu hal') ||
+    normQ.includes('nanya 1 hal') ||
+    normQ.includes('nanya satu hal') ||
+    normQ.includes('1 hal lagi') ||
+    normQ.includes('satu hal lagi') ||
+    normQ.includes('ingin bertanya lagi') ||
+    normQ.includes('mau bertanya lagi') ||
+    normQ.includes('mau nanya lagi') ||
+    normQ.includes('ingin nanya lagi');
 
   if (isIntroductoryPreambleInAccuracy) {
-    if (rawReply && (rawReply.toLowerCase().includes('mangga') || rawReply.toLowerCase().includes('silakan') || rawReply.toLowerCase().includes('silahkan') || rawReply.toLowerCase().includes('siap membantu'))) {
+    if (rawReply && rawReply.trim().length > 0 && !rawReply.includes('Mohon maaf, saya belum dapat mengenali atau menemukan informasi') && !rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi')) {
       return {
         finalContent: rawReply.trim(),
         isAccurate: true,
