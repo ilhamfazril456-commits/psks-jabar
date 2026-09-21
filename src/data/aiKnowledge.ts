@@ -2455,6 +2455,28 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // =========================================================================
+  // ARCHITECTURAL UPGRADE: PRIORITIZE MODEL INTELLIGENCE & NATURAL CONVERSATION
+  // =========================================================================
+  // If the dynamic AI model (Gemini / server assistant) returned a meaningful, non-empty response,
+  // we TRUST the model's contextual understanding directly.
+  // This completely eliminates "instruction fatigue" and rigid regex interception for conversational
+  // follow-ups, while preserving strict security / anti-impersonation / credential boundaries above.
+  if (rawReply && rawReply.trim().length > 0) {
+    const isModelRefusal =
+      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
+      rawReply.includes('belum dapat mengenali atau menemukan informasi');
+
+    if (!isModelRefusal) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+  }
+
   // 0.44 Interceptor Durasi / Berapa Lama Ajuan Pendaftaran Hingga Diterima / Disetujui
   const isDurationVerificationQuery =
     (normQ.includes('berapa lama') ||

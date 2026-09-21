@@ -2759,7 +2759,7 @@ AI WAJIB:
                 !cleaned.startsWith('(lanjutkan') &&
                 !cleaned.includes('lanjutkan penjelasan') &&
                 !isTruncated &&
-                cleaned.length > 20
+                cleaned.length >= 2
               ) {
                 replyText = cleaned;
                 break;
