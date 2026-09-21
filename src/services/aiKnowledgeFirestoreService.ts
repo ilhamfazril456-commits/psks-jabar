@@ -1,5 +1,6 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { checkConversationalFiller } from '../utils/aiConversationalHelpers';
 
 export interface AIKnowledgeDoc {
   id: string;
@@ -1970,9 +1971,12 @@ AI:
       normCurrent.includes('edun')
     );
 
+  const fillerCheckResult = checkConversationalFiller(normCurrent);
+
   const isAckOrConfirm =
     !isQuestionOrSecurityRequest &&
     (
+      fillerCheckResult.isFiller ||
       /^(o+h+|o+a+lah|owalah|jadi|berarti|ternyata|pantesan|wah|paham|ngerti|siap|mantap)\b/i.test(normCurrent) ||
       normCurrent.startsWith('baru tahu') ||
       normCurrent.startsWith('baru tau') ||
@@ -2078,6 +2082,10 @@ AI:
         detectedObject = 'Buku Tamu Digital';
       } else if (text.includes('kta') || text.includes('qr code') || text.includes('kartu')) {
         detectedObject = 'KTA Digital & Smart Access Card';
+      } else if (text.includes('alur pendaftaran') || text.includes('pendaftaran') || text.includes('daftar')) {
+        detectedObject = 'Alur Pendaftaran & Verifikasi Berkas';
+      } else if (text.includes('psks') || text.includes('potensi dan sumber kesejahteraan') || text.includes('kesejahteraan sosial') || text.includes('dinsos')) {
+        detectedObject = 'Sistem Informasi & 10 Pilar PSKS Jawa Barat';
       }
     }
 

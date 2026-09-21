@@ -6,6 +6,19 @@ import {
   normalizeQueryWithComprehensiveVocabulary,
   searchKnowledgeBase,
 } from '../services/aiKnowledgeFirestoreService';
+import {
+  checkConversationalFiller,
+  formatConversationalFillerReply,
+  ConversationalFillerResult,
+  ConversationalFillerType,
+} from '../utils/aiConversationalHelpers';
+
+export {
+  checkConversationalFiller,
+  formatConversationalFillerReply,
+  type ConversationalFillerResult,
+  type ConversationalFillerType,
+};
 
 export interface SmartAnswerResult {
   matched: boolean;
@@ -210,6 +223,19 @@ export function getComprehensiveSmartAnswer(
 
   if (isAskingAdminAccess) {
     return `Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  }
+
+  // 0.0001 CONVERSATIONAL FILLERS, ACKNOWLEDGMENTS & USER REACTIONS
+  // Intercept natural conversation tokens ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", dll.)
+  // Never treat conversational fillers as missing topics or trigger refusal fallback!
+  const fillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ) || checkConversationalFiller(q);
+  if (fillerCheck.isFiller && fillerCheck.fillerType) {
+    return formatConversationalFillerReply(
+      fillerCheck.fillerType,
+      isDeveloperUser,
+      previousContext,
+      userName
+    );
   }
 
   // 0.001 SUPERADMIN OFFICIAL GUIDE: KELOLA AKUN ADMIN
@@ -2069,6 +2095,17 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
     return `Halo! Selamat datang di Portal **PSKS JABAR**. Saya siap memberikan informasi seputar:\n- **10 Pilar Utama PSKS**: Penjelasan detail PKSP (Peksos), PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, dan SLRT/Puskesos.\n- **Layanan Dinsos Jabar**: Kontak pengaduan, alamat kantor dinas, profil pimpinan Ibu Noneng Komara Nengsih, S.E., M.A.P., dan integrasi data sosial di 27 Kab/Kota.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda cari?`;
   }
 
+  // Double-check conversational filler before unhandled fallback to guarantee no false refusal
+  const finalFillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ);
+  if (finalFillerCheck.isFiller && finalFillerCheck.fillerType) {
+    return formatConversationalFillerReply(
+      finalFillerCheck.fillerType,
+      isDeveloperUser,
+      previousContext,
+      userName
+    );
+  }
+
   // Polite unhandled fallback per instructions
   const cleanTopic = targetQ.slice(0, 80).trim();
   return `Mohon maaf untuk saat ini masih belum memiliki informasi (${cleanTopic ? `${cleanTopic}` : 'yang ditanyakan'}) tersebut, silakan hubungi admin dinsos untuk informasi lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
@@ -2493,6 +2530,37 @@ export function verifyAndTrackAnswerAccuracy(
     );
     return {
       finalContent: verifiedSensorAnswer,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // Conversational Filler & Natural Reaction Interceptor ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", "oh gitu", etc.)
+  const accuracyFillerCheck = checkConversationalFiller(normQ) || checkConversationalFiller(query);
+  if (accuracyFillerCheck.isFiller && accuracyFillerCheck.fillerType) {
+    const isModelRefusal =
+      !rawReply ||
+      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
+      rawReply.includes('belum dapat mengenali atau menemukan informasi');
+
+    if (!isModelRefusal && rawReply.trim().length > 0) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+
+    const fillerReply = formatConversationalFillerReply(
+      accuracyFillerCheck.fillerType,
+      isDeveloperUser,
+      previousContext,
+      userName
+    );
+    return {
+      finalContent: fillerReply,
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',

@@ -19,6 +19,10 @@ import {
   convertUnmatchedLogToVocabulary,
   syncMasterItemsToFirestore,
 } from './src/services/aiKnowledgeFirestoreService';
+import {
+  checkConversationalFiller,
+  formatConversationalFillerReply,
+} from './src/utils/aiConversationalHelpers';
 
 dotenv.config();
 
@@ -789,6 +793,21 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
     // Kerahasiaan akun dan password developer mutlak bagi semua non-developer
     if (isDeveloperCredQuery) {
       return `Mohon maaf, kata sandi (*password*), kredensial, dan hak akses pengembang (*developer*) maupun administrator sistem **PSKS JABAR** merupakan informasi rahasia internal terenkripsi tingkat tinggi (*zero-disclosure*) dan sama sekali tidak dapat diberikan, di-reset, atau dibocorkan melalui asisten AI demi mematuhi UU Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas sistem.\n\nApabila Anda adalah pengembang atau administrator resmi yang memiliki hak akses, silakan masuk melalui menu login resmi sistem.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+
+    // 0.0001 CONVERSATIONAL FILLER & ACKNOWLEDGMENT INTERCEPTOR
+    // Intercept natural conversation tokens ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", dll.)
+    const fallbackFillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(q);
+    if (fallbackFillerCheck.isFiller && fallbackFillerCheck.fillerType) {
+      const prevAssistantMsg = Array.isArray(messages)
+        ? [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
+        : '';
+      return formatConversationalFillerReply(
+        fallbackFillerCheck.fillerType,
+        isDev,
+        prevAssistantMsg,
+        userContext?.nama
+      );
     }
 
     // Deteksi pertanyaan seputar alur kerja manajemen administratif, user, monitoring, & maintenance
@@ -2349,6 +2368,20 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
       return `Halo! Selamat datang di Portal **PSKS JABAR**. Saya siap memberikan informasi seputar:\n- **10 Pilar Utama PSKS**: Penjelasan detail PKSP (Peksos), PSM, Tagana, LKS, Karang Taruna, LK3, Pensos, TKSK, KUBE, dan SLRT/Puskesos.\n- **Layanan Dinsos Jabar**: Kontak pengaduan, alamat kantor dinas, profil pimpinan Ibu Noneng Komara Nengsih, S.E., M.A.P., dan integrasi data sosial di 27 Kab/Kota.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda cari?`;
     }
 
+    // Double-check conversational filler before returning refusal fallback
+    const finalFallbackFiller = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ);
+    if (finalFallbackFiller.isFiller && finalFallbackFiller.fillerType) {
+      const prevMsg = Array.isArray(messages)
+        ? [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
+        : '';
+      return formatConversationalFillerReply(
+        finalFallbackFiller.fillerType,
+        isDev,
+        prevMsg,
+        userContext?.nama
+      );
+    }
+
     // Default polite response when no information is found for the context asked:
     const cleanTopic = targetQ.slice(0, 80).trim();
     return `Mohon maaf, saya belum dapat mengenali atau menemukan informasi terkait "${cleanTopic || 'hal tersebut'}" dalam pangkalan data layanan PSKS Jawa Barat.\n\nSebagai Asisten Resmi PSKS Jabar, saya dapat membantu Anda memberikan informasi seputar **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran mandiri pilar, maupun layanan Dinas Sosial Provinsi Jawa Barat.\n\nApakah ada topik pilar sosial atau layanan yang ingin Anda tanyakan? Silakan hubungi kami jika Anda membutuhkan bantuan lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
@@ -2620,10 +2653,12 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           normQueryText.includes('cara');
 
         const hasAckEndingInPost = /(^|\s)(ya|kan|toh|nih)\??$/i.test(normQueryText);
+        const userFillerCheck = checkConversationalFiller(lastUserMsg) || checkConversationalFiller(normQueryText);
 
         const isAckOrConfirmMsg =
           !isQuestionOrSecurityInPost &&
           (
+            userFillerCheck.isFiller ||
             /^(o+h+|o+a+lah|owalah|jadi|berarti|ternyata|pantesan|wah|paham|ngerti|siap|mantap)\b/i.test(normQueryText) ||
             normQueryText.startsWith('baru tahu') ||
             normQueryText.startsWith('baru tau') ||
@@ -2645,6 +2680,16 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
             normQueryText.includes('yang buat') ||
             (hasAckEndingInPost && (normQueryText.startsWith('jadi ') || normQueryText.startsWith('berarti ')))
           );
+
+        if (userFillerCheck.isFiller && userFillerCheck.fillerType) {
+          contextualInstruction += `\n\n[RESPON ALAMI & KONVERSASIONAL (FILLER / REAKSI PERCAKAPAN: "${lastUserMsg}")]:
+Pengguna sedang memberikan respon percakapan alami, filler ("ohh", "oke", "siap", "paham", "ngerti"), ucapan terima kasih, atau apresiasi ("${lastUserMsg}").
+AI WAJIB:
+1. Tanggapi dengan sangat ramah, hangat, sopan, bersahabat, dan manusiawi!
+2. DILARANG KERAS menggunakan format penolakan 'Mohon maaf untuk saat ini masih belum memiliki informasi...' atau mencari kata filler tersebut di pangkalan data!
+3. Jika pengguna mengucapkan terima kasih atau pujian, balas dengan tulus dan senang bisa membantu.
+4. Jika pengguna merespons dengan filler pemahaman ("ohh", "oke", "siap", "paham", "ngerti", "oh gitu"), konfirmasikan pemahamannya secara ramah dan tanyakan apakah ada hal lain seputar 10 Pilar PSKS Jawa Barat atau layanan lainnya yang ingin diketahui.`;
+        }
 
         if (firestoreKnowledgeMatches.length > 0) {
           contextualInstruction += `\n\n[BASIS PENGETAHUAN RESMI TERVERIFIKASI DARI CLOUD FIRESTORE]:`;
@@ -2725,6 +2770,25 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           replyText = getSmartFallbackReply(lastUserMsg, userContext, messages);
         }
 
+        // Post-processing safety: If the user input is a conversational filler, NEVER return a missing info fallback
+        if (userFillerCheck.isFiller && userFillerCheck.fillerType) {
+          if (
+            !replyText ||
+            replyText.includes('Mohon maaf, saya belum dapat mengenali atau menemukan informasi') ||
+            replyText.includes('Mohon maaf untuk saat ini masih belum memiliki informasi')
+          ) {
+            const prevAssistantMsg = Array.isArray(messages)
+              ? [...messages].reverse().find((m: any) => m.role === 'assistant')?.content || ''
+              : '';
+            replyText = formatConversationalFillerReply(
+              userFillerCheck.fillerType,
+              isDeveloper,
+              prevAssistantMsg,
+              userContext?.nama
+            );
+          }
+        }
+
         // POST-PROCESSING ANTI-BLUNDER: Salam Islami hanya diberikan jika pengguna mengucapkan Assalamualaikum terlebih dahulu
         const userGaveSalam = /\b(assalamu?['’]?alaikum|as-salamu?['’]?alaikum|assalam|as-salam)\b/i.test(lastUserMsg);
         if (!userGaveSalam) {
@@ -2738,11 +2802,11 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         }
 
         // PILAR 5: ACTIVE LEARNING & ANONYMOUS QUERY LOGS
-        // Asynchronously log queries that have low knowledge base coverage, complaints, or unrecognized patterns
+        // Asynchronously log queries that have low knowledge base coverage, complaints, or unrecognized patterns (exclude conversational fillers)
         if (
-          firestoreKnowledgeMatches.length === 0 ||
+          ((firestoreKnowledgeMatches.length === 0 && !userFillerCheck.isFiller) ||
           contextResolution.isComplaintOrCorrection ||
-          contextResolution.isAmbiguous
+          contextResolution.isAmbiguous)
         ) {
           const category = contextResolution.isComplaintOrCorrection
             ? 'emosi_komplain'
