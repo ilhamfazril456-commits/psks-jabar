@@ -1,6 +1,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { checkConversationalFiller } from '../utils/aiConversationalHelpers';
+import { resolveDinsosAddressQuery } from '../data/dinsosAddressDirectory';
 
 export interface AIKnowledgeDoc {
   id: string;
@@ -2543,10 +2544,46 @@ export function searchKnowledgeBase(
     return { item, score };
   });
 
-  return scoredDocs
+  const baseResults = scoredDocs
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.item);
+
+  // Address & regional office query priority grounding
+  const addrQueryCheck = resolveDinsosAddressQuery(q);
+  if (addrQueryCheck.isAddressQuery) {
+    if (addrQueryCheck.isSpecificRegion && addrQueryCheck.matchedOffice) {
+      const office = addrQueryCheck.matchedOffice;
+      const filtered = baseResults.filter((doc) => doc.id !== 'kontak_dinas_sosial');
+      const specificDoc: AIKnowledgeDoc = {
+        id: `dinsos_office_${office.id}`,
+        topic: `kantor_dinsos_${office.id}`,
+        title: `Alamat Kantor ${office.namaDinas}`,
+        category: 'layanan',
+        keywords: office.aliases,
+        summary: `Alamat kantor dan nomor kontak ${office.namaDinas}`,
+        content: addrQueryCheck.replyText,
+        actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+        updatedAt: '2026-09-22T00:00:00Z',
+      };
+      return [specificDoc, ...filtered];
+    } else if (addrQueryCheck.needsClarification) {
+      const clarificationDoc: AIKnowledgeDoc = {
+        id: 'dinsos_office_clarification',
+        topic: 'klarifikasi_alamat_kantor',
+        title: 'Pedoman Klarifikasi Lokasi Kantor Dinsos',
+        category: 'layanan',
+        keywords: ['alamat', 'kantor', 'lokasi', 'dimana'],
+        summary: 'Pedoman bertanya kembali secara santun wilayah mana yang dimaksud',
+        content: addrQueryCheck.replyText,
+        actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+        updatedAt: '2026-09-22T00:00:00Z',
+      };
+      return [clarificationDoc, ...baseResults.filter((doc) => doc.id !== 'kontak_dinas_sosial')];
+    }
+  }
+
+  return baseResults;
 }
 
 /**

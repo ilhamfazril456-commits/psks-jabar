@@ -12,12 +12,20 @@ import {
   ConversationalFillerResult,
   ConversationalFillerType,
 } from '../utils/aiConversationalHelpers';
+import {
+  resolveDinsosAddressQuery,
+  DINSOS_ADDRESS_DIRECTORY,
+  DinsosOfficeAddress,
+} from './dinsosAddressDirectory';
 
 export {
   checkConversationalFiller,
   formatConversationalFillerReply,
+  resolveDinsosAddressQuery,
+  DINSOS_ADDRESS_DIRECTORY,
   type ConversationalFillerResult,
   type ConversationalFillerType,
+  type DinsosOfficeAddress,
 };
 
 export interface SmartAnswerResult {
@@ -2036,8 +2044,14 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   4. **Visi & Misi Jawa Barat**: Akselerasi penanganan kemiskinan dan pemerataan kesejahteraan sosial.`;
   }
 
-  // 11.2 Halaman Kontak & Layanan Publik
-  if (q.includes('kontak') || q.includes('hubungi') || q.includes('alamat') || q.includes('dinsos') || q.includes('lokasi') || q.includes('medsos') || q.includes('instagram') || q.includes('youtube') || q.includes('facebook') || q.includes('tiktok') || q.includes('email')) {
+  // 11.2 Penanganan Cerdas Alamat Kantor & Lokasi Wilayah (3 Kondisi Interaktif)
+  const addrQueryRes = resolveDinsosAddressQuery(q, userWilayah);
+  if (addrQueryRes.isAddressQuery) {
+    return `${opening}${addrQueryRes.replyText}`;
+  }
+
+  // 11.2B Halaman Kontak & Layanan Publik (Medsos, WhatsApp, Email Umum)
+  if (q.includes('kontak') || q.includes('hubungi') || q.includes('medsos') || q.includes('instagram') || q.includes('youtube') || q.includes('facebook') || q.includes('tiktok') || q.includes('email') || q.includes('nomor telepon') || q.includes('call center')) {
     const waNum = appSettings?.floatingWaNumber || '+62 821-2603-0038';
     return `${opening}**Halaman Kontak & Layanan Pengaduan Publik Dinsos Jabar**:
 - 📍 **Kantor Utama**: Jl. Jend. H. Amir Machmud No. 331, Cigugur Tengah, Kec. Cimahi Tengah, Kota Cimahi, Jawa Barat 40522
@@ -2693,6 +2707,39 @@ export function verifyAndTrackAnswerAccuracy(
       confidence: 1.0,
       source: 'verified_exact',
     };
+  }
+
+  // =========================================================================
+  // DINSOS 27 KAB/KOTA ADDRESS GROUNDING (3 INTERACTIVE CONDITIONS)
+  // =========================================================================
+  const addrCheck = resolveDinsosAddressQuery(query, userWilayah);
+  if (addrCheck.isAddressQuery) {
+    if (addrCheck.isSpecificRegion && addrCheck.matchedOffice && !addrCheck.matchedOffice.isProvinsi) {
+      const officeCity = addrCheck.matchedOffice.kabKota.toLowerCase().replace('kabupaten ', '').replace('kota ', '');
+      const replyMentionsCity = rawReply && rawReply.toLowerCase().includes(officeCity);
+      const replyGaveCimahi = rawReply && (rawReply.includes('Amir Machmud') || rawReply.includes('Cimahi Tengah') || rawReply.includes('Cigugur'));
+
+      // If model failed, was empty, gave provincial Cimahi instead of the asked city, or missed the target city:
+      if (!rawReply || (replyGaveCimahi && !replyMentionsCity) || !replyMentionsCity) {
+        return {
+          finalContent: addrCheck.replyText,
+          isAccurate: true,
+          confidence: 1.0,
+          source: 'verified_exact',
+        };
+      }
+    } else if (addrCheck.needsClarification) {
+      // If user asked generic "dimana kantor" and rawReply dumped static Cimahi without asking which city:
+      const replyClarified = rawReply && (rawReply.includes('mana') || rawReply.includes('wilayah') || rawReply.includes('kabupaten') || rawReply.includes('kota'));
+      if (!rawReply || !replyClarified) {
+        return {
+          finalContent: addrCheck.replyText,
+          isAccurate: true,
+          confidence: 1.0,
+          source: 'verified_exact',
+        };
+      }
+    }
   }
 
   // =========================================================================

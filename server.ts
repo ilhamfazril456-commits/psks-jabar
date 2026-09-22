@@ -23,6 +23,10 @@ import {
   checkConversationalFiller,
   formatConversationalFillerReply,
 } from './src/utils/aiConversationalHelpers';
+import {
+  resolveDinsosAddressQuery,
+  DINSOS_ADDRESS_DIRECTORY,
+} from './src/data/dinsosAddressDirectory';
 
 dotenv.config();
 
@@ -649,7 +653,28 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      * \`[[action:pillar:pensos:Buka Halaman Penyuluh Sosial]]\`
      * \`[[action:pillar:badanusaha:Buka Halaman KUBE & Usaha]]\`
      * \`[[action:pillar:slrt_puskesos:Buka Halaman SLRT Puskesos]]\`
-   - Tag ini akan secara cerdas diproses oleh sistem menjadi tombol interaktif beranimasi yang dapat langsung ditekan pengguna untuk bernavigasi tanpa harus mencari tombol sendiri di menu.`;
+   - Tag ini akan secara cerdas diproses oleh sistem menjadi tombol interaktif beranimasi yang dapat langsung ditekan pengguna untuk bernavigasi tanpa harus mencari tombol sendiri di menu.
+
+17. **ATURAN WAJIB & PEDOMAN ALAMAT KANTOR DINAS SOSIAL (27 KABUPATEN/KOTA & 3 KONDISI INTERAKTIF)**:
+   Asisten AI WAJIB menguasai seluruh alamat kantor Dinas Sosial di 27 Kabupaten/Kota se-Jawa Barat serta mematuhi 3 kondisi interaktif berikut:
+   - **KONDISI 1 (Pertanyaan Menyebut Wilayah Tertentu)**:
+     Contoh: "dimana alamat kantor sumedang?", "lokasi kantor dinsos kota bogor dimana?", "alamat kantor dinas sosial cirebon", "kantor kbb dmn?", dll.
+     * WAJIB menjawab HANYA alamat kantor wilayah tersebut secara spesifik (nama instansi, alamat jalan, kelurahan/kecamatan, kabupaten/kota, nomor kontak/telepon jika tersedia).
+     * DILARANG KERAS memunculkan alamat kantor provinsi (Cimahi/Bandung) jika pengguna bertanya mengenai kantor Sumedang, Bogor, Cirebon, dll.!
+   - **KONDISI 2 (Pertanyaan "Kantor Sini" / Berdasarkan Wilayah Akun)**:
+     Contoh: "dimana lokasi kantor sini?", "alamat dinas sosial di sini dimana?"
+     * Jika pengguna memiliki wilayah penugasan/domisili akun (misal: Kabupaten Garut), jawab alamat dinas sosial untuk wilayah akun tersebut: "Sesuai dengan wilayah penugasan akun Anda di Kabupaten Garut, alamat kantor Dinas Sosial Kabupaten Garut berada di Jl. Patriot No. 12, Tarogong Kidul, Garut."
+     * Jika tamu publik tanpa wilayah, perlakukan seperti Kondisi 3.
+   - **KONDISI 3 (Pertanyaan Mengambang Tanpa Wilayah)**:
+     Contoh: "dimana lokasi kantor?", "alamat kantor dinsos dimana?", "kantor dinsos dmn?"
+     * WAJIB bertanya kembali secara ramah, interaktif, dan komunikatif:
+       "Lokasi kantor Dinas Sosial wilayah mana ya yang Anda maksud lebih tepatnya? 😊
+       Di Jawa Barat, setiap kabupaten/kota memiliki kantor Dinas Sosial masing-masing. Sebagai contoh:
+       • Kantor Dinsos Kabupaten Sumedang: Jl. Mayor Abdurahman No. 125, Sumedang Utara
+       • Kantor Dinsos Kota Bogor: Jl. Merdeka No. 142, Ciwaringin, Bogor Tengah
+       • Kantor Dinsos Kabupaten Bandung: Jl. Raya Soreang Km. 17, Soreang
+       • Kantor Utama Dinsos Provinsi Jawa Barat: Jl. Jend. H. Amir Machmud No. 331, Kota Cimahi
+       Silakan sebutkan kabupaten/kota yang Anda tuju di 27 Kab/Kota se-Jawa Barat, saya siap memberikan alamat lengkap dan kontaknya!"`;
 
   // Helper function to extract core substantive query by stripping introductory conversational preambles
   function extractCoreInquiry(raw: string): { coreQuery: string; isPureIntro: boolean; hasQuestion: boolean } {
@@ -2426,16 +2451,19 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
       return `**Kepala Dinas Sosial Provinsi Jawa Barat** saat ini dijabat oleh **Ibu Noneng Komara Nengsih, S.E., M.A.P.**\n\nBeliau memimpin tata kelola pelayanan dan perlindungan sosial di Jawa Barat dengan visi *"Mewujudkan Jawa Barat Juara Lahir Batin dengan Inovasi dan Kolaborasi"*, memperkuat peran 10 Pilar PSKS dan modernisasi digital data sosial.`;
     }
 
-    // 0.10 KONTAK & ALAMAT KANTOR DINSOS
+    // 0.10 PENANGANAN CERDAS ALAMAT KANTOR DINSOS & WILAYAH (3 KONDISI INTERAKTIF)
+    const addressRes = resolveDinsosAddressQuery(targetQ, userContext?.wilayah);
+    if (addressRes.isAddressQuery) {
+      return addressRes.replyText;
+    }
+
     if (
-      targetQ.includes('alamat') ||
-      targetQ.includes('lokasi') ||
-      targetQ.includes('kantor') ||
       targetQ.includes('kontak') ||
       targetQ.includes('whatsapp') ||
       targetQ.includes('wa') ||
       targetQ.includes('telepon') ||
-      targetQ.includes('email')
+      targetQ.includes('email') ||
+      targetQ.includes('hubungi')
     ) {
       return `**Kontak & Alamat Resmi Dinas Sosial Provinsi Jawa Barat**:\n- **Kantor Utama**: Jl. Jend. H. Amir Machmud No. 331, Cigugur Tengah, Kec. Cimahi Tengah, Kota Cimahi, Jawa Barat 40522.\n- **Kantor Wilayah Bandung**: Jl. Rajiman No. 6, Pasir Kaliki, Kec. Cicendo, Kota Bandung 40171.\n- **WhatsApp Pengaduan**: +62 821-2603-0038 / +62 896-0242-1065\n- **Email Resmi**: dinsos@jabarprov.go.id\n- **Media Sosial**: Instagram @dinsos.jabar, YouTube Dinsos Jabar TV, Facebook Dinsos Jawa Barat, TikTok @dinsos.jabar, X @dinsosjabar.\n- **Jam Layanan**: Senin – Jumat (08:00 – 16:00 WIB).`;
     }
@@ -2904,6 +2932,40 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         ) {
           const devKnowledge = searchKnowledgeBase('ilham fazril pembuat website', null, userContext?.role);
           firestoreKnowledgeMatches.push(...devKnowledge);
+        }
+
+        // Resolusi Cerdas Alamat Kantor Dinsos (27 Kab/Kota & Klarifikasi)
+        const addrContextMatch = resolveDinsosAddressQuery(lastUserMsg, userContext?.wilayah);
+        if (addrContextMatch.isAddressQuery) {
+          if (addrContextMatch.isSpecificRegion && addrContextMatch.matchedOffice) {
+            // Singkirkan kontak umum Cimahi/Bandung jika yang ditanyakan adalah Kab/Kota spesifik
+            const filtered = firestoreKnowledgeMatches.filter(m => m.id !== 'kontak_dinas_sosial');
+            firestoreKnowledgeMatches.length = 0;
+            firestoreKnowledgeMatches.push(...filtered);
+            firestoreKnowledgeMatches.unshift({
+              id: `dinsos_${addrContextMatch.matchedOffice.id}`,
+              topic: `kantor_dinsos_${addrContextMatch.matchedOffice.id}`,
+              title: `Alamat Kantor ${addrContextMatch.matchedOffice.namaDinas}`,
+              category: 'layanan',
+              keywords: addrContextMatch.matchedOffice.aliases,
+              summary: `Alamat kantor dan nomor telepon ${addrContextMatch.matchedOffice.namaDinas}`,
+              content: addrContextMatch.replyText,
+              actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+              updatedAt: new Date().toISOString(),
+            });
+          } else if (addrContextMatch.needsClarification) {
+            firestoreKnowledgeMatches.unshift({
+              id: 'dinsos_office_clarification',
+              topic: 'klarifikasi_alamat_kantor',
+              title: 'Pedoman Klarifikasi Lokasi Kantor Dinsos',
+              category: 'layanan',
+              keywords: ['alamat', 'kantor', 'lokasi', 'dimana'],
+              summary: 'Instruksi wajib klarifikasi lokasi wilayah',
+              content: addrContextMatch.replyText,
+              actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+              updatedAt: new Date().toISOString(),
+            });
+          }
         }
 
         const isQuestionOrSecurityInPost =
