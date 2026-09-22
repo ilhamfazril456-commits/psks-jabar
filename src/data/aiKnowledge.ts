@@ -942,6 +942,99 @@ Pemohon dapat memantau status pengajuannya secara langsung melalui menu **'Riway
 [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:beranda:Lihat Pilihan 10 Pilar]]`;
   }
 
+  // 0.6B2: PERMINTAAN BANTUAN ("bantu saya", "tolong bantu saya", "bisa bantu saya?", dll.)
+  const isDirectHelpRequest =
+    targetQ === 'bantu saya' ||
+    targetQ === 'bantu saya dong' ||
+    targetQ === 'bantu saya ya' ||
+    targetQ === 'bantu saya min' ||
+    targetQ === 'tolong bantu saya' ||
+    targetQ === 'tolong saya' ||
+    targetQ === 'tolong dibantu' ||
+    targetQ === 'mohon bantu saya' ||
+    targetQ === 'butuh bantuan' ||
+    targetQ === 'perlu bantuan' ||
+    targetQ === 'minta bantuan' ||
+    targetQ === 'bisa bantu saya' ||
+    targetQ === 'bisa bantu saya?' ||
+    targetQ === 'bisakah bantu saya' ||
+    targetQ === 'bisakah bantu saya?' ||
+    targetQ === 'bisakah anda bantu saya' ||
+    targetQ === 'bisakah anda bantu saya?' ||
+    targetQ === 'bisa tolong bantu saya' ||
+    targetQ === 'bisa tolong bantu saya?' ||
+    targetQ === 'apakah bisa bantu saya' ||
+    targetQ === 'apakah bisa bantu saya?' ||
+    targetQ === 'bisa bantu gak' ||
+    targetQ === 'bisa bantu ngga' ||
+    targetQ === 'bisa bantu' ||
+    targetQ === 'bisa bantu?' ||
+    targetQ === 'bisakah membantu' ||
+    targetQ === 'bisakah membantu?' ||
+    /^(tolong\s+)?(bantu\s+saya|bisa\s+bantu\s+saya|tolong\s+bantu)(\s+dong|\s+min|\s+ya)?\??$/i.test(targetQ) ||
+    /^(apakah|bisakah|bisa)?\s*(anda|kamu)?\s*(tolong\s+)?(bantu\s+saya|membantu\s+saya)\??$/i.test(targetQ);
+
+  if (isDirectHelpRequest) {
+    if (isDeveloperUser) {
+      return `Kantenan atuh bos **Ilham Fazril**! Kuring siap pisan ngabantosan sagalana—rek pariksa kodingan arsitektur website, konfigurasi database Firestore, logika pilar sosial, atawa diskusi fitur anyar. Aya naon nu hoyong dibantos dinten ieu? 🚀⚡`;
+    }
+    return `Silakan, apa yang perlu kita bantu? 😊\n\nSaya siap membantu Anda seputar informasi **10 Pilar PSKS Jawa Barat**, alur pendaftaran relawan sosial mandiri, verifikasi berkas, maupun layanan dan kontak pengaduan Dinas Sosial Provinsi Jawa Barat.\n\nSilakan sampaikan pertanyaan atau hal apa yang Anda butuhkan!`;
+  }
+
+  // 0.6B2B: PERTANYAAN UMUM SEPUTAR PILAR PSKS ("seputar pilar psks sih", "tanya pilar psks", "tentang pilar")
+  const isGeneralPillarsInquiry =
+    (
+      targetQ.includes('seputar pilar psks') ||
+      targetQ.includes('tanya pilar psks') ||
+      targetQ.includes('tentang pilar psks') ||
+      targetQ.includes('soal pilar psks') ||
+      targetQ.includes('seputar pilar') ||
+      targetQ.includes('tanya pilar') ||
+      targetQ.includes('tentang pilar') ||
+      targetQ.includes('soal pilar') ||
+      targetQ.includes('mengenai pilar') ||
+      targetQ === 'pilar psks' ||
+      targetQ === 'pilar sosial' ||
+      targetQ === 'pilar'
+    ) &&
+    !targetQ.includes('tagana') &&
+    !targetQ.includes('psm') &&
+    !targetQ.includes('karang taruna') &&
+    !targetQ.includes('katar') &&
+    !targetQ.includes('tksk') &&
+    !targetQ.includes('peksos') &&
+    !targetQ.includes('pksp') &&
+    !targetQ.includes('lks') &&
+    !targetQ.includes('lk3') &&
+    !targetQ.includes('pensos') &&
+    !targetQ.includes('kube') &&
+    !targetQ.includes('slrt') &&
+    !targetQ.includes('puskesos');
+
+  if (isGeneralPillarsInquiry) {
+    return `Boleh sekali, silakan! Pilar apa yang ingin ditanyakan? 😊\n\nDi bawah naungan Dinas Sosial Provinsi Jawa Barat, terdapat **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)** yang siap kami jelaskan:\n1. **PSM** (Pekerja Sosial Masyarakat)\n2. **TAGANA** (Taruna Siaga Bencana)\n3. **Karang Taruna** (KT)\n4. **TKSK** (Tenaga Kesejahteraan Sosial Kecamatan)\n5. **PEKSOS / PKSP** (Pekerja Sosial Profesional)\n6. **LKS** (Lembaga Kesejahteraan Sosial)\n7. **LK3** (Lembaga Konsultasi Kesejahteraan Keluarga)\n8. **PENSOS** (Penyuluh Sosial)\n9. **KUBE & Badan Usaha Sosial**\n10. **SLRT & Puskesos** (Sistem Layanan dan Rujukan Terpadu Satu Pintu)\n\nSilakan sampaikan pilar mana yang ingin Anda ketahui lebih lanjut, baik mengenai tugas pokok, persyaratan, maupun alur pendaftarannya!`;
+  }
+
+  // 0.6B2C: PENGERTIAN & DEFINISI PSKS
+  const isDefinitionOfPsks =
+    targetQ.includes('pengertian psks') ||
+    targetQ.includes('definisi psks') ||
+    targetQ.includes('apa itu psks') ||
+    targetQ.includes('apa arti psks') ||
+    targetQ.includes('apa maksud psks') ||
+    targetQ.includes('arti psks') ||
+    targetQ.includes('maksud psks') ||
+    targetQ.includes('psks itu apa') ||
+    targetQ.includes('psks adalah') ||
+    targetQ.includes('singkatan psks') ||
+    targetQ.includes('kepanjangan psks') ||
+    targetQ === 'psks' ||
+    targetQ === 'apa psks';
+
+  if (isDefinitionOfPsks) {
+    return `Berdasarkan **Undang-Undang Nomor 11 Tahun 2009 tentang Kesejahteraan Sosial**, **Potensi dan Sumber Kesejahteraan Sosial (PSKS)** adalah semua potensi, kemampuan, dan sumber daya—baik yang berwujud manusiawi (perseorangan, keluarga, dan kelompok masyarakat) maupun kelembagaan sosial/institusional—yang ada dan digali di dalam masyarakat, yang dapat didayagunakan dan dimobilisasi untuk mencegah, menangani, serta mengatasi berbagai permasalahan sosial (PPKS / Pemerlu Pelayanan Kesejahteraan Sosial) demi mewujudkan taraf kesejahteraan sosial masyarakat yang mandiri dan berkeadilan.\n\nDi lingkungan Pemerintah Provinsi Jawa Barat, pembinaan dan pemberdayaan PSKS dikoordinasikan langsung oleh **Dinas Sosial Provinsi Jawa Barat** yang mencakup **10 Pilar Utama PSKS**:\n1. **PKSP / PEKSOS** — Pekerja Sosial Profesional\n2. **PSM** — Pekerja Sosial Masyarakat\n3. **TAGANA** — Taruna Siaga Bencana\n4. **LKS** — Lembaga Kesejahteraan Sosial\n5. **Karang Taruna (KT)** — Karang Taruna Desa/Kelurahan\n6. **LK3** — Lembaga Konsultasi Kesejahteraan Keluarga\n7. **PENSOS** — Penyuluh Sosial Masyarakat\n8. **TKSK** — Tenaga Kesejahteraan Sosial Kecamatan\n9. **KUBE** — Kelompok Usaha Bersama & Badan Usaha Sosial\n10. **SLRT / Puskesos** — Sistem Layanan & Rujukan Terpadu Satu Pintu\n\nApakah ada pilar sosial tertentu atau informasi layanan yang ingin Anda ketahui lebih lanjut?`;
+  }
+
   // 0.6B3: Pertanyaan Awalan Sopan & Izin Bertanya ("Bolehkah saya bertanya?", "Boleh nanya?", "Izin bertanya", "Bade naros")
   // Only triggers if there is NO substantive follow-up question attached!
   const isIntroductoryPreamble =
@@ -1292,7 +1385,7 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
       !q.includes('pensos') &&
       !q.includes('kube') &&
       !q.includes('badan usaha') &&
-      !activePillar;
+      (!activePillar || q.includes('psks') || q === 'cara daftar' || q === 'alur pendaftaran');
 
     if (isGeneralPsksRegister) {
       return `${salamPrefix}Sampurasun / Halo ${politeUserHonorific}, terima kasih banyak atas niat baik, kepedulian, dan ketertarikan Anda untuk bergabung bersama Potensi & Sumber Kesejahteraan Sosial (PSKS) di Jawa Barat. 🙏✨
