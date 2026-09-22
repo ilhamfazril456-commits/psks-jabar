@@ -817,7 +817,8 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
         fallbackFillerCheck.fillerType,
         isDev,
         prevAssistantMsg,
-        userContext?.nama
+        userContext?.nama,
+        fallbackFillerCheck.extractedCount
       );
     }
 
@@ -2568,13 +2569,38 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         finalFallbackFiller.fillerType,
         isDev,
         prevMsg,
-        userContext?.nama
+        userContext?.nama,
+        finalFallbackFiller.extractedCount
       );
+    }
+
+    // General discussion / open conversational query handling (human-like conversational flexibility)
+    const isDiscussionOrOpenQuery =
+      targetQ.includes('kenapa') ||
+      targetQ.includes('mengapa') ||
+      targetQ.includes('bagaimana pendapat') ||
+      targetQ.includes('menurut anda') ||
+      targetQ.includes('menurut kamu') ||
+      targetQ.includes('menurutmu') ||
+      targetQ.includes('apa arti') ||
+      targetQ.includes('apa makna') ||
+      targetQ.includes('solusi') ||
+      targetQ.includes('kemiskinan') ||
+      targetQ.includes('solidaritas') ||
+      targetQ.includes('gotong royong') ||
+      targetQ.includes('kemanusiaan') ||
+      targetQ.includes('kepedulian') ||
+      targetQ.includes('masalah sosial') ||
+      targetQ.includes('isu sosial') ||
+      targetQ.includes('diskusi');
+
+    if (isDiscussionOrOpenQuery) {
+      return `Tentu, ini topik yang sangat menarik dan mendalam untuk didiskusikan! Pada prinsipnya, aspek kepedulian sosial, kemanusiaan, dan kesejahteraan masyarakat merupakan ikhtiar bersama yang membutuhkan sinergi erat antara pemerintah, para relawan, dan seluruh komponen warga.\n\nDi wilayah Jawa Barat, nilai-nilai luhur gotong royong dan kesetiakawanan sosial ini diimplementasikan secara nyata melalui peran aktif **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)**—seperti Taruna Siaga Bencana (Tagana) dalam penanggulangan kedaruratan, Pekerja Sosial Masyarakat (PSM) yang mendampingi warga rentan di desa/kelurahan, hingga Karang Taruna yang menggerakkan potensi kepemudaan.\n\nApakah ada perspektif khusus atau pilar sosial tertentu yang ingin Anda bahas lebih jauh? Silakan sampaikan, saya siap berdiskusi! 😊`;
     }
 
     // Default polite response when no information is found for the context asked:
     const cleanTopic = targetQ.slice(0, 80).trim();
-    return `Mohon maaf, saya belum dapat mengenali atau menemukan informasi terkait "${cleanTopic || 'hal tersebut'}" dalam pangkalan data layanan PSKS Jawa Barat.\n\nSebagai Asisten Resmi PSKS Jabar, saya dapat membantu Anda memberikan informasi seputar **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran mandiri pilar, maupun layanan Dinas Sosial Provinsi Jawa Barat.\n\nApakah ada topik pilar sosial atau layanan yang ingin Anda tanyakan? Silakan hubungi kami jika Anda membutuhkan bantuan lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    return `Halo! Terkait "${cleanTopic || 'hal yang Anda tanyakan'}", saya siap membantu Anda berdiskusi dan memberikan informasi seputar **10 Pilar Kesejahteraan Sosial Jawa Barat** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran mandiri pilar, maupun program perlindungan sosial Dinas Sosial Provinsi Jawa Barat.\n\nSilakan sampaikan pertanyaan atau aspek apa yang ingin Anda ketahui lebih lanjut, saya siap membantu menjawabnya! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
   // API endpoint for AI Chat Assistant (with Rate Limiting Protection)
@@ -2940,13 +2966,22 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           );
 
         if (userFillerCheck.isFiller && userFillerCheck.fillerType) {
-          contextualInstruction += `\n\n[RESPON ALAMI & KONVERSASIONAL (FILLER / REAKSI PERCAKAPAN: "${lastUserMsg}")]:
+          if (userFillerCheck.fillerType === 'question_inquiry') {
+            contextualInstruction += `\n\n[PEMBUKAAN PERCAKAPAN / IZIN BERTANYA / BANYAK PERTANYAAN: "${lastUserMsg}"]:
+Pengguna baru membuka percakapan, meminta izin untuk bertanya, atau menyatakan memiliki sejumlah pertanyaan (misal: "bertanya banyak boleh ga?", "saya memiliki 12 pertanyaan, bisakah anda menjawabnya?", "boleh tanya?").
+AI WAJIB:
+1. Sambut dengan sangat hangat, ramah, dan antusias: "Tentu saja sangat boleh! Silakan sampaikan apa saja ${userFillerCheck.extractedCount ? `${userFillerCheck.extractedCount} pertanyaan tersebut` : 'pertanyaan Anda'}, baik sekaligus maupun satu per satu langsung di sini."
+2. Sebutkan kesiapan Anda membantu menjawab seputar 10 Pilar PSKS Jabar (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), alur pendaftaran mandiri, verifikasi berkas, sebaran wilayah 27 Kab/Kota, maupun layanan Dinas Sosial Jabar.
+3. DILARANG KERAS menolak atau mengatakan 'Mohon maaf belum menemukan informasi' karena pertanyaan inti pengguna belum diajukan!`;
+          } else {
+            contextualInstruction += `\n\n[RESPON ALAMI & KONVERSASIONAL (FILLER / REAKSI PERCAKAPAN: "${lastUserMsg}")]:
 Pengguna sedang memberikan respon percakapan alami, filler ("ohh", "oke", "siap", "paham", "ngerti"), ucapan terima kasih, atau apresiasi ("${lastUserMsg}").
 AI WAJIB:
 1. Tanggapi dengan sangat ramah, hangat, sopan, bersahabat, dan manusiawi!
 2. DILARANG KERAS menggunakan format penolakan 'Mohon maaf untuk saat ini masih belum memiliki informasi...' atau mencari kata filler tersebut di pangkalan data!
 3. Jika pengguna mengucapkan terima kasih atau pujian, balas dengan tulus dan senang bisa membantu.
 4. Jika pengguna merespons dengan filler pemahaman ("ohh", "oke", "siap", "paham", "ngerti", "oh gitu"), konfirmasikan pemahamannya secara ramah dan tanyakan apakah ada hal lain seputar 10 Pilar PSKS Jawa Barat atau layanan lainnya yang ingin diketahui.`;
+          }
         }
 
         if (firestoreKnowledgeMatches.length > 0) {
@@ -2971,10 +3006,10 @@ AI WAJIB:
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation with automatic quota failover
         const candidateModels = [
           'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-2.0-flash-lite',
-          'gemini-1.5-flash',
-          'gemini-2.5-pro',
+          'gemini-3.8-flash',
+          'gemini-3.1-flash-lite',
+          'gemini-flash-latest',
+          'gemini-3.1-pro-preview',
         ];
         let replyText = '';
 
@@ -2982,7 +3017,7 @@ AI WAJIB:
           try {
             const configObj: any = {
               systemInstruction: contextualInstruction,
-              temperature: isDeveloper ? 0.7 : 0.25,
+              temperature: isDeveloper ? 0.7 : 0.3,
               maxOutputTokens: isDeveloper ? 4096 : 3072,
             };
 
@@ -3003,13 +3038,12 @@ AI WAJIB:
               const cleaned = response.text.trim();
               const finishReason = response.candidates?.[0]?.finishReason;
 
-              // Anti-placeholder and anti-truncation filter
+              // Anti-placeholder and true truncation check
               const isTruncated =
                 finishReason === 'MAX_TOKENS' ||
                 cleaned.endsWith('(') ||
                 cleaned.endsWith('[') ||
-                cleaned.endsWith('{') ||
-                (cleaned.length > 50 && !/[.!?):`*”"']$/.test(cleaned) && cleaned.split('\n').pop()?.length! > 60);
+                cleaned.endsWith('{');
 
               if (
                 !cleaned.startsWith('(lanjutkan') &&

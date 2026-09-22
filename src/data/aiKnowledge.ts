@@ -171,16 +171,17 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, kami tidak bisa memproses permintaan atau pertanyaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jabar.`;
   }
 
-  // 0.0001 CONVERSATIONAL FILLERS, ACKNOWLEDGMENTS, FOLLOW-UP PREAMBLES & USER REACTIONS
-  // Intercept natural conversation tokens ("ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", "oke sekarang saya ingin tanyakan 1 hal lagi", dll.)
-  // Never treat conversational fillers as missing topics or trigger refusal fallback!
+  // 0.0001 CONVERSATIONAL FILLERS, ACKNOWLEDGMENTS, FOLLOW-UP PREAMBLES, QUESTION INQUIRIES & USER REACTIONS
+  // Intercept natural conversation tokens ("bertanya banyak boleh ga?", "saya memiliki 12 pertanyaan", "ohh", "oke", "siap", "mantap", "makasih", "paham", "ngerti", dll.)
+  // Never treat conversational fillers or question inquiries as missing topics or trigger refusal fallback!
   const fillerCheck = checkConversationalFiller(rawQ) || checkConversationalFiller(targetQ) || checkConversationalFiller(q);
   if (fillerCheck.isFiller && fillerCheck.fillerType) {
     return formatConversationalFillerReply(
       fillerCheck.fillerType,
       isDeveloperUser,
       previousContext,
-      userName
+      userName,
+      fillerCheck.extractedCount
     );
   }
 
@@ -2283,12 +2284,37 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
       finalFillerCheck.fillerType,
       isDeveloperUser,
       previousContext,
-      userName
+      userName,
+      finalFillerCheck.extractedCount
     );
   }
 
-  // Modern, intelligent and polite fallback
-  return `Mohon maaf, saya belum menemukan informasi spesifik mengenai hal tersebut dalam pangkalan data layanan sosial saat ini.\n\nSebagai Asisten Resmi **PSKS JABAR**, saya dapat membantu memberikan panduan terkait:\n- **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).\n- **Alur Pendaftaran Mandiri** & verifikasi berkas berjenjang.\n- **Layanan dan Kontak Pengaduan** Dinas Sosial Provinsi Jawa Barat.\n\nApakah ada hal seputar pilar sosial atau layanan yang ingin Anda tanyakan? Silakan hubungi dinas sosial untuk koordinasi lebih lanjut.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  // General discussion / open conversational query handling
+  const isDiscussionOrOpenQuery =
+    targetQ.includes('kenapa') ||
+    targetQ.includes('mengapa') ||
+    targetQ.includes('bagaimana pendapat') ||
+    targetQ.includes('menurut anda') ||
+    targetQ.includes('menurut kamu') ||
+    targetQ.includes('menurutmu') ||
+    targetQ.includes('apa arti') ||
+    targetQ.includes('apa makna') ||
+    targetQ.includes('solusi') ||
+    targetQ.includes('kemiskinan') ||
+    targetQ.includes('solidaritas') ||
+    targetQ.includes('gotong royong') ||
+    targetQ.includes('kemanusiaan') ||
+    targetQ.includes('kepedulian') ||
+    targetQ.includes('masalah sosial') ||
+    targetQ.includes('isu sosial') ||
+    targetQ.includes('diskusi');
+
+  if (isDiscussionOrOpenQuery) {
+    return `Tentu, ini topik yang sangat menarik dan bernilai penting untuk didiskusikan! Pada prinsipnya, aspek kepedulian sosial, kemanusiaan, dan kesejahteraan masyarakat merupakan ikhtiar bersama yang membutuhkan sinergi erat antara pemerintah, para relawan, dan seluruh komponen warga.\n\nDi wilayah Jawa Barat, nilai-nilai luhur gotong royong dan kesetiakawanan sosial ini diimplementasikan secara nyata melalui peran aktif **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)**—seperti Taruna Siaga Bencana (Tagana) dalam penanggulangan kedaruratan, Pekerja Sosial Masyarakat (PSM) yang mendampingi warga rentan di desa/kelurahan, hingga Karang Taruna yang menggerakkan potensi kepemudaan.\n\nApakah ada perspektif khusus atau pilar sosial tertentu yang ingin Anda bahas lebih jauh? Silakan sampaikan, saya siap berdiskusi! 😊`;
+  }
+
+  // Modern, intelligent, and polite conversational fallback
+  return `Halo! Terkait hal yang Anda tanyakan, sebagai Asisten Resmi **PSKS JABAR**, saya siap berdiskusi dan memberikan informasi serta panduan seputar:\n- **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).\n- **Alur Pendaftaran Mandiri Anggota Baru** & pemantauan status verifikasi berkas.\n- **Data Sebaran & Statistik Personil** di 27 Kabupaten/Kota se-Jawa Barat.\n- **Layanan dan Kontak Pengaduan** Dinas Sosial Provinsi Jawa Barat.\n\nSilakan sampaikan pertanyaan atau hal apa yang ingin Anda diskusikan, saya siap membantu menjawabnya! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
 }
 
 
@@ -2558,8 +2584,12 @@ export function verifyAndTrackAnswerAccuracy(
   if (accuracyFillerCheck.isFiller && accuracyFillerCheck.fillerType) {
     const isModelRefusal =
       !rawReply ||
-      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
-      rawReply.includes('belum dapat mengenali atau menemukan informasi');
+      rawReply.includes('belum memiliki informasi') ||
+      rawReply.includes('belum dapat mengenali') ||
+      rawReply.includes('belum menemukan informasi') ||
+      rawReply.includes('di luar parameter database') ||
+      rawReply.includes('tidak memiliki informasi') ||
+      rawReply.includes('Mohon maaf, saya belum');
 
     if (!isModelRefusal && rawReply.trim().length > 0) {
       return {
@@ -2574,7 +2604,8 @@ export function verifyAndTrackAnswerAccuracy(
       accuracyFillerCheck.fillerType,
       isDeveloperUser,
       previousContext,
-      userName
+      userName,
+      accuracyFillerCheck.extractedCount
     );
     return {
       finalContent: fillerReply,

@@ -1,13 +1,15 @@
-export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up';
+export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up' | 'question_inquiry' | 'capability_inquiry';
 
 export interface ConversationalFillerResult {
   isFiller: boolean;
   fillerType: ConversationalFillerType | null;
+  extractedCount?: number | null;
+  isAskingPermission?: boolean;
 }
 
 /**
  * Normalizes input text and checks if it is a conversational filler,
- * acknowledgement, gratitude, or praise rather than an information query.
+ * acknowledgement, gratitude, praise, question inquiry, or preamble.
  */
 export function checkConversationalFiller(input: string): ConversationalFillerResult {
   if (!input || typeof input !== 'string') {
@@ -34,6 +36,67 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
 
   const c1 = testCandidate(norm);
   const c2 = testCandidate(strippedOpener);
+
+  // 0. Question Inquiry / Preamble / Asking Permission to Ask Questions ("bertanya banyak boleh ga?", "saya memiliki 12 pertanyaan, bisakah anda menjawabnya?", "boleh tanya?", dll.)
+  const isQuestionInquiry = (s: string): { matched: boolean; count?: number | null; isPerm?: boolean } => {
+    // Check for explicit count of questions (e.g. "12 pertanyaan", "5 pertanyaan", "sepuluh pertanyaan", etc.)
+    const countMatch = s.match(/\b(\d+)\s+(pertanyaan|tarosan)\b/i) || s.match(/(pertanyaan|tarosan)\s*(sebanyak\s*)?(\d+)/i);
+    let extractedCount: number | null = null;
+    if (countMatch && (countMatch[1] || countMatch[3])) {
+      const parsed = parseInt(countMatch[1] || countMatch[3], 10);
+      if (!isNaN(parsed) && parsed > 0) extractedCount = parsed;
+    }
+
+    // A. Asking permission or stating ability to ask questions ("bertanya banyak boleh ga?", "boleh nanya?", "bisa nanya?", etc.)
+    const askingPermission =
+      /\b(bertanya|nanya|tanya|naros|taros)\s+(banyak|beberapa|macam|hal|seueur)?\s*(boleh|bisa|kenging|tiasa)?\s*(ga|gak|nggak|teu|kah)?\b/i.test(s) ||
+      /\b(boleh|bisa|kenging|tiasa)\s*(kah)?\s*(saya|aku|abdi|urang)?\s*(bertanya|nanya|tanya|naros|taros)\b/i.test(s) ||
+      /\b(apakah\s+)?(boleh|bisa)\s+(bertanya|nanya|tanya|naros)\b/i.test(s) ||
+      /\b(mau|ingin|bade|hoyong)\s+(nanya|tanya|bertanya|naros)\s*(dong|nih|ya|atuh|min|kang|teh)?\s*(boleh|bisa|kenging|tiasa)?/i.test(s) ||
+      /\b(bisa|boleh|tiasa|kenging)\s+(tanya|nanya|naros)\s*(tanya)?\s*(di\s+sini|disini)?\b/i.test(s);
+
+    // B. Stating intent to ask questions or asking if AI can answer ("saya memiliki 12 pertanyaan, bisakah anda menjawabnya?", "saya ada pertanyaan", etc.)
+    const statingQuestions =
+      /\b(saya|aku|abdi|urang)\s+(memiliki|punya|ada|gaduh|bade)\s+(\d+|banyak|beberapa|satu|dua|tiga|seueur)?\s*(pertanyaan|tarosan)\b/i.test(s) ||
+      /\b(ada|punya|gaduh|aya)\s+(\d+|banyak|beberapa|seueur)\s+(pertanyaan|tarosan)\b/i.test(s) ||
+      /\b(bisa|bisakah|dapatkah|tiasa)\s+(anda|kamu)?\s*(menjawab(nya)?|jawab(nya)?|bantu\s+jawab|jawab\s+pertanyaan|ngawaler)\b/i.test(s) ||
+      /\b(tolong|bisa|apakah\s+bisa)?\s*(jawab|menjawab|waler|ngawaler)\s+(pertanyaan|tarosan|semuanya|ini)?\b/i.test(s) ||
+      /\b(ada\s+yang\s+(mau|ingin)\s+(saya|aku)?\s*(tanyakan|tanya|tanyain))\b/i.test(s) ||
+      /\b(mau|ingin|bade|hoyong)\s+(konsultasi|tanya\s+sesuatu|nanya\s+sesuatu|naroskeun\s+sawios)\b/i.test(s);
+
+    if (askingPermission || statingQuestions || extractedCount !== null) {
+      return { matched: true, count: extractedCount, isPerm: askingPermission };
+    }
+
+    return { matched: false };
+  };
+
+  const qi1 = isQuestionInquiry(c1);
+  const qi2 = isQuestionInquiry(c2);
+  const qiRaw = isQuestionInquiry(norm);
+  if (qi1.matched || qi2.matched || qiRaw.matched) {
+    const finalCount = qi1.count || qi2.count || qiRaw.count || null;
+    const finalPerm = qi1.isPerm || qi2.isPerm || qiRaw.isPerm || false;
+    return {
+      isFiller: true,
+      fillerType: 'question_inquiry',
+      extractedCount: finalCount,
+      isAskingPermission: finalPerm,
+    };
+  }
+
+  // 0.5 Capability & Identity Inquiry ("kamu bisa apa aja?", "bisa bantu apa?", "apa tugasmu?", "kamu siapa?")
+  const isCapabilityOrIdentity =
+    /\b(kamu|anda)?\s*(bisa|dapat)\s*(ngapain|apa\s+(aja|saja)|bantu\s+apa|ngapain\s+aja)\b/i.test(c1) ||
+    /\b(apa\s+(saja\s+)?(yang\s+)?(bisa|dapat)\s+(kamu|anda)\s+(lakukan|jawab|bantu))\b/i.test(c1) ||
+    /\b(apa\s+kemampuan|fitur\s+apa\s+saja|tugas\s+(kamu|anda)|fungsi\s+(kamu|anda))\b/i.test(c1) ||
+    /\b(kamu|anda)\s+(siapa|ini\s+siapa|robot\s+apa|ai\s+apa)\b/i.test(c1) ||
+    /\b(siapa\s+(kamu|anda))\b/i.test(c1) ||
+    /^(bisa\s+bantu\s+apa|apa\s+yang\s+bisa\s+kamu\s+jawab)\??$/i.test(c1);
+
+  if (isCapabilityOrIdentity) {
+    return { isFiller: true, fillerType: 'capability_inquiry' };
+  }
 
   // 1. Gratitude / Ucapan Terima Kasih
   if (
@@ -80,14 +143,15 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
 }
 
 /**
- * Generates an empathetic, natural conversational reply for fillers
- * that smoothly connects to previous context (multi-turn continuity).
+ * Generates an empathetic, natural conversational reply for fillers,
+ * question inquiries, and preambles.
  */
 export function formatConversationalFillerReply(
   fillerType: ConversationalFillerType,
   isDeveloperUser: boolean,
   previousContext?: string,
-  _userName?: string
+  _userName?: string,
+  extractedCount?: number | null
 ): string {
   const normPrev = (previousContext || '').toLowerCase();
   let topicContext = '';
@@ -108,6 +172,12 @@ export function formatConversationalFillerReply(
 
   // Sapaan khusus Developer (Ilham Fazril)
   if (isDeveloperUser) {
+    if (fillerType === 'question_inquiry') {
+      return `Tentu saja sangat boleh bos **Ilham Fazril**! Silakan sampaikan ${extractedCount ? `apa saja **${extractedCount} pertanyaan** tersebut` : 'pertanyaan-pertanyaannya'}, mau sekaligus atau satu per satu. Kodingan, query database Firestore, maupun arsitektur full-stack PSKS JABAR siap kita bahas tuntas! 🚀💻`;
+    }
+    if (fillerType === 'capability_inquiry') {
+      return `Halo bos arsitek **Ilham Fazril**! Sistem asisten AI ini kamu rancang untuk menguasai data 10 Pilar PSKS, validasi verifikasi 2-tier, sebaran 27 Kab/Kota, dan integrasi Firestore. Ada modul atau logika yang mau kita uji atau kembangkan lagi? 🚀⚡`;
+    }
     if (fillerType === 'gratitude') {
       return `Sama-sama santai Kang **Ilham Fazril**! Ada arsitektur, query, atau modul kodingan apa lagi yang mau kita bahas atau oprek bareng? Gas! 🚀💻`;
     }
@@ -118,6 +188,34 @@ export function formatConversationalFillerReply(
       return `Mangga atuh Kang **Ilham Fazril**, sampaikan saja! Mau nanya atau bahas hal apa lagi nih? Urang siap jawab tuntas! 🚀⚡`;
     }
     return `Siap santai Kang **Ilham Fazril**! Kodingan dan sistem AI udah sinkron mantap. Ada hal atau fitur apa lagi yang mau kita eksekusi? 🚀⚡`;
+  }
+
+  // 0. Question Inquiry / Preamble ("bertanya banyak boleh ga?", "saya memiliki 12 pertanyaan, bisakah anda menjawabnya?", dll.)
+  if (fillerType === 'question_inquiry') {
+    const questionPhrase = extractedCount
+      ? `apa saja **${extractedCount} pertanyaan** tersebut`
+      : 'semua pertanyaan yang ingin Anda tanyakan';
+
+    return `Tentu saja sangat boleh! Silakan sampaikan ${questionPhrase}. Anda bebas menanyakannya sekaligus secara berurutan maupun satu per satu langsung di sini.
+
+Sebagai Asisten Resmi **PSKS JABAR**, saya siap membantu memberikan jawaban yang jelas, rapi, dan terstruktur seputar:
+- **10 Pilar Kesejahteraan Sosial** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, dan SLRT/Puskesos).
+- **Alur Pendaftaran Mandiri & Verifikasi Berkas Berjenjang** (syarat berkas, verifikasi wilayah Kab/Kota, hingga pengesahan Provinsi).
+- **Data Statistik & Sebaran Wilayah** di 27 Kabupaten/Kota se-Jawa Barat.
+- **Layanan, Regulasi Resmi, & Kontak Pengaduan** Dinas Sosial Provinsi Jawa Barat.
+
+Silakan ketik pertanyaan Anda di kolom percakapan ini, saya siap menjawabnya dengan senang hati 😊!`;
+  }
+
+  // 0.5 Capability Inquiry ("kamu bisa apa aja?", "siapa kamu?")
+  if (fillerType === 'capability_inquiry') {
+    return `Halo! Saya adalah Asisten AI Resmi **PSKS JABAR** (Kecerdasan Buatan Dinas Sosial Provinsi Jawa Barat). Saya siap membantu Anda memberikan informasi dan panduan seputar:
+1. **10 Pilar Kesejahteraan Sosial**: Regulasi, tugas pokok, fungsi, dan kriteria personil pilar sosial.
+2. **Panduan Pendaftaran Mandiri**: Tata cara mendaftar, syarat berkas pendukung, serta pemantauan status verifikasi berkas.
+3. **Data dan Statistik Sebaran**: Informasi jumlah personil terverifikasi di 27 Kabupaten/Kota se-Jawa Barat.
+4. **Layanan Kedinasan**: Informasi kontak kantor, alamat, dan saluran konsultasi resmi Dinsos Jawa Barat.
+
+Silakan tanyakan informasi yang sedang Anda butuhkan!`;
   }
 
   // Follow-up Preamble ("saya ingin menanyakan 1 hal lagi", "ada 1 hal lagi", dll.)
