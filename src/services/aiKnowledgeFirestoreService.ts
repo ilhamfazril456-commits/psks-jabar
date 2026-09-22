@@ -491,7 +491,7 @@ Website PSKS JABAR merupakan sistem pangkalan data terintegrasi resmi. Di lapang
     keywords: [
       'alur verifikasi', 'verifikasi berkas wilayah', 'pengesahan dan penerimaan anggota',
       'alur pendaftaran', 'alur pendaftaran baru', 'tahap verifikasi', 'dua tahap verifikasi',
-      'verifikasi bertingkat', 'cara daftar', 'upload berkas', 'admin wilayah', 'superadmin',
+      'verifikasi bertingkat', 'cara daftar pilar', 'upload berkas pendaftaran', 'verifikasi berkas admin', 'pengesahan superadmin provinsi',
       'pengesahan anggota', 'menunggu verifikasi', 'disetujui wilayah', 'sah terdaftar'
     ],
     summary: 'Penjelasan alur pendaftaran dan verifikasi berkas berjenjang secara ringkas dan mudah dipahami: dari User terdaftar, verifikasi Admin Wilayah, hingga pengesahan Superadmin Provinsi.',
@@ -2457,6 +2457,29 @@ export function searchKnowledgeBase(
   userRole?: string
 ): AIKnowledgeDoc[] {
   const q = normalizedQuery.toLowerCase();
+
+  // Fast guard: Never return knowledge base articles for security attacks, credentials requests, or discussion mode
+  const isSecurityOrExploitOrCreds =
+    q.includes('password') ||
+    q.includes('kata sandi') ||
+    q.includes('sandi') ||
+    q.includes('kredensial') ||
+    q.includes('pin') ||
+    q.includes('token') ||
+    q.includes('jailbreak') ||
+    q.includes('bypass') ||
+    q.includes('hack') ||
+    q.includes('retas') ||
+    q.includes('sql injection') ||
+    q.includes('tanpa batas') ||
+    q.includes('mode diskusi') ||
+    q.includes('diskusi') ||
+    /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(q);
+
+  if (isSecurityOrExploitOrCreds && !q.includes('profil') && !q.includes('sejarah') && !q.includes('regulasi')) {
+    return [];
+  }
+
   const effectivePillar = activePillar || null;
   const isSuperOrDev = userRole === 'superadmin' || userRole === 'developer';
 

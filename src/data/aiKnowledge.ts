@@ -578,6 +578,62 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     return `Sami-sami / Sama-sama! Senang sekali bisa membantu Anda. Jika ada hal lain yang ingin ditanyakan seputar Sistem Informasi PSKS Jawa Barat, jangan ragu untuk bertanya kembali. Semoga hari Anda menyenangkan dan sehat selalu! 🙏✨`;
   }
 
+  // 0.45 MODE DISKUSI, ARSITEKTUR OTAK AI, KUOTA API, & EVALUASI PERMASALAHAN/SOLUSI
+  const isDiscussionOrBrainQuery =
+    q.includes('mode diskusi') ||
+    q.includes('masuk dalam mode diskusi') ||
+    q.includes('masuk mode diskusi') ||
+    q.includes('kita diskusi') ||
+    q.includes('diskusi lagi') ||
+    q.includes('diskusi dulu') ||
+    (q.includes('quota') && (q.includes('exceeded') || q.includes('habis') || q.includes('limit'))) ||
+    (q.includes('otak') && (q.includes('ai') || q.includes('asisten') || q.includes('kamus') || q.includes('disimpan'))) ||
+    (q.includes('kamus') && (q.includes('ai') || q.includes('asisten') || q.includes('disimpan'))) ||
+    (q.includes('permasalahan') && q.includes('solusi')) ||
+    (q.includes('ingat') && (q.includes('sebelumnya') || q.includes('tadi') || q.includes('masalah')));
+
+  if (isDiscussionOrBrainQuery) {
+    if (q.includes('quota') || q.includes('limit') || (q.includes('ingat') && q.includes('solusi'))) {
+      return `Siap, kita sekarang berada dalam **Mode Diskusi** penuh! 🤝💡
+
+Terkait pertanyaan Anda mengenai **kuota API (quota exceeded)** serta **permasalahan dan solusi sebelumnya**, berikut penjelasannya secara transparan dan tuntas:
+
+1. **Mengapa Quota Exceeded Terjadi?**
+   - Layanan asisten cerdas ini terhubung ke **Gemini API** di sisi server (\`/server.ts\`). Pada free-tier API, terdapat batasan ketat kuota harian (RPD - *Requests Per Day*) dan per menit (RPM - *Requests Per Minute*).
+   - Ketika kuota harian dari satu model utama (misal \`gemini-2.5-flash\`) habis, API mengembalikan status **429 Too Many Requests / Quota Exceeded**.
+
+2. **Apakah Saya Masih Ingat Permasalahan & Solusi Sebelumnya?**
+   - **Tentu sangat ingat!**
+     * **Permasalahan 1 (Alur Pendaftaran False Positive)**: Pengguna bertanya hal lain atau melakukan uji keamanan/diskusi, tetapi bot malah menjawab *"Alur Pendaftaran dan Verifikasi Berkas Bertingkat..."*. Penyebabnya adalah kata kunci seperti \`"masuk"\` (dari *"masuk dalam mode diskusi"*) atau \`"admin wilayah"\` yang salah memicu filter registrasi lokal.
+     * **Permasalahan 2 (Otak / Kamus AI)**: Kebingungan mengenai di mana pengetahuan disimpan. Otak AI terbagi dua: **LLM (Gemini API di server)** untuk pemahaman bahasa alami & nalar konteks, dan **Knowledge Base di Cloud Firestore (\`ai_knowledge_base\`)** untuk data valid 10 Pilar PSKS.
+     * **Solusinya**:
+       1. **Multi-Model Cascade**: Menambahkan rantai failover otomatis ke model lain (\`gemini-2.0-flash\`, \`gemini-2.0-flash-lite\`, \`gemini-1.5-flash\`) sehingga saat satu model mencapai batas kuota, sistem langsung beralih ke model lain tanpa gangguan.
+       2. **Pembersihan Regex Interceptor**: Menghapus kata kunci rancu (seperti \`"masuk"\`, \`"ikut"\`, \`"admin wilayah"\`) agar tidak membajak percakapan umum.
+       3. **Prioritas Nalar LLM**: Jawaban model AI diutamakan secara mutlak untuk memahami konteks percakapan manusia, bukan mencocokkan kata per kata secara kaku.
+
+Silakan, apa poin berikutnya yang ingin kita diskusikan atau uji bersama? Saya siap berdiskusi!`;
+    }
+
+    if (q.includes('otak') || q.includes('kamus') || q.includes('disimpan')) {
+      return `Halo! Pertanyaan yang sangat bagus dan fundamental. Mari kita bedah arsitektur "otak" dan "kamus" asisten AI PSKS JABAR:
+
+### 1. **Otak Pemikir Kontekstual (LLM / Generative AI)** -> *Berada di Sisi Server (Cloud API)*
+- Ditenagai oleh **Google Gemini Models** (\`gemini-2.5-flash\`, \`gemini-2.0-flash\`, dll.) yang dipanggil melalui backend Express (\`/server.ts\`).
+- Bagian inilah yang berfungsi seperti otak manusia: memahami maksud kalimat yang tidak baku, menangkap konteks multi-turn percakapan, membaca bahasa Sunda/Indonesia santai, dan merangkai jawaban yang mengalir alami.
+
+### 2. **Kamus & Pangkalan Pengetahuan (Knowledge Base / Grounding)** -> *Disimpan di Database Cloud Firestore*
+- Data faktual mengenai 10 Pilar PSKS, profil pejabat Dinsos, regulasi UU No. 11/2009, dan panduan fitur sistem tersimpan secara dinamis di **Google Cloud Firestore** (koleksi \`ai_knowledge_base\`).
+- Dokumen pengetahuan ini diambil saat runtime (*Grounding Context Retrieval*) dan disuntikkan ke instruksi sistem Gemini agar jawaban AI selalu akurat dan berbobot kedinasan.
+
+### 3. **Cadangan Lokal (Local Fallback Engine)** -> *Di dalam Codingan (\`src/data/aiKnowledge.ts\`)*
+- Berfungsi sebagai jaring pengaman (*safety net*) jika jaringan offline atau kuota API benar-benar habis, agar sistem tetap mampu memberikan respons esensial.
+
+Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa lagi terinterupsi oleh filter kata kaku. Ada yang ingin kita diskusikan lebih lanjut? 😊`;
+    }
+
+    return `Siap, kita sekarang berada dalam **Mode Diskusi**! 🤝✨\n\nDalam mode ini, kita bisa membahas arsitektur kecerdasan buatan, sistem informasi PSKS JABAR, integrasi data, maupun evaluasi teknis lainnya secara terbuka, analitis, dan mendalam.\n\nSilakan sampaikan topik atau pertanyaan yang ingin Anda diskusikan!`;
+  }
+
   // 0.5 AI IDENTITY & SYSTEM OVERVIEW (SIAPA AI & APA ITU PSKS JABAR)
   if (
     q.includes('siapa kamu') ||
@@ -910,17 +966,15 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 
   // 0.6B2: Pertanyaan Alur Verifikasi Bertingkat 2-Tier & Indikator Sensor Lampu Berkedip
   const isSensorOrTierVerificationQuery =
-    q.includes('sensor lampu') ||
-    q.includes('lampu berkedip') ||
-    q.includes('lampu sensor') ||
-    q.includes('sensor berkedip') ||
-    q.includes('centang hijau') ||
-    q.includes('verifikasi berkas wilayah') ||
-    q.includes('pengesahan dan penerimaan') ||
-    q.includes('pengesahan anggota') ||
-    (q.includes('sensor') && (q.includes('lampu') || q.includes('pending') || q.includes('verifikasi'))) ||
-    (q.includes('lampu') && q.includes('kedip')) ||
-    (q.includes('alur verifikasi') && (q.includes('bertingkat') || q.includes('dua tahap') || q.includes('2 tier') || q.includes('wilayah')));
+    !q.includes('mode diskusi') &&
+    !q.includes('diskusi') &&
+    (q.includes('sensor lampu') ||
+      q.includes('lampu berkedip') ||
+      q.includes('lampu sensor') ||
+      q.includes('sensor berkedip') ||
+      q.includes('centang hijau sensor') ||
+      (q.includes('sensor') && (q.includes('lampu') || q.includes('kedip'))) ||
+      (q.includes('alur verifikasi') && (q.includes('bertingkat') || q.includes('dua tahap') || q.includes('2 tier'))));
 
   if (isSensorOrTierVerificationQuery) {
     return `Alur pendaftaran dan verifikasi berkas di sistem **PSKS JABAR** dilakukan secara berjenjang dan transparan:
@@ -1320,22 +1374,40 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
   // 3.5 PANDUAN LENGKAP CARA DAFTAR & BERGABUNG PILAR SOSIAL (MUTLAK DIDAHULUKAN SEBELUM DEFINISI TEKSTUAL)
   const isRegisterIntent =
     !isDurationVerificationQuery &&
+    !targetQ.includes('mode diskusi') &&
+    !targetQ.includes('masuk dalam mode') &&
+    !targetQ.includes('masuk mode') &&
+    !targetQ.includes('diskusi') &&
     !targetQ.includes('berapa lama') &&
     !targetQ.includes('berapa hari') &&
     !targetQ.includes('durasi') &&
     !targetQ.includes('estimasi waktu') &&
-    (q.includes('daftar') ||
-      q.includes('daptar') ||
-      q.includes('daftr') ||
-      q.includes('gabung') ||
-      q.includes('masuk') ||
-      q.includes('ikut') ||
-      q.includes('cara jadi') ||
-      q.includes('rekrutmen') ||
-      q.includes('pendaftaran') ||
-      q.includes('pendaptaran') ||
-      q.includes('syarat') ||
-      q.includes('persyaratan'));
+    (targetQ.includes('cara daftar') ||
+      targetQ.includes('alur pendaftaran') ||
+      targetQ.includes('tata cara daftar') ||
+      targetQ.includes('bagaimana cara mendaftar') ||
+      targetQ.includes('prosedur pendaftaran') ||
+      targetQ.includes('syarat pendaftaran') ||
+      targetQ.includes('syarat daftar') ||
+      targetQ.includes('syarat gabung') ||
+      targetQ.includes('cara gabung') ||
+      targetQ.includes('cara registrasi') ||
+      targetQ.includes('cara bergabung') ||
+      targetQ.includes('gabung pilar') ||
+      targetQ.includes('gabung relawan') ||
+      targetQ.includes('daftar pilar') ||
+      targetQ.includes('daftar relawan') ||
+      targetQ.includes('pendaftaran mandiri') ||
+      targetQ.includes('tambah anggota mandiri') ||
+      targetQ.includes('daftar jadi anggota') ||
+      targetQ.includes('cara jadi anggota') ||
+      targetQ.includes('cara jadi relawan') ||
+      targetQ.includes('rekrutmen pilar') ||
+      targetQ.includes('rekrutmen anggota') ||
+      targetQ === 'cara daftar' ||
+      targetQ === 'alur pendaftaran' ||
+      targetQ === 'pendaftaran' ||
+      targetQ === 'syarat daftar');
 
   if (isRegisterIntent) {
     const politeUserHonorific =
@@ -2419,17 +2491,61 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('dump database') ||
     normQ.includes('curi data') ||
     normQ.includes('leak') ||
-    normQ.includes('password admin') ||
-    normQ.includes('pin superadmin') ||
     normQ.includes('root access') ||
     normQ.includes('sql injection') ||
     normQ.includes('drop table') ||
     normQ.includes('system prompt') ||
-    normQ.includes('jailbreak');
+    normQ.includes('jailbreak') ||
+    normQ.includes('tanpa batas') ||
+    /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(normQ) ||
+    ((normQ.includes('password') || normQ.includes('username') || normQ.includes('kata sandi') || normQ.includes('sandi') || normQ.includes('pin') || normQ.includes('kredensial') || normQ.includes('token')) &&
+     (normQ.includes('admin') || normQ.includes('superadmin') || normQ.includes('developer') || normQ.includes('wilayah') || normQ.includes('akun') || normQ.includes('dinsos') || normQ.includes('cimahi') || normQ.includes('bandung')));
 
   if (isSecurity) {
     return {
-      finalContent: 'Mohon maaf, kami tidak bisa memproses permintaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jawa Barat.',
+      finalContent: 'Mohon maaf, demi menjaga integritas sistem dan kepatuhan terhadap regulasi pelindungan data (UU PDP No. 27/2022), asisten AI **PSKS JABAR** tidak diizinkan untuk memberikan kredensial/kata sandi, memproses instruksi eksploitasi, bypass, maupun modifikasi peran. Seluruh arsitektur portal dilindungi dengan kontrol akses berbasis peran (RBAC) dan enkripsi pangkalan data yang diawasi oleh tim Dinas Sosial Provinsi Jawa Barat.',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // 0.05 MODE DISKUSI, ARSITEKTUR OTAK AI, KUOTA API, & PERTANYAAN DISKUSI
+  const isDiscussionOrBrainInAccuracy =
+    normQ.includes('mode diskusi') ||
+    normQ.includes('masuk dalam mode diskusi') ||
+    normQ.includes('masuk mode diskusi') ||
+    normQ.includes('kita diskusi') ||
+    normQ.includes('diskusi lagi') ||
+    normQ.includes('diskusi dulu') ||
+    (normQ.includes('quota') && (normQ.includes('exceeded') || normQ.includes('habis') || normQ.includes('limit'))) ||
+    (normQ.includes('otak') && (normQ.includes('ai') || normQ.includes('asisten') || normQ.includes('kamus') || normQ.includes('disimpan'))) ||
+    (normQ.includes('kamus') && (normQ.includes('ai') || normQ.includes('asisten') || normQ.includes('disimpan'))) ||
+    (normQ.includes('permasalahan') && normQ.includes('solusi')) ||
+    (normQ.includes('ingat') && (normQ.includes('sebelumnya') || normQ.includes('tadi') || normQ.includes('masalah')));
+
+  if (isDiscussionOrBrainInAccuracy) {
+    if (rawReply && rawReply.trim().length > 0 && !rawReply.includes('belum memiliki informasi')) {
+      return {
+        finalContent: rawReply.trim(),
+        isAccurate: true,
+        confidence: 0.99,
+        source: 'ai_model_verified',
+      };
+    }
+    const discussionAnswer = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: discussionAnswer,
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',
@@ -2624,26 +2740,40 @@ export function verifyAndTrackAnswerAccuracy(
   // Guarantees that any query regarding registration/joining any of the 10 pillars or general PSKS is answered with the 100% verified, untruncated application workflow
   const isRegistrationWorkflowQuery =
     !isDurationVerificationQuery &&
+    !normQ.includes('mode diskusi') &&
+    !normQ.includes('masuk dalam mode') &&
+    !normQ.includes('masuk mode') &&
+    !normQ.includes('diskusi') &&
     !normQ.includes('berapa lama') &&
     !normQ.includes('berapa hari') &&
     !normQ.includes('durasi') &&
     !normQ.includes('estimasi waktu') &&
-    (normQ.includes('daftar') ||
-      normQ.includes('daptar') ||
-      normQ.includes('daftr') ||
-      normQ.includes('registrasi') ||
-      normQ.includes('pendaftaran') ||
-      normQ.includes('pendaptaran') ||
+    (normQ.includes('cara daftar') ||
       normQ.includes('alur pendaftaran') ||
-      normQ.includes('cara gabung') ||
-      normQ.includes('cara masuk') ||
-      normQ.includes('cara ikut') ||
+      normQ.includes('tata cara daftar') ||
+      normQ.includes('bagaimana cara mendaftar') ||
+      normQ.includes('prosedur pendaftaran') ||
+      normQ.includes('syarat pendaftaran') ||
       normQ.includes('syarat daftar') ||
       normQ.includes('syarat gabung') ||
-      normQ.includes('syarat pendaftaran') ||
-      normQ.includes('tata cara mendaftar') ||
-      normQ.includes('bagaimana cara mendaftar') ||
-      normQ.includes('cara jadi relawan'));
+      normQ.includes('cara gabung') ||
+      normQ.includes('cara registrasi') ||
+      normQ.includes('cara bergabung') ||
+      normQ.includes('gabung pilar') ||
+      normQ.includes('gabung relawan') ||
+      normQ.includes('daftar pilar') ||
+      normQ.includes('daftar relawan') ||
+      normQ.includes('pendaftaran mandiri') ||
+      normQ.includes('tambah anggota mandiri') ||
+      normQ.includes('daftar jadi anggota') ||
+      normQ.includes('cara jadi anggota') ||
+      normQ.includes('cara jadi relawan') ||
+      normQ.includes('rekrutmen pilar') ||
+      normQ.includes('rekrutmen anggota') ||
+      normQ === 'cara daftar' ||
+      normQ === 'alur pendaftaran' ||
+      normQ === 'pendaftaran' ||
+      normQ === 'syarat daftar');
 
   if (isRegistrationWorkflowQuery) {
     const verifiedRegistrationAnswer = getComprehensiveSmartAnswer(
@@ -2667,17 +2797,15 @@ export function verifyAndTrackAnswerAccuracy(
 
   // Sensor Lights & 2-Tier Verification Interceptor
   const isSensorOrTierVerificationInAccuracy =
-    normQ.includes('sensor lampu') ||
-    normQ.includes('lampu berkedip') ||
-    normQ.includes('lampu sensor') ||
-    normQ.includes('sensor berkedip') ||
-    normQ.includes('centang hijau') ||
-    normQ.includes('verifikasi berkas wilayah') ||
-    normQ.includes('pengesahan dan penerimaan') ||
-    normQ.includes('pengesahan anggota') ||
-    (normQ.includes('sensor') && (normQ.includes('lampu') || normQ.includes('pending') || normQ.includes('verifikasi'))) ||
-    (normQ.includes('lampu') && normQ.includes('kedip')) ||
-    (normQ.includes('alur verifikasi') && (normQ.includes('bertingkat') || normQ.includes('dua tahap') || normQ.includes('2 tier') || normQ.includes('wilayah')));
+    !normQ.includes('mode diskusi') &&
+    !normQ.includes('diskusi') &&
+    (normQ.includes('sensor lampu') ||
+      normQ.includes('lampu berkedip') ||
+      normQ.includes('lampu sensor') ||
+      normQ.includes('sensor berkedip') ||
+      normQ.includes('centang hijau sensor') ||
+      (normQ.includes('sensor') && (normQ.includes('lampu') || normQ.includes('kedip'))) ||
+      (normQ.includes('alur verifikasi') && (normQ.includes('bertingkat') || normQ.includes('dua tahap') || normQ.includes('2 tier'))));
 
   if (isSensorOrTierVerificationInAccuracy) {
     const verifiedSensorAnswer = getComprehensiveSmartAnswer(

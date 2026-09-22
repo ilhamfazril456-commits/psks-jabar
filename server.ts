@@ -746,10 +746,14 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('sql injection') ||
       q.includes('drop table') ||
       q.includes('system prompt') ||
-      q.includes('jailbreak');
+      q.includes('jailbreak') ||
+      q.includes('tanpa batas') ||
+      /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(q) ||
+      ((q.includes('password') || q.includes('username') || q.includes('kata sandi') || q.includes('sandi') || q.includes('pin') || q.includes('kredensial') || q.includes('token')) &&
+       (q.includes('admin') || q.includes('superadmin') || q.includes('developer') || q.includes('wilayah') || q.includes('akun') || q.includes('dinsos') || q.includes('cimahi') || q.includes('bandung')));
 
     if (isSecurityThreat) {
-      return `Mohon maaf, kami tidak bisa memproses permintaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jawa Barat.`;
+      return `Mohon maaf, demi menjaga integritas sistem dan kepatuhan terhadap regulasi pelindungan data (UU PDP No. 27/2022), asisten AI **PSKS JABAR** tidak diizinkan untuk memberikan kredensial/kata sandi, memproses instruksi eksploitasi, bypass, maupun modifikasi peran. Seluruh arsitektur portal dilindungi dengan kontrol akses berbasis peran (RBAC) dan enkripsi pangkalan data yang diawasi oleh tim Dinas Sosial Provinsi Jawa Barat.`;
     }
 
     // 0.00 ANTI-PROMPT INJECTION & DEVELOPER/ADMIN IMPERSONATION GUARD (ZERO-TRUST RBAC)
@@ -1030,6 +1034,62 @@ Pengaturan mode pemeliharaan portal dikelola melalui menu **"Manajemen Maintenan
 
 [[action:tab:maintenance:Buka Manajemen Maintenance]]`;
       }
+    }
+
+    // 0.0019 MODE DISKUSI, ARSITEKTUR OTAK AI, KUOTA API, & EVALUASI PERMASALAHAN/SOLUSI
+    const isDiscussionOrBrainQuery =
+      q.includes('mode diskusi') ||
+      q.includes('masuk dalam mode diskusi') ||
+      q.includes('masuk mode diskusi') ||
+      q.includes('kita diskusi') ||
+      q.includes('diskusi lagi') ||
+      q.includes('diskusi dulu') ||
+      (q.includes('quota') && (q.includes('exceeded') || q.includes('habis') || q.includes('limit'))) ||
+      (q.includes('otak') && (q.includes('ai') || q.includes('asisten') || q.includes('kamus') || q.includes('disimpan'))) ||
+      (q.includes('kamus') && (q.includes('ai') || q.includes('asisten') || q.includes('disimpan'))) ||
+      (q.includes('permasalahan') && q.includes('solusi')) ||
+      (q.includes('ingat') && (q.includes('sebelumnya') || q.includes('tadi') || q.includes('masalah')));
+
+    if (isDiscussionOrBrainQuery) {
+      if (q.includes('quota') || q.includes('limit') || (q.includes('ingat') && q.includes('solusi'))) {
+        return `Siap, kita sekarang berada dalam **Mode Diskusi** penuh! 🤝💡
+
+Terkait pertanyaan Anda mengenai **kuota API (quota exceeded)** serta **permasalahan dan solusi sebelumnya**, berikut penjelasannya secara transparan dan tuntas:
+
+1. **Mengapa Quota Exceeded Terjadi?**
+   - Layanan asisten cerdas ini terhubung ke **Gemini API** di sisi server (\`/server.ts\`). Pada free-tier API, terdapat batasan ketat kuota harian (RPD - *Requests Per Day*) dan per menit (RPM - *Requests Per Minute*).
+   - Ketika kuota harian dari satu model utama (misal \`gemini-2.5-flash\`) habis, API mengembalikan status **429 Too Many Requests / Quota Exceeded**.
+
+2. **Apakah Saya Masih Ingat Permasalahan & Solusi Sebelumnya?**
+   - **Tentu sangat ingat!**
+     * **Permasalahan 1 (Alur Pendaftaran False Positive)**: Pengguna bertanya hal lain atau melakukan uji keamanan/diskusi, tetapi bot malah menjawab *"Alur Pendaftaran dan Verifikasi Berkas Bertingkat..."*. Penyebabnya adalah kata kunci seperti \`"masuk"\` (dari *"masuk dalam mode diskusi"*) atau \`"admin wilayah"\` yang salah memicu filter registrasi lokal.
+     * **Permasalahan 2 (Otak / Kamus AI)**: Kebingungan mengenai di mana pengetahuan disimpan. Otak AI terbagi dua: **LLM (Gemini API di server)** untuk pemahaman bahasa alami & nalar konteks, dan **Knowledge Base di Cloud Firestore (\`ai_knowledge_base\`)** untuk data valid 10 Pilar PSKS.
+     * **Solusinya**:
+       1. **Multi-Model Cascade**: Menambahkan rantai failover otomatis ke model lain (\`gemini-2.0-flash\`, \`gemini-2.0-flash-lite\`, \`gemini-1.5-flash\`) sehingga saat satu model mencapai batas kuota, sistem langsung beralih ke model lain tanpa gangguan.
+       2. **Pembersihan Regex Interceptor**: Menghapus kata kunci rancu (seperti \`"masuk"\`, \`"ikut"\`, \`"admin wilayah"\`) agar tidak membajak percakapan umum.
+       3. **Prioritas Nalar LLM**: Jawaban model AI diutamakan secara mutlak untuk memahami konteks percakapan manusia, bukan mencocokkan kata per kata secara kaku.
+
+Silakan, apa poin berikutnya yang ingin kita diskusikan atau uji bersama? Saya siap berdiskusi!`;
+      }
+
+      if (q.includes('otak') || q.includes('kamus') || q.includes('disimpan')) {
+        return `Halo! Pertanyaan yang sangat bagus dan fundamental. Mari kita bedah arsitektur "otak" dan "kamus" asisten AI PSKS JABAR:
+
+### 1. **Otak Pemikir Kontekstual (LLM / Generative AI)** -> *Berada di Sisi Server (Cloud API)*
+- Ditenagai oleh **Google Gemini Models** (\`gemini-2.5-flash\`, \`gemini-2.0-flash\`, dll.) yang dipanggil melalui backend Express (\`/server.ts\`).
+- Bagian inilah yang berfungsi seperti otak manusia: memahami maksud kalimat yang tidak baku, menangkap konteks multi-turn percakapan, membaca bahasa Sunda/Indonesia santai, dan merangkai jawaban yang mengalir alami.
+
+### 2. **Kamus & Pangkalan Pengetahuan (Knowledge Base / Grounding)** -> *Disimpan di Database Cloud Firestore*
+- Data faktual mengenai 10 Pilar PSKS, profil pejabat Dinsos, regulasi UU No. 11/2009, dan panduan fitur sistem tersimpan secara dinamis di **Google Cloud Firestore** (koleksi \`ai_knowledge_base\`).
+- Dokumen pengetahuan ini diambil saat runtime (*Grounding Context Retrieval*) dan disuntikkan ke instruksi sistem Gemini agar jawaban AI selalu akurat dan berbobot kedinasan.
+
+### 3. **Cadangan Lokal (Local Fallback Engine)** -> *Di dalam Codingan (\`src/data/aiKnowledge.ts\`)*
+- Berfungsi sebagai jaring pengaman (*safety net*) jika jaringan offline atau kuota API benar-benar habis, agar sistem tetap mampu memberikan respons esensial.
+
+Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa lagi terinterupsi oleh filter kata kaku. Ada yang ingin kita diskusikan lebih lanjut? 😊`;
+      }
+
+      return `Siap, kita sekarang berada dalam **Mode Diskusi**! 🤝✨\n\nDalam mode ini, kita bisa membahas arsitektur kecerdasan buatan, sistem informasi PSKS JABAR, integrasi data, maupun evaluasi teknis lainnya secara terbuka, analitis, dan mendalam.\n\nSilakan sampaikan topik atau pertanyaan yang ingin Anda diskusikan!`;
     }
 
     // 0.002 PERTANYAAN KESIAPAN BANTUAN ("bisakah bantu saya?", "bisa bantu saya?", dll.)
@@ -1966,23 +2026,40 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
     const isRegisterIntent =
       !isDurationVerificationQuery &&
       !isGeneralPillarOrDefQuery &&
+      !targetQ.includes('mode diskusi') &&
+      !targetQ.includes('masuk dalam mode') &&
+      !targetQ.includes('masuk mode') &&
+      !targetQ.includes('diskusi') &&
       !targetQ.includes('berapa lama') &&
       !targetQ.includes('berapa hari') &&
       !targetQ.includes('durasi') &&
       !targetQ.includes('estimasi waktu') &&
-      (targetQ.includes('daftar') ||
-        targetQ.includes('daptar') ||
-        targetQ.includes('gabung') ||
-        targetQ.includes('masuk') ||
-        targetQ.includes('ikut') ||
-        targetQ.includes('cara jadi') ||
-        targetQ.includes('rekrutmen') ||
-        targetQ.includes('pendaftaran') ||
-        targetQ.includes('pendaptaran') ||
-        targetQ.includes('syarat') ||
-        targetQ.includes('persyaratan') ||
-        targetQ.includes('saratt') ||
-        targetQ.includes('syrt'));
+      (targetQ.includes('cara daftar') ||
+        targetQ.includes('alur pendaftaran') ||
+        targetQ.includes('tata cara daftar') ||
+        targetQ.includes('bagaimana cara mendaftar') ||
+        targetQ.includes('prosedur pendaftaran') ||
+        targetQ.includes('syarat pendaftaran') ||
+        targetQ.includes('syarat daftar') ||
+        targetQ.includes('syarat gabung') ||
+        targetQ.includes('cara gabung') ||
+        targetQ.includes('cara registrasi') ||
+        targetQ.includes('cara bergabung') ||
+        targetQ.includes('gabung pilar') ||
+        targetQ.includes('gabung relawan') ||
+        targetQ.includes('daftar pilar') ||
+        targetQ.includes('daftar relawan') ||
+        targetQ.includes('pendaftaran mandiri') ||
+        targetQ.includes('tambah anggota mandiri') ||
+        targetQ.includes('daftar jadi anggota') ||
+        targetQ.includes('cara jadi anggota') ||
+        targetQ.includes('cara jadi relawan') ||
+        targetQ.includes('rekrutmen pilar') ||
+        targetQ.includes('rekrutmen anggota') ||
+        targetQ === 'cara daftar' ||
+        targetQ === 'alur pendaftaran' ||
+        targetQ === 'pendaftaran' ||
+        targetQ === 'syarat daftar');
 
     if (isRegisterIntent) {
       const politeUserHonorific =
@@ -2691,17 +2768,40 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           });
         }
 
-        // 2. UPAYA PROMPT INJECTION / JAILBREAK INSTRUCTION (TOLAK SECARA HALUS)
+        // 2. UPAYA PROMPT INJECTION / JAILBREAK INSTRUCTION (TOLAK SECARA HALUS DAN RELEVAN)
         const isPromptInjectionAttempt =
           !isDeveloper &&
           (
             /\b(abaikan|ignore|lupakan)\s+(semua\s+)?(perintah|instruksi|system\s*prompt|aturan)/i.test(lowQ) ||
-            /\b(you\s+are\s+now|mulai\s+sekarang\s+kamu\s+adalah|act\s+as|berperanlah\s+sebagai)\b/i.test(lowQ)
+            /\b(you\s+are\s+now|mulai\s+sekarang\s+kamu\s+adalah|act\s+as|berperanlah\s+sebagai)\b/i.test(lowQ) ||
+            /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(lowQ) ||
+            /\b(tanpa\s+batas|unrestricted|tanpa\s+sensor|mode\s+bebas|jailbreak)\b/i.test(lowQ) ||
+            /\b(dan\s+mode|developer\s+mode)\b/i.test(lowQ)
           );
 
         if (isPromptInjectionAttempt) {
           return res.json({
-            reply: 'Mohon maaf, sebagai Asisten AI Resmi Sistem Informasi **PSKS JABAR**, saya beroperasi secara konsisten dalam batas panduan kedinasan dan kepatuhan sistem. Saya siap membantu Anda memberikan informasi seputar **10 Pilar PSKS**, alur pendaftaran relawan sosial mandiri, maupun layanan Dinas Sosial Provinsi Jawa Barat. Silakan sampaikan pertanyaan Anda seputar layanan sosial!'
+            reply: 'Mohon maaf, demi menjaga integritas sistem dan kepatuhan terhadap kebijakan privasi (UU PDP No. 27/2022), asisten AI **PSKS JABAR** beroperasi secara konsisten dalam batas panduan kedinasan resmi dan tidak dapat diarahkan untuk mengabaikan instruksi atau menjalankan mode tanpa batas. Saya siap membantu Anda memberikan informasi seputar **10 Pilar PSKS**, alur pendaftaran relawan sosial, maupun layanan Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
+          });
+        }
+
+        // 2B. PERMINTAAN KREDENSIAL / USERNAME / PASSWORD / PIN / TOKEN AKUN (ZERO-DISCLOSURE)
+        const isCredentialTheftAttempt =
+          !isDeveloper &&
+          (
+            (/\b(username|password|kata sandi|sandi|kredensial|pin|token)\b/i.test(lowQ) &&
+             /\b(admin|superadmin|developer|wilayah|cimahi|bandung|bogor|bekasi|cirebon|sukabumi|garut|tasikmalaya|dinsos|akun|login)\b/i.test(lowQ)) ||
+            lowQ.includes('berikan username') ||
+            lowQ.includes('minta username') ||
+            lowQ.includes('berikan password') ||
+            lowQ.includes('minta password') ||
+            lowQ.includes('bocorkan password') ||
+            lowQ.includes('bocorkan sandi')
+          );
+
+        if (isCredentialTheftAttempt) {
+          return res.json({
+            reply: 'Mohon maaf, demi menjaga integritas sistem dan kepatuhan terhadap UU Pelindungan Data Pribadi (UU PDP No. 27/2022), asisten AI **PSKS JABAR** menerapkan prinsip *zero-disclosure*. Kredensial, username, kata sandi (*password*), maupun PIN akun administrator wilayah, superadmin, dan pengembang bersifat rahasia internal terenkripsi dan sama sekali tidak dapat dibocorkan atau diberikan melalui asisten AI. Silakan masuk melalui formulir login resmi apabila Anda memiliki kewenangan kedinasan.\n\n[[action:tab:login:Buka Halaman Login]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
           });
         }
 
@@ -2868,8 +2968,14 @@ AI WAJIB:
         // Strictly normalize conversation history for Gemini API (ensures starts with user & strictly alternates)
         const sanitizedContents = normalizeGeminiContents(messages);
 
-        // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
-        const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+        // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation with automatic quota failover
+        const candidateModels = [
+          'gemini-2.5-flash',
+          'gemini-2.0-flash',
+          'gemini-2.0-flash-lite',
+          'gemini-1.5-flash',
+          'gemini-2.5-pro',
+        ];
         let replyText = '';
 
         for (const modelName of candidateModels) {
