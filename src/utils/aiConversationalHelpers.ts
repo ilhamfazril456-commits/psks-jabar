@@ -1,4 +1,4 @@
-export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up' | 'question_inquiry' | 'capability_inquiry';
+export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up' | 'question_inquiry' | 'capability_inquiry' | 'closure';
 
 export interface ConversationalFillerResult {
   isFiller: boolean;
@@ -139,6 +139,14 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
     return { isFiller: true, fillerType: 'praise' };
   }
 
+  // 5. Conversational Closure & Confirmation of No More Questions ("tidak ada", "ga ada", "udah cukup", "pas", dll.)
+  if (
+    /^(tidak\s*ada|ga\s*ada|gak\s*ada|ngga\s*ada|nggak\s*ada|teu\s*aya|kosong|udah\s*cukup|sudah\s*cukup|cukup\s*min|cukup|pas|itu\s*aja|itu\s*saja|udah\s*itu\s*aja|sudah\s*itu\s*saja|cukup\s*itu\s*aja|tidak\s*ada\s*lagi|ga\s*ada\s*lagi|gak\s*ada\s*lagi)(\s+(min|kang|teh|admin|kak|makasih|terima\s*kasih|kok|dulu))*$/i.test(c1) ||
+    /^(tidak\s*ada|ga\s*ada|gak\s*ada|ngga\s*ada|nggak\s*ada|teu\s*aya|kosong|udah\s*cukup|sudah\s*cukup|cukup\s*min|cukup|pas|itu\s*aja|itu\s*saja|udah\s*itu\s*aja|sudah\s*itu\s*saja|cukup\s*itu\s*aja|tidak\s*ada\s*lagi|ga\s*ada\s*lagi|gak\s*ada\s*lagi)(\s+(min|kang|teh|admin|kak|makasih|terima\s*kasih|kok|dulu))*$/i.test(c2)
+  ) {
+    return { isFiller: true, fillerType: 'closure' };
+  }
+
   return { isFiller: false, fillerType: null };
 }
 
@@ -234,6 +242,11 @@ Silakan tanyakan informasi yang sedang Anda butuhkan!`;
   // Pujian & Apresiasi
   if (fillerType === 'praise') {
     return `Terima kasih banyak atas apresiasi positifnya 😊! Semoga informasinya bermanfaat. Apakah ada informasi lain seputar ${topicContext ? `**${topicContext}**` : '10 Pilar PSKS dan layanan sosial Jawa Barat'} yang bisa saya bantu jelaskan?`;
+  }
+
+  // Percakapan Penutup / Konfirmasi Tidak Ada Pertanyaan Lagi ("tidak ada", "udah cukup", dll.)
+  if (fillerType === 'closure') {
+    return `Baik, terima kasih banyak! 😊 Jika sewaktu-waktu membutuhkan panduan atau informasi seputar 10 Pilar PSKS dan layanan Dinas Sosial Provinsi Jawa Barat lagi, jangan ragu untuk menyapa kembali ya. Semoga harinya menyenangkan!`;
   }
 
   // Conversational Filler / Ack ("ohh", "oke", "siap", "paham", "ngerti", "oh gitu", dll.)
