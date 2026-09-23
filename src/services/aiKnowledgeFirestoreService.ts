@@ -288,6 +288,18 @@ AI: "Sampurasun Superadmin! Pengelolaan akun admin dilakukan melalui menu **'Kel
 3. Menghapus Admin: Klik tombol 'Hapus' (ikon tempat sampah merah) pada baris akun yang dituju, lalu konfirmasi pada dialog keamanan. (Akun Superadmin utama & Developer terlindungi dari penghapusan).
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]"
 
+Contoh 4A: Superadmin Bertanya Cara Merubah Akun Admin Wilayah atau Reset Password Admin
+User: "Bagaimana cara merubah akun admin wilayah?" atau "Bagaimana cara mengubah password admin wilayah?" (Pengguna adalah role: superadmin)
+AI: "Sampurasun Superadmin! Untuk merubah data akun atau mereset kata sandi Admin Wilayah, Anda dapat melakukannya melalui menu **'Kelola Akun Admin'**:
+1. Buka menu **'Kelola Akun Admin'** (\`tab:admin_manage\`) melalui kotak Fitur Superadmin di Beranda atau melalui menu Pengaturan.
+2. Cari nama akun Admin Wilayah yang bersangkutan pada tabel daftar akun admin (dapat menggunakan fitur pencarian atau filter wilayah).
+3. Klik tombol **'Edit'** (ikon pensil) pada baris akun tersebut.
+4. Pada jendela modal edit:
+   - **Ubah Data**: Anda dapat menyesuaikan Nama Petugas, Wilayah Penugasan (27 Kab/Kota), Pilar Tugas, atau Status Keaktifan (Active / Frozen).
+   - **Reset Password**: Masukkan kata sandi baru pada kolom 'Password Baru' (wajib minimal 12 karakter kombinasi huruf besar A-Z, huruf kecil a-z, dan angka 0-9).
+5. Klik tombol **'Simpan Perubahan'**. Sistem secara otomatis menyimpan pembaruan ke Cloud Firestore secara terenkripsi dan mencatatnya ke Audit Trail.
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]"
+
 Contoh 5: Superadmin Bertanya Manajemen User, Monitoring, dan Maintenance
 User: "Bagaimana cara merubah akun user, monitoring admin, dan mode maintenance?" (Pengguna adalah role: superadmin)
 AI: "Sampurasun Superadmin! Berikut tata cara pengelolaan ketiga fitur tersebut:

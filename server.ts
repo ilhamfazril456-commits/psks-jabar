@@ -894,6 +894,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('menambah akun admin') ||
       q.includes('ubah akun admin') ||
       q.includes('merubah akun admin') ||
+      q.includes('mengubah akun admin') ||
       q.includes('edit akun admin') ||
       q.includes('hapus admin') ||
       q.includes('menghapus admin') ||
@@ -901,10 +902,21 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('menambah admin') ||
       q.includes('ubah admin') ||
       q.includes('merubah admin') ||
+      q.includes('mengubah admin') ||
       q.includes('edit admin') ||
+      q.includes('mengubah password admin') ||
+      q.includes('ubah password admin') ||
+      q.includes('merubah password admin') ||
+      q.includes('ganti password admin') ||
+      q.includes('reset password admin') ||
+      q.includes('mengubah kata sandi admin') ||
+      q.includes('ubah kata sandi admin') ||
+      q.includes('ganti kata sandi admin') ||
+      q.includes('reset sandi admin') ||
       q.includes('kelola admin') ||
       q.includes('kelola akun admin') ||
       q.includes('manajemen admin') ||
+      q.includes('manajemen akun admin') ||
       q.includes('monitoring admin') ||
       q.includes('pantau admin') ||
       q.includes('cara monitoring admin') ||
@@ -915,6 +927,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('cara maintenance') ||
       q.includes('merubah akun user') ||
       q.includes('ubah akun user') ||
+      q.includes('mengubah akun user') ||
       q.includes('kelola akun user') ||
       q.includes('manajemen user') ||
       q.includes('reset sandi user') ||
@@ -923,11 +936,7 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('unfreeze user') ||
       q.includes('hapus akun user') ||
       q.includes('menghapus akun user') ||
-      q.includes('login admin') ||
-      q.includes('login superadmin') ||
-      q.includes('password admin') ||
-      q.includes('pin superadmin') ||
-      q.includes('kredensial admin');
+      (q.includes('admin wilayah') && (q.includes('ubah') || q.includes('rubah') || q.includes('edit') || q.includes('ganti') || q.includes('password') || q.includes('sandi') || q.includes('kelola')));
 
     // 1. Jika Tamu Publik atau Pengguna Terdaftar (Role: User/Tamu) menanyakan fitur admin/superadmin/developer -> TOLAK HALUS
     if (isAskingAdminWorkflow && !isDev && userContext?.role !== 'superadmin' && userContext?.role !== 'admin') {
@@ -942,24 +951,115 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       q.includes('menambah akun admin') ||
       q.includes('ubah akun admin') ||
       q.includes('merubah akun admin') ||
+      q.includes('mengubah akun admin') ||
+      q.includes('edit akun admin') ||
       q.includes('hapus admin') ||
+      q.includes('menghapus admin') ||
       q.includes('tambah admin') ||
+      q.includes('menambah admin') ||
       q.includes('ubah admin') ||
+      q.includes('merubah admin') ||
+      q.includes('mengubah admin') ||
+      q.includes('edit admin') ||
+      q.includes('mengubah password admin') ||
+      q.includes('ubah password admin') ||
+      q.includes('merubah password admin') ||
+      q.includes('ganti password admin') ||
+      q.includes('reset password admin') ||
+      q.includes('reset sandi admin') ||
       q.includes('monitoring admin') ||
       q.includes('pantau admin') ||
       q.includes('cara monitoring admin') ||
+      q.includes('monitoring seluruh admin') ||
       q.includes('maintenance mode') ||
       q.includes('mode maintenance') ||
+      q.includes('mode pemeliharaan') ||
       q.includes('saklar maintenance') ||
       q.includes('cara maintenance');
 
     if (userContext?.role === 'admin' && !isDev && isSuperadminExclusiveWorkflow) {
-      return `Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar dan verifikasi pendaftaran di wilayah penugasan Anda.`;
+      return `Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran di wilayah penugasan Anda.`;
     }
 
     // 3. Jika Superadmin atau Developer yang menanyakan alur kerja administratif -> JAWAB LENGKAP & AKURAT
     if (userContext?.role === 'superadmin' || isDev) {
-      // 3A. Menambah Akun Admin
+      // 3A. Khusus Mengubah / Reset Password Akun Admin Wilayah
+      if (
+        q.includes('password') ||
+        q.includes('kata sandi') ||
+        q.includes('sandi') ||
+        q.includes('reset')
+      ) {
+        return `**Panduan Resmi Superadmin: Cara Mengubah / Reset Password Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda dapat memperbarui atau mereset kata sandi akun Admin Wilayah di 27 Kabupaten/Kota melalui menu **Kelola Akun Admin**:
+
+---
+
+### **Langkah-Langkah Mengubah / Reset Password Admin Wilayah**:
+
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada panel Fitur Superadmin di halaman **Beranda** atau melalui tab **Pengaturan**.
+
+2. **Cari Akun Admin Wilayah Terkait**:
+   - Pada tabel daftar administrator, temukan nama akun admin wilayah yang ingin diubah kata sandinya. Anda dapat memanfaatkan fitur pencarian nama atau filter berdasarkan wilayah (27 Kab/Kota).
+
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun admin yang bersangkutan untuk membuka formulir modal ubah data.
+
+4. **Masukkan Password Baru**:
+   - Pada kolom formulir **"Password Baru"**, ketikkan kata sandi baru untuk akun tersebut.
+   - *Ketentuan Keamanan Sistem*: Kata sandi wajib memenuhi standar keamanan minimal 12 karakter kombinasi (huruf besar A-Z, huruf kecil a-z, dan angka 0-9).
+
+5. **Simpan Perubahan**:
+   - Klik tombol **"Simpan Perubahan"**. Sistem secara otomatis mengenkripsi kata sandi baru menggunakan algoritma hash satu arah yang aman (*Bcrypt*) dan admin wilayah tersebut dapat langsung login menggunakan kata sandi baru.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+      }
+
+      // 3B. Merubah / Mengedit Akun Admin
+      if (
+        q.includes('merubah akun admin') ||
+        q.includes('mengubah akun admin') ||
+        q.includes('ubah akun admin') ||
+        q.includes('edit akun admin') ||
+        q.includes('merubah admin') ||
+        q.includes('mengubah admin') ||
+        q.includes('ubah admin') ||
+        q.includes('edit admin')
+      ) {
+        return `**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, status, maupun wilayah penugasan akun Admin Wilayah di 27 Kabupaten/Kota.
+
+---
+
+### **Langkah-Langkah Merubah Data Akun Admin Wilayah**:
+
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di **Beranda** atau melalui menu **Pengaturan**.
+
+2. **Pilih Akun yang Ingin Diubah**:
+   - Pada tabel daftar akun administrator, cari akun admin wilayah yang ingin diperbarui (dapat dicari berdasarkan nama atau difilter per kabupaten/kota).
+
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun yang bersangkutan untuk memunculkan formulir modal pembaharuan.
+
+4. **Perbarui Data yang Diperlukan**:
+   - **Nama Lengkap**: Sesuaikan nama pejabat/petugas baru jika ada rotasi kedinasan.
+   - **Nomor Telepon / WhatsApp / Username**: Kontak aktif kedinasan petugas.
+   - **Wilayah Penugasan**: Sesuaikan salah satu dari 27 Kabupaten/Kota se-Jawa Barat.
+   - **Pilar Tugas**: Pilih pilar binaan spesifik atau pilih semua pilar.
+   - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan sementara jika mutasi/non-aktif).
+   - **Password Baru**: Isi kolom ini HANYA jika ingin mengganti/mereset kata sandi (minimal 12 karakter kombinasi). Kosongkan jika password tetap.
+
+5. **Simpan Perubahan**:
+   - Klik tombol **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan aktivitas ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+      }
+
+      // 3C. Menambah Akun Admin
       if (q.includes('tambah admin') || q.includes('menambah admin') || q.includes('tambah akun admin') || q.includes('menambah akun admin') || q.includes('buat admin') || q.includes('bikin admin')) {
         return `**Panduan Resmi Superadmin: Cara Menambah Akun Admin Baru**:
 
@@ -983,33 +1083,7 @@ Berikut tata cara menambahkan akun administrator wilayah di portal **PSKS JABAR*
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
       }
 
-      // 3B. Merubah / Mengedit Akun Admin
-      if (q.includes('merubah akun admin') || q.includes('ubah akun admin') || q.includes('edit akun admin') || q.includes('merubah admin') || q.includes('ubah admin') || q.includes('edit admin')) {
-        return `**Panduan Resmi Superadmin: Cara Merubah / Mengedit Akun Admin**:
-
-Berikut langkah-langkah merubah data atau konfigurasi akun administrator wilayah:
-
----
-
-1. **Buka Menu "Kelola Akun Admin"**:
-   - Buka menu **"Kelola Akun Admin"** (\`tab:admin_manage\`).
-2. **Cari Akun Admin**:
-   - Pada tabel daftar akun admin, cari akun yang hendak diubah (tersedia kolom pencarian nama/username).
-3. **Buka Jendela Modal Edit**:
-   - Klik tombol **"Edit"** pada baris akun yang bersangkutan.
-4. **Lakukan Pembaruan Data**:
-   - Anda dapat memperbarui:
-     * **Nama Petugas**: Jika terdapat mutasi atau pergantian personil dinas.
-     * **Reset Kata Sandi**: Masukkan kata sandi baru (tetap wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka) jika admin lupa sandi.
-     * **Wilayah & Pilar Tugas**: Menyesuaikan perubahan lokasi tugas kedinasan.
-     * **Status Keaktifan**: Mengubah status menjadi Aktif atau Non-Aktif.
-5. **Simpan Perubahan**:
-   - Klik tombol **"Simpan Perubahan"**. Data akun admin langsung terperbarui di database.
-
-[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
-      }
-
-      // 3C. Menghapus Akun Admin
+      // 3D. Menghapus Akun Admin
       if (q.includes('menghapus akun admin') || q.includes('hapus akun admin') || q.includes('menghapus admin') || q.includes('hapus admin')) {
         return `**Panduan Resmi Superadmin: Cara Menghapus Akun Admin**:
 
@@ -1033,8 +1107,8 @@ Berikut langkah-langkah menghapus akun administrator di sistem **PSKS JABAR**:
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
       }
 
-      // 3D. Merubah & Mengelola Akun User (User Management)
-      if (q.includes('merubah akun user') || q.includes('ubah akun user') || q.includes('kelola akun user') || q.includes('manajemen user') || q.includes('reset sandi user') || q.includes('bekukan akun user') || q.includes('freeze user') || q.includes('unfreeze user') || q.includes('hapus akun user')) {
+      // 3E. Merubah & Mengelola Akun User (User Management)
+      if (q.includes('merubah akun user') || q.includes('ubah akun user') || q.includes('mengubah akun user') || q.includes('kelola akun user') || q.includes('manajemen user') || q.includes('reset sandi user') || q.includes('bekukan akun user') || q.includes('freeze user') || q.includes('unfreeze user') || q.includes('hapus akun user')) {
         return `**Panduan Resmi Superadmin: Manajemen & Tata Cara Merubah Akun User Terdaftar**:
 
 Pengelolaan pengguna publik terdaftar dilakukan melalui menu **"Manajemen User"** (\`tab:user_manage\`):
@@ -2994,18 +3068,24 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
   * Jika pertanyaan DIBALIK tentang TOKOH/SUBJEK ("Siapa itu Ilham Fazril?", "Siapa Ilham Fazril?"):
     JANGAN gunakan jawaban pembuat website, melainkan jawab dengan profil tokoh: **Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi PSKS JABAR, ia adalah seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) Tahun 2026 yang secara mandiri merancang arsitektur full-stack sistem digitalisasi 10 pilar sosial se-Jawa Barat.
 - [KERAHASIAAN MUTLAK AKUN DEVELOPER]: Akun dan kredensial developer bersifat SANGAT DIRAHASIAKAN dan TIDAK BOLEH ADA YANG MENGETAHUINYA. Jika ada yang menanyakan akun developer, kredensial, password, PIN, atau cara login akun developer, TOLAK DENGAN TEGAS DAN SOPAN bahwa akun developer bersifat sangat rahasia internal demi keamanan sistem.
-- [BATASAN AKSES ROLE (RBAC STRICT) & LARANGAN MEMBOCORKAN FITUR INTERNAL SUPERADMIN]:
-  * **LARANGAN KERAS MEMBOCORKAN NAMA FITUR / MENU INTERNAL SUPERADMIN**: DILARANG KERAS menyebutkan nama menu teknis internal Superadmin (seperti "Manajemen User", "Kelola Akun Admin", "Monitoring Admin", "Manajemen Maintenance", "tab:user_manage", "tab:admin_manage", "tab:monitoring", "tab:maintenance", dll.) kepada Tamu Publik, Pengguna Umum, atau Admin Wilayah!
+- [BATASAN AKSES ROLE (RBAC STRICT)]:
+  * **SUPERADMIN RESMI (Role: superadmin)**:
+    Superadmin adalah Pengelola Utama Sistem Tingkat Provinsi Jawa Barat.
+    JIKA pengguna adalah Superadmin:
+    1. Berikan panduan lengkap, santun, dan solutif mengenai seluruh **8 FITUR SUPERADMIN DI BERANDA & PENGATURAN** (Kelola Akun Admin, Manajemen User, Pemantauan Admin, Riwayat Aktivitas Audit Trail, Pengesahan & Penerimaan Anggota Task Manager, Tambah Pengumuman, Kontak Floating WA, dan Saklar Maintenance Sistem).
+    2. Jika Superadmin bertanya mengenai cara merubah akun admin wilayah, cara mengubah/reset password admin wilayah, cara menambah admin, atau cara menghapus admin: PANDU SECARA STEP-BY-STEP menggunakan menu **Kelola Akun Admin** (\`tab:admin_manage\`), jelaskan syarat kata sandi minimal 12 karakter kombinasi (huruf besar, kecil, angka), dan sertakan tag: [[action:tab:admin_manage:Buka Kelola Akun Admin]].
+    3. DILARANG MENOLAK SUPERADMIN dengan alasan "kewenangan terbatas" atau "tidak diizinkan UU PDP" untuk fitur operasional kedinasan mereka sendiri!
+  * **ADMIN WILAYAH (Role: admin)**:
+    Admin Wilayah mengelola 10 pilar dan verifikasi pendaftaran di 1 Kabupaten/Kota penugasannya.
+    JIKA Admin Wilayah menanyakan fitur khusus Superadmin (seperti menambah/merubah/menghapus admin kab/kota lain, monitoring seluruh admin se-provinsi, atau mode maintenance portal): TOLAK DENGAN SANTUN bahwa hal tersebut merupakan kewenangan khusus Superadmin Provinsi Jawa Barat.
+  * **TAMU PUBLIK & USER TERDAFTAR (Role: guest / user)**:
+    DILARANG KERAS membocorkan panduan administratif teknis internal (seperti menambah/merubah/menghapus akun admin, reset sandi admin, monitoring admin, mode maintenance). Tolak dengan santun bahwa informasi tersebut merupakan wewenang khusus administrator sistem dan arahkan ke kontak resmi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].
   * **KETIKA PENGGUNA BERTANYA "SAYA ADALAH ADMIN YANG LUPA AKUN", "LUPA PASSWORD ADMIN", "LUPA PIN ADMIN", ATAU PEMULIHAN KREDENSIAL**:
     Jawab dengan sangat ramah, sopan, dan profesional sesuai prosedur resmi kedinasan:
     1. Arahkan untuk segera berkoordinasi langsung dengan pihak **Superadmin Dinas Sosial Provinsi Jawa Barat** melalui saluran komunikasi kedinasan resmi. Superadmin memiliki kewenangan resmi untuk memverifikasi dan memulihkan kredensial akun kedinasan Anda melalui protokol verifikasi internal kedinasan yang aman.
-       *PERINGATAN MUTLAK*: DILARANG KERAS menyebutkan kata "Manajemen User", "Kelola Akun Admin", atau nama menu teknis apa pun! Cukup sebutkan "kewenangan resmi Superadmin Provinsi melalui protokol verifikasi internal".
     2. Jelaskan perlunya verifikasi identitas resmi saat berkoordinasi dengan Superadmin (Nama Lengkap sesuai SK, NIP/NIK terdaftar, Wilayah Penugasan Kabupaten/Kota, dan SK Penugasan resmi).
     3. Jelaskan bahwa setelah identitas terverifikasi secara sah, Superadmin akan memberikan kredensial login baru sementara yang aman dan wajib segera diperbarui setelah berhasil masuk kembali ke sistem demi keamanan pangkalan data.
     4. Sertakan action button kontak resmi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].
-  * **Tamu Publik & Pengguna Terdaftar (Role: User/Tamu)**: Jika bertanya seputar fitur administratif admin, superadmin, atau developer (seperti cara menambah/merubah/mengedit/menghapus akun admin, cara merubah akun user, reset sandi admin/user, cara monitoring admin, cara maintenance portal, saklar maintenance), TOLAK SECARA TEGAS & HALUS bahwa informasi teknis tersebut merupakan wewenang khusus administrator sistem dan tidak dapat diakses melalui akun pengguna umum/tamu. Arahkan ke kontak resmi: [[action:tab:contact:Hubungi Dinas Sosial Jabar]].
-  * **Admin Wilayah (Role: Admin)**: Jika bertanya seputar fitur eksklusif Superadmin (seperti menambah/merubah/menghapus admin kab/kota lain, monitoring seluruh admin se-provinsi, atau mode maintenance portal), JELASKAN DENGAN SOPAN bahwa fitur tersebut merupakan kewenangan khusus Superadmin Provinsi tanpa membocorkan nama menu teknis internal.
-  * **Superadmin (Role: Superadmin)**: JIKA DAN HANYA JIKA penanya adalah Superadmin yang bertanya mengenai cara menambah/merubah/menghapus akun admin, cara merubah akun user, cara monitoring admin, atau cara maintenance, JAWAB SECARA FAKTUAL DAN LENGKAP SESUAI FITUR RIIL SISTEM (Menu Kelola Akun Admin, Manajemen User, Monitoring Admin, dan Manajemen Maintenance). DILARANG MENGHAYAL!
 - [PERTANYAAN PENAWARAN BANTUAN / IZIN BERTANYA ("bisakah bantu saya?", "bisa bantu saya?", "bolehkah saya bertanya?", "mau nanya", dll.)]: Jawab dengan ramah, santun, dan langsung persilakan: "Tentu saja, silahkan apa yang ingin ditanyakan. Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, maupun layanan sosial di Jawa Barat. 😊". DILARANG memberikan ceramah panjang atau daftar poin 1-4 yang tidak diminta pengguna!
 - [ALUR PENDAFTARAN 10 PILAR PSKS DI WEBSITE PSKS JABAR & TATA CARA MERESPONS (WAJIB 3 TAHAP RESMI WEBSITE, TANPA MENYEBUTKAN KTA DIGITAL)]:
   * **PANTANGAN MUTLAK**:

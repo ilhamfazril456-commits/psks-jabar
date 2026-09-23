@@ -507,57 +507,165 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
     return `${salamPrefix}Sampurasun / Halo! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Anda mencari informasi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda butuhkan?`;
   }
 
-  // 0.25 MANAJEMEN AKUN & CARA MENAMBAH ADMIN (HANYA KHUSUS SUPERADMIN / ADMIN)
-  if (
+  // 0.25 MANAJEMEN AKUN ADMIN: UBAH AKUN, UBAH PASSWORD, TAMBAH & HAPUS ADMIN (RBAC KETAT)
+  const isManageAdminQuery =
+    q.includes('merubah akun admin') ||
+    q.includes('mengubah akun admin') ||
+    q.includes('ubah akun admin') ||
+    q.includes('edit akun admin') ||
+    q.includes('merubah admin') ||
+    q.includes('mengubah admin') ||
+    q.includes('ubah admin') ||
+    q.includes('edit admin') ||
+    q.includes('mengubah password admin') ||
+    q.includes('ubah password admin') ||
+    q.includes('merubah password admin') ||
+    q.includes('ganti password admin') ||
+    q.includes('reset password admin') ||
+    q.includes('mengubah kata sandi admin') ||
+    q.includes('ubah kata sandi admin') ||
+    q.includes('ganti kata sandi admin') ||
+    q.includes('reset sandi admin') ||
     q.includes('tambah admin') ||
     q.includes('menambah admin') ||
     q.includes('buat admin') ||
     q.includes('bikin admin') ||
-    q.includes('tambah akun') ||
-    q.includes('buat akun') ||
+    q.includes('tambah akun admin') ||
+    q.includes('daftarkan admin') ||
+    q.includes('hapus admin') ||
+    q.includes('menghapus admin') ||
+    q.includes('hapus akun admin') ||
+    q.includes('menghapus akun admin') ||
+    q.includes('kelola akun admin') ||
+    q.includes('manajemen akun admin') ||
     q.includes('kelola admin') ||
     q.includes('manajemen admin') ||
-    q.includes('manajemen user') ||
-    q.includes('manajemen akun') ||
-    q.includes('tambah pengguna')
-  ) {
-    if (userRole !== 'superadmin' && userRole !== 'admin') {
-      return `${salamPrefix}Mohon maaf, panduan dan akses penambahan akun Administrator/Superadmin bersifat terbatas dan hanya dapat dilakukan oleh pejabat yang berwenang (Superadmin Provinsi atau Admin Wilayah) melalui panel autentikasi terverifikasi.
+    (q.includes('admin wilayah') && (q.includes('ubah') || q.includes('rubah') || q.includes('edit') || q.includes('ganti') || q.includes('password') || q.includes('sandi') || q.includes('kelola')));
 
-Jika Anda memerlukan bantuan terkait akun atau layanan pilar sosial, silakan menghubungi administrator dinas sosial setempat atau koordinator pilar sosial di wilayah Anda. Terima kasih atas pengertiannya! 😊`;
+  if (isManageAdminQuery) {
+    // 1. Publik / User Biasa: Dilarang keras mengakses panduan administratif internal
+    if (userRole !== 'superadmin' && !isDeveloperUser && userRole !== 'admin') {
+      return `${salamPrefix}Mohon maaf, informasi dan tata kelola akun administrator sistem (seperti merubah data, mengganti kata sandi, atau menambah akun admin) merupakan kewenangan khusus administrator resmi Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun umum/tamu.\n\nUntuk keperluan administratif kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
     }
 
-    return `${salamPrefix}Sampurasun! Sebagai **${userRole === 'superadmin' ? 'Superadmin' : 'Admin Wilayah'}**, Anda memiliki wewenang untuk menambahkan akun Administrator baru ke dalam sistem PSKS Jawa Barat.
+    // 2. Admin Wilayah: Jelaskan bahwa kelola/ubah akun admin wilayah lain adalah wewenang Superadmin Provinsi
+    if (userRole === 'admin' && !isDeveloperUser) {
+      return `${salamPrefix}Mohon maaf, pengelolaan, perubahan data, penggantian kata sandi, maupun penambahan akun Administrator Wilayah merupakan wewenang khusus **Superadmin Dinas Sosial Provinsi Jawa Barat**.\n\nSebagai Admin Wilayah, wewenang Anda meliputi pengelolaan data 10 pilar, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran di wilayah penugasan Anda. Apabila akun Anda memerlukan pembaruan data atau reset kata sandi, silakan berkoordinasi langsung dengan pihak Superadmin Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
 
-Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
+    // 3. Superadmin & Developer: Berikan panduan resmi, faktual, dan presisi sesuai fitur sistem
+    // A. Khusus Ubah / Ganti / Reset Password Admin Wilayah
+    if (
+      q.includes('password') ||
+      q.includes('kata sandi') ||
+      q.includes('sandi') ||
+      q.includes('reset')
+    ) {
+      return `${salamPrefix}**Panduan Resmi Superadmin: Cara Mengubah / Reset Password Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda dapat memperbarui atau mereset kata sandi akun Admin Wilayah di 27 Kabupaten/Kota melalui menu **Kelola Akun Admin**:
 
 ---
 
-### **Langkah-Langkah Menambahkan Admin Baru**:
+### **Langkah-Langkah Mengubah / Reset Password Admin Wilayah**:
 
-1. **Buka Menu Pengaturan (Control Panel)**
-   - Masuk ke tab **Pengaturan** di bilah menu navigasi utama.
-   - Pilih tab **Manajemen Akun / Pengguna**.
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada panel Fitur Superadmin di halaman **Beranda** atau melalui tab **Pengaturan**.
 
-2. **Klik Tombol "Tambah Akun" / "Tambah Admin"**
-   - Klik tombol **+ Tambah Akun Baru** yang terletak di bagian atas tabel daftar akun.
+2. **Cari Akun Admin Wilayah Terkait**:
+   - Pada tabel daftar administrator, temukan nama akun admin wilayah yang ingin diubah kata sandinya. Anda dapat memanfaatkan fitur pencarian nama atau filter berdasarkan wilayah (27 Kab/Kota).
+
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun admin yang bersangkutan untuk membuka formulir modal ubah data.
+
+4. **Masukkan Password Baru**:
+   - Pada kolom formulir **"Password Baru"**, ketikkan kata sandi baru untuk akun tersebut.
+   - *Ketentuan Keamanan Sistem*: Kata sandi wajib memenuhi standar keamanan minimal 12 karakter kombinasi (huruf besar A-Z, huruf kecil a-z, dan angka 0-9).
+
+5. **Simpan Perubahan**:
+   - Klik tombol **"Simpan Perubahan"**. Sistem secara otomatis mengenkripsi kata sandi baru menggunakan algoritma hash satu arah yang aman (*Bcrypt*) dan admin wilayah tersebut dapat langsung login menggunakan kata sandi baru.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+    }
+
+    // B. Khusus Ubah / Edit Data Akun Admin Wilayah
+    if (
+      q.includes('merubah') ||
+      q.includes('mengubah') ||
+      q.includes('ubah') ||
+      q.includes('edit')
+    ) {
+      return `${salamPrefix}**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, status, maupun wilayah penugasan akun Admin Wilayah di 27 Kabupaten/Kota.
+
+---
+
+### **Langkah-Langkah Merubah Data Akun Admin Wilayah**:
+
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di **Beranda** atau melalui menu **Pengaturan**.
+
+2. **Pilih Akun yang Ingin Diubah**:
+   - Pada tabel daftar akun administrator, cari akun admin wilayah yang ingin diperbarui (dapat dicari berdasarkan nama atau difilter per kabupaten/kota).
+
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun yang bersangkutan untuk memunculkan formulir modal pembaharuan.
+
+4. **Perbarui Data yang Diperlukan**:
+   - **Nama Lengkap**: Sesuaikan nama pejabat/petugas baru jika ada rotasi kedinasan.
+   - **Nomor Telepon / WhatsApp / Username**: Kontak aktif kedinasan petugas.
+   - **Wilayah Penugasan**: Sesuaikan salah satu dari 27 Kabupaten/Kota se-Jawa Barat.
+   - **Pilar Tugas**: Pilih pilar binaan spesifik atau pilih semua pilar.
+   - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan sementara jika mutasi/non-aktif).
+   - **Password Baru**: Isi kolom ini HANYA jika ingin mengganti/mereset kata sandi (minimal 12 karakter kombinasi). Kosongkan jika password tetap.
+
+5. **Simpan Perubahan**:
+   - Klik tombol **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan aktivitas ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+    }
+
+    // C. Khusus Hapus Akun Admin
+    if (q.includes('hapus') || q.includes('menghapus') || q.includes('delete')) {
+      return `${salamPrefix}**Panduan Resmi Superadmin: Cara Menghapus Akun Admin**:
+
+1. Buka menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) di Beranda atau Pengaturan.
+2. Cari nama akun admin yang ingin dihapus pada tabel daftar administrator.
+3. Klik tombol **Hapus** (ikon tempat sampah warna merah) pada baris akun tersebut.
+4. Muncul dialog modal konfirmasi keamanan; klik **"Ya, Hapus Akun"**.
+5. Akun tersebut langsung dihapus secara aman dari pangkalan data sistem (Akun utama Superadmin & Developer terlindungi oleh protokol anti-delete).
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+    }
+
+    // D. Khusus Tambah Admin Baru / Panduan Default Kelola Admin
+    return `${salamPrefix}**Panduan Resmi Superadmin: Cara Menambah Admin Baru**:
+
+Berikut adalah langkah-langkah praktis bagi Superadmin untuk mendaftarkan akun Administrator baru:
+
+---
+
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di halaman **Beranda** atau tab **Pengaturan**.
+
+2. **Klik Tombol "Tambah Admin"**:
+   - Klik tombol **+ Tambah Admin Baru** di bagian atas tabel daftar administrator.
 
 3. **Lengkapi Formulir Data Akun**:
-   - **Nama Lengkap**: Masukkan nama lengkap petugas/pejabat yang ditugaskan.
+   - **Nama Lengkap**: Masukkan nama lengkap petugas/pejabat kedinasan.
    - **Nomor Telepon / WhatsApp / Username**: Nomor HP atau username untuk identitas login.
    - **Role / Hak Akses**:
-     * Pilih **Admin Wilayah / Daerah** (jika bertugas mengelola data 1 Kabupaten/Kota tertentu).
+     * Pilih **Admin Wilayah** (jika bertugas mengelola data 1 Kabupaten/Kota tertentu).
      * Pilih **Superadmin** (jika bertugas mengelola seluruh data Provinsi Jawa Barat).
-   - **Wilayah Penugasan**: Tentukan salah satu dari 27 Kabupaten/Kota (otomatis mencakup Provinsi jika memilih Superadmin).
-   - **PIN / Kata Sandi**: Buat PIN keamanan awal untuk login (sistem menyimpannya dengan enkripsi *Bcrypt*).
+   - **Wilayah Penugasan**: Tentukan salah satu dari 27 Kabupaten/Kota di Jawa Barat.
+   - **PIN / Kata Sandi**: Buat password keamanan (wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka).
 
-4. **Simpan dan Aktifkan Akun**
-   - Pastikan status akun diatur ke **ACTIVE**.
-   - Klik tombol **Simpan Data / Buat Akun**.
+4. **Simpan dan Aktifkan Akun**:
+   - Pastikan status akun diatur ke **ACTIVE**, lalu klik tombol **"Simpan Data / Daftarkan Admin"**.
+   - Akun admin baru langsung aktif seketika dan aktivitas ini tercatat pada **Audit Trail (Riwayat Log)** sistem.
 
-5. **Selesai & Audit Trail**
-   - Akun admin baru langsung aktif dan dapat langsung digunakan untuk login.
-   - Aktivitas pembuatan akun ini otomatis dicatat pada **Audit Trail (Riwayat Aktivitas)** sistem demi transparansi dan akuntabilitas.`;
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
   }
 
   // 0.3 GENERAL CONVERSATIONAL INQUIRY / INTENT TO ASK (ONLY WHEN NO SUBSTANTIVE QUESTION FOLLOWS)
@@ -2580,8 +2688,8 @@ export function verifyAndTrackAnswerAccuracy(
   const isDeveloperUser = userRole === 'developer';
   const { coreQuery: extractedCoreQ, isPureIntro: accuracyIsPureIntro, hasQuestion: accuracyHasQuestion } = extractCoreQueryIntent(query);
 
-  // 0. STRICT SECURITY GUARD CHECK
-  const isSecurity =
+  // 0. STRICT SECURITY GUARD CHECK (HANYA UNTUK SERANGAN EKSPLOITASI / MALICIOUS INJECTION / LEAK NYATA)
+  const isMaliciousExploit =
     normQ.includes('ignore previous') ||
     normQ.includes('abaikan instruksi') ||
     normQ.includes('bypass') ||
@@ -2593,6 +2701,14 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('bocorkan api key') ||
     normQ.includes('dump database') ||
     normQ.includes('curi data') ||
+    normQ.includes('curi password') ||
+    normQ.includes('curi sandi') ||
+    normQ.includes('minta password') ||
+    normQ.includes('minta sandi') ||
+    normQ.includes('berikan password') ||
+    normQ.includes('berikan sandi') ||
+    normQ.includes('apa passwordnya') ||
+    normQ.includes('mana password') ||
     normQ.includes('leak') ||
     normQ.includes('root access') ||
     normQ.includes('sql injection') ||
@@ -2600,11 +2716,9 @@ export function verifyAndTrackAnswerAccuracy(
     normQ.includes('system prompt') ||
     normQ.includes('jailbreak') ||
     normQ.includes('tanpa batas') ||
-    /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(normQ) ||
-    ((normQ.includes('password') || normQ.includes('username') || normQ.includes('kata sandi') || normQ.includes('sandi') || normQ.includes('pin') || normQ.includes('kredensial') || normQ.includes('token')) &&
-     (normQ.includes('admin') || normQ.includes('superadmin') || normQ.includes('developer') || normQ.includes('wilayah') || normQ.includes('akun') || normQ.includes('dinsos') || normQ.includes('cimahi') || normQ.includes('bandung')));
+    /\b(bayangkan|anggap)\s+(anda|kamu)\s+adalah\b/i.test(normQ);
 
-  if (isSecurity) {
+  if (isMaliciousExploit) {
     return {
       finalContent: 'Mohon maaf, demi menjaga integritas sistem dan kepatuhan terhadap regulasi pelindungan data (UU PDP No. 27/2022), asisten AI **PSKS JABAR** tidak diizinkan untuk memberikan kredensial/kata sandi, memproses instruksi eksploitasi, bypass, maupun modifikasi peran. Seluruh arsitektur portal dilindungi dengan kontrol akses berbasis peran (RBAC) dan enkripsi pangkalan data yang diawasi oleh tim Dinas Sosial Provinsi Jawa Barat.',
       isAccurate: true,
