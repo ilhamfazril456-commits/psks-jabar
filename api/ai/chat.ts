@@ -106,7 +106,27 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
 4. ALAMAT & KONTAK DINAS SOSIAL:
    - Kantor Dinsos Provinsi Jawa Barat: Jl. Jend. H. Amir Machmud No. 331, Cimahi Tengah, Kota Cimahi 40522 & Jl. Rajiman No. 6 Bandung.
    - Jika pengguna menanyakan alamat kantor di kabupaten/kota tertentu (misal: Sumedang, Bogor, Sukabumi, Bandung, Garut, dll), berikan alamat spesifik dinas sosial kabupaten/kota tersebut.
-   - JANGAN PERNAH menyodorkan pertanyaan lokasi kantor jika pengguna TIDAK sedang menanyakan lokasi kantor atau alamat!`;
+   - JANGAN PERNAH menyodorkan pertanyaan lokasi kantor jika pengguna TIDAK sedang menanyakan lokasi kantor atau alamat!
+
+5. ALUR PENDAFTARAN RESMI 10 PILAR PADA WEBSITE PSKS JABAR (MUTLAK 3 TAHAPAN):
+   - Jika pengguna bertanya mengenai pendaftaran, cara daftar, cara mendaftar, bagaimana cara mendaftar, alur pendaftaran, atau cara bergabung ke salah satu dari 10 Pilar PSKS (seperti PSM, TAGANA, Karang Taruna, TKSK, PEKSOS, LKS, LK3, PENSOS, KUBE, SLRT/Puskesos):
+   - DILARANG KERAS menjawab dengan cara lama / konvensional di luar sistem website (seperti: "1. Memenuhi Kriteria Dasar: Warga Negara Indonesia (WNI)...").
+   - WAJIB JELASKAN ALUR PENDAFTARAN PADA WEBSITE PSKS JABAR MELALUI 3 TAHAP BERIKUT SECARA JELAS DAN RUNTUT:
+     * **Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User Terdaftar)**:
+       - Masuk (*login*) ke akun pengguna di website **PSKS JABAR** (atau klik menu *"Daftar Akun Baru"* jika belum memiliki akun).
+       - Pada halaman **Beranda**, pilih pilar yang dituju (misal: PSM, TAGANA, Karang Taruna, dsb.), lalu klik tombol hijau **"+ Tambah Anggota Mandiri / Pendaftaran"**.
+       - Isi formulir pendaftaran: NIK (16 digit), Nama Lengkap sesuai KTP, Nomor WhatsApp aktif, serta Wilayah Penugasan (pilih 1 dari 27 Kab/Kota se-Jawa Barat).
+       - Unggah foto berkas pendukung sesuai pilar (contoh untuk PSM: foto KTP, SK Pengukuhan Kepala Desa/Lurah/Camat, atau Sertifikat Pelatihan/Bimtek PSM; untuk TAGANA: KTP & Sertifikat Diklatsar/SK Penugasan; dsb). Sistem secara otomatis mengompresi foto agar jelas dan hemat memori.
+       - Klik tombol **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status awal **"Menunggu Verifikasi" (Pending)**.
+     * **Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**:
+       - Admin Dinas Sosial Kabupaten/Kota setempat memeriksa keabsahan administrasi dan dokumen foto berkas pendukung yang diunggah.
+       - Jika berkas lengkap dan sah, status pengajuan disetujui menjadi **"DISETUJUI_WILAYAH"** dan otomatis diteruskan ke tingkat Provinsi Jawa Barat.
+     * **Tahap 3: Pengesahan oleh Superadmin (Dinas Sosial Provinsi Jawa Barat)**:
+       - Superadmin Dinas Sosial Provinsi Jawa Barat melakukan validasi akhir keselarasan data lintas wilayah.
+       - Berkas resmi disahkan dengan status **"SAH_TERDAFTAR"** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+     * **Pemantauan Status Pengajuan**:
+       - Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+   - PANTANGAN MUTLAK DARI USER: JANGAN DISERTAI PENERBITAN KARTU KTA DIGITAL DULU! Dilarang keras menyebut atau mempromosikan kartu KTA Digital dalam penjelasan pendaftaran ini.`;
 
     // 4. SANITIZE & CONVERT MESSAGES FOR GEMINI SDK
     const contents: any[] = [];

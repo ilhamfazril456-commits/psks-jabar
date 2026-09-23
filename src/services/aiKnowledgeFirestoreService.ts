@@ -113,10 +113,9 @@ Ada informasi apa yang sedang Anda butuhkan atau ingin Anda tanyakan?"
            - **Fitur Sensor Lampu Berkedip**: Di pojok kanan atas kotak fitur "Pengesahan dan Penerimaan Anggota" terdapat sensor lampu bulat yang berkedip-kedip (*pulsing animation*) menandakan ada pengajuan anggota dari kabupaten/kota yang sedang menunggu pengesahan tingkat provinsi.
            - **Status Selesai**: Setelah Superadmin atau Developer memeriksa dan mengesahkan seluruh permohonan anggota, sensor lampu berhenti berkedip dan berubah menjadi **ikon centang hijau solid**.
            - Pengesahan resmi ini menetapkan status keanggotaan menjadi **"SAH_TERDAFTAR"** dalam Satu Data Sosial Jawa Barat.
-        3. **Penerbitan KTA Digital & Pindai Keabsahan Anggota**:
-           - Personil yang telah berstatus **"SAH_TERDAFTAR"** resmi memperoleh **KTA Digital ber-QR Code dengan tanda tangan kriptografi SHA-256**.
-           - Kartu KTA Digital ini dapat dipindai (*scan*) sewaktu-waktu di lapangan untuk memverifikasi keaslian anggota melalui fitur **Pindai Kartu Anggota (QR / NFC Scanner)** di Section 12 Dashboard Superadmin.
-           - Pemohon dapat memantau seluruh proses ini secara transparan dan real-time di portal melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+        3. **Pemantauan Riwayat Pendaftaran oleh Pemohon**:
+           - Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung dan transparan melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+           - *(PENTING: Jangan menyertakan penerbitan kartu KTA Digital dulu untuk pendaftar umum)*.
         - Arahkan action tags: [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
 
      C. Perkiraan Waktu & Legalitas Lapangan:
@@ -1873,12 +1872,25 @@ AI MUTLAK:
     };
   }
 
-  // 5. Detect Registration Flow & 2-Tier Sensor Light Verification Queries
+  // 5. Detect Registration Flow & 10-Pillar Website Registration Queries
   const isRegistrationOrSensorQuestion =
+    normCurrent.includes('cara daftar') ||
+    normCurrent.includes('cara mendaftar') ||
     normCurrent.includes('alur pendaftaran') ||
     normCurrent.includes('alur daftar') ||
     normCurrent.includes('pendaftaran baru') ||
     normCurrent.includes('alur pendaftaran baru') ||
+    normCurrent.includes('bagaimana cara mendaftar') ||
+    normCurrent.includes('bagaimana cara daftar') ||
+    normCurrent.includes('gimana cara daftar') ||
+    normCurrent.includes('gimana cara mendaftar') ||
+    normCurrent.includes('syarat dan cara daftar') ||
+    normCurrent.includes('syarat daftar') ||
+    normCurrent.includes('syarat mendaftar') ||
+    normCurrent.includes('mau daftar') ||
+    normCurrent.includes('ingin daftar') ||
+    normCurrent.includes('bisa daftar') ||
+    normCurrent.includes('tata cara pendaftaran') ||
     normCurrent.includes('verifikasi berkas wilayah') ||
     normCurrent.includes('pengesahan dan penerimaan') ||
     normCurrent.includes('pengesahan anggota') ||
@@ -1889,32 +1901,86 @@ AI MUTLAK:
     normCurrent.includes('centang hijau') ||
     (normCurrent.includes('sensor') && (normCurrent.includes('lampu') || normCurrent.includes('pending') || normCurrent.includes('verifikasi'))) ||
     (normCurrent.includes('lampu') && normCurrent.includes('kedip')) ||
-    (normCurrent.includes('verifikasi') && (normCurrent.includes('tingkat') || normCurrent.includes('alur') || normCurrent.includes('tier') || normCurrent.includes('tahap') || normCurrent.includes('dua tahap')));
+    (normCurrent.includes('verifikasi') && (normCurrent.includes('tingkat') || normCurrent.includes('alur') || normCurrent.includes('tier') || normCurrent.includes('tahap') || normCurrent.includes('dua tahap'))) ||
+    ((normCurrent.includes('daftar') || normCurrent.includes('mendaftar') || normCurrent.includes('registrasi') || normCurrent.includes('gabung')) &&
+      (normCurrent.includes('psm') || normCurrent.includes('tagana') || normCurrent.includes('karang taruna') || normCurrent.includes('katar') || normCurrent.includes('tksk') || normCurrent.includes('peksos') || normCurrent.includes('pksp') || normCurrent.includes('lks') || normCurrent.includes('lk3') || normCurrent.includes('pensos') || normCurrent.includes('penyuluh') || normCurrent.includes('kube') || normCurrent.includes('slrt') || normCurrent.includes('puskesos') || normCurrent.includes('pilar') || normCurrent.includes('relawan') || normCurrent.includes('anggota')));
 
   if (isRegistrationOrSensorQuestion) {
+    let pilarTargetName = 'Pilar PSKS';
+    let pilarTargetId = 'psm';
+    let berkasPendukung = 'foto berkas pendukung (seperti foto KTP, SK Penugasan/Pengukuhan, atau Sertifikat Pelatihan/Bimtek terkait)';
+
+    if (normCurrent.includes('psm') || normCurrent.includes('pekerja sosial masyarakat')) {
+      pilarTargetName = 'PSM (Pekerja Sosial Masyarakat)';
+      pilarTargetId = 'psm';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, SK Pengukuhan dari Kepala Desa/Lurah/Camat, atau Sertifikat Pelatihan/Bimtek Dasar PSM)';
+    } else if (normCurrent.includes('tagana') || normCurrent.includes('taruna siaga') || normCurrent.includes('bencana')) {
+      pilarTargetName = 'TAGANA (Taruna Siaga Bencana)';
+      pilarTargetId = 'tagana';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, Sertifikat Diklatsar Kebencanaan / Kesiapsiagaan, atau SK Penugasan TAGANA)';
+    } else if (normCurrent.includes('karang taruna') || normCurrent.includes('katar')) {
+      pilarTargetName = 'Karang Taruna';
+      pilarTargetId = 'karangtaruna';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, SK Kepengurusan Karang Taruna Desa/Kelurahan atau unit RT/RW)';
+    } else if (normCurrent.includes('tksk')) {
+      pilarTargetName = 'TKSK (Tenaga Kesejahteraan Sosial Kecamatan)';
+      pilarTargetId = 'tksk';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, SK Pengangkatan TKSK Kemensos RI / Dinas Sosial, atau dokumen penugasan kecamatan)';
+    } else if (normCurrent.includes('peksos') || normCurrent.includes('pksp')) {
+      pilarTargetName = 'PEKSOS (Pekerja Sosial Profesional)';
+      pilarTargetId = 'peksos';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, Ijazah Profesi Kesejahteraan Sosial, Sertifikat Kompetensi, STRPS Kemensos, atau SIPPS Dinas Sosial)';
+    } else if (normCurrent.includes('lks') || normCurrent.includes('panti') || normCurrent.includes('yayasan')) {
+      pilarTargetName = 'LKS (Lembaga Kesejahteraan Sosial)';
+      pilarTargetId = 'lks';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP Penanggung Jawab, Akta Notaris Kemenkumham, serta TDLKS / Izin Operasional Dinsos)';
+    } else if (normCurrent.includes('lk3') || normCurrent.includes('konsultasi keluarga')) {
+      pilarTargetName = 'LK3 (Lembaga Konsultasi Kesejahteraan Keluarga)';
+      pilarTargetId = 'lk3';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP Penanggung Jawab, SK Pendirian Lembaga, atau Sertifikat Konselor Keluarga)';
+    } else if (normCurrent.includes('pensos') || normCurrent.includes('penyuluh')) {
+      pilarTargetName = 'Penyuluh Sosial (PENSOS)';
+      pilarTargetId = 'pensos';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, Sertifikat Diklat Fungsional Penyuluh Sosial, atau SK Jabatan Fungsional PENSOS)';
+    } else if (normCurrent.includes('kube') || normCurrent.includes('kelompok usaha')) {
+      pilarTargetName = 'KUBE (Kelompok Usaha Bersama)';
+      pilarTargetId = 'badanusaha';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP Ketua/Pengurus, Berita Acara Pembentukan Kelompok, atau Dokumen Profil Usaha KPM)';
+    } else if (normCurrent.includes('slrt') || normCurrent.includes('puskesos')) {
+      pilarTargetName = 'SLRT / Puskesos';
+      pilarTargetId = 'slrt_puskesos';
+      berkasPendukung = 'foto berkas pendukung (seperti foto KTP, SK Pengukuhan Pengurus Sekretariat Puskesos Desa/Kelurahan, atau Surat Tugas)';
+    }
+
     return {
       detectedContext: true,
-      detectedObject: 'Alur Pendaftaran & Verifikasi Berkas Bertingkat',
-      detectedTopic: 'Alur Pendaftaran Baru & Verifikasi Berkas',
-      instruction: `[ALUR PENDAFTARAN BARU 10 PILAR & TAHAPAN VERIFIKASI ("${lastUserMsg}")]
+      detectedObject: `Alur Pendaftaran ${pilarTargetName}`,
+      detectedTopic: `Alur Pendaftaran ${pilarTargetName} di Website PSKS JABAR`,
+      instruction: `[ALUR PENDAFTARAN RESMI ${pilarTargetName.toUpperCase()} PADA WEBSITE PSKS JABAR ("${lastUserMsg}")]
 AI:
-1. Jelaskan alur pendaftaran secara sederhana, jelas, dan mudah dipahami dalam 3 tahapan:
-   - **Tahap 1 (Pengguna / Pemohon)**:
-     * Masuk dengan akun terdaftar di website PSKS JABAR, pilih salah satu dari 10 pilar di Beranda, lalu klik "+ Tambah Anggota Mandiri / Pendaftaran".
-     * Isi formulir data diri (NIK, Nama, WhatsApp, Wilayah Penugasan) dan **unggah foto berkas pendukung** (KTP, SK, atau Sertifikat Pelatihan/Bimtek).
-     * Klik "Kirim Pengajuan". Status awal otomatis menjadi "Menunggu Verifikasi" (Pending).
-   - **Tahap 2 (Admin Wilayah Kab/Kota)**:
-     * Admin Dinas Sosial Kabupaten/Kota memeriksa keabsahan administrasi dan dokumen yang diunggah.
-     * Jika sesuai, berkas disetujui menjadi "DISETUJUI_WILAYAH" dan diteruskan ke tingkat Provinsi.
-   - **Tahap 3 (Superadmin Provinsi)**:
-     * Superadmin Provinsi Jawa Barat melakukan pengesahan akhir sehingga data resmi berstatus "SAH_TERDAFTAR" dalam database pangkalan data sosial Jawa Barat.
-   - **Pemantauan**: Pemohon dapat memantau status secara langsung di menu "Riwayat Pengajuan Pendaftaran".
-2. CATATAN PENTING: DILARANG menjelaskan sensor lampu cerdas (karena kurang relevan bagi pendaftar umum) dan DILARANG menyebutkan KTA Digital. Buat penjelasan seadanya, lugas, dan bersahabat.
-3. Berikan action tags navigasi: [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]].`,
+1. Pahami bahwa pendaftaran dilakukan secara DIGITAL melalui portal website PSKS JABAR ini dengan 3 tahapan berjenjang:
+   - **Tahap 1: Pendaftaran & Upload Berkas oleh Pengguna (User Terdaftar)**:
+     * Masuk (*login*) ke akun pengguna di website **PSKS JABAR** (atau klik *"Daftar Akun Baru"* bila belum memiliki akun).
+     * Pada menu **Beranda**, pilih pilar **${pilarTargetName}**, lalu klik tombol hijau **"+ Tambah Anggota Mandiri / Pendaftaran"**.
+     * Lengkapi biodata diri: NIK 16 digit, Nama Lengkap sesuai KTP, Nomor WhatsApp aktif, serta Wilayah Penugasan (salah satu dari 27 Kab/Kota se-Jawa Barat).
+     * **Unggah foto berkas pendukung**: ${berkasPendukung}. Sistem secara otomatis mengompresi foto agar jelas dan hemat memori.
+     * Klik **"Kirim Pengajuan"**. Berkas pendaftaran otomatis tercatat dengan status awal **"Menunggu Verifikasi" (Pending)**.
+   - **Tahap 2: Verifikasi Berkas oleh Admin Wilayah (Kabupaten/Kota)**:
+     * Admin Dinas Sosial Kabupaten/Kota setempat memeriksa keabsahan administrasi dan dokumen foto berkas pendukung yang diunggah.
+     * Jika berkas lengkap dan sesuai, status disetujui menjadi **"DISETUJUI_WILAYAH"** dan otomatis diteruskan ke tingkat Provinsi Jawa Barat.
+   - **Tahap 3: Pengesahan oleh Superadmin (Provinsi Jawa Barat)**:
+     * Superadmin Dinas Sosial Provinsi Jawa Barat melakukan validasi akhir keselarasan data lintas wilayah.
+     * Berkas resmi disahkan dengan status **"SAH_TERDAFTAR"** dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
+   - **Pemantauan Status**: Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsung melalui menu **"Riwayat Pengajuan Pendaftaran"**.
+2. PANTANGAN MUTLAK DARI USER:
+   - DILARANG KERAS menyertakan atau menyebutkan penerbitan kartu KTA Digital dulu!
+   - DILARANG menjelaskan cara lama/konvensional di luar website (seperti: "1. Memenuhi Kriteria Dasar: Warga Negara Indonesia (WNI)..."). Fokus sepenuhnya pada alur pendaftaran 3 tahap pada website ini.
+3. Berikan action tags navigasi: [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:pillar:${pilarTargetId}:Formulir Pendaftaran ${pilarTargetName}]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]].`,
       isAmbiguous: false,
       clarificationPrompt: '',
       suggestedActionTags: [
         '[[action:tab:beranda:Pilih Pilar di Beranda]]',
+        `[[action:pillar:${pilarTargetId}:Formulir Pendaftaran ${pilarTargetName}]]`,
         '[[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]'
       ],
     };
