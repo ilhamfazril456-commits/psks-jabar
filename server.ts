@@ -2398,7 +2398,13 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
           '(seperti foto KTP, Ijazah Profesi Kesejahteraan Sosial, Sertifikat Kompetensi, STRPS Kemensos RI, atau SIPPS)'
         );
       }
-      return `**Pekerja Sosial Profesional (PEKSOS / PKSP)**:\n- **Definisi Resmi**: Tenaga ahli yang memiliki kualifikasi keilmuan formal pekerjaan sosial (lulusan D-IV/S-1/S-2/Profesi Spesialis Kesejahteraan Sosial) yang telah lulus uji kompetensi profesi resmi dari LSP/Kemensos RI dan mengantongi Surat Izin Praktik Pekerja Sosial (SIPPS).\n- **Dasar Hukum**: UU No. 14 Tahun 2019 tentang Pekerja Sosial dan UU No. 11 Tahun 2009 tentang Kesejahteraan Sosial.\n- **Klasifikasi di Jawa Barat**:\n  1. **Peksos Pemerintah (ASN / PPPK)**: Bertugas di Dinsos Prov. Jabar, Dinsos Kab/Kota, Balai/Sentra Rehabilitasi Sosial (UPTD), dan Rumah Perlindungan Sosial (Jenjang: Ahli Pertama, Muda, Madya, Utama).\n  2. **Peksos Masyarakat (Non-ASN / Praktik Mandiri)**: Bertugas di Lembaga Kesejahteraan Sosial (LKS/Panti), yayasan kemanusiaan, rumah sakit, atau membuka praktik mandiri berlisensi SIPPS.\n- **Tugas & Pelayanan Klinis**: Manajemen kasus (*case manager*), asesmen biopsikososial terstandar, rehabilitasi sosial klinis, konseling trauma, advokasi pemenuhan hak sosial, dan pendampingan perlindungan khusus (Anak Berhadapan dengan Hukum/ABH, korban KDRT, korban perdagangan orang/TPPO, disabilitas berat, serta lansia telantar).\n- **Perbedaan Mendasar**: PEKSOS berlandaskan pendidikan akademik keilmuan formal spesifik dan lisensi hukum klinis SIPPS, sedangkan pilar seperti PSM atau Tagana berbasis kerelawanan pengabdian masyarakat.`;
+      return `**Pekerja Sosial Profesional (PEKSOS / PKSP)**:
+- **Definisi Resmi**: Tenaga ahli yang memiliki kualifikasi keilmuan formal pekerjaan sosial (lulusan D-IV/S-1/S-2/Profesi Spesialis Kesejahteraan Sosial) yang telah lulus uji kompetensi profesi resmi dari LSP/Kemensos RI dan mengantongi Surat Izin Praktik Pekerja Sosial (SIPPS).
+- **Dasar Hukum**: UU No. 14 Tahun 2019 tentang Pekerja Sosial dan UU No. 11 Tahun 2009 tentang Kesejahteraan Sosial.
+- **Klasifikasi di Jawa Barat**:
+  1. **Peksos Pemerintah (ASN / PPPK)**: Bertugas di Dinsos Prov. Jabar, Dinsos Kab/Kota, Balai/Sentra Rehabilitasi Sosial (UPTD), dan Rumah Perlindungan Sosial (Jenjang: Ahli Pertama, Muda, Madya, Utama).
+  2. **Peksos Masyarakat (Non-ASN / Praktik Mandiri)**: Bertugas di Lembaga Kesejahteraan Sosial (LKS/Panti), yayasan kemanusiaan, rumah sakit, atau membuka praktik mandiri berlisensi SIPPS.
+- **Tugas & Pelayanan Klinis**: Manajemen kasus (*case manager*), asesmen biopsikososial terstandar, rehabilitasi sosial klinis, konseling trauma, advokasi pemenuhan hak sosial, dan pendampingan perlindungan khusus (Anak Berhadapan dengan Hukum/ABH, korban KDRT, korban perdagangan orang/TPPO, disabilitas berat, serta lansia telantar).`;
     }
 
     // 0.6 PSM (Pekerja Sosial Masyarakat)

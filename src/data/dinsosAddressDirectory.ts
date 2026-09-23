@@ -459,20 +459,50 @@ export function resolveDinsosAddressQuery(
     .replace(/\s+/g, ' ')
     .trim();
 
+  // Quick exclusion: conversational fillers, gratitude, greetings, or explicit negations
+  // MUST NEVER be intercepted as address queries!
+  const isConversationalOrGratitude =
+    /\b(makasih|makasi|terima kasih|hatur nuhun|nuhun|thx|thanks|tq|syukron|matur nuwun)\b/i.test(norm) ||
+    /\b(bukan|salah|bukan lokasi|bukan tempat|bukan kantor|nggak|enggak|tidak|gamau|ga mau)\b/i.test(norm) ||
+    /\b(oke|siap|baik|paham|ngerti|mantap|keren|bagus|sipp?|yoi|yup|halo|hai|pagi|siang|sore|malam|sampurasun)\b/i.test(norm);
+
   // Check if previous assistant message was a fallback question:
   // "Lokasi kantor mana ya lebih tepatnya? Apakah yang dimaksud adalah alamat kantor wilayah [Nama Wilayah]?"
   const prevFallbackMatch = previousAssistantMessage?.match(
     /Apakah yang dimaksud adalah alamat kantor wilayah ([^?]+)\?/i
   );
   if (prevFallbackMatch) {
+    // If user expresses negation or says "bukan / salah / makasih", CANCEL the fallback immediately!
+    const isNegation = /\b(bukan|salah|bukan itu|bukan lokasi|nggak|enggak|tidak|bukan wilayah|makasih|makasi|nuhun)\b/i.test(norm);
+    if (isNegation) {
+      return {
+        isAddressQuery: false,
+        isSpecificRegion: false,
+        needsClarification: false,
+        replyText: '',
+      };
+    }
+
     const isAffirmative =
-      /\b(iya|ya|betul|benar|tepat|maksud saya|maksudnya|yang itu|setuju|hooh|yup)\b/i.test(norm) ||
+      (/\b(iya|ya|betul|benar|tepat|maksud saya|maksudnya|yang itu|setuju|hooh)\b/i.test(norm) &&
+        !/\b(makasih|makasi|terima kasih|bukan|salah)\b/i.test(norm)) ||
       norm.toLowerCase().includes(prevFallbackMatch[1].trim().toLowerCase());
+
     if (isAffirmative) {
       const suggestedTarget = prevFallbackMatch[1].trim();
       // Recurse to resolve the confirmed region
       return resolveDinsosAddressQuery(`alamat kantor ${suggestedTarget}`, userWilayah);
     }
+  }
+
+  // If query is conversational, gratitude, or negation, immediately exit
+  if (isConversationalOrGratitude) {
+    return {
+      isAddressQuery: false,
+      isSpecificRegion: false,
+      needsClarification: false,
+      replyText: '',
+    };
   }
 
   // Daftar nama daerah Jawa Barat yang berdiri sendiri
@@ -490,30 +520,25 @@ export function resolveDinsosAddressQuery(
     return reg.test(norm);
   });
 
-  const extractedCandidate = extractCandidateRegion(query);
-
   const isAskingLocationOrAddress =
     norm.includes('alamat') ||
-    norm.includes('lokasi') ||
-    norm.includes('kantor') ||
-    norm.includes('tempat') ||
-    norm.includes('posko') ||
-    norm.includes('dimana') ||
-    norm.includes('di mana') ||
-    norm.includes('dmana') ||
-    norm.includes('dmn') ||
-    norm.includes('kantornya') ||
-    norm.includes('dinsos') ||
-    norm.includes('dinas sosial') ||
-    norm.includes('no telp') ||
-    norm.includes('telepon') ||
-    norm.includes('kontak') ||
-    norm.startsWith('di ') ||
-    norm.startsWith('ke ') ||
-    // Jika hanya menyebutkan nama daerah persis saat konteks alamat
-    (mentionsAnyRegion && norm.split(' ').length <= 4) ||
-    // Single word / short query that is not empty
-    (extractedCandidate.length > 0 && norm.split(' ').length <= 3 && !['halo', 'hai', 'tes', 'bantuan'].includes(norm));
+    norm.includes('lokasi kantor') ||
+    norm.includes('lokasi dinsos') ||
+    norm.includes('kantor dinsos') ||
+    norm.includes('kantor dinas') ||
+    norm.includes('posko dinsos') ||
+    norm.includes('dimana kantor') ||
+    norm.includes('di mana kantor') ||
+    norm.includes('dmana kantor') ||
+    norm.includes('dmn kantor') ||
+    norm.includes('alamat kantor') ||
+    norm.includes('kantornya dimana') ||
+    norm.includes('kantornya di mana') ||
+    norm.includes('no telp dinsos') ||
+    norm.includes('telepon dinsos') ||
+    norm.includes('kontak dinsos') ||
+    norm.includes('kontak dinas') ||
+    ((norm.includes('kantor') || norm.includes('alamat')) && mentionsAnyRegion);
 
   if (!isAskingLocationOrAddress) {
     return {
@@ -860,6 +885,7 @@ export function resolveDinsosAddressQuery(
   }
 
   // 4. FALLBACK SYSTEM: Validasi jika user bertanya wilayah spesifik tapi tidak ditemukan di KAB_KOTA_ONLY
+  const extractedCandidate = extractCandidateRegion(query);
   if (extractedCandidate && extractedCandidate.length > 0) {
     const validation = validateRegionInKabKota(extractedCandidate, KAB_KOTA_ONLY);
     if (!validation.found) {

@@ -1726,10 +1726,7 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
   * **Asesmen Biopsikososial Terstandar**: Menggali secara mendalam faktor psikologis, relasi keluarga, dan kondisi sosial lingkungan klien PPKS.
   * **Intervensi Klinis & Rehabilitasi Sosial**: Memberikan konseling sosial intensif, terapi psikososial pemulihan trauma, dan mediasi sosial.
   * **Pendampingan Hukum & Perlindungan Khusus**: Pendampingan bagi Anak yang Berhadapan dengan Hukum (ABH), korban Tindak Pidana Perdagangan Orang (TPPO), korban Kekerasan Dalam Rumah Tangga (KDRT), korban kekerasan seksual, penyandang disabilitas berat, dan lansia telantar.
-  * **Advokasi Sosial**: Memperjuangkan pemenuhan hak-hak sosial dasar klien di hadapan instansi pemerintah, pengadilan, dan masyarakat.
-- **Perbedaan Mendasar PEKSOS dengan Pilar Lain (seperti PSM)**:
-  * **PEKSOS**: Berlandaskan pendidikan akademik formal sarjana/spesialis, memiliki lisensi klinis resmi (SIPPS), menangani intervensi kasus kompleks.
-  * **PSM**: Berbasis kerelawanan warga masyarakat desa/kelurahan yang berfokus pada pendataan awal dan pendampingan sosial di akar rumput.`;
+  * **Advokasi Sosial**: Memperjuangkan pemenuhan hak-hak sosial dasar klien di hadapan instansi pemerintah, pengadilan, dan masyarakat.`;
   }
 
   // 4.2 PSM (Pekerja Sosial Masyarakat)
@@ -2750,55 +2747,6 @@ export function verifyAndTrackAnswerAccuracy(
   }
 
   // =========================================================================
-  // DINSOS 27 KAB/KOTA ADDRESS GROUNDING (3 INTERACTIVE CONDITIONS & FALLBACK)
-  // =========================================================================
-  const addrCheck = resolveDinsosAddressQuery(query, userWilayah, previousContext);
-  if (addrCheck.isAddressQuery) {
-    if (addrCheck.isFallback) {
-      return {
-        finalContent: addrCheck.replyText,
-        isAccurate: true,
-        confidence: 1.0,
-        source: 'verified_exact',
-      };
-    }
-    if (addrCheck.isSpecificRegion) {
-      const rawLower = (rawReply || '').toLowerCase();
-      // Detect if raw response mistakenly asked for clarification when region was already specified,
-      // or dumped provincial Cimahi, or was completely empty:
-      const gaveUnwantedClarification =
-        rawLower.includes('wilayah mana') ||
-        rawLower.includes('lebih tepatnya') ||
-        (rawLower.includes('sebagai contoh') && !rawLower.includes('cisaat') && !rawLower.includes('cibinong'));
-      const gaveProvincialInstead =
-        (rawLower.includes('amir machmud') || rawLower.includes('cigugur')) &&
-        !query.toLowerCase().includes('provinsi') &&
-        !query.toLowerCase().includes('jabar') &&
-        !query.toLowerCase().includes('cimahi');
-
-      if (!rawReply || gaveUnwantedClarification || gaveProvincialInstead) {
-        return {
-          finalContent: addrCheck.replyText,
-          isAccurate: true,
-          confidence: 1.0,
-          source: 'verified_exact',
-        };
-      }
-    } else if (addrCheck.needsClarification) {
-      // If user asked generic "dimana kantor" and rawReply dumped static Cimahi without asking which city:
-      const replyClarified = rawReply && (rawReply.includes('mana') || rawReply.includes('wilayah') || rawReply.includes('kabupaten') || rawReply.includes('kota'));
-      if (!rawReply || !replyClarified) {
-        return {
-          finalContent: addrCheck.replyText,
-          isAccurate: true,
-          confidence: 1.0,
-          source: 'verified_exact',
-        };
-      }
-    }
-  }
-
-  // =========================================================================
   // ARCHITECTURAL UPGRADE: PRIORITIZE MODEL INTELLIGENCE & NATURAL CONVERSATION
   // =========================================================================
   // If the dynamic AI model (Gemini / server assistant) returned a meaningful, non-empty response,
@@ -2816,6 +2764,21 @@ export function verifyAndTrackAnswerAccuracy(
         isAccurate: true,
         confidence: 0.99,
         source: 'ai_model_verified',
+      };
+    }
+  }
+
+  // =========================================================================
+  // DINSOS 27 KAB/KOTA ADDRESS GROUNDING (FALLBACK IF MODEL FAILED OR EMPTY)
+  // =========================================================================
+  const addrCheck = resolveDinsosAddressQuery(query, userWilayah, previousContext);
+  if (addrCheck.isAddressQuery) {
+    if (addrCheck.isFallback || addrCheck.isSpecificRegion || addrCheck.needsClarification) {
+      return {
+        finalContent: addrCheck.replyText,
+        isAccurate: true,
+        confidence: 1.0,
+        source: 'verified_exact',
       };
     }
   }
