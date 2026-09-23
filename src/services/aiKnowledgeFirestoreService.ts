@@ -2552,16 +2552,16 @@ export function searchKnowledgeBase(
   // Address & regional office query priority grounding
   const addrQueryCheck = resolveDinsosAddressQuery(q);
   if (addrQueryCheck.isAddressQuery) {
-    if (addrQueryCheck.isSpecificRegion && addrQueryCheck.matchedOffice) {
+    if (addrQueryCheck.isSpecificRegion) {
       const office = addrQueryCheck.matchedOffice;
       const filtered = baseResults.filter((doc) => doc.id !== 'kontak_dinas_sosial');
       const specificDoc: AIKnowledgeDoc = {
-        id: `dinsos_office_${office.id}`,
-        topic: `kantor_dinsos_${office.id}`,
-        title: `Alamat Kantor ${office.namaDinas}`,
+        id: `dinsos_office_${office?.id || 'regional'}`,
+        topic: `kantor_dinsos_${office?.id || 'regional'}`,
+        title: `Alamat Kantor ${office?.namaDinas || 'Dinas Sosial Wilayah'}`,
         category: 'layanan',
-        keywords: office.aliases,
-        summary: `Alamat kantor dan nomor kontak ${office.namaDinas}`,
+        keywords: office?.aliases || ['alamat', 'kantor', 'dinsos'],
+        summary: `Alamat kantor dan nomor kontak ${office?.namaDinas || 'Dinas Sosial Wilayah'}`,
         content: addrQueryCheck.replyText,
         actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
         updatedAt: '2026-09-22T00:00:00Z',

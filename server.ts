@@ -657,24 +657,26 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
 
 17. **ATURAN WAJIB & PEDOMAN ALAMAT KANTOR DINAS SOSIAL (27 KABUPATEN/KOTA & 3 KONDISI INTERAKTIF)**:
    Asisten AI WAJIB menguasai seluruh alamat kantor Dinas Sosial di 27 Kabupaten/Kota se-Jawa Barat serta mematuhi 3 kondisi interaktif berikut:
-   - **KONDISI 1 (Pertanyaan Menyebut Wilayah Tertentu)**:
-     Contoh: "dimana alamat kantor sumedang?", "lokasi kantor dinsos kota bogor dimana?", "alamat kantor dinas sosial cirebon", "kantor kbb dmn?", dll.
-     * WAJIB menjawab HANYA alamat kantor wilayah tersebut secara spesifik (nama instansi, alamat jalan, kelurahan/kecamatan, kabupaten/kota, nomor kontak/telepon jika tersedia).
-     * DILARANG KERAS memunculkan alamat kantor provinsi (Cimahi/Bandung) jika pengguna bertanya mengenai kantor Sumedang, Bogor, Cirebon, dll.!
+   - **KONDISI 1 (Pertanyaan Menyebut Wilayah Tertentu / Termasuk Daerah Kembar Seperti Sukabumi, Bogor, Cirebon, Bekasi, Tasikmalaya, Bandung)**:
+     Contoh: "kasih tau saya alamat kantor dinsos sukabumi", "dimana alamat kantor sumedang?", "lokasi kantor dinsos kota bogor dimana?", "alamat kantor dinas sosial cirebon", "kantor kbb dmn?", dll.
+     * **Jika pengguna menanyakan nama wilayah yang memiliki Kabupaten dan Kota (seperti Sukabumi, Bogor, Cirebon, Bekasi, Tasikmalaya, Bandung)**:
+       AI WAJIB LANGSUNG MEMBERIKAN ALAMAT KEDUA KANTOR TERSEBUT (KABUPATEN & KOTA) secara lengkap, rapi, dan terstruktur dalam satu jawaban! DILARANG KERAS bertanya balik "wilayah mana yang Anda maksud?" jika pengguna sudah menyebutkan nama wilayahnya (seperti "Sukabumi")!
+     * **Jika pengguna secara spesifik menyebut Kabupaten atau Kota** (misal: "Kabupaten Sukabumi", "Kota Bogor", "Cisaat", "Cikole"): Jawab HANYA kantor spesifik tersebut.
+     * DILARANG KERAS memunculkan alamat kantor provinsi (Cimahi/Bandung) jika pengguna bertanya mengenai kantor Sukabumi, Sumedang, Bogor, Cirebon, dll.!
    - **KONDISI 2 (Pertanyaan "Kantor Sini" / Berdasarkan Wilayah Akun)**:
      Contoh: "dimana lokasi kantor sini?", "alamat dinas sosial di sini dimana?"
-     * Jika pengguna memiliki wilayah penugasan/domisili akun (misal: Kabupaten Garut), jawab alamat dinas sosial untuk wilayah akun tersebut: "Sesuai dengan wilayah penugasan akun Anda di Kabupaten Garut, alamat kantor Dinas Sosial Kabupaten Garut berada di Jl. Patriot No. 12, Tarogong Kidul, Garut."
+     * Jika pengguna memiliki wilayah penugasan/domisili akun (misal: Kabupaten Garut), jawab alamat dinas sosial untuk wilayah akun tersebut.
      * Jika tamu publik tanpa wilayah, perlakukan seperti Kondisi 3.
-   - **KONDISI 3 (Pertanyaan Mengambang Tanpa Wilayah)**:
-     Contoh: "dimana lokasi kantor?", "alamat kantor dinsos dimana?", "kantor dinsos dmn?"
-     * WAJIB bertanya kembali secara ramah, interaktif, dan komunikatif:
+   - **KONDISI 3 (Pertanyaan Mengambang Tanpa Wilayah Sama Sekali)**:
+     Contoh murni tanpa nama daerah: "dimana lokasi kantor?", "alamat kantor dinsos dimana?", "kantor dinsos dmn?"
+     * HANYA jika pengguna sama sekali TIDAK menyebutkan nama daerah, bertanyalah secara ramah:
        "Lokasi kantor Dinas Sosial wilayah mana ya yang Anda maksud lebih tepatnya? 😊
        Di Jawa Barat, setiap kabupaten/kota memiliki kantor Dinas Sosial masing-masing. Sebagai contoh:
        • Kantor Dinsos Kabupaten Sumedang: Jl. Mayor Abdurahman No. 125, Sumedang Utara
        • Kantor Dinsos Kota Bogor: Jl. Merdeka No. 142, Ciwaringin, Bogor Tengah
-       • Kantor Dinsos Kabupaten Bandung: Jl. Raya Soreang Km. 17, Soreang
+       • Kantor Dinsos Sukabumi: Cisaat (Kabupaten) & Cikole (Kota)
        • Kantor Utama Dinsos Provinsi Jawa Barat: Jl. Jend. H. Amir Machmud No. 331, Kota Cimahi
-       Silakan sebutkan kabupaten/kota yang Anda tuju di 27 Kab/Kota se-Jawa Barat, saya siap memberikan alamat lengkap dan kontaknya!"`;
+       Silakan sebutkan nama kabupaten/kota yang Anda tuju di 27 Kab/Kota se-Jawa Barat, saya siap memberikan alamat lengkap dan kontaknya!"`;
 
   // Helper function to extract core substantive query by stripping introductory conversational preambles
   function extractCoreInquiry(raw: string): { coreQuery: string; isPureIntro: boolean; hasQuestion: boolean } {
@@ -2451,8 +2453,11 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
       return `**Kepala Dinas Sosial Provinsi Jawa Barat** saat ini dijabat oleh **Ibu Noneng Komara Nengsih, S.E., M.A.P.**\n\nBeliau memimpin tata kelola pelayanan dan perlindungan sosial di Jawa Barat dengan visi *"Mewujudkan Jawa Barat Juara Lahir Batin dengan Inovasi dan Kolaborasi"*, memperkuat peran 10 Pilar PSKS dan modernisasi digital data sosial.`;
     }
 
-    // 0.10 PENANGANAN CERDAS ALAMAT KANTOR DINSOS & WILAYAH (3 KONDISI INTERAKTIF)
-    const addressRes = resolveDinsosAddressQuery(targetQ, userContext?.wilayah);
+    // 0.10 PENANGANAN CERDAS ALAMAT KANTOR DINSOS & WILAYAH (3 KONDISI INTERAKTIF & FALLBACK)
+    const prevAssistantMsg = Array.isArray(messages)
+      ? [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
+      : '';
+    const addressRes = resolveDinsosAddressQuery(targetQ, userContext?.wilayah, prevAssistantMsg);
     if (addressRes.isAddressQuery) {
       return addressRes.replyText;
     }
@@ -2934,21 +2939,34 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           firestoreKnowledgeMatches.push(...devKnowledge);
         }
 
-        // Resolusi Cerdas Alamat Kantor Dinsos (27 Kab/Kota & Klarifikasi)
-        const addrContextMatch = resolveDinsosAddressQuery(lastUserMsg, userContext?.wilayah);
+        // Resolusi Cerdas Alamat Kantor Dinsos (27 Kab/Kota & Klarifikasi & Fallback)
+        const prevAssistantMsgInPost = Array.isArray(messages)
+          ? [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
+          : '';
+        const addrContextMatch = resolveDinsosAddressQuery(lastUserMsg, userContext?.wilayah, prevAssistantMsgInPost);
         if (addrContextMatch.isAddressQuery) {
-          if (addrContextMatch.isSpecificRegion && addrContextMatch.matchedOffice) {
+          if (addrContextMatch.isFallback) {
+            return res.json({
+              reply: addrContextMatch.replyText,
+              isVerified: true,
+              source: 'verified_exact',
+            });
+          }
+          if (addrContextMatch.isSpecificRegion) {
             // Singkirkan kontak umum Cimahi/Bandung jika yang ditanyakan adalah Kab/Kota spesifik
             const filtered = firestoreKnowledgeMatches.filter(m => m.id !== 'kontak_dinas_sosial');
             firestoreKnowledgeMatches.length = 0;
             firestoreKnowledgeMatches.push(...filtered);
+            const officeId = addrContextMatch.matchedOffice ? addrContextMatch.matchedOffice.id : 'regional_sukabumi';
+            const officeTitle = addrContextMatch.matchedOffice ? addrContextMatch.matchedOffice.namaDinas : 'Dinas Sosial Wilayah';
+            const officeKeywords = addrContextMatch.matchedOffice ? addrContextMatch.matchedOffice.aliases : ['alamat', 'kantor', 'dinsos', 'sukabumi'];
             firestoreKnowledgeMatches.unshift({
-              id: `dinsos_${addrContextMatch.matchedOffice.id}`,
-              topic: `kantor_dinsos_${addrContextMatch.matchedOffice.id}`,
-              title: `Alamat Kantor ${addrContextMatch.matchedOffice.namaDinas}`,
+              id: `dinsos_${officeId}`,
+              topic: `kantor_dinsos_${officeId}`,
+              title: `Alamat Kantor ${officeTitle}`,
               category: 'layanan',
-              keywords: addrContextMatch.matchedOffice.aliases,
-              summary: `Alamat kantor dan nomor telepon ${addrContextMatch.matchedOffice.namaDinas}`,
+              keywords: officeKeywords,
+              summary: `Alamat kantor dan nomor telepon ${officeTitle}`,
               content: addrContextMatch.replyText,
               actionTag: '[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
               updatedAt: new Date().toISOString(),

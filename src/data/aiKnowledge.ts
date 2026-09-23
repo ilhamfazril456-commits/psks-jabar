@@ -2710,17 +2710,33 @@ export function verifyAndTrackAnswerAccuracy(
   }
 
   // =========================================================================
-  // DINSOS 27 KAB/KOTA ADDRESS GROUNDING (3 INTERACTIVE CONDITIONS)
+  // DINSOS 27 KAB/KOTA ADDRESS GROUNDING (3 INTERACTIVE CONDITIONS & FALLBACK)
   // =========================================================================
-  const addrCheck = resolveDinsosAddressQuery(query, userWilayah);
+  const addrCheck = resolveDinsosAddressQuery(query, userWilayah, previousContext);
   if (addrCheck.isAddressQuery) {
-    if (addrCheck.isSpecificRegion && addrCheck.matchedOffice && !addrCheck.matchedOffice.isProvinsi) {
-      const officeCity = addrCheck.matchedOffice.kabKota.toLowerCase().replace('kabupaten ', '').replace('kota ', '');
-      const replyMentionsCity = rawReply && rawReply.toLowerCase().includes(officeCity);
-      const replyGaveCimahi = rawReply && (rawReply.includes('Amir Machmud') || rawReply.includes('Cimahi Tengah') || rawReply.includes('Cigugur'));
+    if (addrCheck.isFallback) {
+      return {
+        finalContent: addrCheck.replyText,
+        isAccurate: true,
+        confidence: 1.0,
+        source: 'verified_exact',
+      };
+    }
+    if (addrCheck.isSpecificRegion) {
+      const rawLower = (rawReply || '').toLowerCase();
+      // Detect if raw response mistakenly asked for clarification when region was already specified,
+      // or dumped provincial Cimahi, or was completely empty:
+      const gaveUnwantedClarification =
+        rawLower.includes('wilayah mana') ||
+        rawLower.includes('lebih tepatnya') ||
+        (rawLower.includes('sebagai contoh') && !rawLower.includes('cisaat') && !rawLower.includes('cibinong'));
+      const gaveProvincialInstead =
+        (rawLower.includes('amir machmud') || rawLower.includes('cigugur')) &&
+        !query.toLowerCase().includes('provinsi') &&
+        !query.toLowerCase().includes('jabar') &&
+        !query.toLowerCase().includes('cimahi');
 
-      // If model failed, was empty, gave provincial Cimahi instead of the asked city, or missed the target city:
-      if (!rawReply || (replyGaveCimahi && !replyMentionsCity) || !replyMentionsCity) {
+      if (!rawReply || gaveUnwantedClarification || gaveProvincialInstead) {
         return {
           finalContent: addrCheck.replyText,
           isAccurate: true,

@@ -35,8 +35,9 @@ import {
   verifyAndTrackAnswerAccuracy,
   getSystemStateMetrics,
 } from '../data/aiKnowledge';
+import { resolveDinsosAddressQuery } from '../data/dinsosAddressDirectory';
 import { ensureAIKnowledgeSeeded } from '../services/aiKnowledgeFirestoreService';
-import { PILLARS_CONFIG } from '../data/initialData';
+import { PILLARS_CONFIG, KAB_KOTA_ONLY } from '../data/initialData';
 
 interface Message {
   id: string;
@@ -812,6 +813,39 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
     setMessages((prev) => [...prev, userMsg]);
     if (!customText) setInputMessage('');
+
+    const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
+
+    // =========================================================================
+    // FALLBACK SYSTEM: Validasi pertanyaan wilayah spesifik terhadap KAB_KOTA_ONLY
+    // Jika tidak ditemukan dalam 27 Kab/Kota Jawa Barat, AI wajib bertanya balik:
+    // 'Lokasi kantor mana ya lebih tepatnya? Apakah yang dimaksud adalah alamat kantor wilayah [Nama Wilayah]?'
+    // =========================================================================
+    const addressResolution = resolveDinsosAddressQuery(textToSend, session?.wilayah, previousAssistantMessage);
+    if (
+      addressResolution.isAddressQuery &&
+      (addressResolution.isFallback ||
+        (addressResolution.isSpecificRegion && previousAssistantMessage.includes('Apakah yang dimaksud adalah alamat kantor wilayah')))
+    ) {
+      const botMsg: Message = {
+        id: `bot-${Date.now()}`,
+        role: 'assistant',
+        content: addressResolution.replyText,
+        timestamp: new Date(),
+        isVerified: true,
+        trackingSource: 'verified_exact',
+      };
+      setMessages((prev) => [...prev, botMsg]);
+      setIsLoading(false);
+      if (isOpenRef.current) {
+        setTypingMessageId(botMsg.id);
+      } else {
+        setTypingMessageId(null);
+        setHasUnreadInBackground(true);
+      }
+      return;
+    }
+
     setIsLoading(true);
 
     try {

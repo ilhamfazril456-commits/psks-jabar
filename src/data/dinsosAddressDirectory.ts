@@ -1,3 +1,5 @@
+import { KAB_KOTA_ONLY } from './initialData';
+
 export interface DinsosOfficeAddress {
   id: string;
   kabKota: string;
@@ -7,6 +9,17 @@ export interface DinsosOfficeAddress {
   alamat: string;
   telepon?: string;
   email?: string;
+}
+
+export interface DinsosAddressQueryResult {
+  isAddressQuery: boolean;
+  matchedOffice?: DinsosOfficeAddress;
+  matchedOffices?: DinsosOfficeAddress[];
+  isSpecificRegion: boolean;
+  needsClarification: boolean;
+  isFallback?: boolean;
+  suggestedRegion?: string;
+  replyText: string;
 }
 
 export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
@@ -146,7 +159,7 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kab_sukabumi',
     kabKota: 'Kabupaten Sukabumi',
-    aliases: ['kabupaten sukabumi', 'kab sukabumi', 'cisaat', 'palabuhanratu', 'dinsos kab sukabumi'],
+    aliases: ['kabupaten sukabumi', 'kab sukabumi', 'cisaat', 'palabuhanratu', 'pelabuhanratu', 'dinsos kab sukabumi', 'dinsos kabupaten sukabumi'],
     namaDinas: 'Dinas Sosial Kabupaten Sukabumi',
     alamat: 'Kompleks Gelanggang Pemuda Cisaat, Jl. Veteran No. 1, Sukamanah, Kec. Cisaat, Kabupaten Sukabumi, Jawa Barat 43152',
     telepon: '(0266) 222146',
@@ -162,7 +175,7 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kab_tasikmalaya',
     kabKota: 'Kabupaten Tasikmalaya',
-    aliases: ['kabupaten tasikmalaya', 'kab tasikmalaya', 'singaparna', 'dinsos kab tasikmalaya'],
+    aliases: ['kabupaten tasikmalaya', 'kab tasikmalaya', 'singaparna', 'dinsos kab tasikmalaya', 'kab tasik', 'dinsos kab tasik'],
     namaDinas: 'Dinas Sosial, Pengendalian Penduduk, Keluarga Berencana, Pemberdayaan Perempuan dan Perlindungan Anak Kabupaten Tasikmalaya',
     alamat: 'Jl. Pemuda No. 1, Bojongkoneng, Kec. Singaparna, Kabupaten Tasikmalaya, Jawa Barat 46415',
     telepon: '(0265) 545233',
@@ -202,7 +215,7 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kota_cimahi',
     kabKota: 'Kota Cimahi',
-    aliases: ['kota cimahi', 'cmi', 'cimahi kota', 'dinsos kota cimahi', 'dinsos cimahi'],
+    aliases: ['kota cimahi', 'cmi', 'cimahi kota', 'dinsos kota cimahi', 'dinsos cimahi', 'cimahi'],
     namaDinas: 'Dinas Sosial Kota Cimahi',
     alamat: 'Gedung B Lantai 2, Kompleks Perkantoran Pemkot Cimahi, Jl. Rd. Demang Hardjakusumah No. 1, Cihanjuang, Kec. Cimahi Utara, Kota Cimahi, Jawa Barat 40513',
     telepon: '(022) 6654274',
@@ -226,7 +239,7 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kota_sukabumi',
     kabKota: 'Kota Sukabumi',
-    aliases: ['kota sukabumi', 'dinsos kota sukabumi', 'sukabumi kota', 'cikole'],
+    aliases: ['kota sukabumi', 'dinsos kota sukabumi', 'sukabumi kota', 'cikole', 'ciaul', 'ciaul pasir'],
     namaDinas: 'Dinas Sosial Kota Sukabumi',
     alamat: 'Jl. Ciaul Pasir No. 42, Cisarua, Kec. Cikole, Kota Sukabumi, Jawa Barat 43115',
     telepon: '(0266) 221980',
@@ -234,35 +247,250 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kota_tasikmalaya',
     kabKota: 'Kota Tasikmalaya',
-    aliases: ['kota tasikmalaya', 'dinsos kota tasikmalaya', 'tasikmalaya kota', 'bungursari'],
+    aliases: ['kota tasikmalaya', 'dinsos kota tasikmalaya', 'tasikmalaya kota', 'bungursari', 'kota tasik', 'dinsos kota tasik'],
     namaDinas: 'Dinas Sosial Kota Tasikmalaya',
     alamat: 'Jl. Ir. H. Juanda No. 195, Sukamulya, Kec. Bungursari, Kota Tasikmalaya, Jawa Barat 46151',
     telepon: '(0265) 345091',
   },
 ];
 
+function levenshteinDistance(s1: string, s2: string): number {
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (s1[i - 1] === s2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
 /**
- * Normalizes query string and resolves Dinsos office address.
- * Follows the 3 conditions strictly:
- * 1. Specific region mentioned -> Returns ONLY that region's address.
- * 2. "Sini" / Local context mentioned -> Resolves to userWilayah if set.
- * 3. General / floating question without region -> Asks interactive clarification.
+ * Finds the closest Kab/Kota name from KAB_KOTA_ONLY using fuzzy string distance and smart regional heuristics
  */
-export function resolveDinsosAddressQuery(
-  query: string,
-  userWilayah?: string
-): {
-  isAddressQuery: boolean;
-  matchedOffice?: DinsosOfficeAddress;
-  isSpecificRegion: boolean;
-  needsClarification: boolean;
-  replyText: string;
-} {
+export function findClosestKabKota(input: string, list: string[] = KAB_KOTA_ONLY): string {
+  const cleanInput = input
+    .toLowerCase()
+    .replace(/[?!.,;:_()\-]/g, ' ')
+    .replace(/^(kabupaten|kab\.|kab|kota)\s+/i, '')
+    .trim();
+
+  const wantsKota = /\bkota\b/i.test(input);
+  const wantsKab = /\b(kabupaten|kab\.|kab)\b/i.test(input);
+
+  // Direct manual overrides for neighboring areas or common subdistricts
+  const manualOverrides: Record<string, string> = {
+    cilacap: 'Kab. Pangandaran',
+    brebes: 'Kab. Cirebon',
+    tegal: 'Kab. Cirebon',
+    banten: 'Kab. Sukabumi',
+    lebak: 'Kab. Bogor',
+    jakarta: 'Kota Bekasi',
+    tangerang: 'Kota Depok',
+    lembang: 'Kab. Bandung Barat',
+    cibadak: 'Kab. Sukabumi',
+    pelabuhanratu: 'Kab. Sukabumi',
+    palabuhanratu: 'Kab. Sukabumi',
+    sumber: 'Kab. Cirebon',
+    soreang: 'Kab. Bandung',
+    ngamprah: 'Kab. Bandung Barat',
+    cikarang: 'Kab. Bekasi',
+    cibinong: 'Kab. Bogor',
+    singaparna: 'Kab. Tasikmalaya',
+    ciaul: 'Kota Sukabumi',
+    cikole: 'Kota Sukabumi',
+    ciwaringin: 'Kota Bogor',
+  };
+
+  if (manualOverrides[cleanInput]) {
+    return manualOverrides[cleanInput];
+  }
+
+  // Filter list by kota / kab preference if user explicitly specified it
+  let candidateList = list;
+  if (wantsKota && !wantsKab) {
+    const kotaOnly = list.filter((i) => i.startsWith('Kota '));
+    if (kotaOnly.length > 0) candidateList = kotaOnly;
+  } else if (wantsKab && !wantsKota) {
+    const kabOnly = list.filter((i) => i.startsWith('Kab. '));
+    if (kabOnly.length > 0) candidateList = kabOnly;
+  }
+
+  let bestMatch = candidateList[0] || list[0];
+  let minScore = Infinity;
+
+  for (const item of candidateList) {
+    const rawClean = item.toLowerCase().replace(/^(kab\.|kota)\s+/i, '').trim();
+    if (rawClean === cleanInput) return item;
+    if (rawClean.includes(cleanInput) || cleanInput.includes(rawClean)) {
+      return item;
+    }
+    const dist = levenshteinDistance(cleanInput, rawClean);
+    const score = dist / Math.max(cleanInput.length, rawClean.length);
+    if (score < minScore) {
+      minScore = score;
+      bestMatch = item;
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Extracts candidate region from query by stripping common location/address inquiry stop words
+ */
+export function extractCandidateRegion(query: string): string {
   const norm = query
     .toLowerCase()
     .replace(/[?!.,;:_()\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  // If user explicitly asks about sini or provinsi, do not treat as a foreign candidate region
+  if (
+    norm.includes('kantor sini') ||
+    norm.includes('lokasi sini') ||
+    norm.includes('alamat sini') ||
+    norm.includes('di sini') ||
+    norm.includes('disini') ||
+    norm.includes('provinsi') ||
+    norm.includes('jabar') ||
+    norm.includes('jawa barat') ||
+    norm.includes('kantor utama') ||
+    norm.includes('kantor pusat')
+  ) {
+    return '';
+  }
+
+  const stopWords = new Set([
+    'alamat', 'lokasi', 'kantor', 'kantornya', 'posko', 'poskonya',
+    'tempat', 'tempatnya', 'dinsos', 'dinas', 'sosial',
+    'dimana', 'dmana', 'dmn', 'mana', 'dimanakah',
+    'di', 'ke', 'dari', 'pada', 'untuk',
+    'wilayah', 'daerah', 'area',
+    'kabupaten', 'kab', 'kota', 'kotamadya',
+    'ada', 'adakah', 'apa', 'apakah',
+    'tolong', 'mohon', 'bisa', 'dong', 'ya', 'sih', 'kah',
+    'tanya', 'mau', 'ingin', 'minta', 'kasih', 'tahu', 'tau', 'beritahu', 'berikan', 'sebutkan',
+    'saya', 'kami', 'info', 'informasi', 'detail',
+    'no', 'nomor', 'telp', 'telepon', 'hp', 'whatsapp', 'wa', 'kontak', 'hubungi', 'sekitar'
+  ]);
+
+  const words = norm.split(' ').filter((w) => w && !stopWords.has(w));
+  return words.join(' ').trim();
+}
+
+/**
+ * Validates whether a candidate region exists in KAB_KOTA_ONLY.
+ * If not found, returns fallback suggestion with closest match.
+ */
+export function validateRegionInKabKota(
+  candidate: string,
+  list: string[] = KAB_KOTA_ONLY
+): {
+  found: boolean;
+  matchedName?: string;
+  suggestedName: string;
+} {
+  const clean = candidate.toLowerCase().trim();
+
+  // Check aliases from directory first
+  for (const office of DINSOS_ADDRESS_DIRECTORY) {
+    if (office.isProvinsi) continue;
+    for (const alias of office.aliases) {
+      if (alias === clean || clean === alias) {
+        const corresponding =
+          list.find((k) =>
+            k.toLowerCase().includes(office.kabKota.toLowerCase().replace(/^(kabupaten|kota)\s+/i, ''))
+          ) || office.kabKota;
+        return { found: true, matchedName: corresponding, suggestedName: corresponding };
+      }
+    }
+  }
+
+  // Exact or root match against KAB_KOTA_ONLY
+  for (const item of list) {
+    const root = item.toLowerCase().replace(/^(kab\.|kota)\s+/i, '').trim();
+    const itemNorm = item.toLowerCase();
+    if (
+      clean === root ||
+      clean === itemNorm ||
+      clean === 'kabupaten ' + root ||
+      clean === 'kab ' + root ||
+      clean === 'kota ' + root
+    ) {
+      return { found: true, matchedName: item, suggestedName: item };
+    }
+  }
+
+  const suggested = findClosestKabKota(candidate, list);
+  return {
+    found: false,
+    suggestedName: suggested,
+  };
+}
+
+/**
+ * Normalizes query string and resolves Dinsos office address.
+ * Follows the 3 conditions strictly:
+ * 1. Specific region mentioned (including dual regions like Sukabumi, Bogor, etc.) -> Returns exact address immediately.
+ * 2. "Sini" / Local context mentioned -> Resolves to userWilayah if set.
+ * 3. General / floating question without region -> Asks interactive clarification.
+ * 4. Fallback system: If specific region inquired is NOT in KAB_KOTA_ONLY -> Asks:
+ *    "Lokasi kantor mana ya lebih tepatnya? Apakah yang dimaksud adalah alamat kantor wilayah [Nama Wilayah]?"
+ */
+export function resolveDinsosAddressQuery(
+  query: string,
+  userWilayah?: string,
+  previousAssistantMessage?: string
+): DinsosAddressQueryResult {
+  const norm = query
+    .toLowerCase()
+    .replace(/[?!.,;:_()\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Check if previous assistant message was a fallback question:
+  // "Lokasi kantor mana ya lebih tepatnya? Apakah yang dimaksud adalah alamat kantor wilayah [Nama Wilayah]?"
+  const prevFallbackMatch = previousAssistantMessage?.match(
+    /Apakah yang dimaksud adalah alamat kantor wilayah ([^?]+)\?/i
+  );
+  if (prevFallbackMatch) {
+    const isAffirmative =
+      /\b(iya|ya|betul|benar|tepat|maksud saya|maksudnya|yang itu|setuju|hooh|yup)\b/i.test(norm) ||
+      norm.toLowerCase().includes(prevFallbackMatch[1].trim().toLowerCase());
+    if (isAffirmative) {
+      const suggestedTarget = prevFallbackMatch[1].trim();
+      // Recurse to resolve the confirmed region
+      return resolveDinsosAddressQuery(`alamat kantor ${suggestedTarget}`, userWilayah);
+    }
+  }
+
+  // Daftar nama daerah Jawa Barat yang berdiri sendiri
+  const allKnownRegions = [
+    'sukabumi', 'bogor', 'cirebon', 'bekasi', 'tasikmalaya', 'tasik',
+    'bandung', 'sumedang', 'garut', 'ciamis', 'cianjur', 'indramayu',
+    'karawang', 'kuningan', 'majalengka', 'pangandaran', 'parigi',
+    'purwakarta', 'subang', 'banjar', 'cimahi', 'depok', 'jabar', 'jawa barat',
+    'soreang', 'cikarang', 'cibinong', 'sumber', 'singaparna', 'kbb', 'ngamprah',
+    'cisaat', 'palabuhanratu', 'cikole'
+  ];
+
+  const mentionsAnyRegion = allKnownRegions.some((r) => {
+    const reg = new RegExp(`\\b${r}\\b`, 'i');
+    return reg.test(norm);
+  });
+
+  const extractedCandidate = extractCandidateRegion(query);
 
   const isAskingLocationOrAddress =
     norm.includes('alamat') ||
@@ -274,7 +502,18 @@ export function resolveDinsosAddressQuery(
     norm.includes('di mana') ||
     norm.includes('dmana') ||
     norm.includes('dmn') ||
-    norm.includes('kantornya');
+    norm.includes('kantornya') ||
+    norm.includes('dinsos') ||
+    norm.includes('dinas sosial') ||
+    norm.includes('no telp') ||
+    norm.includes('telepon') ||
+    norm.includes('kontak') ||
+    norm.startsWith('di ') ||
+    norm.startsWith('ke ') ||
+    // Jika hanya menyebutkan nama daerah persis saat konteks alamat
+    (mentionsAnyRegion && norm.split(' ').length <= 4) ||
+    // Single word / short query that is not empty
+    (extractedCandidate.length > 0 && norm.split(' ').length <= 3 && !['halo', 'hai', 'tes', 'bantuan'].includes(norm));
 
   if (!isAskingLocationOrAddress) {
     return {
@@ -295,23 +534,280 @@ export function resolveDinsosAddressQuery(
 
   // 1. Check if user explicitly asked for provincial / utama / pusat
   const isAskingProvinsiExplicit =
-    norm.includes('provinsi') ||
+    (norm.includes('provinsi') && !norm.includes('kabupaten')) ||
     norm.includes('jabar') ||
     norm.includes('jawa barat') ||
     norm.includes('kantor utama') ||
     norm.includes('kantor pusat') ||
-    norm.includes('prov');
+    norm.includes('prov jabar');
 
-  // Check for specific Kab/Kota (exclude generic 'provinsi_jabar' first)
+  // =========================================================================
+  // DUAL REGION HANDLING (Sukabumi, Bogor, Cirebon, Bekasi, Tasikmalaya, Bandung)
+  // When user asks "sukabumi", provide BOTH Kabupaten & Kota Sukabumi immediately!
+  // =========================================================================
+
+  // A. SUKABUMI
+  if (/\bsukabumi\b/i.test(norm)) {
+    const isExplicitKab = /\b(kabupaten|kab)\b/i.test(norm) || norm.includes('cisaat') || norm.includes('palabuhanratu') || norm.includes('pelabuhanratu');
+    const isExplicitKota = /\bkota\b/i.test(norm) || norm.includes('cikole') || norm.includes('ciaul');
+
+    const kabOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_sukabumi')!;
+    const kotaOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_sukabumi')!;
+
+    if (isExplicitKab && !isExplicitKota) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kabOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Sukabumi**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Sukabumi\n• 📌 **Alamat Kantor**: ${kabOffice.alamat}\n• 📞 **Telepon**: ${kabOffice.telepon}\n\nAda informasi terkait layanan sosial atau pilar PSKS di wilayah **Kabupaten Sukabumi** yang ingin Anda ketahui lebih lanjut? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isExplicitKota && !isExplicitKab) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kotaOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Sukabumi**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Sukabumi\n• 📌 **Alamat Kantor**: ${kotaOffice.alamat}\n• 📞 **Telepon**: ${kotaOffice.telepon}\n\nAda informasi terkait layanan sosial atau pilar PSKS di wilayah **Kota Sukabumi** yang ingin Anda ketahui lebih lanjut? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    // Default ketika menyebut "Sukabumi": Berikan KEDUA alamat (Kabupaten & Kota) secara lengkap tanpa bertanya ulang!
+    return {
+      isAddressQuery: true,
+      matchedOffice: kabOffice,
+      matchedOffices: [kabOffice, kotaOffice],
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Sukabumi**:\n\nDi wilayah **Sukabumi**, terdapat 2 instansi Dinas Sosial sesuai wilayah administrasi pemerintahan (Kabupaten dan Kota):\n\n1️⃣ **Dinas Sosial Kabupaten Sukabumi**:\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Sukabumi\n• 📌 **Alamat Kantor**: Kompleks Gelanggang Pemuda Cisaat, Jl. Veteran No. 1, Sukamanah, Kec. Cisaat, Kabupaten Sukabumi, Jawa Barat 43152\n• 📞 **Telepon**: (0266) 222146\n\n2️⃣ **Dinas Sosial Kota Sukabumi**:\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Sukabumi\n• 📌 **Alamat Kantor**: Jl. Ciaul Pasir No. 42, Cisarua, Kec. Cikole, Kota Sukabumi, Jawa Barat 43115\n• 📞 **Telepon**: (0266) 221980\n\nSilakan kunjungi kantor yang sesuai dengan wilayah domisili atau koordinasi Anda (Kabupaten Sukabumi di Cisaat atau Kota Sukabumi di Ciaul/Cikole). Ada hal terkait layanan sosial di Sukabumi yang bisa saya bantu? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // B. BOGOR
+  if (/\bbogor\b/i.test(norm)) {
+    const isExplicitKab = /\b(kabupaten|kab)\b/i.test(norm) || norm.includes('cibinong');
+    const isExplicitKota = /\bkota\b/i.test(norm) || norm.includes('ciwaringin') || norm.includes('merdeka');
+
+    const kabOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_bogor')!;
+    const kotaOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_bogor')!;
+
+    if (isExplicitKab && !isExplicitKota) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kabOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Bogor**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Bogor\n• 📌 **Alamat Kantor**: ${kabOffice.alamat}\n• 📞 **Telepon**: ${kabOffice.telepon}\n\nAda informasi terkait layanan sosial di **Kabupaten Bogor** yang ingin Anda tanyakan? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isExplicitKota && !isExplicitKab) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kotaOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Bogor**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Bogor\n• 📌 **Alamat Kantor**: ${kotaOffice.alamat}\n• 📞 **Telepon**: ${kotaOffice.telepon}\n\nAda informasi terkait layanan sosial di **Kota Bogor** yang ingin Anda tanyakan? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    return {
+      isAddressQuery: true,
+      matchedOffice: kotaOffice,
+      matchedOffices: [kabOffice, kotaOffice],
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Bogor**:\n\nDi wilayah **Bogor**, terdapat 2 instansi Dinas Sosial:\n\n1️⃣ **Dinas Sosial Kabupaten Bogor**:\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Bogor\n• 📌 **Alamat Kantor**: Jl. Bersih No. 1, Komplek Perkantoran Pemda Cibinong, Kec. Cibinong, Kabupaten Bogor 16914\n• 📞 **Telepon**: (021) 8753177\n\n2️⃣ **Dinas Sosial Kota Bogor**:\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Bogor\n• 📌 **Alamat Kantor**: Jl. Merdeka No. 142, Ciwaringin, Kec. Bogor Tengah, Kota Bogor 16124\n• 📞 **Telepon**: (0251) 8321075\n\nSilakan kunjungi kantor yang sesuai dengan wilayah administrasi domisili Anda. Ada hal lain yang bisa saya bantu? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // C. CIREBON
+  if (/\bcirebon\b/i.test(norm)) {
+    const isExplicitKab = /\b(kabupaten|kab)\b/i.test(norm) || norm.includes('sumber');
+    const isExplicitKota = /\bkota\b/i.test(norm) || norm.includes('kesambi') || norm.includes('dharsono');
+
+    const kabOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_cirebon')!;
+    const kotaOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_cirebon')!;
+
+    if (isExplicitKab && !isExplicitKota) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kabOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Cirebon**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Cirebon\n• 📌 **Alamat Kantor**: ${kabOffice.alamat}\n• 📞 **Telepon**: ${kabOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isExplicitKota && !isExplicitKab) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kotaOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Cirebon**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial, Pemberdayaan Perempuan dan Perlindungan Anak Kota Cirebon\n• 📌 **Alamat Kantor**: ${kotaOffice.alamat}\n• 📞 **Telepon**: ${kotaOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    return {
+      isAddressQuery: true,
+      matchedOffice: kabOffice,
+      matchedOffices: [kabOffice, kotaOffice],
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Cirebon**:\n\n1️⃣ **Dinas Sosial Kabupaten Cirebon**:\n• 📌 **Alamat**: Jl. Sunan Drajat No. 11, Sumber, Kec. Sumber, Kabupaten Cirebon 45611\n• 📞 **Telepon**: (0231) 321151\n\n2️⃣ **Dinas Sosial Kota Cirebon**:\n• 📌 **Alamat**: Jl. Brigjen Dharsono No. 05, Sunyaragi, Kec. Kesambi, Kota Cirebon 45132\n• 📞 **Telepon**: (0231) 487261\n\nSilakan kunjungi kantor yang sesuai dengan wilayah domisili Anda! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // D. BEKASI
+  if (/\bbekasi\b/i.test(norm)) {
+    const isExplicitKab = /\b(kabupaten|kab)\b/i.test(norm) || norm.includes('cikarang');
+    const isExplicitKota = /\bkota\b/i.test(norm) || norm.includes('juanda');
+
+    const kabOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_bekasi')!;
+    const kotaOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_bekasi')!;
+
+    if (isExplicitKab && !isExplicitKota) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kabOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Bekasi**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Bekasi\n• 📌 **Alamat Kantor**: ${kabOffice.alamat}\n• 📞 **Telepon**: ${kabOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isExplicitKota && !isExplicitKab) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kotaOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Bekasi**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Bekasi\n• 📌 **Alamat Kantor**: ${kotaOffice.alamat}\n• 📞 **Telepon**: ${kotaOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    return {
+      isAddressQuery: true,
+      matchedOffice: kotaOffice,
+      matchedOffices: [kabOffice, kotaOffice],
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Bekasi**:\n\n1️⃣ **Dinas Sosial Kabupaten Bekasi**:\n• 📌 **Alamat**: Kompleks Perkantoran Pemkab Bekasi, Blok B1 Lt. 2, Desa Sukamahi, Kec. Cikarang Pusat, Kabupaten Bekasi 17530\n• 📞 **Telepon**: (021) 89970135\n\n2️⃣ **Dinas Sosial Kota Bekasi**:\n• 📌 **Alamat**: Jl. Ir. H. Juanda No. 100, Margahayu, Kec. Bekasi Timur, Kota Bekasi 17113\n• 📞 **Telepon**: (021) 8802956\n\nSilakan kunjungi kantor yang sesuai dengan wilayah domisili Anda! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // E. TASIKMALAYA / TASIK
+  if (/\b(tasikmalaya|tasik)\b/i.test(norm)) {
+    const isExplicitKab = /\b(kabupaten|kab)\b/i.test(norm) || norm.includes('singaparna');
+    const isExplicitKota = /\bkota\b/i.test(norm) || norm.includes('bungursari');
+
+    const kabOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_tasikmalaya')!;
+    const kotaOffice = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_tasikmalaya')!;
+
+    if (isExplicitKab && !isExplicitKota) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kabOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Tasikmalaya**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Tasikmalaya\n• 📌 **Alamat Kantor**: ${kabOffice.alamat}\n• 📞 **Telepon**: ${kabOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isExplicitKota && !isExplicitKab) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: kotaOffice,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Tasikmalaya**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Tasikmalaya\n• 📌 **Alamat Kantor**: ${kotaOffice.alamat}\n• 📞 **Telepon**: ${kotaOffice.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    return {
+      isAddressQuery: true,
+      matchedOffice: kabOffice,
+      matchedOffices: [kabOffice, kotaOffice],
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Tasikmalaya**:\n\n1️⃣ **Dinas Sosial Kabupaten Tasikmalaya**:\n• 📌 **Alamat**: Jl. Pemuda No. 1, Bojongkoneng, Kec. Singaparna, Kabupaten Tasikmalaya 46415\n• 📞 **Telepon**: (0265) 545233\n\n2️⃣ **Dinas Sosial Kota Tasikmalaya**:\n• 📌 **Alamat**: Jl. Ir. H. Juanda No. 195, Sukamulya, Kec. Bungursari, Kota Tasikmalaya 46151\n• 📞 **Telepon**: (0265) 345091\n\nSilakan kunjungi kantor yang sesuai dengan wilayah domisili Anda! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // F. BANDUNG (Kota Bandung, Kab. Bandung, KBB, & Provinsi)
+  if (/\bbandung\b/i.test(norm)) {
+    const isBarat = norm.includes('barat') || norm.includes('kbb') || norm.includes('ngamprah') || norm.includes('padalarang');
+    const isKab = (norm.includes('kabupaten') || norm.includes('kab ') || norm.includes('soreang')) && !isBarat;
+    const isKota = norm.includes('kota') || norm.includes('gedebage');
+    const isProv = norm.includes('provinsi') || norm.includes('prov') || norm.includes('rajiman') || norm.includes('amir machmud') || norm.includes('utama');
+
+    if (isBarat) {
+      const kbb = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_bandung_barat')!;
+      return {
+        isAddressQuery: true,
+        matchedOffice: kbb,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Bandung Barat (KBB)**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Bandung Barat\n• 📌 **Alamat Kantor**: ${kbb.alamat}\n• 📞 **Telepon**: ${kbb.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isKab) {
+      const kab = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kab_bandung')!;
+      return {
+        isAddressQuery: true,
+        matchedOffice: kab,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kabupaten Bandung**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kabupaten Bandung\n• 📌 **Alamat Kantor**: ${kab.alamat}\n• 📞 **Telepon**: ${kab.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isKota) {
+      const kota = DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_bandung')!;
+      return {
+        isAddressQuery: true,
+        matchedOffice: kota,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Kantor Dinas Sosial Kota Bandung**:\n\n• 🏢 **Nama Instansi**: Dinas Sosial Kota Bandung\n• 📌 **Alamat Kantor**: ${kota.alamat}\n• 📞 **Telepon**: ${kota.telepon}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    if (isProv) {
+      const prov = DINSOS_ADDRESS_DIRECTORY[0];
+      return {
+        isAddressQuery: true,
+        matchedOffice: prov,
+        isSpecificRegion: true,
+        needsClarification: false,
+        replyText: `📍 **Alamat Resmi Dinas Sosial Provinsi Jawa Barat**:\n\n${prov.alamat}\n• 📞 **Telepon**: ${prov.telepon}\n• ✉️ **Email**: ${prov.email}\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+      };
+    }
+
+    // Default ketika menyebut "Bandung": Jelaskan secara lengkap
+    return {
+      isAddressQuery: true,
+      matchedOffice: DINSOS_ADDRESS_DIRECTORY.find((o) => o.id === 'kota_bandung'),
+      isSpecificRegion: true,
+      needsClarification: false,
+      replyText: `📍 **Alamat Kantor Dinas Sosial di Wilayah Bandung Raya**:\n\n1️⃣ **Dinas Sosial Kota Bandung**:\n• 📌 **Alamat**: Jl. Babakan Karet No. 7, Rancabalong, Kec. Gedebage, Kota Bandung 40294\n• 📞 **Telepon**: (022) 7562095\n\n2️⃣ **Dinas Sosial Kabupaten Bandung**:\n• 📌 **Alamat**: Jl. Raya Soreang Km. 17, Soreang, Kabupaten Bandung 40911\n• 📞 **Telepon**: (022) 5891159\n\n3️⃣ **Dinas Sosial Kabupaten Bandung Barat (KBB)**:\n• 📌 **Alamat**: Kompleks Pemkab Bandung Barat Gedung D, Jl. Raya Padalarang - Cisarua Km. 2, Ngamprah 40552\n• 📞 **Telepon**: (022) 82783015\n\n4️⃣ **Dinas Sosial Provinsi Jawa Barat**:\n• 📌 **Kantor Utama**: Jl. Jend. H. Amir Machmud No. 331, Kota Cimahi\n• 📌 **Kantor Wilayah Bandung**: Jl. Rajiman No. 6, Cicendo, Kota Bandung 40171\n• 📞 **Hotline**: +62 821-2603-0038\n\nSilakan kunjungi kantor yang sesuai dengan wilayah yang Anda tuju! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+    };
+  }
+
+  // =========================================================================
+  // SINGLE REGION MATCHING
+  // =========================================================================
   let foundOffice: DinsosOfficeAddress | undefined;
 
-  // Search through all 27 Kab/Kota
   for (const office of DINSOS_ADDRESS_DIRECTORY) {
     if (office.isProvinsi) continue;
     for (const alias of office.aliases) {
-      // Word boundary or inclusion check
       const regex = new RegExp(`\\b${alias}\\b`, 'i');
-      if (regex.test(norm) || norm.includes(alias)) {
+      if (regex.test(norm)) {
         foundOffice = office;
         break;
       }
@@ -319,7 +815,6 @@ export function resolveDinsosAddressQuery(
     if (foundOffice) break;
   }
 
-  // If specific Kab/Kota found:
   if (foundOffice) {
     const phoneLine = foundOffice.telepon ? `\n• 📞 **Telepon**: ${foundOffice.telepon}` : '';
     const emailLine = foundOffice.email ? `\n• ✉️ **Email**: ${foundOffice.email}` : '';
@@ -333,11 +828,11 @@ export function resolveDinsosAddressQuery(
     };
   }
 
-  // If user asked "di sini" / "sini" and user has an assigned wilayah
+  // User bertanya "di sini" / "sini" dan memiliki wilayah akun
   if (isAskingSini && userWilayah && userWilayah !== 'Jawa Barat' && userWilayah !== 'Semua Wilayah') {
     const userWilayahLower = userWilayah.toLowerCase();
     const localOffice = DINSOS_ADDRESS_DIRECTORY.find((o) =>
-      o.aliases.some((a) => userWilayahLower.includes(a))
+      o.aliases.some((a) => userWilayahLower.includes(a)) || userWilayahLower.includes(o.kabKota.toLowerCase())
     );
 
     if (localOffice) {
@@ -352,8 +847,8 @@ export function resolveDinsosAddressQuery(
     }
   }
 
-  // If user explicitly asks for provinsi / jabar / kantor utama
-  if (isAskingProvinsiExplicit && !foundOffice) {
+  // User bertanya provinsi secara eksplisit
+  if (isAskingProvinsiExplicit) {
     const provOffice = DINSOS_ADDRESS_DIRECTORY[0];
     return {
       isAddressQuery: true,
@@ -364,13 +859,44 @@ export function resolveDinsosAddressQuery(
     };
   }
 
-  // Condition C: Floating / Generic Question without specific region
-  // AI clarifies interactively and gives representative examples!
+  // 4. FALLBACK SYSTEM: Validasi jika user bertanya wilayah spesifik tapi tidak ditemukan di KAB_KOTA_ONLY
+  if (extractedCandidate && extractedCandidate.length > 0) {
+    const validation = validateRegionInKabKota(extractedCandidate, KAB_KOTA_ONLY);
+    if (!validation.found) {
+      return {
+        isAddressQuery: true,
+        matchedOffice: undefined,
+        isSpecificRegion: false,
+        needsClarification: true,
+        isFallback: true,
+        suggestedRegion: validation.suggestedName,
+        replyText: `Lokasi kantor mana ya lebih tepatnya? Apakah yang dimaksud adalah alamat kantor wilayah ${validation.suggestedName}?`,
+      };
+    } else if (validation.matchedName) {
+      const directOffice = DINSOS_ADDRESS_DIRECTORY.find((o) =>
+        o.kabKota.toLowerCase().includes(validation.matchedName!.toLowerCase().replace(/^(kab\.|kota)\s+/i, ''))
+      );
+      if (directOffice) {
+        const phoneLine = directOffice.telepon ? `\n• 📞 **Telepon**: ${directOffice.telepon}` : '';
+        const emailLine = directOffice.email ? `\n• ✉️ **Email**: ${directOffice.email}` : '';
+        return {
+          isAddressQuery: true,
+          matchedOffice: directOffice,
+          isSpecificRegion: true,
+          needsClarification: false,
+          replyText: `📍 **Alamat Kantor ${directOffice.namaDinas}**:\n\n• 🏢 **Nama Instansi**: ${directOffice.namaDinas}\n• 📌 **Alamat Kantor**: ${directOffice.alamat}${phoneLine}${emailLine}\n\nAda informasi terkait layanan sosial atau pilar PSKS di wilayah **${directOffice.kabKota}** yang ingin Anda ketahui lebih lanjut? 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`,
+        };
+      }
+    }
+  }
+
+  // Condition 3: Pertanyaan Mengambang Tanpa Menyebut Wilayah Sama Sekali
+  // (Contoh: "dimana lokasi kantor?", "alamat dinas sosial dimana?")
   return {
     isAddressQuery: true,
     matchedOffice: undefined,
     isSpecificRegion: false,
     needsClarification: true,
-    replyText: `Lokasi kantor Dinas Sosial wilayah mana ya yang Anda maksud lebih tepatnya? 😊\n\nDi Jawa Barat, setiap kabupaten/kota memiliki kantor Dinas Sosial masing-masing. Sebagai contoh:\n• Kantor **Dinsos Kabupaten Sumedang**: Jl. Mayor Abdurahman No. 125, Sumedang Utara\n• Kantor **Dinsos Kota Bogor**: Jl. Merdeka No. 142, Ciwaringin, Bogor Tengah\n• Kantor **Dinsos Kabupaten Bandung**: Jl. Raya Soreang Km. 17, Soreang\n• **Kantor Utama Dinsos Provinsi Jawa Barat**: Jl. Jend. H. Amir Machmud No. 331, Kota Cimahi\n\nSilakan sebutkan kabupaten/kota yang Anda tuju di 27 Kab/Kota se-Jawa Barat, saya siap memberikan alamat lengkap dan kontaknya!`,
+    replyText: `Lokasi kantor Dinas Sosial wilayah mana ya yang Anda maksud lebih tepatnya? 😊\n\nDi Jawa Barat, setiap kabupaten/kota memiliki kantor Dinas Sosial masing-masing. Sebagai contoh:\n• Kantor **Dinsos Kabupaten Sumedang**: Jl. Mayor Abdurahman No. 125, Sumedang Utara\n• Kantor **Dinsos Kota Bogor**: Jl. Merdeka No. 142, Ciwaringin, Bogor Tengah\n• Kantor **Dinsos Sukabumi**: Cisaat (Kabupaten) & Cikole (Kota)\n• Kantor **Dinsos Kabupaten Bandung**: Jl. Raya Soreang Km. 17, Soreang\n• **Kantor Utama Dinsos Provinsi Jawa Barat**: Jl. Jend. H. Amir Machmud No. 331, Kota Cimahi\n\nSilakan sebutkan nama kabupaten/kota yang Anda tuju di 27 Kab/Kota se-Jawa Barat, saya siap memberikan alamat lengkap dan kontaknya!`,
   };
 }
