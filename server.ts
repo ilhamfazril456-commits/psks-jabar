@@ -1248,29 +1248,141 @@ Fitur ini dikelola melalui menu **"Pengaturan Kontak WA"** (\`tab:floating_wa\`)
       }
 
       // 3K. Ringkasan 8 Fitur Superadmin di Beranda
-      if (q.includes('8 fitur') || q.includes('fitur superadmin di beranda') || q.includes('apa saja fitur superadmin')) {
-        return `**8 Fitur Utama Superadmin PSKS Jawa Barat di Beranda & Pengaturan**:
+      if (
+        (q.includes('8 fitur') && (q.includes('superadmin') || q.includes('beranda') || q.includes('admin') || q.includes('fitur'))) ||
+        (q.includes('fitur superadmin') && (q.includes('beranda') || q.includes('apa saja') || q.includes('daftar') || q.includes('semua') || q.includes('8') || q.includes('alur') || q.includes('punya'))) ||
+        (q.includes('fitur di beranda') && (q.includes('superadmin') || q.includes('admin') || q.includes('8')))
+      ) {
+        return `**Panduan Lengkap 8 Fitur Superadmin di Beranda PSKS JABAR**:
 
-Berikut adalah 8 fitur kendali otorisasi sistem yang tersedia bagi Superadmin:
+Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali penuh di halaman Beranda yang mencakup 8 fitur administratif berikut:
 
 ---
 
-1. **Fitur 1: Manajemen Akun Admin** (\`tab:admin_manage\`)
-   - Hak khusus untuk mengelola 27 akun admin wilayah, menambah admin baru, merubah data/password (min. 12 karakter), dan reset credential.
-2. **Fitur 2: Akun User** (\`tab:user_manage\`)
-   - Pusat data seluruh user terdaftar, reset password pengguna (min. 6 karakter), fitur Freeze (bekukan akun) & Unfreeze, serta penghapusan akun.
-3. **Fitur 3: Pemantauan Admin (Live Monitoring)** (\`tab:monitoring\`)
-   - Radar real-time status online/offline admin 27 Kab/Kota, waktu aktivitas terakhir (*last active*), dan Direct Message instruksi dinas.
-4. **Fitur 4: Riwayat Aktivitas (Comprehensive Audit Trail)** (\`tab:activity_logs\`)
-   - Catatan forensik mutasi data Firestore secara realtime dengan timestamp milidetik, role, IP, dan user agent.
-5. **Fitur 5: Pengesahan & Penerimaan Anggota** (\`tab:task_manager\`)
-   - Pengesahan berkas rekomendasi dari 27 Kab/Kota berstatus \`SAH_TERDAFTAR\` dengan indikator sensor lampu status berkedip.
-6. **Fitur 6: Tambah Pengumuman** (\`tab:announcement_manage\`)
-   - Publikasi siaran darurat modal melayang 15 detik, running text, dan 27 saklar wilayah.
-7. **Fitur 7: Kontak Floating WhatsApp** (\`tab:floating_wa\`)
-   - Penyesuaian 27 kontak WA wilayah, Superadmin Dinsos, dan fitur pembaruan ALL IN massal.
-8. **Fitur 8: Saklar Maintenance Sistem** (\`tab:maintenance\`)
-   - Saklar pemeliharaan 3 tingkat: Global, Per-Role (Publik/Admin), dan Granular per-wilayah, disertai akses bypass otomatis.`;
+### **1. Kelola Akun Admin (\`tab:admin_manage\`)**
+- **Fungsi**: Manajemen seluruh akun administrator (Superadmin Provinsi & Admin Wilayah 27 Kab/Kota).
+- **Alur Teknis**:
+  * **Tambah Admin**: Lengkapi form Nama, Username, Password (min. 12 karakter kombinasi), Role, Wilayah Penugasan (27 Kab/Kota), dan Pilar Tugas -> Klik *"Daftarkan Admin"*.
+  * **Edit / Merubah Akun**: Cari akun di tabel -> Klik tombol **Edit** (ikon pensil) -> Sesuaikan nama, wilayah, status (ACTIVE/FROZEN), atau isi *"Password Baru"* (min. 12 karakter) jika reset sandi -> Klik *"Simpan Perubahan"*.
+  * **Hapus Akun**: Klik ikon tempat sampah merah -> Konfirmasi pada dialog modal keamanan.
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]
+
+---
+
+### **2. Manajemen User (\`tab:user_manage\`)**
+- **Fungsi**: Tata kelola seluruh akun pengguna publik/relawan terdaftar se-Jawa Barat.
+- **Alur Teknis**:
+  * Cari nama/NIK pengguna pada tabel pengguna.
+  * **Reset Password**: Klik tombol kunci untuk mereset kata sandi user (min. 6 karakter).
+  * **Freeze / Unfreeze**: Bekukan akun user jika terindikasi pelanggaran agar tidak dapat login, atau aktifkan kembali.
+  * **Hapus User**: Hapus akun pengguna yang tidak valid secara permanen.
+[[action:tab:user_manage:Buka Manajemen User]]
+
+---
+
+### **3. Pemantauan Admin (Live Admin Monitoring) (\`tab:monitoring\`)**
+- **Fungsi**: Radar pemantauan aktivitas real-time seluruh Admin Wilayah di 27 Kabupaten/Kota.
+- **Alur Teknis**:
+  * Pantau status online/offline secara live.
+  * Periksa telemetri waktu aktivitas terakhir (*last active*) dan rekam jejak akses daerah.
+  * Kirim pesan dinas langsung (*Direct Message*) ke kotak masuk akun Admin Wilayah tertentu.
+[[action:tab:monitoring:Buka Monitoring Admin]]
+
+---
+
+### **4. Riwayat Aktivitas (Comprehensive Audit Trail) (\`tab:audit_trail\`)**
+- **Fungsi**: Rekaman forensik realtime mutasi data Firestore (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
+- **Alur Teknis**:
+  * Setiap tindakan admin wilayah maupun superadmin tercatat otomatis dengan timestamp milidetik, role, alamat IP, dan user agent browser.
+  * Mendukung filter rentang tanggal, filter tipe aktivitas, dan ekspor data audit.
+[[action:tab:audit_trail:Buka Audit Trail]]
+
+---
+
+### **5. Pengesahan & Penerimaan Anggota (Task Manager)**
+- **Fungsi**: Pusat pengesahan akhir tingkat provinsi permohonan anggota 10 pilar yang telah disetujui Admin Wilayah (\`DISETUJUI_WILAYAH\`).
+- **Alur Teknis**:
+  * **Indikator Sensor Lampu Bulat Berkedip**: Di pojok kanan atas kotak fitur terdapat sensor lampu bulat yang berkedip-kedip (*pulsing animation*) jika terdapat berkas pending yang menunggu pengesahan provinsi.
+  * **Status Selesai**: Ketika seluruh pengajuan telah disahkan, sensor lampu berhenti berkedip dan berubah menjadi **ikon centang hijau solid**.
+  * Klik tombol **"Pengesahan Sah"** untuk menetapkan status keanggotaan resmi menjadi **"SAH_TERDAFTAR"** dalam Satu Data Sosial Jawa Barat.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **6. Tambah Pengumuman**
+- **Fungsi**: Publikasi maklumat kedinasan darurat dan siaran pers resmi Dinsos Jabar.
+- **Alur Teknis**:
+  * Klik tombol pengumuman -> Isi judul, pesan maklumat, dan unggah foto dokumentasi (sistem otomatis melakukan kompresi foto hemat penyimpanan).
+  * Atur durasi pop-up melayang (muncul otomatis selama 15 detik di layar beranda pengunjung) dan running text banner.
+  * Gunakan 27 saklar wilayah untuk menentukan target siaran (seluruh Jabar atau wilayah tertentu, serta tayang ke Publik dan/atau Admin).
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **7. Kontak Floating WhatsApp**
+- **Fungsi**: Konfigurasi kontak bantuan cepat WhatsApp dinas yang melayang di pojok kanan bawah website.
+- **Alur Teknis**:
+  * Atur nomor WhatsApp dinas untuk masing-masing 27 Kabupaten/Kota.
+  * Atur nomor narahubung Superadmin Dinsos Provinsi dan narahubung Developer.
+  * Manfaatkan tombol **"ALL IN"** untuk sinkronisasi pembaruan nomor darurat secara massal dan serentak.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **8. Saklar Maintenance Sistem (\`tab:maintenance\`)**
+- **Fungsi**: Pusat kendali mode pemeliharaan website saat pembaruan infrastruktur.
+- **Alur Teknis**:
+  * Memiliki 3 tingkat kendali saklar: **Global** (kunci seluruh portal), **Per-Role** (hanya kunci Publik atau Admin), dan **Granular 27 Kab/Kota** (hanya kunci daerah tertentu).
+  * Tuliskan banner pesan pemeliharaan dan estimasi waktu penyelesaian.
+  * Superadmin dan Developer memiliki hak akses *bypass* otomatis sehingga tetap dapat login dan mengelola sistem saat maintenance aktif.
+[[action:tab:maintenance:Buka Saklar Maintenance]]`;
+      }
+
+      // 3L. Fitur di Menu Pengaturan (Superadmin Settings)
+      if (
+        (q.includes('pengaturan') && (q.includes('fitur') || q.includes('menu') || q.includes('apa saja') || q.includes('cara menggunakan') || q.includes('isi') || q.includes('panel') || q.includes('ada apa'))) ||
+        (q.includes('menu pengaturan') && (q.includes('superadmin') || q.includes('admin') || q.includes('ada apa') || q.includes('fitur'))) ||
+        (q.includes('superadmin settings') || q.includes('halaman pengaturan'))
+      ) {
+        return `**Panduan Lengkap Fitur di Menu Pengaturan (\`tab:pengaturan\`)**:
+
+Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural dan personalisasi website PSKS JABAR:
+
+---
+
+### **1. Background & Video Header (\`section: background\`)**
+- Mengatur gambar latar belakang (*hero banner*) atau tautan video streaming latar beranda.
+- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Cloud Firestore.
+- Mengatur tingkat transparansi (*opacity overlay*) gelap agar judul dan navigasi tetap terbaca jelas.
+
+### **2. Foto & Sambutan Kepala Dinas (\`section: kadinas_photo\`)**
+- Mengunggah foto resmi Kepala Dinas Sosial Provinsi Jawa Barat dengan pratinjau langsung.
+- Memperbarui Nama Pejabat Lengkap, NIP kedinasan, Jabatan, dan naskah teks sambutan resmi Kepala Dinas yang tampil di beranda.
+
+### **3. Profil Organisasi, Visi & Misi PSKS Jabar (\`section: profil_text\`)**
+- Menyesuaikan naskah visi dan misi pembangunan kesejahteraan sosial Jawa Barat.
+- Mengatur deskripsi profil kelembagaan 10 Pilar PSKS dan dasar hukum kedinasan (UU No. 11/2009, Permensos, dan Perda Jabar).
+
+### **4. Kontak Medsos & Floating WhatsApp (\`section: medsos_wa\`)**
+- Mengatur nomor layanan WhatsApp resmi Dinsos Jabar.
+- Menautkan tautan akun media sosial resmi kedinasan: Instagram, YouTube, Facebook, dan Twitter/X.
+
+### **5. Kontrol Keamanan & Saklar Mode Maintenance (\`section: security\`)**
+- Mengaktifkan/menonaktifkan saklar pemeliharaan Global, Per-Role (User/Admin), atau Granular 27 Kab/Kota.
+- Menentukan pesan pengumuman pemeliharaan dan estimasi jam selesai, dilengkapi proteksi auto-bypass Superadmin.
+
+### **6. Smart Access Card / KTA Digital (\`section: smart_card\`)**
+- Konfigurasi instrumen kedinasan KTA dan verifikasi QR Code terenkripsi yang dikhususkan untuk identitas resmi Superadmin dan Administrator.
+
+### **7. Pangkalan Data Cloud Firestore & Audit Trail (\`section: database\`)**
+- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Cloud Firestore (koleksi 10 pilar, akun admin, pesan dinas).
+- Fitur ekspor berkas cadangan (*backup JSON*) serta pembersihan log audit berkala.
+
+### **8. Manajemen Otak AI (Firestore AI Brain) (\`section: ai_assistant\`)**
+- Mengelola konfigurasi kecerdasan buatan: System Instruction, Context Rules, Dialogue Examples, dan Glosarium Istilah 27 Kabupaten/Kota.
+
+---
+[[action:tab:pengaturan:Buka Menu Pengaturan]]`;
       }
     }
 

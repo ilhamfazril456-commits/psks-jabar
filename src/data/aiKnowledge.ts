@@ -668,6 +668,161 @@ Berikut adalah langkah-langkah praktis bagi Superadmin untuk mendaftarkan akun A
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
   }
 
+  // 0.26 PANDUAN LENGKAP 8 FITUR SUPERADMIN DI BERANDA (RBAC: SUPERADMIN & DEVELOPER)
+  const isEightSuperadminFeaturesQuery =
+    (q.includes('8 fitur') && (q.includes('superadmin') || q.includes('beranda') || q.includes('admin') || q.includes('fitur'))) ||
+    (q.includes('fitur superadmin') && (q.includes('beranda') || q.includes('apa saja') || q.includes('daftar') || q.includes('semua') || q.includes('8') || q.includes('alur') || q.includes('punya'))) ||
+    (q.includes('fitur di beranda') && (q.includes('superadmin') || q.includes('admin') || q.includes('8'))) ||
+    (q.includes('hak akses superadmin') && (q.includes('fitur') || q.includes('beranda') || q.includes('apa saja') || q.includes('punya')));
+
+  if (isEightSuperadminFeaturesQuery) {
+    if (userRole !== 'superadmin' && !isDeveloperUser && userRole !== 'admin') {
+      return `${salamPrefix}Mohon maaf, informasi dan panduan teknis fitur operasional administrator sistem merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun umum/tamu.\n\nUntuk keperluan administratif resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+    if (userRole === 'admin' && !isDeveloperUser) {
+      return `${salamPrefix}Mohon maaf, 8 fitur kendali tingkat provinsi tersebut merupakan wewenang khusus **Superadmin Dinas Sosial Provinsi Jawa Barat**. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran di wilayah penugasan Anda.`;
+    }
+
+    return `${salamPrefix}**Panduan Lengkap 8 Fitur Superadmin di Beranda PSKS JABAR**:
+
+Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali penuh di halaman Beranda yang mencakup 8 fitur administratif berikut:
+
+---
+
+### **1. Kelola Akun Admin (\`tab:admin_manage\`)**
+- **Fungsi**: Manajemen seluruh akun administrator (Superadmin Provinsi & Admin Wilayah 27 Kab/Kota).
+- **Alur Teknis**:
+  * **Tambah Admin**: Lengkapi form Nama, Username, Password (min. 12 karakter kombinasi), Role, Wilayah Penugasan (27 Kab/Kota), dan Pilar Tugas -> Klik *"Daftarkan Admin"*.
+  * **Edit / Merubah Akun**: Cari akun di tabel -> Klik tombol **Edit** (ikon pensil) -> Sesuaikan nama, wilayah, status (ACTIVE/FROZEN), atau isi *"Password Baru"* (min. 12 karakter) jika reset sandi -> Klik *"Simpan Perubahan"*.
+  * **Hapus Akun**: Klik ikon tempat sampah merah -> Konfirmasi pada dialog keamanan.
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]
+
+---
+
+### **2. Manajemen User (\`tab:user_manage\`)**
+- **Fungsi**: Tata kelola seluruh akun pengguna publik/relawan terdaftar se-Jawa Barat.
+- **Alur Teknis**:
+  * Cari nama/NIK pengguna pada tabel pengguna.
+  * **Reset Password**: Klik tombol kunci untuk mereset kata sandi user (min. 6 karakter).
+  * **Freeze / Unfreeze**: Bekukan akun user jika terindikasi pelanggaran agar tidak dapat login, atau aktifkan kembali.
+  * **Hapus User**: Hapus akun pengguna yang tidak valid secara permanen.
+[[action:tab:user_manage:Buka Manajemen User]]
+
+---
+
+### **3. Pemantauan Admin (Live Admin Monitoring) (\`tab:monitoring\`)**
+- **Fungsi**: Radar pemantauan aktivitas real-time seluruh Admin Wilayah di 27 Kabupaten/Kota.
+- **Alur Teknis**:
+  * Pantau status online/offline secara live.
+  * Periksa telemetri waktu aktivitas terakhir (*last active*) dan rekam jejak akses daerah.
+  * Kirim pesan dinas langsung (*Direct Message*) ke kotak masuk akun Admin Wilayah tertentu.
+[[action:tab:monitoring:Buka Monitoring Admin]]
+
+---
+
+### **4. Riwayat Aktivitas (Comprehensive Audit Trail) (\`tab:audit_trail\`)**
+- **Fungsi**: Rekaman forensik realtime mutasi data Firestore (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
+- **Alur Teknis**:
+  * Setiap tindakan admin wilayah maupun superadmin tercatat otomatis dengan timestamp milidetik, role, alamat IP, dan user agent browser.
+  * Mendukung filter rentang tanggal, filter tipe aktivitas, dan ekspor data audit.
+[[action:tab:audit_trail:Buka Audit Trail]]
+
+---
+
+### **5. Pengesahan & Penerimaan Anggota (Task Manager)**
+- **Fungsi**: Pusat pengesahan akhir tingkat provinsi permohonan anggota 10 pilar yang telah disetujui Admin Wilayah (\`DISETUJUI_WILAYAH\`).
+- **Alur Teknis**:
+  * **Indikator Sensor Lampu Bulat Berkedip**: Di pojok kanan atas kotak fitur terdapat sensor lampu bulat yang berkedip-kedip (*pulsing animation*) jika terdapat berkas pending yang menunggu pengesahan provinsi.
+  * **Status Selesai**: Ketika seluruh pengajuan telah disahkan, sensor lampu berhenti berkedip dan berubah menjadi **ikon centang hijau solid**.
+  * Klik tombol **"Pengesahan Sah"** untuk menetapkan status keanggotaan resmi menjadi **"SAH_TERDAFTAR"** dalam Satu Data Sosial Jawa Barat.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **6. Tambah Pengumuman**
+- **Fungsi**: Publikasi maklumat kedinasan darurat dan siaran pers resmi Dinsos Jabar.
+- **Alur Teknis**:
+  * Klik tombol pengumuman -> Isi judul, pesan maklumat, dan unggah foto dokumentasi (sistem otomatis melakukan kompresi foto agar hemat storage).
+  * Atur durasi pop-up melayang (muncul otomatis selama 15 detik di layar beranda pengunjung) dan running text banner.
+  * Gunakan 27 saklar wilayah untuk menentukan target siaran (seluruh Jabar atau wilayah tertentu, serta tayang ke Publik dan/atau Admin).
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **7. Kontak Floating WhatsApp**
+- **Fungsi**: Konfigurasi kontak bantuan cepat WhatsApp dinas yang melayang di pojok kanan bawah website.
+- **Alur Teknis**:
+  * Atur nomor WhatsApp dinas untuk masing-masing 27 Kabupaten/Kota.
+  * Atur nomor narahubung Superadmin Dinsos Provinsi dan narahubung Developer.
+  * Manfaatkan tombol **"ALL IN"** untuk sinkronisasi pembaruan nomor darurat secara massal dan serentak.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **8. Saklar Maintenance Sistem (\`tab:maintenance\`)**
+- **Fungsi**: Pusat kendali mode pemeliharaan website saat pembaruan infrastruktur.
+- **Alur Teknis**:
+  * Memiliki 3 tingkat kendali saklar: **Global** (kunci seluruh portal), **Per-Role** (hanya kunci Publik atau Admin), dan **Granular 27 Kab/Kota** (hanya kunci daerah tertentu).
+  * Tuliskan banner pesan pemeliharaan dan estimasi waktu penyelesaian.
+  * Superadmin dan Developer memiliki hak akses *bypass* otomatis sehingga tetap dapat login dan mengelola sistem saat maintenance aktif.
+[[action:tab:maintenance:Buka Saklar Maintenance]]`;
+  }
+
+  // 0.27 PANDUAN LENGKAP FITUR DI MENU PENGATURAN (RBAC: SUPERADMIN & DEVELOPER)
+  const isSettingsFeaturesQuery =
+    (q.includes('pengaturan') && (q.includes('fitur') || q.includes('menu') || q.includes('apa saja') || q.includes('cara menggunakan') || q.includes('isi') || q.includes('panel') || q.includes('ada apa'))) ||
+    (q.includes('menu pengaturan') && (q.includes('superadmin') || q.includes('admin') || q.includes('ada apa') || q.includes('fitur'))) ||
+    (q.includes('superadmin settings') || q.includes('halaman pengaturan'));
+
+  if (isSettingsFeaturesQuery) {
+    if (userRole !== 'superadmin' && !isDeveloperUser && userRole !== 'admin') {
+      return `${salamPrefix}Mohon maaf, panel menu Pengaturan sistem merupakan instrumen kendali khusus Superadmin dan Developer Dinas Sosial Jawa Barat dan tidak tersedia untuk pengguna umum/tamu.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+    if (userRole === 'admin' && !isDeveloperUser) {
+      return `${salamPrefix}Mohon maaf, halaman Pengaturan sistem merupakan panel kendali tingkat provinsi yang dikhususkan bagi Superadmin dan Developer. Akun Admin Wilayah mengelola data operasional 10 pilar dan verifikasi pendaftaran di wilayah penugasan Anda.`;
+    }
+
+    return `${salamPrefix}**Panduan Lengkap Fitur di Menu Pengaturan (\`tab:pengaturan\`)**:
+
+Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural dan personalisasi website PSKS JABAR:
+
+---
+
+### **1. Background & Video Header (\`section: background\`)**
+- Mengatur gambar latar belakang (*hero banner*) atau tautan video streaming latar beranda.
+- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Cloud Firestore.
+- Mengatur tingkat transparansi (*opacity overlay*) gelap agar judul dan navigasi tetap terbaca jelas.
+
+### **2. Foto & Sambutan Kepala Dinas (\`section: kadinas_photo\`)**
+- Mengunggah foto resmi Kepala Dinas Sosial Provinsi Jawa Barat dengan pratinjau langsung.
+- Memperbarui Nama Pejabat Lengkap, NIP kedinasan, Jabatan, dan naskah teks sambutan resmi Kepala Dinas yang tampil di beranda.
+
+### **3. Profil Organisasi, Visi & Misi PSKS Jabar (\`section: profil_text\`)**
+- Menyesuaikan naskah visi dan misi pembangunan kesejahteraan sosial Jawa Barat.
+- Mengatur deskripsi profil kelembagaan 10 Pilar PSKS dan dasar hukum kedinasan (UU No. 11/2009, Permensos, dan Perda Jabar).
+
+### **4. Kontak Medsos & Floating WhatsApp (\`section: medsos_wa\`)**
+- Mengatur nomor layanan WhatsApp resmi Dinsos Jabar.
+- Menautkan tautan akun media sosial resmi kedinasan: Instagram, YouTube, Facebook, dan Twitter/X.
+
+### **5. Kontrol Keamanan & Saklar Mode Maintenance (\`section: security\`)**
+- Mengaktifkan/menonaktifkan saklar pemeliharaan Global, Per-Role (User/Admin), atau Granular 27 Kab/Kota.
+- Menentukan pesan pengumuman pemeliharaan dan estimasi jam selesai, dilengkapi proteksi auto-bypass Superadmin.
+
+### **6. Smart Access Card / KTA Digital (\`section: smart_card\`)**
+- Konfigurasi instrumen kedinasan KTA dan verifikasi QR Code terenkripsi yang dikhususkan untuk identitas resmi Superadmin dan Administrator.
+
+### **7. Pangkalan Data Cloud Firestore & Audit Trail (\`section: database\`)**
+- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Cloud Firestore (koleksi 10 pilar, akun admin, pesan dinas).
+- Fitur ekspor berkas cadangan (*backup JSON*) serta pembersihan log audit berkala.
+
+### **8. Manajemen Otak AI (Firestore AI Brain) (\`section: ai_assistant\`)**
+- Mengelola konfigurasi kecerdasan buatan: System Instruction, Context Rules, Dialogue Examples, dan Glosarium Istilah 27 Kabupaten/Kota.
+
+---
+[[action:tab:pengaturan:Buka Menu Pengaturan]]`;
+  }
+
   // 0.3 GENERAL CONVERSATIONAL INQUIRY / INTENT TO ASK (ONLY WHEN NO SUBSTANTIVE QUESTION FOLLOWS)
   if (
     !hasQuestion &&
@@ -2933,17 +3088,81 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
+  // C. SUPERADMIN & DEVELOPER: PANDUAN LANGKAH DIGITAL RIIL WEBSITE (ANTI-HALUSINASI BIROKRASI MANUAL)
+  const isSuperadminAskingStepByStep =
+    (userRole === 'superadmin' || isDeveloperUser) &&
+    (
+      normQ.includes('merubah akun admin') ||
+      normQ.includes('mengubah akun admin') ||
+      normQ.includes('ubah akun admin') ||
+      normQ.includes('edit akun admin') ||
+      normQ.includes('merubah admin') ||
+      normQ.includes('mengubah admin') ||
+      normQ.includes('ubah admin') ||
+      normQ.includes('edit admin') ||
+      normQ.includes('ubah password admin') ||
+      normQ.includes('mengubah password admin') ||
+      normQ.includes('merubah password admin') ||
+      normQ.includes('reset password admin') ||
+      normQ.includes('reset sandi admin') ||
+      normQ.includes('tambah admin') ||
+      normQ.includes('menambah admin') ||
+      normQ.includes('hapus admin') ||
+      normQ.includes('menghapus admin') ||
+      normQ.includes('8 fitur superadmin') ||
+      normQ.includes('8 fitur') ||
+      normQ.includes('fitur superadmin') ||
+      normQ.includes('fitur di pengaturan') ||
+      normQ.includes('fitur pengaturan') ||
+      normQ.includes('menu pengaturan') ||
+      (normQ.includes('admin wilayah') && (normQ.includes('ubah') || normQ.includes('rubah') || normQ.includes('edit') || normQ.includes('ganti') || normQ.includes('password') || normQ.includes('sandi') || normQ.includes('kelola')))
+    );
+
+  // Deteksi halusinasi prosedur manual kertas / surat permohonan dinas
+  const isHallucinatedBureaucracy =
+    rawReply &&
+    (
+      rawReply.includes('Surat Tugas') ||
+      rawReply.includes('surat tugas') ||
+      rawReply.includes('surat permohonan') ||
+      rawReply.includes('surat resmi') ||
+      rawReply.includes('Pengajuan Resmi melalui Surat') ||
+      rawReply.includes('pengajuan resmi melalui surat') ||
+      rawReply.includes('ditandatangani oleh Kepala Dinas') ||
+      rawReply.includes('mengirimkan surat') ||
+      rawReply.includes('tidak dapat dilakukan secara mandiri') ||
+      rawReply.includes('kewenangan sistem yang bersifat terbatas')
+    );
+
+  // Jika Superadmin bertanya alur fiturnya dan model berhalusinasi birokrasi kertas, langsung berikan panduan UI riil
+  if (isSuperadminAskingStepByStep && (isHallucinatedBureaucracy || !rawReply || rawReply.trim().length === 0)) {
+    const verifiedStepGuide = getComprehensiveSmartAnswer(
+      query,
+      userRole,
+      userName,
+      userWilayah,
+      currentTab,
+      activePillar,
+      allPillarData,
+      appSettings,
+      previousContext
+    );
+    return {
+      finalContent: verifiedStepGuide,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
   // =========================================================================
   // ARCHITECTURAL UPGRADE: PRIORITIZE MODEL INTELLIGENCE & NATURAL CONVERSATION
   // =========================================================================
-  // If the dynamic AI model (Gemini / server assistant) returned a meaningful, non-empty response,
-  // we TRUST the model's contextual understanding directly.
-  // This completely eliminates "instruction fatigue" and rigid regex interception for conversational
-  // follow-ups, while preserving strict security / anti-impersonation / credential boundaries above.
   if (rawReply && rawReply.trim().length > 0) {
     const isModelRefusal =
       rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
-      rawReply.includes('belum dapat mengenali atau menemukan informasi');
+      rawReply.includes('belum dapat mengenali atau menemukan informasi') ||
+      isHallucinatedBureaucracy;
 
     if (!isModelRefusal) {
       return {

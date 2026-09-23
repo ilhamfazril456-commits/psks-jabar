@@ -67,17 +67,305 @@ export default async function handler(req: any, res: any) {
 
     // 2. CHECK GEMINI API KEY
     const apiKey = process.env.GEMINI_API_KEY;
+
+    // 3. COMPOSE USER AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
+    const isDev = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
+    const isSuperadmin = userContext?.role === 'superadmin' && userContext?.statusActive === 'SAH_TERDAFTAR';
+    const isAdminWilayah = userContext?.role === 'admin' && userContext?.statusActive === 'SAH_TERDAFTAR';
+    const isPublicUser = !isDev && !isSuperadmin && !isAdminWilayah;
+
+    // FAST RBAC INTERCEPTOR (ANTI-HALLUCINATION & DETERMINISTIC STEP-BY-STEP)
+    const isAskingAdminManage =
+      normLastMsg.includes('merubah akun admin') ||
+      normLastMsg.includes('mengubah akun admin') ||
+      normLastMsg.includes('ubah akun admin') ||
+      normLastMsg.includes('edit akun admin') ||
+      normLastMsg.includes('merubah admin') ||
+      normLastMsg.includes('mengubah admin') ||
+      normLastMsg.includes('ubah admin') ||
+      normLastMsg.includes('edit admin') ||
+      (normLastMsg.includes('admin wilayah') && (normLastMsg.includes('ubah') || normLastMsg.includes('rubah') || normLastMsg.includes('edit') || normLastMsg.includes('ganti') || normLastMsg.includes('password') || normLastMsg.includes('sandi') || normLastMsg.includes('kelola')));
+
+    const isAskingAdminPassword =
+      normLastMsg.includes('password admin') ||
+      normLastMsg.includes('kata sandi admin') ||
+      normLastMsg.includes('sandi admin') ||
+      normLastMsg.includes('reset password admin') ||
+      normLastMsg.includes('reset sandi admin');
+
+    const isAskingAdminCreate =
+      normLastMsg.includes('tambah admin') ||
+      normLastMsg.includes('menambah admin') ||
+      normLastMsg.includes('buat admin') ||
+      normLastMsg.includes('tambah akun admin');
+
+    const isAskingAdminDelete =
+      normLastMsg.includes('hapus admin') ||
+      normLastMsg.includes('menghapus admin') ||
+      normLastMsg.includes('hapus akun admin');
+
+    const isAskingEightFeatures =
+      (normLastMsg.includes('8 fitur') && (normLastMsg.includes('superadmin') || normLastMsg.includes('beranda') || normLastMsg.includes('admin') || normLastMsg.includes('fitur'))) ||
+      (normLastMsg.includes('fitur superadmin') && (normLastMsg.includes('beranda') || normLastMsg.includes('apa saja') || normLastMsg.includes('daftar') || normLastMsg.includes('semua') || normLastMsg.includes('8') || normLastMsg.includes('alur') || normLastMsg.includes('punya'))) ||
+      (normLastMsg.includes('fitur di beranda') && (normLastMsg.includes('superadmin') || normLastMsg.includes('admin') || normLastMsg.includes('8')));
+
+    const isAskingSettingsFeatures =
+      (normLastMsg.includes('pengaturan') && (normLastMsg.includes('fitur') || normLastMsg.includes('menu') || normLastMsg.includes('apa saja') || normLastMsg.includes('cara menggunakan') || normLastMsg.includes('isi') || normLastMsg.includes('panel') || normLastMsg.includes('ada apa'))) ||
+      (normLastMsg.includes('menu pengaturan') && (normLastMsg.includes('superadmin') || normLastMsg.includes('admin') || normLastMsg.includes('ada apa') || normLastMsg.includes('fitur')));
+
+    // A. Pengguna Umum / Tamu: Dilarang mengakses panduan internal admin
+    if (isPublicUser && (isAskingAdminManage || isAskingAdminPassword || isAskingAdminCreate || isAskingAdminDelete || isAskingEightFeatures || isAskingSettingsFeatures)) {
+      return res.status(200).json({
+        reply: 'Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+        source: 'rbac_guard_public',
+      });
+    }
+
+    // B. Admin Wilayah: Menanyakan wewenang khusus Superadmin
+    if (isAdminWilayah && (isAskingAdminManage || isAskingAdminPassword || isAskingAdminCreate || isAskingAdminDelete || isAskingEightFeatures || isAskingSettingsFeatures)) {
+      return res.status(200).json({
+        reply: 'Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Akun Admin Wilayah memiliki wewenang penuh untuk pengelolaan data 10 pilar, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran di wilayah penugasan Anda.',
+        source: 'rbac_guard_admin',
+      });
+    }
+
+    // C. Superadmin & Developer: Panduan Step-by-Step 100% Berbasis Fitur Riil Website
+    if (isSuperadmin || isDev) {
+      if (isAskingAdminPassword) {
+        return res.status(200).json({
+          reply: `**Panduan Resmi Superadmin: Cara Mengubah / Reset Password Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda dapat memperbarui atau mereset kata sandi akun Admin Wilayah di 27 Kabupaten/Kota melalui menu **Kelola Akun Admin**:
+
+---
+
+### **Langkah-Langkah Mengubah / Reset Password Admin Wilayah**:
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di halaman **Beranda** atau melalui tab **Pengaturan**.
+2. **Cari Akun Admin Wilayah Terkait**:
+   - Pada tabel daftar administrator, temukan nama akun admin wilayah yang ingin diubah kata sandinya. Anda dapat memanfaatkan fitur pencarian nama atau filter berdasarkan wilayah (27 Kab/Kota).
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun admin yang bersangkutan untuk membuka formulir modal ubah data.
+4. **Masukkan Password Baru**:
+   - Pada kolom formulir **"Password Baru"**, ketikkan kata sandi baru untuk akun tersebut.
+   - *Ketentuan Keamanan Sistem*: Kata sandi wajib memenuhi standar keamanan minimal 12 karakter kombinasi (huruf besar A-Z, huruf kecil a-z, dan angka 0-9).
+5. **Simpan Perubahan**:
+   - Klik tombol **"Simpan Perubahan"**. Sistem secara otomatis mengenkripsi kata sandi baru menggunakan algoritma hash satu arah yang aman (*Bcrypt*) dan admin wilayah tersebut dapat langsung login menggunakan kata sandi baru.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+
+      if (isAskingAdminManage) {
+        return res.status(200).json({
+          reply: `**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, status, maupun wilayah penugasan akun Admin Wilayah di 27 Kabupaten/Kota langsung melalui antarmuka website PSKS JABAR:
+
+---
+
+### **Langkah-Langkah Merubah Data Akun Admin Wilayah**:
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di halaman **Beranda** atau melalui menu **Pengaturan**.
+2. **Pilih Akun yang Ingin Diubah**:
+   - Pada tabel daftar akun administrator, cari akun admin wilayah yang ingin diperbarui (dapat dicari berdasarkan nama atau difilter per kabupaten/kota dari 27 Kab/Kota).
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun yang bersangkutan untuk membuka formulir modal pembaruan (*Edit Admin Modal*).
+4. **Perbarui Data yang Diperlukan**:
+   - **Nama Lengkap / Username**: Sesuaikan nama pejabat/petugas penanggung jawab akun.
+   - **Wilayah Penugasan**: Sesuaikan wilayah tugas dari 27 Kabupaten/Kota se-Jawa Barat.
+   - **Pilar Tugas**: Pilih pilar sosial binaan atau semua pilar.
+   - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan akun sementara jika ada mutasi/non-aktif).
+   - **Password Baru**: Isi kolom ini HANYA jika ingin mereset kata sandi (minimal 12 karakter kombinasi huruf besar, kecil, dan angka). Kosongkan jika password tidak diubah.
+5. **Simpan Perubahan**:
+   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+
+      if (isAskingAdminCreate) {
+        return res.status(200).json({
+          reply: `**Panduan Resmi Superadmin: Cara Menambah Admin Baru**:
+
+Berikut adalah langkah-langkah praktis bagi Superadmin untuk mendaftarkan akun Administrator baru di website:
+
+---
+
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di halaman **Beranda** atau tab **Pengaturan**.
+2. **Isi Formulir Pendaftaran Admin**:
+   - **Nama Lengkap**: Masukkan nama lengkap petugas/pejabat kedinasan.
+   - **Nomor Telepon / WhatsApp / Username**: Nomor HP atau username untuk identitas login.
+   - **Role / Hak Akses**: Pilih **Admin Wilayah** (mengelola data 1 Kab/Kota) atau **Superadmin** (tingkat Provinsi Jawa Barat).
+   - **Wilayah Penugasan**: Tentukan salah satu dari 27 Kabupaten/Kota di Jawa Barat.
+   - **Kata Sandi**: Buat password keamanan (wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka).
+3. **Simpan dan Aktifkan Akun**:
+   - Pastikan status akun diatur ke **ACTIVE**, lalu klik tombol **"Daftarkan Admin"**.
+   - Akun admin baru langsung aktif seketika dan tercatat pada **Audit Trail**.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+
+      if (isAskingAdminDelete) {
+        return res.status(200).json({
+          reply: `**Panduan Resmi Superadmin: Cara Menghapus Akun Admin**:
+
+1. Buka menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) di Beranda atau Pengaturan.
+2. Cari nama akun admin yang ingin dihapus pada tabel daftar administrator.
+3. Klik tombol **Hapus** (ikon tempat sampah warna merah) pada baris akun tersebut.
+4. Muncul dialog modal konfirmasi keamanan; klik **"Ya, Hapus Akun"**.
+5. Akun tersebut langsung dihapus secara aman dari pangkalan data sistem (Akun utama Superadmin & Developer terlindungi oleh protokol anti-delete).
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+
+      if (isAskingEightFeatures) {
+        return res.status(200).json({
+          reply: `**Panduan Lengkap 8 Fitur Superadmin di Beranda PSKS JABAR**:
+
+Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali penuh di halaman Beranda yang mencakup 8 fitur administratif berikut:
+
+---
+
+### **1. Kelola Akun Admin (\`tab:admin_manage\`)**
+- **Fungsi**: Manajemen seluruh akun administrator (Superadmin Provinsi & Admin Wilayah 27 Kab/Kota).
+- **Alur Teknis**:
+  * **Tambah Admin**: Lengkapi form Nama, Username, Password (min. 12 karakter kombinasi), Role, Wilayah Penugasan (27 Kab/Kota), dan Pilar Tugas -> Klik *"Daftarkan Admin"*.
+  * **Edit / Merubah Akun**: Cari akun di tabel -> Klik tombol **Edit** (ikon pensil) -> Sesuaikan nama, wilayah, status (ACTIVE/FROZEN), atau isi *"Password Baru"* (min. 12 karakter) jika reset sandi -> Klik *"Simpan Perubahan"*.
+  * **Hapus Akun**: Klik ikon tempat sampah merah -> Konfirmasi pada dialog modal keamanan.
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]
+
+---
+
+### **2. Manajemen User (\`tab:user_manage\`)**
+- **Fungsi**: Tata kelola seluruh akun pengguna publik/relawan terdaftar se-Jawa Barat.
+- **Alur Teknis**:
+  * Cari nama/NIK pengguna pada tabel pengguna.
+  * **Reset Password**: Klik tombol kunci untuk mereset kata sandi user (min. 6 karakter).
+  * **Freeze / Unfreeze**: Bekukan akun user jika terindikasi pelanggaran agar tidak dapat login, atau aktifkan kembali.
+  * **Hapus User**: Hapus akun pengguna yang tidak valid secara permanen.
+[[action:tab:user_manage:Buka Manajemen User]]
+
+---
+
+### **3. Pemantauan Admin (Live Admin Monitoring) (\`tab:monitoring\`)**
+- **Fungsi**: Radar pemantauan aktivitas real-time seluruh Admin Wilayah di 27 Kabupaten/Kota.
+- **Alur Teknis**:
+  * Pantau status online/offline secara live.
+  * Periksa telemetri waktu aktivitas terakhir (*last active*) dan rekam jejak akses daerah.
+  * Kirim pesan dinas langsung (*Direct Message*) ke kotak masuk akun Admin Wilayah tertentu.
+[[action:tab:monitoring:Buka Monitoring Admin]]
+
+---
+
+### **4. Riwayat Aktivitas (Comprehensive Audit Trail) (\`tab:audit_trail\`)**
+- **Fungsi**: Rekaman forensik realtime mutasi data Firestore (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
+- **Alur Teknis**:
+  * Setiap tindakan admin wilayah maupun superadmin tercatat otomatis dengan timestamp milidetik, role, alamat IP, dan user agent browser.
+  * Mendukung filter rentang tanggal, filter tipe aktivitas, dan ekspor data audit.
+[[action:tab:audit_trail:Buka Audit Trail]]
+
+---
+
+### **5. Pengesahan & Penerimaan Anggota (Task Manager)**
+- **Fungsi**: Pusat pengesahan akhir tingkat provinsi permohonan anggota 10 pilar yang telah disetujui Admin Wilayah (\`DISETUJUI_WILAYAH\`).
+- **Alur Teknis**:
+  * **Indikator Sensor Lampu Bulat Berkedip**: Di pojok kanan atas kotak fitur terdapat sensor lampu bulat yang berkedip-kedip (*pulsing animation*) jika terdapat berkas pending yang menunggu pengesahan provinsi.
+  * **Status Selesai**: Ketika seluruh pengajuan telah disahkan, sensor lampu berhenti berkedip dan berubah menjadi **ikon centang hijau solid**.
+  * Klik tombol **"Pengesahan Sah"** untuk menetapkan status keanggotaan resmi menjadi **"SAH_TERDAFTAR"** dalam Satu Data Sosial Jawa Barat.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **6. Tambah Pengumuman**
+- **Fungsi**: Publikasi maklumat kedinasan darurat dan siaran pers resmi Dinsos Jabar.
+- **Alur Teknis**:
+  * Klik tombol pengumuman -> Isi judul, pesan maklumat, dan unggah foto dokumentasi (sistem otomatis melakukan kompresi foto hemat penyimpanan).
+  * Atur durasi pop-up melayang (muncul otomatis selama 15 detik di layar beranda pengunjung) dan running text banner.
+  * Gunakan 27 saklar wilayah untuk menentukan target siaran (seluruh Jabar atau wilayah tertentu, serta tayang ke Publik dan/atau Admin).
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **7. Kontak Floating WhatsApp**
+- **Fungsi**: Konfigurasi kontak bantuan cepat WhatsApp dinas yang melayang di pojok kanan bawah website.
+- **Alur Teknis**:
+  * Atur nomor WhatsApp dinas untuk masing-masing 27 Kabupaten/Kota.
+  * Atur nomor narahubung Superadmin Dinsos Provinsi dan narahubung Developer.
+  * Manfaatkan tombol **"ALL IN"** untuk sinkronisasi pembaruan nomor darurat secara massal dan serentak.
+[[action:tab:beranda:Lihat di Beranda]]
+
+---
+
+### **8. Saklar Maintenance Sistem (\`tab:maintenance\`)**
+- **Fungsi**: Pusat kendali mode pemeliharaan website saat pembaruan infrastruktur.
+- **Alur Teknis**:
+  * Memiliki 3 tingkat kendali saklar: **Global** (kunci seluruh portal), **Per-Role** (hanya kunci Publik atau Admin), dan **Granular 27 Kab/Kota** (hanya kunci daerah tertentu).
+  * Tuliskan banner pesan pemeliharaan dan estimasi waktu penyelesaian.
+  * Superadmin dan Developer memiliki hak akses *bypass* otomatis sehingga tetap dapat login dan mengelola sistem saat maintenance aktif.
+[[action:tab:maintenance:Buka Saklar Maintenance]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+
+      if (isAskingSettingsFeatures) {
+        return res.status(200).json({
+          reply: `**Panduan Lengkap Fitur di Menu Pengaturan (\`tab:pengaturan\`)**:
+
+Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural dan personalisasi website PSKS JABAR:
+
+---
+
+### **1. Background & Video Header (\`section: background\`)**
+- Mengatur gambar latar belakang (*hero banner*) atau tautan video streaming latar beranda.
+- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Cloud Firestore.
+- Mengatur tingkat transparansi (*opacity overlay*) gelap agar judul dan navigasi tetap terbaca jelas.
+
+### **2. Foto & Sambutan Kepala Dinas (\`section: kadinas_photo\`)**
+- Mengunggah foto resmi Kepala Dinas Sosial Provinsi Jawa Barat dengan pratinjau langsung.
+- Memperbarui Nama Pejabat Lengkap, NIP kedinasan, Jabatan, dan naskah teks sambutan resmi Kepala Dinas yang tampil di beranda.
+
+### **3. Profil Organisasi, Visi & Misi PSKS Jabar (\`section: profil_text\`)**
+- Menyesuaikan naskah visi dan misi pembangunan kesejahteraan sosial Jawa Barat.
+- Mengatur deskripsi profil kelembagaan 10 Pilar PSKS dan dasar hukum kedinasan (UU No. 11/2009, Permensos, dan Perda Jabar).
+
+### **4. Kontak Medsos & Floating WhatsApp (\`section: medsos_wa\`)**
+- Mengatur nomor layanan WhatsApp resmi Dinsos Jabar.
+- Menautkan tautan akun media sosial resmi kedinasan: Instagram, YouTube, Facebook, dan Twitter/X.
+
+### **5. Kontrol Keamanan & Saklar Mode Maintenance (\`section: security\`)**
+- Mengaktifkan/menonaktifkan saklar pemeliharaan Global, Per-Role (User/Admin), atau Granular 27 Kab/Kota.
+- Menentukan pesan pengumuman pemeliharaan dan estimasi jam selesai, dilengkapi proteksi auto-bypass Superadmin.
+
+### **6. Smart Access Card / KTA Digital (\`section: smart_card\`)**
+- Konfigurasi instrumen kedinasan KTA dan verifikasi QR Code terenkripsi yang dikhususkan untuk identitas resmi Superadmin dan Administrator.
+
+### **7. Pangkalan Data Cloud Firestore & Audit Trail (\`section: database\`)**
+- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Cloud Firestore (koleksi 10 pilar, akun admin, pesan dinas).
+- Fitur ekspor berkas cadangan (*backup JSON*) serta pembersihan log audit berkala.
+
+### **8. Manajemen Otak AI (Firestore AI Brain) (\`section: ai_assistant\`)**
+- Mengelola konfigurasi kecerdasan buatan: System Instruction, Context Rules, Dialogue Examples, dan Glosarium Istilah 27 Kabupaten/Kota.
+
+---
+[[action:tab:pengaturan:Buka Menu Pengaturan]]`,
+          source: 'rbac_superadmin_verified',
+        });
+      }
+    }
+
     if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
       return res.status(200).json({
         reply: 'Halo! Saya Asisten AI **PSKS JABAR**. Sistem saat ini siap melayani Anda seputar 10 Pilar Kesejahteraan Sosial (PSM, Tagana, Karang Taruna, TKSK, Peksos, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran anggota, serta layanan Dinas Sosial Provinsi Jawa Barat. Ada yang bisa saya bantu?',
       });
     }
-
-    // 3. COMPOSE SYSTEM INSTRUCTION & SAFETY GUARDRAILS
-    const isDev = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
-    const isSuperadmin = userContext?.role === 'superadmin' && userContext?.statusActive === 'SAH_TERDAFTAR';
-    const isAdminWilayah = userContext?.role === 'admin' && userContext?.statusActive === 'SAH_TERDAFTAR';
-    const isPublicUser = !isDev && !isSuperadmin && !isAdminWilayah;
 
     const systemInstruction = `Anda adalah Asisten Virtual Cerdas Resmi sistem **PSKS JABAR** (Potensi dan Sumber Kesejahteraan Sosial Provinsi Jawa Barat), dinaungi langsung oleh Dinas Sosial Provinsi Jawa Barat.
 Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Architect & Siswa Magang PKL Dayasos Dinsos Jabar 2026).
@@ -241,6 +529,43 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
       return res.status(200).json({
         reply: 'Halo! Saya Asisten AI **PSKS JABAR**. Ada yang bisa saya bantu atau informasi apa yang ingin Anda diskusikan seputar 10 Pilar PSKS atau layanan sosial di Jawa Barat? 😊',
       });
+    }
+
+    // Safety interceptor: replace any hallucinated paper bureaucracy with real website UI steps
+    const isHallucinatedBureaucracy =
+      generatedReply.includes('Surat Tugas') ||
+      generatedReply.includes('surat tugas') ||
+      generatedReply.includes('surat permohonan') ||
+      generatedReply.includes('Pengajuan Resmi melalui Surat') ||
+      generatedReply.includes('pengajuan resmi melalui surat') ||
+      generatedReply.includes('ditandatangani oleh Kepala Dinas') ||
+      generatedReply.includes('mengirimkan surat') ||
+      generatedReply.includes('tidak dapat dilakukan secara mandiri');
+
+    if (isHallucinatedBureaucracy && (isSuperadmin || isDev)) {
+      generatedReply = `**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
+
+Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, status, maupun wilayah penugasan akun Admin Wilayah di 27 Kabupaten/Kota langsung melalui antarmuka website PSKS JABAR:
+
+---
+
+### **Langkah-Langkah Merubah Data Akun Admin Wilayah**:
+1. **Buka Menu Kelola Akun Admin**:
+   - Klik menu **"Kelola Akun Admin"** (\`tab:admin_manage\`) pada kotak Fitur Superadmin di halaman **Beranda** atau melalui menu **Pengaturan**.
+2. **Pilih Akun yang Ingin Diubah**:
+   - Pada tabel daftar akun administrator, cari akun admin wilayah yang ingin diperbarui (dapat dicari berdasarkan nama atau difilter per kabupaten/kota dari 27 Kab/Kota).
+3. **Klik Tombol "Edit" (Ikon Pensil)**:
+   - Klik tombol **Edit** pada baris akun yang bersangkutan untuk membuka formulir modal pembaruan (*Edit Admin Modal*).
+4. **Perbarui Data yang Diperlukan**:
+   - **Nama Lengkap / Username**: Sesuaikan nama pejabat/petugas penanggung jawab akun.
+   - **Wilayah Penugasan**: Sesuaikan wilayah tugas dari 27 Kabupaten/Kota se-Jawa Barat.
+   - **Pilar Tugas**: Pilih pilar sosial binaan atau semua pilar.
+   - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan akun sementara jika ada mutasi/non-aktif).
+   - **Password Baru**: Isi kolom ini HANYA jika ingin mereset kata sandi (minimal 12 karakter kombinasi huruf besar, kecil, dan angka). Kosongkan jika password tidak diubah.
+5. **Simpan Perubahan**:
+   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+
+[[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
     }
 
     return res.status(200).json({
