@@ -2412,7 +2412,12 @@ export function normalizeQueryWithComprehensiveVocabulary(rawQuery: string): {
   detectedIntents: string[];
   detectedPillar: string | null;
 } {
-  let text = rawQuery.toLowerCase();
+  let text = rawQuery.toLowerCase()
+    .replace(/\b(daptar|daftr|ndaftar|ndaptar|ngedaftar|ngedaptar|dafar|dafttar)\b/gi, 'daftar')
+    .replace(/\b(pendaptaran|pendaftaranya|pendaptarannya|pendaftarannya)\b/gi, 'pendaftaran')
+    .replace(/\b(mendaptar|mendaftarkan|mendaptarkan)\b/gi, 'mendaftar')
+    .replace(/\b(regist|regis|regitrasi)\b/gi, 'registrasi')
+    .replace(/\b(gimana sih|bagaimana sih|gimana|gmn|gmna|kmaha|kumaha)\b/gi, 'bagaimana');
   const detectedIntents: string[] = [];
 
   // Look up vocabulary replacements

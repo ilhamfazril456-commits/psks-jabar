@@ -56,11 +56,31 @@ export function getSystemStateMetrics(allPillarData?: Record<string, PSKSDataRec
 }
 
 /**
+ * Helper to normalize common Indonesian/Sundanese colloquialisms, typos, and variations
+ */
+export function normalizeSpellingAndTypo(text: string): string {
+  if (!text) return '';
+  return text
+    // Normalisasi variasi kata daftar / pendaftaran
+    .replace(/\b(daptar|daftr|ndaftar|ndaptar|ngedaftar|ngedaptar|dafar|dafttar)\b/gi, 'daftar')
+    .replace(/\b(pendaptaran|pendaftaranya|pendaptarannya|pendaftarannya)\b/gi, 'pendaftaran')
+    .replace(/\b(mendaptar|mendaftarkan|mendaptarkan)\b/gi, 'mendaftar')
+    .replace(/\b(regist|regis|regitrasi)\b/gi, 'registrasi')
+    // Normalisasi kata tanya dan gaya bicara santai
+    .replace(/\b(gimana sih|bagaimana sih|gimana|gmn|gmna|kmaha|kumaha)\b/gi, 'bagaimana')
+    // Normalisasi pilar & istilah umum
+    .replace(/\b(tagna|tgna)\b/gi, 'tagana')
+    .replace(/\b(pksm)\b/gi, 'psm')
+    .replace(/\b(pekso|peksoss|pksp)\b/gi, 'peksos')
+    .replace(/\b(puskessos|puskeso)\b/gi, 'puskesos');
+}
+
+/**
  * Extracts core inquiry intent from conversational preambles / basa-basi,
  * handling greetings, informal Sundanese/Indonesian phrasing, and multi-turn cues.
  */
 export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPureIntro: boolean; hasQuestion: boolean } {
-  const trimmed = raw.trim().toLowerCase();
+  const trimmed = normalizeSpellingAndTypo(raw.trim().toLowerCase());
 
   // Fast security pattern check - never strip security threat keywords
   if (
@@ -91,6 +111,7 @@ export function extractCoreQueryIntent(raw: string): { coreQuery: string; isPure
     /^(bolehkah|boleh|bisakah|bisa)\s*(saya|aku|abdi|urang)?\s*(nanya|tanya|bertanya)\s*(ga|gak|dong|min|ya)?\s*[,.-]?\s*/i,
     /^(mau|izin|bade)\s*(nanya|bertanya|naros)\s*(dong|min|kang|teh)?\s*[,.-]?\s*/i,
     /^(tolong|coba)?\s*(jelaskan|kasih tau|beri tahu|kasih info)\s*(dong|min)?\s*[,.-]?\s*/i,
+    /^(bagaimana|gimana|gmn)?\s*(sih)?\s*(dong)?\s*[,.-]?\s*/i,
   ];
 
   let cleaned = trimmed;
@@ -133,7 +154,7 @@ export function getComprehensiveSmartAnswer(
   previousContext?: string
 ): string {
   const rawQ = query.trim();
-  const q = rawQ.toLowerCase();
+  const q = normalizeSpellingAndTypo(rawQ.toLowerCase());
   const roleTitle = userRole.toUpperCase();
   const wilayah = userWilayah || 'Jawa Barat';
   
@@ -142,7 +163,7 @@ export function getComprehensiveSmartAnswer(
   const isSuperAdmin = userRole === 'superadmin' || isDeveloperUser;
   const { totalRecords, pillarCounts } = getSystemStateMetrics(allPillarData);
   const { coreQuery, isPureIntro, hasQuestion } = extractCoreQueryIntent(q);
-  const targetQ = hasQuestion ? coreQuery : q;
+  const targetQ = normalizeSpellingAndTypo(hasQuestion ? coreQuery : q);
 
   // 0. SECURITY & ANTI-JAILBREAK SHIELD (STRICT COMPLIANCE RULE #4)
   const isSecurityThreat =
@@ -1392,12 +1413,19 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
     !targetQ.includes('durasi') &&
     !targetQ.includes('estimasi waktu') &&
     (targetQ.includes('cara daftar') ||
+      targetQ.includes('cara daptar') ||
       targetQ.includes('alur pendaftaran') ||
+      targetQ.includes('alur pendaptaran') ||
       targetQ.includes('tata cara daftar') ||
+      targetQ.includes('tata cara daptar') ||
       targetQ.includes('bagaimana cara mendaftar') ||
+      targetQ.includes('bagaimana cara mendaptar') ||
       targetQ.includes('prosedur pendaftaran') ||
+      targetQ.includes('prosedur pendaptaran') ||
       targetQ.includes('syarat pendaftaran') ||
+      targetQ.includes('syarat pendaptaran') ||
       targetQ.includes('syarat daftar') ||
+      targetQ.includes('syarat daptar') ||
       targetQ.includes('syarat gabung') ||
       targetQ.includes('cara gabung') ||
       targetQ.includes('cara registrasi') ||
@@ -1405,18 +1433,30 @@ Total akumulasi personil terdata saat ini mencapai **${totalRecords.toLocaleStri
       targetQ.includes('gabung pilar') ||
       targetQ.includes('gabung relawan') ||
       targetQ.includes('daftar pilar') ||
+      targetQ.includes('daptar pilar') ||
       targetQ.includes('daftar relawan') ||
+      targetQ.includes('daptar relawan') ||
       targetQ.includes('pendaftaran mandiri') ||
+      targetQ.includes('pendaptaran mandiri') ||
       targetQ.includes('tambah anggota mandiri') ||
       targetQ.includes('daftar jadi anggota') ||
+      targetQ.includes('daptar jadi anggota') ||
       targetQ.includes('cara jadi anggota') ||
       targetQ.includes('cara jadi relawan') ||
       targetQ.includes('rekrutmen pilar') ||
       targetQ.includes('rekrutmen anggota') ||
       targetQ === 'cara daftar' ||
+      targetQ === 'cara daptar' ||
       targetQ === 'alur pendaftaran' ||
+      targetQ === 'alur pendaptaran' ||
       targetQ === 'pendaftaran' ||
-      targetQ === 'syarat daftar');
+      targetQ === 'pendaptaran' ||
+      targetQ === 'syarat daftar' ||
+      targetQ === 'syarat daptar' ||
+      ((targetQ.includes('daftar') || targetQ.includes('daptar') || targetQ.includes('pendaftaran') || targetQ.includes('pendaptaran') || targetQ.includes('gabung') || targetQ.includes('registrasi') || targetQ.includes('rekrutmen') || ((targetQ.includes('cara') || targetQ.includes('gimana') || targetQ.includes('bagaimana') || targetQ.includes('alur') || targetQ.includes('syarat')) && (targetQ.includes('daftar') || targetQ.includes('daptar') || targetQ.includes('masuk') || targetQ.includes('gabung') || targetQ.includes('jadi')))) &&
+        (activePillar || targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('tagana') || targetQ.includes('psm') || targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('tksk') || targetQ.includes('lks') || targetQ.includes('panti') || targetQ.includes('yayasan') || targetQ.includes('lk3') || targetQ.includes('pensos') || targetQ.includes('penyuluh') || targetQ.includes('kube') || targetQ.includes('badan usaha') || targetQ.includes('slrt') || targetQ.includes('puskesos'))) ||
+      ((targetQ.includes('cara') || targetQ.includes('syarat') || targetQ.includes('alur') || targetQ.includes('gabung')) &&
+        (targetQ.includes('peksos') || targetQ.includes('pksp') || targetQ.includes('tagana') || targetQ.includes('psm') || targetQ.includes('karang taruna') || targetQ.includes('katar') || targetQ.includes('tksk') || targetQ.includes('lks') || targetQ.includes('lk3') || targetQ.includes('pensos') || targetQ.includes('kube') || targetQ.includes('slrt') || targetQ.includes('puskesos'))));
 
   if (isRegisterIntent) {
     const politeUserHonorific =
@@ -2512,7 +2552,7 @@ export function verifyAndTrackAnswerAccuracy(
   confidence: number;
   source: 'verified_exact' | 'state_grounded' | 'ai_model_verified' | 'knowledge_fallback';
 } {
-  const normQ = query.toLowerCase().replace(/[?!.,]/g, '').trim();
+  const normQ = normalizeSpellingAndTypo(query.toLowerCase().replace(/[?!.,]/g, '').trim());
   // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
   const isDeveloperUser = userRole === 'developer';
   const { coreQuery: extractedCoreQ, isPureIntro: accuracyIsPureIntro, hasQuestion: accuracyHasQuestion } = extractCoreQueryIntent(query);
