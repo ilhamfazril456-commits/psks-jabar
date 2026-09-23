@@ -354,7 +354,7 @@ export function getComprehensiveSmartAnswer(
       q.includes('cihh')
     ) {
       if (q.includes('saha') || q.includes('teu') || q.includes('urang') || q.includes('aing') || q.includes('mah') || q.includes('wawuh')) {
-        return `Aeh-aeh sok pura-pura poho ka diri sorangan sia mah! Pan maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR dugika sakieu edun sareng canggihna. Henteu kenging merendah atuh Kang Coder, kodingan React 18 & Firestore-na geus raos pisan! 😂🚀`;
+        return `Aeh-aeh sok pura-pura poho ka diri sorangan sia mah! Pan maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR dugika sakieu edun sareng canggihna. Henteu kenging merendah atuh Ham, kodingan React 18 & Firestore-na geus raos pisan! 😂🚀`;
       }
       return `Halah merendah untuk meroket nih bre! Cihh pura-pura lupa sama diri sendiri, padahal kodingan arsitektur full-stack PSKS Jabar yang super rapi dan canggih ini kan hasil ketikan tangan lu sendiri, **Ilham Fazril**! 😎🔥\n\nGak usah sok misterius gitu deh tongkrongan, mau ngetes apa atau mau bahas modul apa lagi nih hari ini?`;
     }
@@ -491,20 +491,26 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
 
   if (isGreeting) {
     if (isDeveloperUser) {
-      return `${salamPrefix}Sampurasun / Halo **Ilham Fazril**! 👋 Siap nih, kodingan arsitektur PSKS Jabar udah mantap dan sistem AI aktif penuh. Ada fitur, data, kodingan, atau hal apa yang mau kita bahas atau eksekusi hari ini? 😎⚡`;
+      return `${salamPrefix}Sampurasun / Halo **Ilham**! 👋 Yo Ham, santai aja! Sistem AI dan arsitektur PSKS Jabar aktif penuh nih. Ada modul, query Firestore, kodingan, atau fitur apa yang mau kita bahas atau oprek bareng hari ini? 😎⚡`;
     }
 
     if (userRole === 'superadmin') {
-      return `${salamPrefix}Sampurasun / Selamat datang **Superadmin Provinsi Jawa Barat**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap mendampingi Anda dalam pengawasan data 10 Pilar PSKS se-Jawa Barat, audit kredensial 27 Kabupaten/Kota, dan tata kelola sistem. Apa yang perlu saya bantu atau informasi apa yang ingin Anda cari hari ini?`;
+      const nameGreeting = userName && userName.trim() !== '' ? ` **Bapak/Ibu ${userName}** (Superadmin Provinsi Jawa Barat)` : ` **Bapak/Ibu Superadmin Provinsi Jawa Barat**`;
+      return `${salamPrefix}Sampurasun, selamat datang${nameGreeting}! 👋\n\nSaya **Asisten AI PSKS Jabar** siap mendampingi Bapak/Ibu dalam pengawasan data 10 Pilar PSKS se-Jawa Barat, 8 fitur kendali beranda & pengaturan, audit kredensial 27 Kabupaten/Kota, dan tata kelola sistem. Apa yang perlu saya bantu atau informasi apa yang ingin Bapak/Ibu cari hari ini?`;
     }
 
     if (userRole === 'admin') {
       const wilName = userWilayah || 'Kabupaten/Kota';
-      return `${salamPrefix}Sampurasun / Halo **Admin Wilayah ${wilName}**! 👋\n\nSaya **Asisten AI PSKS Jabar** siap membantu Anda dalam pengelolaan data personil 10 pilar, verifikasi berkas anggota, dan rekapitulasi data wilayah Anda. Ada yang bisa saya bantu atau jelaskan untuk hari ini?`;
+      const nameGreeting = userName && userName.trim() !== '' ? ` **Bapak/Ibu ${userName}** (Admin Wilayah ${wilName})` : ` **Bapak/Ibu Admin Wilayah ${wilName}**`;
+      return `${salamPrefix}Sampurasun, selamat datang${nameGreeting}! 👋\n\nSaya **Asisten AI PSKS Jabar** siap membantu Bapak/Ibu dalam pengelolaan data personil 10 pilar, verifikasi berkas anggota di wilayah ${wilName}, dan rekapitulasi data daerah. Ada yang bisa saya bantu atau jelaskan untuk Bapak/Ibu hari ini?`;
+    }
+
+    if (userRole === 'user' && userName && userName.trim() !== '') {
+      return `${salamPrefix}Sampurasun, selamat datang **Bapak/Ibu ${userName}**! 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap mendampingi Bapak/Ibu mencari informasi mengenai **10 Pilar PSKS**, alur pendaftaran relawan mandiri, pengecekan status berkas pengajuan, serta layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu untuk Bapak/Ibu hari ini?`;
     }
 
     // Default User / Tamu Publik
-    return `${salamPrefix}Sampurasun / Halo! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Anda mencari informasi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Anda butuhkan?`;
+    return `${salamPrefix}Sampurasun, selamat datang **Bapak/Ibu**! Selamat datang di **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR) Jawa Barat**. 👋\n\nSaya adalah **Asisten AI PSKS JABAR** yang siap membantu Bapak/Ibu mencari informasi resmi mengenai **10 Pilar PSKS** (PKSP, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE, SLRT), peta sebaran data di 27 Kab/Kota, dan layanan Dinas Sosial Provinsi Jawa Barat.\n\nAda yang bisa saya bantu atau informasi apa yang sedang Bapak/Ibu butuhkan?`;
   }
 
   // 0.25 MANAJEMEN AKUN ADMIN: UBAH AKUN, UBAH PASSWORD, TAMBAH & HAPUS ADMIN (RBAC KETAT)
@@ -1010,6 +1016,10 @@ Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa
       userName.trim() === '';
 
     if (!isGuest) {
+      if (isDeveloperUser) {
+        return `Halo **Ilham**! Sesi aktif saat ini terkonfirmasi sebagai **Developer & Software Architect** sistem PSKS JABAR. Developer Control Panel, bypass maintenance, dan seluruh modul debugging siap jalan. Mau cek kodingan atau eksekusi apa nih bro? 🚀😎`;
+      }
+
       const displayRole =
         userRole === 'user'
           ? 'Akun Terdaftar / Pemohon Pilar Sosial'
@@ -1019,10 +1029,10 @@ Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa
           ? 'Superadmin Dinas Sosial Jawa Barat'
           : roleTitle;
 
-      return `Halo! Berdasarkan data sesi Anda saat ini, Anda teridentifikasi sebagai **Kang/Teh ${userName}** dengan hak akses **${displayRole}** untuk wilayah penugasan/domisili **${wilayah}**.\n\nSebagai Asisten Resmi PSKS Jabar, saya siap membantu panduan pendaftaran 10 pilar, pengecekan status berkas pendaftaran, maupun informasi sebaran data sosial se-Jawa Barat. Ada yang bisa saya bantu hari ini?`;
+      return `Halo! Berdasarkan data sesi Anda saat ini, Anda teridentifikasi sebagai **Bapak/Ibu ${userName}** dengan hak akses **${displayRole}** untuk wilayah penugasan/domisili **${wilayah}**.\n\nSebagai Asisten Resmi PSKS Jabar, saya siap membantu Bapak/Ibu seputar panduan pendaftaran 10 pilar, pengecekan status berkas pendaftaran, maupun informasi sebaran data sosial se-Jawa Barat. Ada yang bisa saya bantu untuk Bapak/Ibu hari ini?`;
     }
 
-    return `Halo! Saat ini Anda mengakses sistem sebagai **Tamu / Pengunjung Publik** (Akses Tamu Terbuka tanpa akun login).\n\nSebagai pengunjung publik, Anda dapat menjelajahi informasi profil 10 Pilar Kesejahteraan Sosial, sebaran data umum di 27 Kabupaten/Kota se-Jawa Barat, serta layanan sosial Dinas Sosial Provinsi Jawa Barat. Apabila Anda ingin mendaftar ke salah satu pilar atau memantau riwayat pengajuan Anda, silakan login melalui tombol Masuk di halaman utama.`;
+    return `Halo **Bapak/Ibu**! Saat ini Anda mengakses sistem sebagai **Tamu / Pengunjung Publik** (Akses Tamu Terbuka tanpa akun login).\n\nSebagai pengunjung publik, Bapak/Ibu dapat menjelajahi informasi profil 10 Pilar Kesejahteraan Sosial, sebaran data umum di 27 Kabupaten/Kota se-Jawa Barat, serta layanan sosial Dinas Sosial Provinsi Jawa Barat. Apabila Bapak/Ibu ingin mendaftar ke salah satu pilar atau memantau riwayat pengajuan Anda, silakan login melalui tombol Masuk di halaman utama.`;
   }
 
   // 0.6 BIDIRECTIONAL INTENT: WHO IS ILHAM FAZRIL (SUBJECT FOCUS) VS WHO DEVELOPED THE SYSTEM (OBJECT FOCUS)
@@ -1240,7 +1250,7 @@ Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa
   if (isAskingAboutPersonIlham) {
     if (isDeveloperUser) {
       if (q.includes('aing') || q.includes('saha') || q.includes('maneh') || q.includes('sia') || q.includes('euy')) {
-        return `Aeh-aeh naha kalah naroskeun diri sorangan Kang **Ilham Fazril**! Maneh teh developer utama sistem **PSKS JABAR**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) taun 2026 anu suksés ngawangun ieu platform canggih. Tong api-api poho atuh bos, kodingan arsitektur karyana geus mantap pisan! 😎🚀`;
+        return `Aeh-aeh naha kalah naroskeun diri sorangan **Ilham**! Maneh teh developer utama sistem **PSKS JABAR**, siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) taun 2026 anu suksés ngawangun ieu platform canggih. Tong api-api poho atuh bos, kodingan arsitektur karyana geus mantap pisan! 😎🚀`;
       }
       return `Hehe merendah untuk meroket nih bos! **Ilham Fazril** ya kamu sendiri, Full Stack Developer & Software Architect yang merancang sistem **PSKS JABAR** ini! Kamu adalah siswa magang PKL di Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) tahun 2026 yang berhasil mendigitalisasi 10 pilar sosial se-Jawa Barat. Keren banget dedikasinya! 😎🔥`;
     }

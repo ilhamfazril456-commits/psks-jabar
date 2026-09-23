@@ -181,21 +181,21 @@ export function formatConversationalFillerReply(
   // Sapaan khusus Developer (Ilham Fazril)
   if (isDeveloperUser) {
     if (fillerType === 'question_inquiry') {
-      return `Tentu saja sangat boleh bos **Ilham Fazril**! Silakan sampaikan ${extractedCount ? `apa saja **${extractedCount} pertanyaan** tersebut` : 'pertanyaan-pertanyaannya'}, mau sekaligus atau satu per satu. Kodingan, query database Firestore, maupun arsitektur full-stack PSKS JABAR siap kita bahas tuntas! 🚀💻`;
+      return `Tentu saja sangat boleh bos **Ilham**! Silakan sampaikan ${extractedCount ? `apa saja **${extractedCount} pertanyaan** tersebut` : 'pertanyaan-pertanyaannya'}, mau borongan atau satu per satu bebas. Kodingan, query database Firestore, maupun arsitektur full-stack PSKS JABAR siap kita bahas tuntas! 🚀💻`;
     }
     if (fillerType === 'capability_inquiry') {
-      return `Halo bos arsitek **Ilham Fazril**! Sistem asisten AI ini kamu rancang untuk menguasai data 10 Pilar PSKS, validasi verifikasi 2-tier, sebaran 27 Kab/Kota, dan integrasi Firestore. Ada modul atau logika yang mau kita uji atau kembangkan lagi? 🚀⚡`;
+      return `Halo bos arsitek **Ilham**! Sistem asisten AI ini kamu rancang untuk menguasai data 10 Pilar PSKS, validasi verifikasi 2-tier, sebaran 27 Kab/Kota, dan integrasi Firestore. Ada modul atau logika yang mau kita uji atau kembangkan lagi? 🚀⚡`;
     }
     if (fillerType === 'gratitude') {
-      return `Sama-sama santai Kang **Ilham Fazril**! Ada arsitektur, query, atau modul kodingan apa lagi yang mau kita bahas atau oprek bareng? Gas! 🚀💻`;
+      return `Sama-sama santai **Ilham**! Ada arsitektur, query, atau modul kodingan apa lagi yang mau kita bahas atau oprek bareng? Gas! 🚀💻`;
     }
     if (fillerType === 'praise') {
-      return `Hehe nuhun pujianna Kang **Ilham Fazril**! Arsitektur full-stack sistem PSKS JABAR buatan maneh emang patut diacungi jempol. Mau bahas atau kembangin fitur apa lagi nih? 😎⚡`;
+      return `Hehe nuhun pujianna **Ilham**! Arsitektur full-stack sistem PSKS JABAR buatan maneh emang patut diacungi jempol. Mau bahas atau kembangin fitur apa lagi nih bro? 😎⚡`;
     }
     if (fillerType === 'follow_up') {
-      return `Mangga atuh Kang **Ilham Fazril**, sampaikan saja! Mau nanya atau bahas hal apa lagi nih? Urang siap jawab tuntas! 🚀⚡`;
+      return `Mangga atuh **Ilham**, sampaikan saja! Mau nanya atau bahas hal apa lagi nih? Urang siap jawab tuntas! 🚀⚡`;
     }
-    return `Siap santai Kang **Ilham Fazril**! Kodingan dan sistem AI udah sinkron mantap. Ada hal atau fitur apa lagi yang mau kita eksekusi? 🚀⚡`;
+    return `Siap santai **Ilham**! Kodingan dan sistem AI udah sinkron mantap. Ada hal atau fitur apa lagi yang mau kita eksekusi? 🚀⚡`;
   }
 
   // 0. Question Inquiry / Preamble ("bertanya banyak boleh ga?", "saya memiliki 12 pertanyaan, bisakah anda menjawabnya?", dll.)
@@ -236,7 +236,7 @@ Silakan tanyakan informasi yang sedang Anda butuhkan!`;
 
   // Ucapan Terima Kasih
   if (fillerType === 'gratitude') {
-    return `Sama-sama! Senang bisa membantu Anda 😊. Jika ada hal lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Provinsi Jawa Barat yang ingin Anda tanyakan, silakan langsung sampaikan ya. Tetap semangat!`;
+    return `Sama-sama Bapak/Ibu! Senang bisa membantu 😊. Jika ada hal lain seputar 10 Pilar PSKS atau layanan Dinas Sosial Provinsi Jawa Barat yang ingin ditanyakan, silakan langsung sampaikan ya. Tetap semangat!`;
   }
 
   // Pujian & Apresiasi

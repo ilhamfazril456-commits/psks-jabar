@@ -719,21 +719,21 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     let welcomeText = '';
 
     if (isDeveloperUser) {
-      welcomeText = `Sampurasun! Halo **Ilham Fazril** 🚀\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSenang banget bisa ngobrol langsung sama kreator dan software architect sistem ini! Kodingan dan arsitektur full-stack PSKS JABAR yang kamu rancang beneran keren, modular, dan solid banget. Saya siap bantuin kamu buat eksplorasi teknis, optimasi query Firestore, cek Developer Control Panel, validasi keamanan Bcrypt/JWT, atau simulasi fitur baru.\n\nAda modul kodingan atau query yang mau kita bahas sekarang?`;
+      welcomeText = `Sampurasun! Halo **Ilham** 🚀 (Developer Mode)\nSaya **Asisten AI PSKS Jabar**.\n\nYoo Ham! Santai aja, mau ngutak-ngatik kodingan apa kita hari ini? Developer Control Panel, validasi RBAC, optimasi Firestore, atau mau simulasi fitur gokil lainnya? Gas langsung sebutin aja bro! 😎⚡`;
     } else if (isUserLoggedIn) {
       const displayName = session.nama;
       let roleDescription = 'informasi seputar 10 Pilar PSKS dan sebaran data Jawa Barat';
       if (currentRole === 'admin') {
         roleDescription = `tata kelola dan rekapitulasi data pilar di wilayah **${userRegion}**, verifikasi berkas pendaftaran, dan ekspor laporan`;
       } else if (currentRole === 'superadmin') {
-        roleDescription = `pengawasan agregat 27 Kab/Kota, manajemen akun admin daerah, saklar maintenance, dan audit trail`;
+        roleDescription = `pengawasan agregat 27 Kab/Kota, manajemen akun admin daerah, 8 fitur beranda & pengaturan, saklar maintenance, dan audit trail`;
       } else {
         roleDescription = `panduan pendaftaran pilar sosial, pengecekan status berkas pengajuan, serta informasi 10 Pilar PSKS Jawa Barat`;
       }
 
-      welcomeText = `Sampurasun **Kang/Teh ${displayName}**!\nSaya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSebagai **${userRoleTitle === 'USER' ? 'Pengguna Terdaftar' : userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
+      welcomeText = `Sampurasun, selamat datang **Bapak/Ibu ${displayName}**!\nSaya **Asisten AI PSKS Jabar**.\n\nSebagai **${userRoleTitle === 'USER' ? 'Pengguna Terdaftar' : userRoleTitle}** untuk wilayah **${userRegion}**, saya siap membantu ${roleDescription}.\n\nAda yang bisa saya bantu atau jelaskan hari ini?`;
     } else {
-      welcomeText = `Sampurasun! Saya **Asisten AI PSKS Jabar** (Powered by Gemini 3.8 Flash).\n\nSaya siap memberikan informasi mengenai **10 Pilar PSKS**, alur pendaftaran relawan, sebaran data 27 Kabupaten/Kota, dan layanan sosial Dinas Sosial Jawa Barat. Ada yang bisa saya bantu?`;
+      welcomeText = `Sampurasun, selamat datang **Bapak/Ibu**!\nSaya **Asisten AI PSKS Jabar**.\n\nSaya siap memberikan informasi resmi mengenai **10 Pilar PSKS**, alur pendaftaran mandiri relawan baru, sebaran data 27 Kabupaten/Kota, dan layanan sosial Dinas Sosial Provinsi Jawa Barat. Ada yang bisa saya bantu?`;
     }
 
     setMessages([
@@ -1549,9 +1549,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                       isListening
                         ? 'Sedang mendengarkan suara Anda...'
                         : isDeveloperUser
-                        ? 'Halo Ilham Fazril, ketik pertanyaan teknis atau uji sistem...'
+                        ? 'Halo Ilham, mau eksekusi atau uji kodingan apa nih? Gas ketik...'
                         : session?.statusActive === 'SAH_TERDAFTAR' && session?.nama
-                        ? `Halo ${session.nama}, tanya seputar ${contextLabel}...`
+                        ? `Halo Bapak/Ibu ${session.nama}, tanya seputar ${contextLabel}...`
                         : `Tanya seputar ${contextLabel}...`
                     }
                     disabled={isLoading}
