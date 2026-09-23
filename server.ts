@@ -557,23 +557,41 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
      **"Wa'alaikumsalam Warahmatullahi Wabarakatuh."**
    - Setelah menjawab salam, lanjutkan dengan sambutan hangat atau langsung jawab pertanyaan yang diajukan dengan ramah dan solutif. Jangan pernah mengabaikan atau melewatkan jawaban salam ini!
 
-11. **PANDUAN MANAJEMEN AKUN & CARA MENAMBAH ADMIN (KHUSUS SUPERADMIN - DILARANG UNTUK PUBLIK/USER)**:
-   - CATATAN KERAS: Panduan ini HANYA BOLEH diberikan jika penanya memiliki hak akses resmi (role 'superadmin' atau 'admin') yang secara eksplisit meminta petunjuk pengelolaan admin internal.
-   - DILARANG KERAS membeberkan panduan ini kepada akun publik / role 'user', dan DILARANG KERAS membeberkannya saat pengguna sedang bingung atau memprotes ("lah", "kok gitu")!
-   - Langkah-langkah resmi bagi Superadmin:
-     1. **Buka Menu Pengaturan (Control Panel)**: Masuk ke halaman **Pengaturan** pada bilah navigasi utama.
-     2. **Pilih Tab Manajemen Akun / Pengguna**: Klik tab **Manajemen Akun**.
-     3. **Klik Tombol "Tambah Akun Baru" / "Tambah Admin"**: Tombol ini terletak di atas tabel daftar pengguna.
-     4. **Lengkapi Formulir Data Akun**:
-        - **Nama Lengkap**: Masukkan nama lengkap petugas/pejabat yang ditugaskan.
-        - **Nomor Telepon / WhatsApp / Username**: Kontak aktif petugas untuk identitas login.
-        - **Role / Hak Akses**:
-          * Pilih **Admin Wilayah / Admin Daerah** (jika bertugas mengelola data di 1 Kabupaten/Kota tertentu).
-          * Pilih **Superadmin** (jika bertugas mengelola seluruh data Provinsi Jawa Barat).
-        - **Wilayah Penugasan**: Tentukan salah satu dari 27 Kabupaten/Kota di Jawa Barat (otomatis mencakup Provinsi jika memilih Superadmin).
-        - **PIN / Kata Sandi Awal**: Masukkan PIN keamanan untuk login (sistem menyimpannya secara terenkripsi Bcrypt).
-     5. **Simpan dan Aktifkan**: Pastikan status akun diatur ke **ACTIVE**, lalu klik tombol **Simpan Data / Buat Akun**.
-     6. **Selesai**: Akun admin baru langsung aktif seketika dan aktivitas ini tercatat pada **Audit Trail (Riwayat Aktivitas)** sistem.
+11. **PANDUAN 8 FITUR SUPERADMIN & ATURAN RBAC KETAT BERDASARKAN ROLE**:
+   - **ISOLASI ROLE & PENGETAHUAN (MUTLAK & KETAT)**:
+     * **DEVELOPER (KANG ILHAM FAZRIL / ROOT)**: Otoritas tertinggi. Boleh mengetahui segala arsitektur kode, sistem, Firestore, algoritma, maupun fitur kontrol teknis.
+     * **SUPERADMIN (DINAS SOSIAL PROVINSI)**: Boleh mengetahui dan dipandu mengenai seluruh 8 Fitur Superadmin di Beranda & Pengaturan. DILARANG KERAS membocorkan akun, kredensial, atau rahasia internal Developer.
+     * **ADMIN WILAYAH (27 KABUPATEN/KOTA)**: HANYA BOLEH dipandu seputar hak aksesnya: pengelolaan data 10 pilar di daerahnya, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran wilayah.
+       - JIKA Admin Wilayah menanyakan fitur khusus Superadmin (tambah/edit/hapus admin kab/kota lain, monitoring seluruh admin se-Jabar, saklar maintenance): TOLAK DENGAN SANTUN bahwa itu adalah kewenangan khusus Superadmin Provinsi.
+     * **USER / TAMU PUBLIK**: HANYA BOLEH mengakses informasi 10 pilar, bansos, dan alur pendaftaran relawan. DILARANG KERAS membeberkan panduan administratif internal, nama menu internal, atau tata cara kelola admin!
+
+   - **PANDUAN LENGKAP 8 FITUR SUPERADMIN (DIJAWAB JIKA USER ROLE ADALAH 'superadmin' ATAU 'developer')**:
+     1. **Fitur 1: Manajemen Akun Admin** (\`tab:admin_manage\`):
+        - Mengelola akun admin wilayah 27 Kabupaten/Kota.
+        - Menambah Admin Baru: Isi Nama Lengkap, Nomor HP/Username, Role (Admin Wilayah / Superadmin), Wilayah Tugas (27 Kab/Kota), Password baru (minimal 12 karakter kombinasi), lalu simpan.
+        - Mengedit / Reset Password Admin: Buka tabel admin, klik Edit, perbarui data atau masukkan password baru, lalu simpan.
+        - Menghapus Admin: Klik ikon tempat sampah dengan konfirmasi modal keamanan.
+     2. **Fitur 2: Manajemen Akun User** (\`tab:user_manage\`):
+        - Pusat data seluruh user/relawan terdaftar se-Jawa Barat.
+        - Reset Password User (minimal 6 karakter), fitur Freeze (bekukan akun) & Unfreeze (aktifkan kembali), serta hapus akun user.
+     3. **Fitur 3: Pemantauan Admin (Live Admin Monitoring)** (\`tab:monitoring\`):
+        - Radar live real-time status Online/Offline admin 27 Kab/Kota.
+        - Telemetri waktu aktif terakhir (*last active*) dan tombol Kirim Pesan Dinas langsung (*Direct Message*) ke kotak masuk admin daerah.
+     4. **Fitur 4: Riwayat Aktivitas (Comprehensive Audit Trail)** (\`tab:activity_logs\`):
+        - Perekaman forensik realtime mutasi data (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE) lengkap dengan timestamp milidetik, role, IP, dan user agent.
+        - Filter tanggal dan ekspor data audit.
+     5. **Fitur 5: Pengesahan & Penerimaan Anggota (Task Manager)** (\`tab:task_manager\`):
+        - Pusat pengesahan akhir tingkat provinsi berkas yang telah disetujui Admin Wilayah.
+        - Dilengkapi sensor lampu berkedip (merah/oranye jika ada pending, dan centang hijau solid jika seluruh berkas selesai disahkan).
+        - Tombol "Pengesahan Sah" menjadikan status \`SAH_TERDAFTAR\` seketika.
+     6. **Fitur 6: Tambah Pengumuman** (\`tab:announcement_manage\`):
+        - Menerbitkan siaran darurat / pengumuman penting kedinasan.
+        - Muncul sebagai modal popup melayang 15 detik di layar beranda, running text, lengkap dengan 27 saklar wilayah (pilih apakah tayang ke publik dan/atau admin).
+     7. **Fitur 7: Kontak Floating WhatsApp** (\`tab:floating_wa\`):
+        - Mengatur 27 nomor WhatsApp admin wilayah, nomor Superadmin Provinsi, Developer, dan fitur penyesuaian ALL IN massal.
+     8. **Fitur 8: Saklar Maintenance Sistem** (\`tab:maintenance\`):
+        - Pusat kendali pemeliharaan sistem dengan 3 level saklar: Global (semua), Per-Role (kunci Publik atau Admin), dan Granular per-wilayah di 27 Kab/Kota.
+        - Penulisan banner pengumuman & estimasi waktu pemeliharaan. Bypass otomatis untuk Superadmin & Developer.
 
 12. **PENANGANAN KEBINGUNGAN & KELUHAN TIDAK NYAMBUNG (ANTI-HALUSINASI & ANTI-JUMPING TOPIC)**:
    - Jika pengguna merespons dengan rasa heran, bingung, atau mengeluh (seperti: "lah", "kok gitu", "lah kok tagana", "kok malah jadi ke yang lain", "kenapa jadi tagana", "naha bet tagana", "ga nyambung", "gak nyambung", "maksudnya?", "kok aneh", "salah jawab"):
@@ -1080,6 +1098,105 @@ Pengaturan mode pemeliharaan portal dikelola melalui menu **"Manajemen Maintenan
    - Akun Superadmin dan Akun Developer memiliki izin bypass otomatis sehingga tetap dapat login dan menguji sistem secara penuh saat mode maintenance aktif.
 
 [[action:tab:maintenance:Buka Manajemen Maintenance]]`;
+      }
+
+      // 3G. Fitur 4: Riwayat Aktivitas (Comprehensive Audit Trail Logs)
+      if (q.includes('riwayat aktivitas') || q.includes('audit log') || q.includes('log aktivitas') || q.includes('jejak aktivitas')) {
+        return `**Panduan Resmi Superadmin: Fitur Riwayat Aktivitas (Audit Trail Logs)**:
+
+Fitur Riwayat Aktivitas dapat diakses melalui menu **"Riwayat Log"** (\`tab:activity_logs\`):
+
+---
+
+1. **Perekaman Forensik Otomatis**:
+   - Setiap mutasi data penting (CREATE, UPDATE, DELETE data pilar, verifikasi anggota, pergantian password, saklar maintenance) otomatis tercatat ke Cloud Firestore pada koleksi \`audit_logs\`.
+2. **Atribut Forensik Presisi**:
+   - Menyimpan nama aparatur pelaksana, hak akses (role), stempel waktu milidetik, alamat IP, dan user agent browser.
+3. **Penyaringan & Ekspor**:
+   - Memfilter log aktivitas berdasarkan rentang tanggal, jenis aksi, atau wilayah kerja guna audit kepatuhan dinas.
+
+[[action:tab:activity_logs:Buka Riwayat Log]]`;
+      }
+
+      // 3H. Fitur 5: Pengesahan & Penerimaan Anggota (Task Manager)
+      if (q.includes('pengesahan') || q.includes('penerimaan anggota') || q.includes('task manager') || q.includes('terima anggota')) {
+        return `**Panduan Resmi Superadmin: Fitur Pengesahan & Penerimaan Anggota (Task Manager)**:
+
+Fitur ini diakses melalui menu **"Pengesahan & Penerimaan Anggota"** (\`tab:task_manager\`):
+
+---
+
+1. **Pusat Pengesahan Akhir Provinsi (Tier 2)**:
+   - Menampung seluruh berkas pendaftaran anggota 10 Pilar PSKS yang telah disetujui oleh Admin Wilayah di 27 Kab/Kota (\`DISETUJUI_WILAYAH\`).
+2. **Indikator Sensor Lampu Berkedip**:
+   - Di pojok kanan atas kotak fitur terdapat sensor lampu bulat yang berkedip jika masih ada berkas pending yang menunggu pengesahan.
+   - Sensor otomatis berubah menjadi **centang hijau solid** ketika seluruh berkas selesai disahkan.
+3. **Pengesahan Status \`SAH_TERDAFTAR\`**:
+   - Superadmin dapat memeriksa data legalitas pendaftar, lalu mengklik tombol **"Pengesahan Sah"** untuk menetapkan personil menjadi anggota sah dalam Satu Data Sosial Jawa Barat.
+
+[[action:tab:task_manager:Buka Pengesahan Anggota]]`;
+      }
+
+      // 3I. Fitur 6: Tambah Pengumuman (Announcement Manager)
+      if (q.includes('pengumuman') || q.includes('tambah pengumuman') || q.includes('siaran darurat')) {
+        return `**Panduan Resmi Superadmin: Fitur Tambah Pengumuman Kedinasan**:
+
+Fitur ini dikelola melalui menu **"Pengaturan Pengumuman"** (\`tab:announcement_manage\`):
+
+---
+
+1. **Layar Melayang 15 Detik**:
+   - Pengumuman darurat atau maklumat resmi akan tampil sebagai popup modal melayang selama 15 detik di layar Beranda pengunjung.
+2. **Konten & Kompresi Foto**:
+   - Dilengkapi input judul, teks isi maklumat/link dokumen, serta unggah foto dengan kompresi hemat storage.
+3. **27 Saklar Penayangan Wilayah**:
+   - Superadmin dapat menentukan sasaran tayang pengumuman: untuk Publik (User), Admin Wilayah, atau spesifik di kabupaten/kota tertentu se-Jawa Barat.
+
+[[action:tab:announcement_manage:Buka Pengaturan Pengumuman]]`;
+      }
+
+      // 3J. Fitur 7: Ubah Kontak Floating WhatsApp
+      if (q.includes('floating wa') || q.includes('kontak wa') || q.includes('whatsapp dinas')) {
+        return `**Panduan Resmi Superadmin: Fitur Kontak Floating WhatsApp**:
+
+Fitur ini dikelola melalui menu **"Pengaturan Kontak WA"** (\`tab:floating_wa\`):
+
+---
+
+1. **Manajemen 27 Kontak Wilayah**:
+   - Menyesuaikan nomor kontak resmi WhatsApp untuk masing-masing 27 Kabupaten/Kota se-Jawa Barat.
+2. **Kontak Pusat & Developer**:
+   - Konfigurasi nomor WhatsApp Tim Hotline Dinsos Jabar dan narahubung teknis.
+3. **Fitur ALL IN Massal**:
+   - Fitur cepat untuk menerapkan nomor narahubung atau format template pesan pembuka ke seluruh 27 wilayah secara serentak.
+
+[[action:tab:floating_wa:Buka Pengaturan Kontak WA]]`;
+      }
+
+      // 3K. Ringkasan 8 Fitur Superadmin di Beranda
+      if (q.includes('8 fitur') || q.includes('fitur superadmin di beranda') || q.includes('apa saja fitur superadmin')) {
+        return `**8 Fitur Utama Superadmin PSKS Jawa Barat di Beranda & Pengaturan**:
+
+Berikut adalah 8 fitur kendali otorisasi sistem yang tersedia bagi Superadmin:
+
+---
+
+1. **Fitur 1: Manajemen Akun Admin** (\`tab:admin_manage\`)
+   - Hak khusus untuk mengelola 27 akun admin wilayah, menambah admin baru, merubah data/password (min. 12 karakter), dan reset credential.
+2. **Fitur 2: Akun User** (\`tab:user_manage\`)
+   - Pusat data seluruh user terdaftar, reset password pengguna (min. 6 karakter), fitur Freeze (bekukan akun) & Unfreeze, serta penghapusan akun.
+3. **Fitur 3: Pemantauan Admin (Live Monitoring)** (\`tab:monitoring\`)
+   - Radar real-time status online/offline admin 27 Kab/Kota, waktu aktivitas terakhir (*last active*), dan Direct Message instruksi dinas.
+4. **Fitur 4: Riwayat Aktivitas (Comprehensive Audit Trail)** (\`tab:activity_logs\`)
+   - Catatan forensik mutasi data Firestore secara realtime dengan timestamp milidetik, role, IP, dan user agent.
+5. **Fitur 5: Pengesahan & Penerimaan Anggota** (\`tab:task_manager\`)
+   - Pengesahan berkas rekomendasi dari 27 Kab/Kota berstatus \`SAH_TERDAFTAR\` dengan indikator sensor lampu status berkedip.
+6. **Fitur 6: Tambah Pengumuman** (\`tab:announcement_manage\`)
+   - Publikasi siaran darurat modal melayang 15 detik, running text, dan 27 saklar wilayah.
+7. **Fitur 7: Kontak Floating WhatsApp** (\`tab:floating_wa\`)
+   - Penyesuaian 27 kontak WA wilayah, Superadmin Dinsos, dan fitur pembaruan ALL IN massal.
+8. **Fitur 8: Saklar Maintenance Sistem** (\`tab:maintenance\`)
+   - Saklar pemeliharaan 3 tingkat: Global, Per-Role (Publik/Admin), dan Granular per-wilayah, disertai akses bypass otomatis.`;
       }
     }
 

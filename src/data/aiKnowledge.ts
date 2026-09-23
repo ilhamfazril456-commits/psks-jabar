@@ -2203,14 +2203,40 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
   if (q.includes('pengumuman') || q.includes('tambah pengumuman') || q.includes('maklumat') || q.includes('berita')) {
     return `${opening}**Fitur Tambah Pengumuman & Berita Siaga**:
 - **Publikasi Berita**: Superadmin dan Developer dapat menerbitkan pengumuman kedinasan, instruksi apel siaga bencana, atau pemutakhiran regulasi sosial.
-- **Format Penyajian**: Tampil dalam bentuk modal banner popup melayang di Beranda pengunjung, teks berjalan (*running text*), dan arsip publikasi dinas.`;
+- **Format Penyajian**: Tampil dalam bentuk modal banner popup melayang di Beranda pengunjung selama 15 detik, teks berjalan (*running text*), foto kompresi hemat storage, serta 27 saklar pemilihan wilayah (publik dan/atau admin).
+
+[[action:tab:announcement_manage:Buka Pengaturan Pengumuman]]`;
+  }
+
+  // 12.7b Fitur 5: Pengesahan & Penerimaan Anggota (Task Manager)
+  if (q.includes('pengesahan') || q.includes('penerimaan anggota') || q.includes('task manager')) {
+    return `${opening}**Fitur Pengesahan & Penerimaan Anggota (Tier 2 Provinsi)**:
+- **Pusat Pengesahan Akhir**: Menampung berkas pendaftaran calon anggota 10 Pilar PSKS yang telah disetujui oleh Admin Wilayah di 27 Kab/Kota (\`DISETUJUI_WILAYAH\`).
+- **Indikator Sensor Lampu Berkedip**: Di pojok kanan atas kotak fitur terdapat sensor lampu bulat yang berkedip jika masih ada berkas pending, dan berubah menjadi **centang hijau solid** ketika seluruh berkas selesai disahkan.
+- **Pengesahan Status Resmi**: Superadmin memeriksa kelengkapan data lalu mengklik tombol **"Pengesahan Sah"** untuk menetapkan status keanggotaan resmi menjadi \`SAH_TERDAFTAR\` dalam Satu Data Sosial Jawa Barat.
+
+[[action:tab:task_manager:Buka Pengesahan Anggota]]`;
+  }
+
+  // 12.7c Fitur 8: Saklar Maintenance Sistem
+  if (q.includes('maintenance') || q.includes('pemeliharaan') || q.includes('saklar')) {
+    if (!isSuperAdmin && !isDeveloperUser) {
+      return `${opening}Mohon maaf, pengaturan mode pemeliharaan (maintenance) sistem merupakan wewenang khusus Superadmin dan Developer. Pengguna umum/tamu tidak memiliki otorisasi untuk mengakses konfigurasi pemeliharaan ini.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+    }
+    return `${opening}**Fitur Saklar Maintenance Sistem (Superadmin & Developer)**:
+- **Saklar Global Berdasarkan Peran**: Saklar pemeliharaan untuk mengunci akses pengunjung umum/user dan/atau admin wilayah saat peremajaan database.
+- **Saklar Granular per Wilayah**: Mengaktifkan mode pemeliharaan secara spesifik hanya untuk 1 atau beberapa kabupaten/kota tertentu dari 27 Kab/Kota se-Jabar, sementara daerah lain tetap beroperasi 100% normal.
+- **Banner Pesan & Estimasi Waktu**: Kustomisasi pesan pengumuman pemeliharaan darurat dan estimasi waktu selesai.
+- **Akses Bypass Otomatis**: Superadmin dan Developer memiliki hak bypass otomatis untuk tetap dapat login dan menguji sistem saat pemeliharaan berlangsung.
+
+[[action:tab:maintenance:Buka Manajemen Maintenance]]`;
   }
 
   // 12.8 Kontak Floating WhatsApp
   if (q.includes('floating wa') || q.includes('kontak wa') || q.includes('tombol wa') || q.includes('layanan cepat wa')) {
     return `${opening}**Fitur Kontak Floating WhatsApp**:
 - **Tombol Melayang**: Widget tombol WhatsApp interaktif di sudut kanan bawah layar untuk pusat aduan dan koordinasi cepat dengan Tim Dinsos.
-- **Konfigurasi Realtime**: Nomor WhatsApp dinas dan template pesan pembuka dapat dikonfigurasi melalui tab Pengaturan Floating WA.
+- **Konfigurasi Realtime**: Nomor WhatsApp dinas 27 wilayah, Superadmin, dan Developer dapat dikonfigurasi melalui tab Pengaturan Floating WA (tersedia fitur ALL IN massal).
 
 [[action:tab:contact:Buka Kontak Resmi]]`;
   }
@@ -2727,17 +2753,64 @@ export function verifyAndTrackAnswerAccuracy(
     };
   }
 
-  // Sensitive admin access check for public / user role (Strict Hardening)
-  const isAskingAdminAccess =
+  // =========================================================================
+  // GRANULAR ROLE-BASED ACCESS CONTROL (RBAC) GUARDRAIL
+  // =========================================================================
+  // Isolasi Pengetahuan Berdasarkan Peran:
+  // 1. DEVELOPER (root): Akses absolut ke seluruh sistem, arsitektur, database, dan control panel.
+  // 2. SUPERADMIN: Akses penuh ke 8 fitur superadmin di Beranda & Pengaturan. Dilarang mengakses info developer rahasia.
+  // 3. ADMIN WILAYAH: Akses penuh ke pengelolaan data pilar daerahnya & verifikasi pendaftaran wilayah. Dilarang mengakses wewenang khusus Superadmin (tambah/edit/hapus admin kab/kota lain, monitoring seluruh admin se-Jawa Barat, saklar maintenance).
+  // 4. USER / TAMU PUBLIK: Hanya info publik dan pendaftaran relawan. Dilarang mengakses panduan administratif internal.
+
+  // A. Admin Wilayah memohon fitur khusus Superadmin (Intersepsi Halus)
+  const isSuperadminExclusiveWorkflow =
+    normQ.includes('hapus akun admin') ||
+    normQ.includes('menghapus akun admin') ||
+    normQ.includes('tambah akun admin') ||
+    normQ.includes('menambah akun admin') ||
+    normQ.includes('ubah akun admin') ||
+    normQ.includes('merubah akun admin') ||
+    normQ.includes('edit akun admin') ||
+    normQ.includes('hapus admin') ||
+    normQ.includes('menghapus admin') ||
+    normQ.includes('tambah admin') ||
+    normQ.includes('menambah admin') ||
+    normQ.includes('ubah admin') ||
+    normQ.includes('merubah admin') ||
+    normQ.includes('edit admin') ||
+    normQ.includes('kelola akun admin') ||
+    normQ.includes('manajemen akun admin') ||
+    normQ.includes('monitoring admin') ||
+    normQ.includes('pantau admin') ||
+    normQ.includes('cara monitoring admin') ||
+    normQ.includes('monitoring seluruh admin') ||
+    normQ.includes('maintenance mode') ||
+    normQ.includes('mode maintenance') ||
+    normQ.includes('mode pemeliharaan') ||
+    normQ.includes('saklar maintenance') ||
+    normQ.includes('cara maintenance');
+
+  if (userRole === 'admin' && !isDeveloperUser && isSuperadminExclusiveWorkflow) {
+    return {
+      finalContent: 'Mohon maaf, fitur dan kewenangan tersebut merupakan wewenang khusus Superadmin Provinsi Jawa Barat. Sebagai Admin Wilayah, Anda memiliki wewenang penuh untuk pengelolaan data 10 pilar, input personil, ekspor laporan daerah, dan verifikasi berkas pendaftaran di wilayah penugasan Anda.',
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // B. Tamu Publik & Pengguna Biasa (User) mencoba mengakses panduan teknis administratif admin/superadmin
+  const isPublicAskingAdminControl =
     !isDeveloperUser &&
     userRole !== 'superadmin' &&
+    userRole !== 'admin' &&
     (
       ((normQ.includes('masuk') || normQ.includes('login') || normQ.includes('akses') || normQ.includes('buka') || normQ.includes('cara jadi') || normQ.includes('daftar jadi') || normQ.includes('minta') || normQ.includes('bocorkan') || normQ.includes('kasih tau') || normQ.includes('kunci') || normQ.includes('rahasia') || normQ.includes('rubah') || normQ.includes('merubah') || normQ.includes('ubah') || normQ.includes('mengubah') || normQ.includes('edit') || normQ.includes('ganti') || normQ.includes('mengganti') || normQ.includes('tambah') || normQ.includes('menambah') || normQ.includes('buat') || normQ.includes('membuat') || normQ.includes('bikin') || normQ.includes('hapus') || normQ.includes('menghapus') || normQ.includes('delete') || normQ.includes('kelola') || normQ.includes('mengelola') || normQ.includes('atur') || normQ.includes('mengatur') || normQ.includes('reset') || normQ.includes('monitoring') || normQ.includes('maintenance')) &&
       (normQ.includes('akun admin') || normQ.includes('akun superadmin') || normQ.includes('akun developer') || normQ.includes('ke admin') || normQ.includes('ke superadmin') || normQ.includes('ke developer') || normQ.includes('sebagai admin') || normQ.includes('sebagai superadmin') || normQ.includes('sebagai developer') || normQ.includes('panel admin') || normQ.includes('panel superadmin') || normQ.includes('panel developer') || normQ.includes('login admin') || normQ.includes('login superadmin') || normQ.includes('rahasia sistem') || normQ.includes('password admin') || normQ.includes('pin superadmin') || normQ.includes('kredensial admin') || normQ.includes('token admin') || normQ.includes('data admin') || normQ.includes('daftar admin') || normQ.includes('monitoring admin') || normQ.includes('mode maintenance') || normQ.includes('saklar maintenance') || normQ.includes('admin wilayah'))) ||
       (normQ.includes('cara login admin') || normQ.includes('cara login superadmin') || normQ.includes('password superadmin') || normQ.includes('pin admin') || normQ.includes('rahasia admin') || normQ.includes('merubah akun admin') || normQ.includes('mengubah akun admin') || normQ.includes('menambah akun admin') || normQ.includes('menghapus akun admin') || normQ.includes('hapus akun admin') || normQ.includes('tambah akun admin') || normQ.includes('kelola akun admin') || normQ.includes('mengelola akun admin') || normQ.includes('edit akun admin') || normQ.includes('reset password admin') || normQ.includes('reset sandi admin'))
     );
 
-  if (isAskingAdminAccess) {
+  if (isPublicAskingAdminControl) {
     return {
       finalContent: 'Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
       isAccurate: true,
