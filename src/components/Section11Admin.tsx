@@ -115,7 +115,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
           </span>
         </div>
 
-        {/* 8 FEATURE CARDS (SIDE BY SIDE ON RESPONSIVE BENTO GRID) */}
+        {/* 9 FITUR KENDALI SUPERADMIN & DEVELOPER (4 ATAS, 4 TENGAH, 1 BAWAH PALING KIRI DI LAPTOP; 2 PER BARIS DI HP) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 max-w-7xl w-full mx-auto">
           
           {/* FITUR 1: MANAJEMEN AKUN ADMIN WILAYAH (Theme: Deep Emerald & Gold) */}
@@ -311,145 +311,76 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             </button>
           </div>
 
-        </div>
-
-        {/* BARIS KEDUA: FITUR 5 (PENGESAHAN & PENERIMAAN ANGGOTA - TINGKAT PROVINSI) */}
-        <div className="max-w-7xl w-full mx-auto mt-2 sm:mt-4 lg:mt-6">
-          {/* FITUR 5: MANAJEMEN TUGAS & PENGESAHAN ANGGOTA (Theme: Deep Purple & Violet Executive) */}
-          <div className="group relative bg-gradient-to-r from-white via-purple-50/40 to-violet-50/60 rounded-xl sm:rounded-2xl border border-purple-200 hover:border-purple-400 p-3 sm:p-5 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-5 overflow-hidden">
+          {/* FITUR 5: MANAJEMEN TUGAS & PENGESAHAN ANGGOTA (Theme: Deep Purple & Violet) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-purple-50/30 rounded-xl sm:rounded-2xl border border-purple-200 hover:border-purple-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             {/* Top Accent Gradient Bar */}
             <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-purple-600 via-fuchsia-400 to-violet-700 absolute top-0 left-0" />
 
-            {/* Left Content Area */}
-            <div className="flex items-start gap-3 sm:gap-4 flex-1">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-700 to-violet-900 text-purple-100 rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-purple-400/30 shrink-0 mt-0.5">
-                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-purple-200" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-purple-100 text-purple-900 text-[8px] sm:text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider border border-purple-200 shadow-2xs leading-none">
-                    FITUR 5 • PENGESAHAN TINGKAT PROVINSI
+            {/* Sensor Lampu di Pojok Kanan Atas Kotak Fitur (Berkedip Jika Ada Pending, Centang Jika Selesai) */}
+            <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-20">
+              {hasPendingSuperadmin ? (
+                <div
+                  className="relative flex items-center justify-center cursor-pointer group/sensor"
+                  onClick={onOpenTaskManagerConsole}
+                  title={`Sensor Status: ${pendingSuperadminCount} berkas menunggu pengesahan & penerimaan`}
+                >
+                  <span className="animate-ping absolute inline-flex h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-rose-500 opacity-75 duration-1000" />
+                  <span className="relative inline-flex items-center justify-center rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 border-2 border-white shadow-md shadow-rose-500/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                   </span>
-                  {hasPendingSuperadmin ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                      {pendingSuperadminCount} Berkas Menunggu
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      Semua Berkas Terverifikasi
-                    </span>
-                  )}
                 </div>
-                <h4 className="text-sm sm:text-lg font-black text-purple-950 group-hover:text-purple-800 transition-colors leading-snug">
-                  Pengesahan & Penerimaan Anggota 10 Pilar PSKS
-                </h4>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1 max-w-3xl">
-                  Pusat pengesahan akhir, persetujuan rekomendasi admin 27 Kab/Kota, dan penerimaan sah anggota 10 Pilar PSKS se-Jawa Barat.
-                </p>
+              ) : (
+                <div
+                  className="inline-flex items-center justify-center rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 bg-emerald-500 text-white border-2 border-white shadow-sm"
+                  title="Sensor Status: Tidak ada berkas pending (Semua selesai disahkan)"
+                >
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" />
+                </div>
+              )}
+            </div>
 
-                {/* Highlight Bullets */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-2.5 pt-2 border-t border-purple-100/80 text-[10px] sm:text-xs text-slate-700 font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span>Rekomendasi 27 Kab/Kota</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span>Pengesahan Sah Realtime</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 hidden sm:flex">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span>Penerbitan KTA Digital Otomatis</span>
-                  </div>
+            <div>
+              {/* Icon Box & Badge Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4 pr-6 sm:pr-7">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-purple-700 to-violet-900 text-purple-100 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-purple-400/30 shrink-0">
+                  <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-purple-200" />
+                </div>
+                <span className="bg-purple-100 text-purple-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-purple-200 shadow-2xs leading-none">
+                  FITUR 5
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h4 className="text-[11px] sm:text-base font-black text-purple-950 mb-1 sm:mb-2 group-hover:text-purple-800 transition-colors leading-snug">
+                Pengesahan Anggota
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Pusat pengesahan akhir, persetujuan rekomendasi admin wilayah, dan penerimaan sah anggota 10 Pilar PSKS se-Jawa Barat.
+              </p>
+
+              {/* Highlight Bullets */}
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-600 shrink-0" />
+                  <span>Rekomendasi 27 Kab/Kota</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0 hidden sm:block" />
+                  <span>Pengesahan Sah Realtime</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Action Button & Sensor Indicator */}
-            <div className="flex items-center gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0">
-              <button
-                onClick={onOpenTaskManagerConsole}
-                className="relative w-full md:w-auto bg-gradient-to-r from-purple-700 to-violet-800 hover:from-purple-800 hover:to-violet-900 text-white font-extrabold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-purple-700/20 transition-all duration-200 flex items-center justify-center gap-2 group/btn text-xs sm:text-sm tracking-wide cursor-pointer"
-              >
-                <span>Buka Pengesahan Anggota</span>
-                <ArrowRight className="w-4 h-4 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0" />
-
-                {/* Sensor Lampu Mini di Button */}
-                {hasPendingSuperadmin && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600 border-2 border-white"></span>
-                  </span>
-                )}
-              </button>
-            </div>
+            {/* Action Button */}
+            <button
+              onClick={onOpenTaskManagerConsole}
+              className="w-full bg-gradient-to-r from-purple-700 to-violet-800 hover:from-purple-800 hover:to-violet-900 text-white font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-purple-700/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer"
+            >
+              <span className="truncate">Pengesahan Anggota</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
           </div>
-        </div>
 
-        {/* BARIS KETIGA: FITUR KHUSUS SUPERADMIN & DEVELOPER (BARIS BARU DI BAWAH PENGESAHAN ANGGOTA - UNTUK LAPTOP & HP) */}
-        <div className="max-w-7xl w-full mx-auto mt-2 sm:mt-4 lg:mt-6">
-          <div className="group relative bg-gradient-to-r from-white via-teal-50/30 to-emerald-50/50 rounded-xl sm:rounded-2xl border border-teal-200 hover:border-teal-400 p-3 sm:p-5 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-5 overflow-hidden">
-            {/* Top Accent Gradient Bar */}
-            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-teal-600 via-emerald-400 to-[#128c7e] absolute top-0 left-0" />
-
-            {/* Left Content Area */}
-            <div className="flex items-start gap-3 sm:gap-4 flex-1">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-teal-700 to-emerald-900 text-teal-100 rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-teal-400/30 shrink-0 mt-0.5">
-                <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-teal-200" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="bg-teal-100 text-teal-900 text-[8px] sm:text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider border border-teal-300 shadow-2xs leading-none">
-                    FITUR KHUSUS SUPERADMIN & DEVELOPER
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-                    <Sparkles className="w-3 h-3 text-teal-600" />
-                    Pusat Tanya Jawab Publik
-                  </span>
-                </div>
-                <h4 className="text-sm sm:text-lg font-black text-teal-950 group-hover:text-teal-800 transition-colors leading-snug">
-                  Kelola Tanya Jawab Portal (FAQ Management)
-                </h4>
-                <p className="text-xs text-slate-600 font-medium leading-relaxed mt-1 max-w-3xl">
-                  Tambah, sunting redaksi, atur prioritas nomor urut, dan kendalikan status saklar tayang publik untuk daftar pertanyaan FAQ di beranda secara *realtime*.
-                </p>
-
-                {/* Highlight Bullets */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-2.5 pt-2 border-t border-teal-100 text-[10px] sm:text-xs text-slate-700 font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                    <span>Sinkronisasi Realtime Cloud Firestore</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                    <span>4 Kategori Standar Dinsos Jabar</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 hidden sm:flex">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                    <span>Terhubung Otomatis ke Asisten AI</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Action Button */}
-            <div className="flex items-center gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0">
-              <button
-                onClick={onOpenFaqConsole}
-                className="w-full md:w-auto bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-800 hover:to-emerald-900 text-white font-extrabold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-md hover:shadow-teal-700/20 transition-all duration-200 flex items-center justify-center gap-2 group/btn text-xs sm:text-sm tracking-wide cursor-pointer"
-              >
-                <span>Kelola FAQ Portal</span>
-                <ArrowRight className="w-4 h-4 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* BARIS KEEMPAT: FITUR 6 S/D FITUR 8 (GRID 3 KOLOM) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4 lg:gap-6 max-w-7xl w-full mx-auto mt-2 sm:mt-4 lg:mt-6">
-          
           {/* FITUR 6: TAMBAH PENGUMUMAN (Theme: Vivid Orange & Coral) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-orange-50/30 rounded-xl sm:rounded-2xl border border-orange-200 hover:border-orange-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             {/* Top Accent Gradient Bar */}
@@ -591,6 +522,52 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             </button>
           </div>
 
+          {/* FITUR 9: KELOLA TANYA JAWAB PORTAL (FAQ MANAGEMENT) (Theme: Deep Teal & Emerald) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-teal-50/30 rounded-xl sm:rounded-2xl border border-teal-200 hover:border-teal-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            {/* Top Accent Gradient Bar */}
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-teal-500 via-emerald-400 to-[#128c7e] absolute top-0 left-0" />
+
+            <div>
+              {/* Icon Box & Badge Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-teal-700 to-emerald-900 text-teal-100 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-teal-400/30 shrink-0">
+                  <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-teal-200" />
+                </div>
+                <span className="bg-teal-100 text-teal-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-teal-200 shadow-2xs leading-none">
+                  FITUR 9
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h4 className="text-[11px] sm:text-base font-black text-teal-950 mb-1 sm:mb-2 group-hover:text-teal-800 transition-colors leading-snug">
+                Kelola FAQ Portal
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Pusat kendali tanya jawab beranda, edit redaksi, nomor prioritas, & saklar tayang publik realtime.
+              </p>
+
+              {/* Highlight Bullets */}
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-600 shrink-0" />
+                  <span>Sinkronisasi Firestore</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 hidden sm:block" />
+                  <span>Saklar Tayang Publik</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={onOpenFaqConsole}
+              className="w-full bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-800 hover:to-emerald-900 text-white font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-teal-700/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer"
+            >
+              <span className="truncate">Kelola FAQ</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
         </div>
       </div>
     </section>
