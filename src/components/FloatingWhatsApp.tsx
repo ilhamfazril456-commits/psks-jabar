@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppSettings, UserSession } from '../types';
 
 interface FloatingWhatsAppProps {
@@ -9,6 +9,7 @@ interface FloatingWhatsAppProps {
 
 export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ appSettings, session, currentWilayah }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isPulsingNotice, setIsPulsingNotice] = useState(false);
 
   // Determine active region
   const targetWilayah = currentWilayah || session?.wilayah;
@@ -27,13 +28,42 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ appSettings,
   const finalNum = cleanNum.startsWith('0') ? '62' + cleanNum.slice(1) : cleanNum;
   const waUrl = `https://wa.me/${finalNum}`;
 
+  // Listen to programmatic trigger (e.g. from FAQ button "Hubungi Kami")
+  useEffect(() => {
+    const handleTriggerWa = () => {
+      setIsPulsingNotice(true);
+      setIsHovered(true);
+
+      // Open WhatsApp link in new window
+      const win = window.open(waUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // Fallback for popup blockers: click native anchor element
+        const btn = document.getElementById('floating-whatsapp-btn') as HTMLAnchorElement | null;
+        if (btn) btn.click();
+      }
+
+      setTimeout(() => {
+        setIsPulsingNotice(false);
+        setIsHovered(false);
+      }, 3500);
+    };
+
+    window.addEventListener('open-floating-whatsapp', handleTriggerWa);
+    return () => {
+      window.removeEventListener('open-floating-whatsapp', handleTriggerWa);
+    };
+  }, [waUrl]);
+
   return (
     <div className="fixed bottom-3.5 right-3.5 sm:bottom-6 sm:right-6 z-40 animate-wa-float select-none flex items-center justify-end">
       {/* Tightly Scoped Radar Pulse Rings (Confined to compact icon bounds) */}
-      <span className="absolute right-0 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-[#25d366] opacity-40 animate-wa-pulse-1 pointer-events-none" />
+      <span className={`absolute right-0 rounded-full bg-[#25d366] pointer-events-none transition-all duration-300 ${
+        isPulsingNotice ? 'w-16 h-16 sm:w-20 sm:h-20 opacity-80 animate-ping' : 'w-11 h-11 sm:w-14 sm:h-14 opacity-40 animate-wa-pulse-1'
+      }`} />
       <span className="absolute right-0 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-emerald-400 opacity-40 animate-wa-pulse-2 pointer-events-none" />
 
       <a
+        id="floating-whatsapp-btn"
         href={waUrl}
         target="_blank"
         rel="noreferrer"
@@ -45,7 +75,9 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ appSettings,
         onTouchEnd={() => {
           setTimeout(() => setIsHovered(false), 2200);
         }}
-        className="relative z-10 flex items-center justify-center min-w-[48px] min-h-[48px] bg-gradient-to-r from-[#25d366] via-[#1ebd5a] to-[#128c7e] text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(37,211,102,0.4)] transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ring-2 ring-white/40 group"
+        className={`relative z-10 flex items-center justify-center min-w-[48px] min-h-[48px] bg-gradient-to-r from-[#25d366] via-[#1ebd5a] to-[#128c7e] text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(37,211,102,0.4)] transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(37,211,102,0.6)] hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ring-2 ring-white/40 group ${
+          isPulsingNotice ? 'scale-110 ring-4 ring-emerald-300 shadow-[0_0_25px_rgba(37,211,102,0.9)] animate-bounce' : ''
+        }`}
       >
         {/* Ambient Subtle Glow */}
         <span

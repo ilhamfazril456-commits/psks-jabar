@@ -1809,6 +1809,27 @@ export default function App() {
     navigateToTab('faq_manage');
   };
 
+  const handleOpenFloatingWhatsApp = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('open-floating-whatsapp'));
+    const waBtn = document.getElementById('floating-whatsapp-btn') as HTMLAnchorElement | null;
+    if (waBtn) {
+      waBtn.click();
+    } else {
+      let rawNum = appSettings?.floatingWaSuperadminNumber || appSettings?.floatingWaNumber || '6289602421065';
+      const cleanNum = rawNum.replace(/[^0-9]/g, '');
+      const finalNum = cleanNum.startsWith('0') ? '62' + cleanNum.slice(1) : cleanNum;
+      window.open(`https://wa.me/${finalNum}`, '_blank');
+    }
+  }, [appSettings]);
+
+  const handleOpenAiAssistant = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('open-ai-assistant'));
+    const aiBtn = document.getElementById('btn-open-ai-assistant');
+    if (aiBtn) {
+      aiBtn.click();
+    }
+  }, []);
+
   const handleOpenAnnouncementDetail = (ann?: AnnouncementConfig) => {
     navigateToTab('announcement_detail', { detailData: ann || appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG });
   };
@@ -3275,13 +3296,8 @@ export default function App() {
             <React.Suspense fallback={null}>
               <PortalFaqSection
                 faqs={portalFaqs}
-                onOpenAiAssistant={() => {
-                  const aiBtn = document.getElementById('btn-open-ai-assistant');
-                  if (aiBtn) aiBtn.click();
-                }}
-                onOpenContact={() => {
-                  navigateToTab('kontak');
-                }}
+                onOpenAiAssistant={handleOpenAiAssistant}
+                onOpenContact={handleOpenFloatingWhatsApp}
               />
             </React.Suspense>
 

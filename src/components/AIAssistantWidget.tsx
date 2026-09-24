@@ -350,6 +350,21 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     });
   }, []);
 
+  // Listen for global request to open AI Assistant (e.g. from FAQ or Header buttons)
+  useEffect(() => {
+    const handleOpenExternal = () => {
+      setIsOpen(true);
+      setRotationSeed((prev) => prev + 1);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 350);
+    };
+    window.addEventListener('open-ai-assistant', handleOpenExternal);
+    return () => {
+      window.removeEventListener('open-ai-assistant', handleOpenExternal);
+    };
+  }, []);
+
   // Voice-to-Text handler using browser Web Speech API
   const handleToggleVoice = () => {
     const SpeechRecognition =
@@ -1046,6 +1061,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       >
         {/* Floating Trigger Button */}
         <button
+          id="btn-open-ai-assistant"
           type="button"
           onClick={handleToggleWidget}
           onMouseEnter={() => setIsHovered(true)}
