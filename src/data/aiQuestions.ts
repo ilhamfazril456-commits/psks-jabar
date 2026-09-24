@@ -72,6 +72,13 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           question: 'Bagaimana cara melihat pengumuman dan berita terbaru dari Dinas Sosial Jawa Barat?',
           hint: 'Fitur Pengumuman & Berita',
         },
+        {
+          id: 'u-faq-info',
+          category: 'Panduan Umum',
+          role: 'user',
+          question: 'Di mana saya bisa membaca daftar Tanya Jawab (FAQ) resmi di portal PSKS Jabar?',
+          hint: 'Daftar FAQ Portal Beranda',
+        },
       ],
     },
     {
@@ -497,6 +504,13 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           role: 'superadmin',
           question: 'Bagaimana cara mengedit, menghapus, atau mengatur visibilitas pengumuman Dinsos Jabar?',
           hint: 'Manajemen Pengumuman',
+        },
+        {
+          id: 'sa-faq-mgmt',
+          category: 'Pengumuman & Kontak WA',
+          role: 'superadmin',
+          question: 'Bagaimana cara kerja Fitur Kelola Tanya Jawab Portal (FAQ Management) dan di mana letak posisinya?',
+          hint: 'Kelola FAQ Portal Beranda',
         },
       ],
     },

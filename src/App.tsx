@@ -66,6 +66,11 @@ const AnnouncementManagementPage = React.lazy(() => import('./components/Announc
 const AnnouncementDetailPage = React.lazy(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
 const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
 const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
+const FAQManagementPage = React.lazy(() => import('./components/FAQManagementPage').then(m => ({ default: m.FAQManagementPage })));
+const PortalFaqSection = React.lazy(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
+import { PortalFaqItem } from './types';
+import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
+import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
 import { Inbox, ArrowRight, ClipboardList, Lock, LogIn, Check } from 'lucide-react';
 import { isSubmissionPendingWilayah } from './utils/submissionStatus';
 
@@ -538,6 +543,9 @@ export default function App() {
           break;
         case 'floating_wa_manage':
           import('./components/FloatingWaManagerPage');
+          break;
+        case 'faq_manage':
+          import('./components/FAQManagementPage');
           break;
         case 'superadmin_settings':
           import('./components/SuperadminSettingsPage');
@@ -1531,6 +1539,42 @@ export default function App() {
     return () => unsubscribe();
   }, [session.statusActive]);
 
+  // 3d. Portal FAQs State with Firestore Real-time Listener (Single Source of Truth)
+  const [portalFaqs, setPortalFaqs] = useState<PortalFaqItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('portal_faqs_cache_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_PORTAL_FAQS;
+  });
+
+  useEffect(() => {
+    const unsubscribe = subscribeToFaqs((faqs) => {
+      React.startTransition(() => {
+        setPortalFaqs(faqs);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSaveFaq = useCallback(async (faq: PortalFaqItem) => {
+    const success = await saveFaqToFirestore(faq);
+    return success;
+  }, []);
+
+  const handleDeleteFaq = useCallback(async (faqId: string) => {
+    const success = await deleteFaqFromFirestore(faqId);
+    return success;
+  }, []);
+
+  const handleSeedDefaults = useCallback(async () => {
+    const success = await seedDefaultFaqsToFirestore();
+    return success;
+  }, []);
+
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
@@ -1671,6 +1715,7 @@ export default function App() {
       'floating_wa_manage',
       'user_manage',
       'task_manage',
+      'faq_manage',
     ];
 
     if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
@@ -1758,6 +1803,10 @@ export default function App() {
 
   const handleOpenFloatingWaConsole = () => {
     navigateToTab('floating_wa_manage');
+  };
+
+  const handleOpenFaqConsole = () => {
+    navigateToTab('faq_manage');
   };
 
   const handleOpenAnnouncementDetail = (ann?: AnnouncementConfig) => {
@@ -3217,9 +3266,24 @@ export default function App() {
                   onOpenTaskManagerConsole={handleOpenTaskManagerConsole}
                   onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
                   onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
+                  onOpenFaqConsole={handleOpenFaqConsole}
                 />
               </React.Suspense>
             )}
+
+            {/* Portal FAQ: Eksklusif berada tepat di atas navigasi footer beranda */}
+            <React.Suspense fallback={null}>
+              <PortalFaqSection
+                faqs={portalFaqs}
+                onOpenAiAssistant={() => {
+                  const aiBtn = document.getElementById('btn-open-ai-assistant');
+                  if (aiBtn) aiBtn.click();
+                }}
+                onOpenContact={() => {
+                  navigateToTab('kontak');
+                }}
+              />
+            </React.Suspense>
 
             {/* Portal Footer: Eksklusif berada di bagian paling bawah Beranda */}
             <Footer logoUrl={appSettings?.logoUrl} />
@@ -3389,6 +3453,17 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'faq_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <FAQManagementPage
+            session={session}
+            faqs={portalFaqs}
+            onBackToHome={handleBackToHome}
+            onSaveFaq={handleSaveFaq}
+            onDeleteFaq={handleDeleteFaq}
+            onSeedDefaults={handleSeedDefaults}
+          />
+        )}
+
         {currentTab === 'user_reg_history' && (
           <UserRegistrationHistoryPage
             session={session}
@@ -3438,6 +3513,7 @@ export default function App() {
               'floating_wa_manage',
               'user_manage',
               'task_manage',
+              'faq_manage',
             ];
             const isSuperadminOrDev =
               session.statusActive === 'SAH_TERDAFTAR' &&

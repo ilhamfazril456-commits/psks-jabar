@@ -310,3 +310,15 @@ export interface PillarRegistrationSubmission {
   processedAtFormatted?: string;
 }
 
+export interface PortalFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: 'pilar_psks' | 'pendaftaran' | 'akun_keamanan' | 'bantuan_kontak' | string;
+  order: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+

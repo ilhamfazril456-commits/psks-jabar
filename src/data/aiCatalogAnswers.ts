@@ -459,4 +459,29 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
 6. **Logistik & Pergudangan**: Pengelolaan bufferstock sandang-pangan terintegrasi.
 
 [[action:pillar:tagana:Buka Modul Tagana Jabar]] [[action:tab:user_reg_history:Pantau Riwayat Penugasan]]`,
+
+  'u-faq-info': `**Lokasi & Akses Daftar Tanya Jawab (FAQ) Resmi Portal PSKS Jabar**:
+- **Posisi di Portal**: Daftar FAQ resmi berada di halaman **Beranda paling bawah, persis di atas navigasi footer**.
+- **4 Kategori Utama**:
+  1. **Pendaftaran & Akun**: Prosedur menjadi anggota, verifikasi NIK, dan aktivasi akun.
+  2. **Legalitas & Regulasi**: Keabsahan KTA digital QR code, UU No. 11/2009, dan UU PDP No. 27/2022.
+  3. **Layanan & Teknis Portal**: Biaya layanan 100% gratis, peta spasial 27 Kab/Kota, dan panduan fitur.
+  4. **Bantuan & Informasi Dinsos**: Kontak WhatsApp dinas, alamat kantor Cimahi, dan konsultasi interaktif Asisten AI.
+- **Fitur Interaktif**: Bapak/Ibu dapat mencari pertanyaan lewat kolom pencarian instan, memfilter kategori, atau bertanya langsung kepada saya di sini.
+
+[[action:tab:beranda:Buka Beranda & Lihat FAQ]]`,
+
+  'sa-faq-mgmt': `**Panduan Fitur Kelola Tanya Jawab Portal (FAQ Management) Superadmin & Developer**:
+
+**📍 Posisi Fitur**:
+- Berada pada **baris baru tepat di bawah Fitur 5 (Pengesahan & Penerimaan Anggota)**, baik pada tampilan Laptop maupun HP.
+
+**⚙️ Alur & Tata Cara Pengelolaan**:
+1. **Buka Konsol**: Klik tombol **"Kelola FAQ Portal"** pada kotak fitur di beranda.
+2. **Tambah Tanya Jawab**: Klik **"+ Tambah Tanya Jawab"**, masukkan redaksi pertanyaan, pilih salah satu dari 4 kategori resmi, ketik jawaban lengkap, atur nomor prioritas urutan, dan tentukan status tayang publik -> Klik **"Simpan Tanya Jawab"**. Data langsung tersimpan *realtime* di Cloud Firestore koleksi \`portal_faqs\`.
+3. **Edit Redaksi**: Klik tombol pensil pada kartu FAQ, perbaiki teks atau jawaban, lalu klik **"Simpan Perubahan"**.
+4. **Saklar Tayang Instan**: Geser saklar **Aktif / Nonaktif** untuk mengendalikan visibilitas pertanyaan di portal publik seketika.
+5. **Hapus / Reset**: Hapus pertanyaan usang via ikon tempat sampah, atau gunakan tombol **"Pulihkan Standar Dinsos"** untuk merestore daftar rekomendasi Dinsos Jabar.
+
+[[action:tab:faq_manage:Buka Kelola FAQ Portal]]`,
 };

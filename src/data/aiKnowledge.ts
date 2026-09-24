@@ -771,7 +771,82 @@ Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali
   * Memiliki 3 tingkat kendali saklar: **Global** (kunci seluruh portal), **Per-Role** (hanya kunci Publik atau Admin), dan **Granular 27 Kab/Kota** (hanya kunci daerah tertentu).
   * Tuliskan banner pesan pemeliharaan dan estimasi waktu penyelesaian.
   * Superadmin dan Developer memiliki hak akses *bypass* otomatis sehingga tetap dapat login dan mengelola sistem saat maintenance aktif.
-[[action:tab:maintenance:Buka Saklar Maintenance]]`;
+[[action:tab:maintenance:Buka Saklar Maintenance]]
+
+---
+
+### **🌟 Fitur Tambahan Superadmin & Developer: Kelola Tanya Jawab Portal (FAQ Management)**
+- **Posisi**: Berada di **baris baru tepat di bawah Fitur 5 (Pengesahan & Penerimaan Anggota)** untuk tampilan laptop maupun tampilan HP.
+- **Fungsi**: Pusat kendali penuh daftar pertanyaan yang sering diajukan di beranda publik.
+- **Alur Teknis**:
+  * Tambah pertanyaan dan jawaban baru dengan memilih salah satu dari 4 kategori resmi.
+  * Sunting redaksi pertanyaan/jawaban seketika dengan sinkronisasi realtime Cloud Firestore.
+  * Atur urutan nomor prioritas dan aktifkan/nonaktifkan saklar tayang publik secara instan.
+  * Opsi pulihkan (*restore*) ke standar resmi rekomendasi Dinsos Jabar.
+[[action:tab:faq_manage:Buka Kelola FAQ Portal]]`;
+  }
+
+  // 0.28 FITUR KELOLA TANYA JAWAB PORTAL (FAQ MANAGEMENT) & FAQ PUBLIK
+  const isFaqQuery =
+    q.includes('faq') ||
+    q.includes('tanya jawab') ||
+    q.includes('pertanyaan yang sering diajukan') ||
+    q.includes('pertanyaan sering diajukan') ||
+    q.includes('kelola faq') ||
+    q.includes('manajemen faq');
+
+  if (isFaqQuery) {
+    if (userRole === 'superadmin' || isDeveloperUser) {
+      return `${salamPrefix}**Panduan Fitur Kelola Tanya Jawab Portal (FAQ Management)**:
+
+Fitur **Kelola FAQ Portal** adalah instrumen kendali eksklusif khusus **Superadmin & Developer** untuk mengelola seluruh daftar pertanyaan yang sering diajukan di portal publik beranda.
+
+---
+
+### **📍 Posisi Fitur di Beranda**:
+- **Tampilan Laptop (Desktop)**: Ditempatkan di **baris baru tepat di bawah fitur Pengesahan & Penerimaan Anggota (Fitur 5)**.
+- **Tampilan HP (Mobile)**: Ditempatkan di **baris baru tersendiri** tepat di bawah kartu Pengesahan & Penerimaan Anggota.
+
+---
+
+### **⚙️ Kemampuan & Alur Pengelolaan**:
+1. **Tambah Tanya Jawab Baru**:
+   - Klik tombol **"Kelola FAQ Portal"** di beranda.
+   - Klik tombol **"+ Tambah Tanya Jawab"**.
+   - Isi form: **Pertanyaan**, **Kategori** (*Pendaftaran & Akun, Legalitas & Regulasi, Layanan & Teknis, atau Bantuan & Informasi*), **Jawaban Lengkap**, **Nomor Urut Prioritas**, dan **Saklar Tayang Publik**.
+   - Klik **"Simpan Tanya Jawab"** -> Tersimpan *realtime* ke pangkalan data Cloud Firestore (\`portal_faqs\`).
+
+2. **Edit & Perbarui Redaksi**:
+   - Temukan pertanyaan yang ingin diedit -> Klik ikon pensil (**Edit**).
+   - Perbaiki redaksi pertanyaan atau jawaban -> Klik **"Simpan Perubahan"**. Perubahan langsung tampil di portal publik tanpa reload.
+
+3. **Kendali Saklar Tayang Publik**:
+   - Cukup geser saklar **Aktif / Nonaktif** pada kartu FAQ untuk menyembunyikan atau menampilkan pertanyaan dari publik secara seketika.
+
+4. **Hapus Pertanyaan**:
+   - Klik ikon tempat sampah merah -> Konfirmasi pada dialog keamanan.
+
+5. **Reset ke Standar Dinsos Jabar**:
+   - Jika ingin memulihkan daftar FAQ resmi rekomendasi Dinas Sosial Jabar, klik tombol **"Pulihkan Standar Dinsos"**.
+
+---
+[[action:tab:faq_manage:Buka Kelola FAQ Portal]]`;
+    }
+
+    // Untuk Pengguna Umum, Tamu, dan Admin Wilayah:
+    return `${salamPrefix}**Pertanyaan yang Sering Diajukan (FAQ) Portal PSKS Jabar**:
+
+Daftar **FAQ resmi** dapat Bapak/Ibu temukan di halaman **Beranda paling bawah, tepat di atas navigasi footer**. 
+
+Tanya jawab di portal ini mencakup 4 kategori utama:
+1. **Pendaftaran & Akun**: Tata cara pendaftaran relawan 10 pilar, syarat NIK, dan aktivasi akun resmi.
+2. **Legalitas & Regulasi**: Keabsahan KTA digital bersertifikat QR code, UU No. 11/2009, Permensos, dan perlindungan privasi UU PDP No. 27/2022.
+3. **Layanan & Teknis Portal**: Biaya layanan (100% Gratis), fitur peta sebaran spasial 27 Kab/Kota, dan panduan teknis.
+4. **Bantuan & Informasi Dinsos**: Akses kontak hotline WhatsApp, alamat kantor Dinsos Jabar di Cimahi, dan konsultasi interaktif Asisten AI.
+
+Bapak/Ibu juga dapat langsung menanyakan pertanyaan spesifik kepada saya di sini, dan saya akan menjawabnya seketika!
+
+[[action:tab:beranda:Buka Beranda & Lihat FAQ]]`;
   }
 
   // 0.27 PANDUAN LENGKAP FITUR DI MENU PENGATURAN (RBAC: SUPERADMIN & DEVELOPER)

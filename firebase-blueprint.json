@@ -210,6 +210,24 @@
         "lastRegisteredAt": { "type": "string" }
       },
       "required": ["identifier", "registeredAccounts", "count"]
+    },
+    "portal_faqs": {
+      "title": "Portal FAQs Collection",
+      "description": "Daftar tanya jawab resmi portal PSKS Jawa Barat yang dapat dikelola oleh Superadmin dan Developer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "category": { "type": "string" },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdBy": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "question", "answer", "category", "order", "isActive"]
     }
   }
 }

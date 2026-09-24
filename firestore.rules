@@ -156,6 +156,16 @@ service cloud.firestore {
       allow write: if isValidId(logId) && request.resource.data.keys().size() <= 15;
       allow delete: if isValidId(logId);
     }
+
+    // Collection: portal_faqs (Pusat Tanya Jawab Resmi & FAQ Publik)
+    match /portal_faqs/{faqId} {
+      allow read: if true;
+      allow write: if isValidId(faqId)
+                   && request.resource.data.keys().size() <= 20
+                   && (!('question' in request.resource.data) || isReasonableString(request.resource.data.question, 1000))
+                   && (!('answer' in request.resource.data) || isReasonableString(request.resource.data.answer, 25000));
+      allow delete: if isValidId(faqId);
+    }
   }
 }
 
