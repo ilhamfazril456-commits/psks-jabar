@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { UserSession, DocumentRepoItem, DocumentCategory } from '../types';
 import { DOCUMENT_CATEGORIES } from '../data/defaultDocuments';
 import { downloadOfficialPdf } from '../utils/officialPdfGenerator';
+import { BackToHomeButton } from './BackToHomeButton';
 import {
   ArrowLeft,
   Search,
@@ -35,6 +36,8 @@ import {
   Lock,
   Globe,
   Loader2,
+  UploadCloud,
+  FileUp,
 } from 'lucide-react';
 
 interface DocumentRepositoryPageProps {
@@ -85,6 +88,9 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
   const [formPageCount, setFormPageCount] = useState<number>(10);
   const [formStatus, setFormStatus] = useState<'PUBLIK' | 'INTERNAL_ADMIN'>('PUBLIK');
   const [formTags, setFormTags] = useState('');
+  const [formPdfFileName, setFormPdfFileName] = useState('');
+  const [formPdfDataUrl, setFormPdfDataUrl] = useState('');
+  const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Deletion Modal state
@@ -101,6 +107,11 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
   // Filtered Documents
   const filteredDocuments = useMemo(() => {
     let result = [...documents];
+
+    // Dokumen berstatus INTERNAL_ADMIN hanya dapat dilihat oleh Superadmin / Developer
+    if (!isSuperadminOrDev) {
+      result = result.filter((d) => d.status === 'PUBLIK');
+    }
 
     if (selectedCategory !== 'semua') {
       result = result.filter((d) => d.category === selectedCategory);
@@ -144,6 +155,45 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
     }
   };
 
+  // Handle PDF File Upload (Upload PDF yang sudah jadi)
+  const handlePdfFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('Berkas harus berformat PDF resmi (.pdf)!', 'error');
+      return;
+    }
+
+    setIsReadingPdf(true);
+    // Hitung ukuran aktual berkas (KB atau MB) secara realtime apa adanya
+    const sizeMb = file.size / (1024 * 1024);
+    const sizeStr = sizeMb >= 1 ? `${sizeMb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+    setFormFileSize(sizeStr);
+    setFormPdfFileName(file.name);
+
+    // Otomatis isi judul jika belum diisi oleh admin
+    if (!formTitle.trim()) {
+      const autoTitle = file.name
+        .replace(/\.pdf$/i, '')
+        .replace(/[-_]/g, ' ')
+        .trim();
+      setFormTitle(autoTitle);
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormPdfDataUrl(reader.result as string);
+      setIsReadingPdf(false);
+      showToast(`Berkas "${file.name}" (${sizeStr}) berhasil dimuat!`, 'success');
+    };
+    reader.onerror = () => {
+      setIsReadingPdf(false);
+      showToast('Gagal membaca berkas PDF. Silakan pilih kembali.', 'error');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Open Create Modal
   const handleOpenCreateModal = () => {
     setEditingDoc(null);
@@ -155,9 +205,11 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
     setFormInstansi('Dinas Sosial Provinsi Jawa Barat');
     setFormDescription('');
     setFormFileSize('1.5 MB');
-    setFormPageCount(12);
+    setFormPageCount(10);
     setFormStatus('PUBLIK');
     setFormTags('PSKS, Jabar, Regulasi');
+    setFormPdfFileName('');
+    setFormPdfDataUrl('');
     setIsFormOpen(true);
   };
 
@@ -175,6 +227,8 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
     setFormPageCount(item.pageCount);
     setFormStatus(item.status);
     setFormTags(item.tags ? item.tags.join(', ') : '');
+    setFormPdfFileName(item.fileName || '');
+    setFormPdfDataUrl(item.fileDataUrl || '');
     setIsFormOpen(true);
   };
 
@@ -215,7 +269,9 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       updatedAt: new Date().toISOString(),
       updatedBy: session.nama || 'Superadmin Jabar',
       fileType: 'PDF',
-      pdfType: editingDoc?.pdfType || 'general_official_doc',
+      fileName: formPdfFileName || undefined,
+      fileDataUrl: formPdfDataUrl || undefined,
+      pdfType: editingDoc?.pdfType || 'uploaded_official_doc',
     };
 
     const success = await onSaveDocument(docPayload);
@@ -223,7 +279,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
 
     if (success) {
       setIsFormOpen(false);
-      showToast(editingDoc ? 'Dokumen berhasil diperbarui!' : 'Dokumen baru berhasil ditambahkan!', 'success');
+      showToast(editingDoc ? 'Dokumen berhasil diperbarui!' : 'Dokumen baru berhasil diterbitkan!', 'success');
     } else {
       showToast('Gagal menyimpan dokumen ke database. Coba lagi.', 'error');
     }
@@ -277,38 +333,11 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       )}
 
       {/* Top Header Bar with Navigation & Title */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-        <button
-          type="button"
-          onClick={onBackToHome}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-[#0f2b5c] bg-white border border-slate-200 hover:border-[#0f2b5c] px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition-all cursor-pointer group"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#0f2b5c] group-hover:-translate-x-1 transition-transform" />
-          <span>Kembali ke Beranda</span>
-        </button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 pb-5">
+        <BackToHomeButton onClick={onBackToHome} id="btn-back-top-document-repository" className="w-fit self-start" />
 
-        <div className="flex flex-wrap items-center gap-2">
-          {isSuperadminOrDev && (
-            <>
-              <button
-                type="button"
-                onClick={handleOpenCreateModal}
-                className="inline-flex items-center gap-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md border border-amber-400/40 transition-all cursor-pointer active:scale-95"
-              >
-                <Plus className="w-4 h-4 text-amber-300" />
-                <span>Tambah Dokumen Baru</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsResetConfirmOpen(true)}
-                title="Pulihkan dokumen kedinasan bawaan"
-                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-2.5 rounded-xl border border-slate-300 transition-all cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
-                <span className="hidden md:inline">Reset Default</span>
-              </button>
-            </>
-          )}
+        <div className="text-[11px] sm:text-xs font-bold text-slate-500 bg-white/90 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs text-center sm:text-right">
+          <span>Pusat Unduh Dokumen & Regulasi Kedinasan • Dinsos Jabar</span>
         </div>
       </div>
 
@@ -400,6 +429,45 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
           <div className="text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5">Akses Masyarakat</div>
         </div>
       </div>
+
+      {/* Admin Action Bar (Superadmin & Developer) - Ditempatkan rapi di atas filter dokumen, bukan di header atas */}
+      {isSuperadminOrDev && (
+        <div className="bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#06152d] text-white p-4 sm:p-5 rounded-2xl border-2 border-amber-400/50 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <div className="font-black text-amber-300 text-xs sm:text-sm uppercase tracking-wider">
+                Panel Pengelola Dokumen Kedinasan (Superadmin)
+              </div>
+              <div className="text-[11px] sm:text-xs text-blue-200 font-medium">
+                Terbitkan regulasi baru, kelola naskah TTE resmi, atau pulihkan dokumen ke standar kedinasan.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
+            <button
+              type="button"
+              id="btn-tambah-dokumen-baru"
+              onClick={handleOpenCreateModal}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8901c] hover:opacity-95 text-[#0f2b5c] font-black text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md border border-amber-200 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4 text-[#0f2b5c] stroke-[3]" />
+              <span>Tambah Dokumen Baru</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsResetConfirmOpen(true)}
+              title="Pulihkan dokumen kedinasan bawaan"
+              className="inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-white/20 transition-all cursor-pointer shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden sm:inline">Reset Default</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
@@ -714,14 +782,22 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
         </div>
       )}
 
+      {/* Bottom Navigation Bar */}
+      <div className="pt-6 sm:pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <BackToHomeButton onClick={onBackToHome} id="btn-back-bottom-document-repo" className="w-fit self-start" />
+        <div className="text-[11px] sm:text-xs text-slate-500 font-semibold text-center sm:text-right">
+          <span>Pusat Unduh Dokumen & Regulasi Kedinasan • Dinas Sosial Provinsi Jawa Barat</span>
+        </div>
+      </div>
+
       {/* ========================================================================= */}
       {/* MODAL 1: PREVIEW DOKUMEN & KOP RESMI */}
       {/* ========================================================================= */}
       {previewDoc && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border-2 border-amber-300 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
+          <div className="relative w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]">
             {/* Modal Header */}
-            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40">
+            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0 sticky top-0 z-10">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-amber-300" />
                 <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
@@ -731,14 +807,14 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               <button
                 type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body: Styled Kop Surat & Legal Content */}
-            <div className="p-5 sm:p-8 overflow-y-auto space-y-6 text-slate-800 text-xs sm:text-sm font-sans">
+            <div className="p-5 sm:p-8 overflow-y-auto space-y-6 text-slate-800 text-xs sm:text-sm font-sans flex-1">
               {/* Kop Surat Visualizer */}
               <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1 relative">
                 <div className="text-xs sm:text-sm font-extrabold uppercase text-[#0f2b5c] tracking-wider">
@@ -793,30 +869,48 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
                 </div>
               </div>
 
-              {/* Electronic Signature & BSrE Stamp Banner */}
-              <div className="bg-gradient-to-r from-blue-950 via-[#0f2b5c] to-blue-950 text-white p-4 sm:p-5 rounded-2xl border-2 border-[#d4af37] flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="space-y-1 text-center sm:text-left">
-                  <div className="inline-flex items-center gap-1.5 text-[10px] font-black text-amber-300 uppercase tracking-widest">
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                    <span>TERSERTIFIKASI ELEKTRONIK (TTE)</span>
+              {/* Electronic Signature, Purple Wet Stamp & BSrE Stamp Banner */}
+              <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border-2 border-slate-300 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
+                {/* Info TTE & Pejabat */}
+                <div className="space-y-1.5 text-center md:text-left z-10 flex-1">
+                  <div className="inline-flex items-center gap-1.5 text-[10px] font-black text-blue-900 bg-blue-100/80 px-2.5 py-1 rounded-md border border-blue-200 uppercase tracking-widest">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-800" />
+                    <span>Tersertifikasi Elektronik (TTE) BSrE BSSN</span>
                   </div>
-                  <div className="text-xs sm:text-sm font-black">
-                    KEPALA DINAS SOSIAL PROVINSI JAWA BARAT
+                  <div className="text-xs sm:text-sm font-extrabold text-[#0f2b5c] uppercase">
+                    Kepala Dinas Sosial Pemerintah Daerah Provinsi Jawa Barat
                   </div>
-                  <div className="text-[10px] text-blue-200">
-                    Sertifikasi Resmi Balai Sertifikasi Elektronik (BSrE) - Badan Siber dan Sandi Negara
+                  <div className="text-xs font-bold text-slate-800">
+                    Drs. H. ANDRA WIJAYA, M.Si.
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium">
+                    Pembina Utama Madya • NIP. 19680514 199303 1 004
                   </div>
                 </div>
 
-                <div className="shrink-0 bg-white text-[#0f2b5c] p-2 rounded-xl text-center shadow">
-                  <QrCode className="w-10 h-10 mx-auto text-[#0f2b5c]" />
-                  <div className="text-[8px] font-bold text-slate-600 mt-1 uppercase">Validasi Sah</div>
+                {/* Stempel Basah Kedinasan Digital (Warna Ungu/Kebiruan #4338ca) */}
+                <div className="shrink-0 flex items-center justify-center relative select-none">
+                  <div className="w-24 h-24 rounded-full border-2 border-[#4338ca] text-[#4338ca] flex flex-col items-center justify-center p-1 relative shadow-xs bg-indigo-50/20 rotate-[-4deg]">
+                    <div className="w-[86px] h-[86px] rounded-full border border-[#4338ca] flex flex-col items-center justify-center p-1 text-center">
+                      <div className="text-[6.5px] font-black tracking-tight leading-none uppercase">PEMDA PROV. JABAR</div>
+                      <div className="h-px w-10 bg-[#4338ca] my-0.5" />
+                      <div className="text-[8px] font-black uppercase tracking-wider leading-none">DINAS SOSIAL</div>
+                      <div className="h-px w-10 bg-[#4338ca] my-0.5" />
+                      <div className="text-[5.5px] font-black uppercase tracking-tight">★ RESMI & SAH ★</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* QR Code Validasi BSrE BSSN */}
+                <div className="shrink-0 bg-white p-2.5 rounded-xl border border-slate-200 text-center shadow-xs">
+                  <QrCode className="w-12 h-12 mx-auto text-[#0f2b5c]" />
+                  <div className="text-[8px] font-black text-slate-700 mt-1 uppercase">Validasi TTE BSrE</div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="bg-slate-50 p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="bg-slate-50 p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
               <div className="text-[11px] text-slate-500 font-medium text-center sm:text-left">
                 Telah diunduh sebanyak <strong className="text-slate-800">{previewDoc.downloadCount.toLocaleString('id-ID')} kali</strong>
               </div>
@@ -849,25 +943,81 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       {/* MODAL 2: TAMBAH / EDIT DOKUMEN BARU (SUPERADMIN & DEVELOPER) */}
       {/* ========================================================================= */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-2 border-amber-400 overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40">
+        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]">
+            {/* Modal Header: Selalu tampil di atas, tidak terpotong */}
+            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-amber-300" />
                 <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
-                  {editingDoc ? 'Edit Data Dokumen Kedinasan' : 'Tambah Dokumen / Regulasi Baru'}
+                  {editingDoc ? 'Edit Data Dokumen Kedinasan' : 'Tambah & Unggah Dokumen PDF Baru'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10"
+                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+            {/* Modal Body: Dapat di-scroll leluasa di laptop maupun HP */}
+            <form id="form-dokumen-kedinasan" onSubmit={handleSaveSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1 min-h-0">
+              {/* AREA UPLOAD FILE PDF SUDAH JADI */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/50 hover:bg-blue-50/80 transition-colors">
+                <input
+                  type="file"
+                  id="upload-pdf-file-input"
+                  accept="application/pdf"
+                  onChange={handlePdfFileSelect}
+                  className="hidden"
+                />
+
+                {formPdfFileName ? (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-blue-200 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                        <FileCheck className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">
+                            PDF Terlampir
+                          </span>
+                          <span className="text-xs font-bold text-slate-600">{formFileSize}</span>
+                        </div>
+                        <div className="text-xs sm:text-sm font-bold text-slate-900 truncate mt-0.5" title={formPdfFileName}>
+                          {formPdfFileName}
+                        </div>
+                      </div>
+                    </div>
+                    <label
+                      htmlFor="upload-pdf-file-input"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shrink-0"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      <span>Ganti PDF</span>
+                    </label>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="upload-pdf-file-input"
+                    className="flex flex-col items-center justify-center text-center py-5 px-3 cursor-pointer group"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-blue-100 group-hover:bg-blue-200 border border-blue-300 flex items-center justify-center text-blue-700 transition-colors mb-2">
+                      <UploadCloud className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs sm:text-sm font-bold text-blue-950 group-hover:text-blue-800">
+                      Pilih / Unggah Berkas PDF Resmi Kedinasan
+                    </span>
+                    <span className="text-[11px] text-slate-500 max-w-md mt-1">
+                      Superadmin atau Developer dapat langsung mengunggah file PDF yang sudah jadi. Ukuran dan nama file akan terhitung otomatis apa adanya.
+                    </span>
+                  </label>
+                )}
+              </div>
+
               {/* Judul Dokumen */}
               <div>
                 <label className="block font-black text-slate-800 mb-1">Judul Dokumen / Regulasi *</label>
@@ -978,7 +1128,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               {/* Ukuran File & Jumlah Halaman */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-black text-slate-800 mb-1">Estimasi Ukuran File</label>
+                  <label className="block font-black text-slate-800 mb-1">Ukuran File (Otomatis dari PDF)</label>
                   <input
                     type="text"
                     value={formFileSize}
@@ -994,7 +1144,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
                     type="number"
                     value={formPageCount}
                     onChange={(e) => setFormPageCount(Number(e.target.value))}
-                    placeholder="24"
+                    placeholder="10"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-[#0f2b5c]"
                   />
                 </div>
@@ -1011,26 +1161,27 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-[#0f2b5c]"
                 />
               </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md border border-amber-400/40 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>{editingDoc ? 'Simpan Perubahan' : 'Terbitkan Dokumen'}</span>
-                </button>
-              </div>
             </form>
+
+            {/* Modal Footer: Selalu terpancang di bawah, tidak terpotong */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="form-dokumen-kedinasan"
+                disabled={isSaving || isReadingPdf}
+                className="bg-[#0f2b5c] hover:bg-[#143b7d] text-amber-300 font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-md border border-amber-400/40 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSaving || isReadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{editingDoc ? 'Simpan Perubahan' : 'Terbitkan Dokumen'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1039,7 +1190,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       {/* MODAL 3: KONFIRMASI HAPUS DOKUMEN */}
       {/* ========================================================================= */}
       {deletingDoc && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border-2 border-rose-300">
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center">
               <AlertTriangle className="w-6 h-6" />
@@ -1075,7 +1226,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       {/* MODAL 4: KONFIRMASI RESET STANDAR KEDINASAN */}
       {/* ========================================================================= */}
       {isResetConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border-2 border-amber-300">
             <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl mx-auto flex items-center justify-center">
               <RotateCcw className="w-6 h-6" />

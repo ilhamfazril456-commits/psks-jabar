@@ -69,6 +69,7 @@ const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRe
 const FAQManagementPage = React.lazy(() => import('./components/FAQManagementPage').then(m => ({ default: m.FAQManagementPage })));
 const PortalFaqSection = React.lazy(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
 const DocumentRepositoryPage = React.lazy(() => import('./components/DocumentRepositoryPage').then(m => ({ default: m.DocumentRepositoryPage })));
+const PublicDocumentRepoSection = React.lazy(() => import('./components/PublicDocumentRepoSection').then(m => ({ default: m.PublicDocumentRepoSection })));
 import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
 import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
@@ -1768,7 +1769,6 @@ export default function App() {
       'user_manage',
       'task_manage',
       'faq_manage',
-      'document_repository',
     ];
 
     if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
@@ -3359,6 +3359,23 @@ export default function App() {
               />
             </React.Suspense>
 
+            {/* Titik Akses Publik: Pusat Unduh Dokumen & Regulasi Kedinasan (Tepat di atas navigasi footer beranda) */}
+            <React.Suspense fallback={null}>
+              <PublicDocumentRepoSection
+                documents={portalDocuments}
+                onOpenRepository={() => navigateToTab('document_repository')}
+                onDownloadDoc={async (doc) => {
+                  try {
+                    const { downloadOfficialPdf } = await import('./utils/officialPdfGenerator');
+                    await downloadOfficialPdf(doc);
+                    await handleIncrementDocumentDownload(doc.id, doc.downloadCount || 0);
+                  } catch (err) {
+                    console.error('Home download error', err);
+                  }
+                }}
+              />
+            </React.Suspense>
+
             {/* Portal Footer: Eksklusif berada di bagian paling bawah Beranda */}
             <Footer logoUrl={appSettings?.logoUrl} />
         </div>
@@ -3538,7 +3555,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'document_repository' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+        {currentTab === 'document_repository' && (
           <DocumentRepositoryPage
             session={session}
             documents={portalDocuments}

@@ -72,7 +72,24 @@ export function subscribeToDocuments(
           pdfType: (data as any).pdfType || undefined,
           externalDownloadUrl: (data as any).externalDownloadUrl || undefined,
           fileType: (data as any).fileType || 'PDF',
+          fileName: (data as any).fileName || undefined,
+          fileDataUrl: (data as any).fileDataUrl || undefined,
         });
+      });
+
+      // Ensure all official default documents are synced and present
+      DEFAULT_DOCUMENT_REPOSITORY.forEach((def) => {
+        const existingIdx = items.findIndex((it) => it.id === def.id);
+        if (existingIdx === -1) {
+          items.push(def);
+          setFirestoreDoc(COLLECTION_NAME, def.id, cleanFirestoreData(def), { merge: true }).catch(() => {});
+        } else {
+          // If title or pdfType needs update to official standard
+          if (items[existingIdx].pdfType !== def.pdfType || items[existingIdx].title !== def.title) {
+            items[existingIdx] = { ...items[existingIdx], ...def, downloadCount: items[existingIdx].downloadCount || 0 };
+            setFirestoreDoc(COLLECTION_NAME, def.id, cleanFirestoreData(items[existingIdx]), { merge: true }).catch(() => {});
+          }
+        }
       });
 
       // Sort by creation date (newest first)

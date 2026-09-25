@@ -349,5 +349,7 @@ export interface DocumentRepoItem {
   pdfType?: string;
   externalDownloadUrl?: string;
   fileType?: 'PDF' | 'DOCX' | 'XLSX';
+  fileName?: string;
+  fileDataUrl?: string;
 }
 

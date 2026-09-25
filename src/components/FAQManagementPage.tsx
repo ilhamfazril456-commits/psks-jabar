@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { UserSession, PortalFaqItem } from '../types';
 import { FAQ_CATEGORIES, DEFAULT_PORTAL_FAQS } from '../data/defaultFaqs';
+import { BackToHomeButton } from './BackToHomeButton';
 import {
   ArrowLeft,
   Plus,
@@ -257,13 +258,9 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
       <header className="bg-gradient-to-r from-[#043e2e] via-[#0d3b2f] to-[#128c7e] text-white py-6 sm:py-8 px-4 sm:px-8 shadow-lg border-b border-emerald-700/50">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <button
-              onClick={onBackToHome}
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-200 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-all mb-3 cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Kembali ke Beranda</span>
-            </button>
+            <div className="mb-3">
+              <BackToHomeButton onClick={onBackToHome} variant="glass" id="btn-back-top-faq-manage" />
+            </div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-md text-[10px] sm:text-xs font-black bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 uppercase tracking-wider">
                 Pusat Kendali Superadmin & Developer
@@ -472,14 +469,22 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
             ))
           )}
         </div>
+
+        {/* Bottom Navigation Bar */}
+        <div className="pt-6 sm:pt-8 mt-8 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <BackToHomeButton onClick={onBackToHome} id="btn-back-bottom-faq-manage" className="w-fit self-start" />
+          <div className="text-[11px] sm:text-xs text-slate-500 font-semibold text-center sm:text-right">
+            <span>Portal Tanya Jawab Resmi (FAQ) • Dinas Sosial Provinsi Jawa Barat</span>
+          </div>
+        </div>
       </main>
 
       {/* MODAL: Tambah / Edit FAQ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-fadeIn pt-14 sm:pt-6 pb-12">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full my-auto max-h-[85vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-800 to-teal-800 text-white flex items-center justify-between">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-800 to-teal-800 text-white flex items-center justify-between shrink-0 sticky top-0 z-10">
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-200">
                   {editingFaq ? 'Mode Sunting Data' : 'Tambah Pertanyaan Baru'}
@@ -653,7 +658,7 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
 
       {/* MODAL: Konfirmasi Hapus */}
       {deletingFaq && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-rose-200 shadow-2xl max-w-md w-full p-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
@@ -685,7 +690,7 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
 
       {/* MODAL: Konfirmasi Reset ke Default */}
       {isResetConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-amber-200 shadow-2xl max-w-md w-full p-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
               <RotateCcw className="w-6 h-6" />
