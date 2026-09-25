@@ -255,5 +255,59 @@
       },
       "required": ["id", "title", "category", "nomorRegulasi", "status"]
     }
+  },
+  "firestore": {
+    "/admin_accounts/{accountId}": {
+      "schema": "admin_accounts",
+      "description": "Akun administrator wilayah dan superadmin"
+    },
+    "/psks_records/{recordId}": {
+      "schema": "psks_records",
+      "description": "Data record personil 12 Pilar PSKS se-Jawa Barat"
+    },
+    "/app_settings/{documentId}": {
+      "schema": "app_settings",
+      "description": "Konfigurasi global sistem"
+    },
+    "/system_video_chunks/{chunkId}": {
+      "schema": "system_video_chunks",
+      "description": "Potongan video background realtime"
+    },
+    "/registration_submissions/{submissionId}": {
+      "schema": "registration_submissions",
+      "description": "Antrean verifikasi pendaftaran mandiri anggota 10 Pilar PSKS"
+    },
+    "/task_items/{taskId}": {
+      "schema": "task_items",
+      "description": "Daftar penugasan operasional wilayah dari Superadmin"
+    },
+    "/security_signals/{signalId}": {
+      "schema": "security_signals",
+      "description": "Sinyal instan aksi keamanan"
+    },
+    "/ai_knowledge_base/{docId}": {
+      "schema": "ai_knowledge_base",
+      "description": "Pangkalan data basis pengetahuan cerdas asisten AI"
+    },
+    "/ai_config/{configId}": {
+      "schema": "ai_config",
+      "description": "Otak dan konfigurasi instruksi sistem asisten AI"
+    },
+    "/ai_vocabulary/{vocabId}": {
+      "schema": "ai_vocabulary",
+      "description": "Kamus kosakata baku dan non-baku asisten AI"
+    },
+    "/ip_registrations/{ipDocId}": {
+      "schema": "ip_registrations",
+      "description": "Pelacakan kuota pendaftaran akun per IP/perangkat"
+    },
+    "/portal_faqs/{faqId}": {
+      "schema": "portal_faqs",
+      "description": "Daftar tanya jawab resmi portal PSKS Jawa Barat"
+    },
+    "/document_repository/{docId}": {
+      "schema": "document_repository",
+      "description": "Repositori resmi berkas regulasi Kemensos RI, Pergub Jabar, SOP dan blanko"
+    }
   }
 }

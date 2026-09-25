@@ -1,24 +1,39 @@
-import { DocumentRepoItem } from '../types';
+import { DocumentRepoItem, DocumentCategory } from '../types';
 import { DEFAULT_DOCUMENT_REPOSITORY } from '../data/defaultDocuments';
 import {
   subscribeToCollection,
+  subscribeToIndexedQuery,
+  queryFirestoreCollection,
   setFirestoreDoc,
   deleteFirestoreDoc,
   cleanFirestoreData,
   handleFirestoreError,
   OperationType,
+  IndexedQueryOptions,
 } from './firestoreDataService';
 
 const COLLECTION_NAME = 'document_repository';
 const LOCAL_STORAGE_KEY = 'portal_documents_cache_v1';
 
+export interface DocumentQueryFilter {
+  category?: DocumentCategory | 'semua';
+  status?: 'PUBLIK' | 'INTERNAL_ADMIN' | 'semua';
+  sortBy?: 'tahun' | 'downloadCount' | 'createdAt';
+  sortDirection?: 'asc' | 'desc';
+  limitCount?: number;
+}
+
 /**
- * Real-time subscriber for Document Repository
+ * Real-time subscriber for Document Repository with Firestore Query Indexing support
  */
 export function subscribeToDocuments(
   onUpdate: (documents: DocumentRepoItem[]) => void,
-  onError?: (error: any) => void
+  optionsOrError?: DocumentQueryFilter | ((error: any) => void),
+  onErrorCallback?: (error: any) => void
 ): () => void {
+  const options = typeof optionsOrError === 'object' && optionsOrError !== null ? optionsOrError : undefined;
+  const onError = typeof optionsOrError === 'function' ? optionsOrError : onErrorCallback;
+
   // Initial load from cache or defaults
   try {
     const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -36,8 +51,32 @@ export function subscribeToDocuments(
     onUpdate(DEFAULT_DOCUMENT_REPOSITORY);
   }
 
-  const unsubscribe = subscribeToCollection(
+  // Construct indexed query constraints matching Firestore Composite Indexes
+  const queryConstraints: IndexedQueryOptions = {
+    wheres: [],
+    orders: [],
+  };
+
+  if (options?.status && options.status !== 'semua') {
+    queryConstraints.wheres!.push({ field: 'status', op: '==', value: options.status });
+  }
+
+  if (options?.category && options.category !== 'semua') {
+    queryConstraints.wheres!.push({ field: 'category', op: '==', value: options.category });
+  }
+
+  const sortField = options?.sortBy || 'tahun';
+  const sortDir = options?.sortDirection || 'desc';
+  queryConstraints.orders!.push({ field: sortField, direction: sortDir });
+
+  if (options?.limitCount) {
+    queryConstraints.limitCount = options.limitCount;
+  }
+
+  // Kueri terindeks Firestore
+  const unsubscribe = subscribeToIndexedQuery(
     COLLECTION_NAME,
+    queryConstraints,
     (docs) => {
       if (!docs || docs.length === 0) {
         // First run: Seed Firestore with default 10 authentic documents
@@ -204,3 +243,69 @@ export async function seedDefaultDocumentsToFirestore(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Perform a fast indexed query on document_repository
+ */
+export async function queryDocumentsIndexed(
+  filter: DocumentQueryFilter
+): Promise<DocumentRepoItem[]> {
+  const queryConstraints: IndexedQueryOptions = {
+    wheres: [],
+    orders: [],
+  };
+
+  if (filter.status && filter.status !== 'semua') {
+    queryConstraints.wheres!.push({ field: 'status', op: '==', value: filter.status });
+  }
+
+  if (filter.category && filter.category !== 'semua') {
+    queryConstraints.wheres!.push({ field: 'category', op: '==', value: filter.category });
+  }
+
+  const sortField = filter.sortBy || 'tahun';
+  const sortDir = filter.sortDirection || 'desc';
+  queryConstraints.orders!.push({ field: sortField, direction: sortDir });
+
+  if (filter.limitCount) {
+    queryConstraints.limitCount = filter.limitCount;
+  }
+
+  const rawDocs = await queryFirestoreCollection(COLLECTION_NAME, queryConstraints);
+  return rawDocs.map(({ id, data }) => ({
+    id,
+    title: data.title || 'Dokumen',
+    category: data.category || 'regulasi_kemensos',
+    nomorRegulasi: data.nomorRegulasi || '',
+    tahun: data.tahun || 2026,
+    tanggalDitetapkan: data.tanggalDitetapkan || '',
+    instansi: data.instansi || '',
+    description: data.description || '',
+    fileSize: data.fileSize || '1.0 MB',
+    pageCount: data.pageCount || 1,
+    status: data.status || 'PUBLIK',
+    downloadCount: typeof data.downloadCount === 'number' ? data.downloadCount : 0,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    createdAt: data.createdAt || new Date().toISOString(),
+    updatedAt: data.updatedAt,
+    updatedBy: data.updatedBy,
+    pdfType: data.pdfType,
+    externalDownloadUrl: data.externalDownloadUrl,
+    fileType: data.fileType || 'PDF',
+    fileName: data.fileName,
+    fileDataUrl: data.fileDataUrl,
+  }));
+}
+
+/**
+ * Fetch top downloaded documents via Firestore index
+ */
+export async function fetchTopDownloadedDocuments(limitCount: number = 5): Promise<DocumentRepoItem[]> {
+  return queryDocumentsIndexed({
+    status: 'PUBLIK',
+    sortBy: 'downloadCount',
+    sortDirection: 'desc',
+    limitCount,
+  });
+}
+

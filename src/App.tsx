@@ -95,6 +95,7 @@ const MultipleSessionWarningModal = React.lazy(() => import('./components/Welcom
 import {
   subscribeToDoc,
   subscribeToCollection,
+  subscribeToIndexedQuery,
   setFirestoreDoc,
   deleteFirestoreDoc,
   checkServerConnectivity,
@@ -1244,8 +1245,12 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const unsubscribe = subscribeToCollection(
+    // Kueri terindeks Firestore: Urutkan pesan admin berdasarkan createdAt DESC
+    const unsubscribe = subscribeToIndexedQuery(
       'admin_messages',
+      {
+        orders: [{ field: 'createdAt', direction: 'desc' }],
+      },
       (docs) => {
         if (!docs || docs.length === 0) {
           setAdminMessages([]);
@@ -1402,8 +1407,12 @@ export default function App() {
       return;
     }
 
-    const unsubscribe = subscribeToCollection(
+    // Kueri terindeks Firestore: Urutkan pendaftaran berdasarkan submittedAt DESC
+    const unsubscribe = subscribeToIndexedQuery(
       'registration_submissions',
+      {
+        orders: [{ field: 'submittedAt', direction: 'desc' }],
+      },
       (docs) => {
         if (!docs || docs.length === 0) {
           React.startTransition(() => {
@@ -1497,8 +1506,12 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const unsubscribe = subscribeToCollection(
+    // Kueri terindeks Firestore: Urutkan penugasan wilayah berdasarkan createdAt DESC
+    const unsubscribe = subscribeToIndexedQuery(
       'task_items',
+      {
+        orders: [{ field: 'createdAt', direction: 'desc' }],
+      },
       (docs) => {
         if (!docs || docs.length === 0) {
           // If Firestore collection is empty, seed with DEFAULT_TASK_ITEMS

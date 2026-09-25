@@ -45,25 +45,37 @@ function setCachedFaqs(faqs: PortalFaqItem[]) {
 }
 
 /**
- * Realtime listener for FAQs from Firestore
+ * Realtime listener for FAQs from Firestore with Index Query support
  */
 export function subscribeToFaqs(
   onUpdate: (faqs: PortalFaqItem[]) => void,
-  onError?: (err: any) => void
+  activeOnlyOrError?: boolean | ((err: any) => void),
+  onErrorCallback?: (err: any) => void
 ): () => void {
+  const activeOnly = typeof activeOnlyOrError === 'boolean' ? activeOnlyOrError : false;
+  const onError = typeof activeOnlyOrError === 'function' ? activeOnlyOrError : onErrorCallback;
+
   let unsub: (() => void) | null = null;
   let isCancelled = false;
 
   // Emit current cached FAQs immediately
-  onUpdate(getCachedFaqs());
+  const initialCached = getCachedFaqs();
+  onUpdate(activeOnly ? initialCached.filter((f) => f.isActive) : initialCached);
 
   getFirestoreModule().then(({ firestore, db }) => {
     if (isCancelled) return;
 
     try {
       const colRef = firestore.collection(db, COLLECTION_NAME);
+      // Query terindeks Firestore:
+      // Jika activeOnly: where('isActive', '==', true) + orderBy('order', 'asc')
+      // Jika semua: orderBy('order', 'asc')
+      const indexedQuery = activeOnly
+        ? firestore.query(colRef, firestore.where('isActive', '==', true), firestore.orderBy('order', 'asc'))
+        : firestore.query(colRef, firestore.orderBy('order', 'asc'));
+
       unsub = firestore.onSnapshot(
-        colRef,
+        indexedQuery as any,
         (snapshot) => {
           if (isCancelled) return;
           if (snapshot.empty) {
@@ -74,7 +86,7 @@ export function subscribeToFaqs(
           }
 
           const items: PortalFaqItem[] = [];
-          snapshot.forEach((doc) => {
+          snapshot.forEach((doc: any) => {
             const data = doc.data() as any;
             items.push({
               id: doc.id,
@@ -89,7 +101,7 @@ export function subscribeToFaqs(
             });
           });
 
-          // Sort by order ascending
+          // Secondary in-memory sort guard
           items.sort((a, b) => a.order - b.order);
 
           setCachedFaqs(items);

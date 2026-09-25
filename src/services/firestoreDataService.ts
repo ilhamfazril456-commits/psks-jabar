@@ -109,6 +109,142 @@ export function subscribeToCollection(
 }
 
 /**
+ * Interface parameter kueri terindeks Firestore
+ */
+export interface FirestoreQueryConstraint {
+  field: string;
+  op: '<' | '<=' | '==' | '!=' | '>=' | '>' | 'array-contains' | 'in' | 'array-contains-any';
+  value: any;
+}
+
+export interface FirestoreOrderConstraint {
+  field: string;
+  direction?: 'asc' | 'desc';
+}
+
+export interface IndexedQueryOptions {
+  wheres?: FirestoreQueryConstraint[];
+  orders?: FirestoreOrderConstraint[];
+  limitCount?: number;
+}
+
+/**
+ * Non-blocking dynamic listener for an indexed composite query
+ * Automatically builds query with where, orderBy, and limit
+ * Has robust fallback to collection listener if index is still building in Firebase Console
+ */
+export function subscribeToIndexedQuery(
+  collectionName: string,
+  options: IndexedQueryOptions,
+  onNext: (docs: { id: string; data: any }[]) => void,
+  onError?: (err: any) => void
+): () => void {
+  let unsub: (() => void) | null = null;
+  let cancelled = false;
+
+  getFirestoreModule().then(({ firestore, db }) => {
+    if (cancelled) return;
+    try {
+      const collRef = firestore.collection(db, collectionName);
+      const constraints: any[] = [];
+
+      // Build WHERE constraints
+      if (options.wheres && options.wheres.length > 0) {
+        options.wheres.forEach((w) => {
+          if (w.value !== undefined) {
+            constraints.push(firestore.where(w.field, w.op, w.value));
+          }
+        });
+      }
+
+      // Build ORDER BY constraints
+      if (options.orders && options.orders.length > 0) {
+        options.orders.forEach((o) => {
+          constraints.push(firestore.orderBy(o.field, o.direction || 'asc'));
+        });
+      }
+
+      // Build LIMIT
+      if (typeof options.limitCount === 'number' && options.limitCount > 0) {
+        constraints.push(firestore.limit(options.limitCount));
+      }
+
+      const q = constraints.length > 0 ? firestore.query(collRef, ...constraints) : collRef;
+
+      unsub = firestore.onSnapshot(
+        q as any,
+        (snapshot) => {
+          if (!cancelled) {
+            const docs = (snapshot as any).docs.map((d: any) => ({ id: d.id, data: d.data() }));
+            onNext(docs);
+          }
+        },
+        (err) => {
+          // If index error occurs (e.g. requires index during initial build), fallback gracefully to base collection
+          const errMsg = err?.message || String(err);
+          if (errMsg.includes('requires an index') || errMsg.includes('failed-precondition')) {
+            console.warn(`[Firestore Indexing Alert] Composite query for ${collectionName} requires index build. Using defensive fallback to full sync.`, errMsg);
+            if (!cancelled) {
+              unsub = subscribeToCollection(collectionName, onNext, onError);
+            }
+          } else {
+            if (!cancelled && onError) onError(err);
+          }
+        }
+      );
+    } catch (e) {
+      if (!cancelled && onError) onError(e);
+    }
+  }).catch((err) => {
+    if (!cancelled && onError) onError(err);
+  });
+
+  return () => {
+    cancelled = true;
+    if (unsub) unsub();
+  };
+}
+
+/**
+ * Fetch one-off indexed query from Firestore
+ */
+export async function queryFirestoreCollection(
+  collectionName: string,
+  options: IndexedQueryOptions
+): Promise<{ id: string; data: any }[]> {
+  try {
+    const { firestore, db } = await getFirestoreModule();
+    const collRef = firestore.collection(db, collectionName);
+    const constraints: any[] = [];
+
+    if (options.wheres) {
+      options.wheres.forEach((w) => {
+        if (w.value !== undefined) {
+          constraints.push(firestore.where(w.field, w.op, w.value));
+        }
+      });
+    }
+
+    if (options.orders) {
+      options.orders.forEach((o) => {
+        constraints.push(firestore.orderBy(o.field, o.direction || 'asc'));
+      });
+    }
+
+    if (typeof options.limitCount === 'number' && options.limitCount > 0) {
+      constraints.push(firestore.limit(options.limitCount));
+    }
+
+    const q = constraints.length > 0 ? firestore.query(collRef, ...constraints) : collRef;
+    const snap = await firestore.getDocs(q as any);
+    return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+  } catch (err) {
+    console.warn(`Error running query on ${collectionName}:`, err);
+    return [];
+  }
+}
+
+/**
  * Persist document to Firestore with clean payload
  */
 export async function setFirestoreDoc(
