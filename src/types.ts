@@ -322,3 +322,32 @@ export interface PortalFaqItem {
   updatedBy?: string;
 }
 
+export type DocumentCategory = 
+  | 'regulasi_kemensos' 
+  | 'pergub_jabar' 
+  | 'sop_juknis' 
+  | 'format_blanko' 
+  | 'panduan_sistem';
+
+export interface DocumentRepoItem {
+  id: string;
+  title: string;
+  category: DocumentCategory;
+  nomorRegulasi: string;
+  tahun: number | string;
+  tanggalDitetapkan?: string;
+  instansi: string;
+  description: string;
+  fileSize: string;
+  pageCount: number;
+  status: 'PUBLIK' | 'INTERNAL_ADMIN';
+  downloadCount: number;
+  tags: string[];
+  createdAt: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  pdfType?: string;
+  externalDownloadUrl?: string;
+  fileType?: 'PDF' | 'DOCX' | 'XLSX';
+}
+

@@ -166,6 +166,16 @@ service cloud.firestore {
                    && (!('answer' in request.resource.data) || isReasonableString(request.resource.data.answer, 25000));
       allow delete: if isValidId(faqId);
     }
+
+    // Collection: document_repository (Repositori Dokumen Kedinasan & Regulasi)
+    match /document_repository/{docId} {
+      allow read: if true;
+      allow write: if isValidId(docId)
+                   && request.resource.data.keys().size() <= 25
+                   && (!('title' in request.resource.data) || isReasonableString(request.resource.data.title, 500))
+                   && (!('description' in request.resource.data) || isReasonableString(request.resource.data.description, 5000));
+      allow delete: if isValidId(docId);
+    }
   }
 }
 

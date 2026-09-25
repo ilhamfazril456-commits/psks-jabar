@@ -228,6 +228,32 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "question", "answer", "category", "order", "isActive"]
+    },
+    "document_repository": {
+      "title": "Document Repository & Regulation Center",
+      "description": "Repositori resmi berkas regulasi Kemensos RI, Pergub Jabar, SOP 10 Pilar PSKS, dan formulir blanko kedinasan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "nomorRegulasi": { "type": "string" },
+        "tahun": { "type": "number" },
+        "tanggalDitetapkan": { "type": "string" },
+        "instansi": { "type": "string" },
+        "description": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "pageCount": { "type": "number" },
+        "status": { "type": "string" },
+        "downloadCount": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "fileType": { "type": "string" },
+        "pdfType": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "nomorRegulasi", "status"]
     }
   }
 }

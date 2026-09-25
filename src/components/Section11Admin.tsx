@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Check,
   HelpCircle,
+  FileDown,
 } from 'lucide-react';
 
 interface Section11AdminProps {
@@ -32,6 +33,7 @@ interface Section11AdminProps {
   onOpenAnnouncementConsole: () => void;
   onOpenFloatingWaConsole?: () => void;
   onOpenFaqConsole?: () => void;
+  onOpenDocumentRepoConsole?: () => void;
   submissions?: PillarRegistrationSubmission[];
   pendingCount?: number;
 }
@@ -47,6 +49,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   onOpenAnnouncementConsole,
   onOpenFloatingWaConsole,
   onOpenFaqConsole,
+  onOpenDocumentRepoConsole,
   submissions = [],
   pendingCount,
 }) => {
@@ -115,8 +118,8 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
           </span>
         </div>
 
-        {/* 9 FITUR KENDALI SUPERADMIN & DEVELOPER (4 ATAS, 4 TENGAH, 1 BAWAH PALING KIRI DI LAPTOP; 2 PER BARIS DI HP) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 lg:gap-6 max-w-7xl w-full mx-auto">
+        {/* 10 FITUR KENDALI SUPERADMIN & DEVELOPER (5 ATAS, 5 BAWAH DI LAPTOP; 2 PER BARIS DI HP) */}
+        <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-2 sm:gap-3.5 lg:gap-4 max-w-7xl w-full mx-auto">
           
           {/* FITUR 1: MANAJEMEN AKUN ADMIN WILAYAH (Theme: Deep Emerald & Gold) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-amber-50/20 rounded-xl sm:rounded-2xl border border-amber-200/90 hover:border-amber-400/90 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
@@ -566,6 +569,53 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             >
               <span className="truncate">Kelola FAQ</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 10: PUSAT UNDUH DOKUMEN & REGULASI KEDINASAN (Theme: Regal Navy & Gold) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-blue-50/30 rounded-xl sm:rounded-2xl border border-blue-300 hover:border-amber-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            {/* Top Accent Gradient Bar */}
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#0f2b5c] via-[#d4af37] to-[#1a4a9c] absolute top-0 left-0" />
+
+            <div>
+              {/* Icon Box & Badge Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#0f2b5c] via-[#1a3a6c] to-[#091f42] text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-amber-400/40 shrink-0">
+                  <FileDown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                </div>
+                <span className="bg-amber-100 text-[#0f2b5c] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-300 shadow-2xs leading-none">
+                  FITUR 10
+                </span>
+              </div>
+
+              {/* Title & Description */}
+              <h4 className="text-[11px] sm:text-base font-black text-[#0f2b5c] mb-1 sm:mb-2 group-hover:text-blue-900 transition-colors leading-snug">
+                Pusat Unduh Dokumen
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Repositori regulasi dinas, Permensos RI, Pergub Jabar, SOP 10 Pilar, & format blanko resmi ber-TTE.
+              </p>
+
+              {/* Highlight Bullets */}
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-700 shrink-0" />
+                  <span>10+ Dokumen & SOP Resmi</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-700 shrink-0 hidden sm:block" />
+                  <span>Unduh Real PDF Ber-TTE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={onOpenDocumentRepoConsole}
+              className="w-full bg-gradient-to-r from-[#0f2b5c] to-[#1a4a9c] hover:from-[#143b7d] hover:to-[#2257b3] text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-blue-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/30"
+            >
+              <span className="truncate">Unduh Dokumen</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
             </button>
           </div>
         </div>

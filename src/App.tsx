@@ -68,9 +68,18 @@ const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaMa
 const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
 const FAQManagementPage = React.lazy(() => import('./components/FAQManagementPage').then(m => ({ default: m.FAQManagementPage })));
 const PortalFaqSection = React.lazy(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
-import { PortalFaqItem } from './types';
+const DocumentRepositoryPage = React.lazy(() => import('./components/DocumentRepositoryPage').then(m => ({ default: m.DocumentRepositoryPage })));
+import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
 import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
+import {
+  subscribeToDocuments,
+  saveDocumentToFirestore,
+  deleteDocumentFromFirestore,
+  seedDefaultDocumentsToFirestore,
+  incrementDocumentDownloadCount,
+} from './services/documentRepoFirestoreService';
+import { DEFAULT_DOCUMENT_REPOSITORY } from './data/defaultDocuments';
 import { Inbox, ArrowRight, ClipboardList, Lock, LogIn, Check } from 'lucide-react';
 import { isSubmissionPendingWilayah } from './utils/submissionStatus';
 
@@ -546,6 +555,9 @@ export default function App() {
           break;
         case 'faq_manage':
           import('./components/FAQManagementPage');
+          break;
+        case 'document_repository':
+          import('./components/DocumentRepositoryPage');
           break;
         case 'superadmin_settings':
           import('./components/SuperadminSettingsPage');
@@ -1575,6 +1587,46 @@ export default function App() {
     return success;
   }, []);
 
+  // 3e. Document Repository State with Firestore Real-time Listener (Single Source of Truth)
+  const [portalDocuments, setPortalDocuments] = useState<DocumentRepoItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('portal_documents_cache_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_DOCUMENT_REPOSITORY;
+  });
+
+  useEffect(() => {
+    const unsubscribe = subscribeToDocuments((docs) => {
+      React.startTransition(() => {
+        setPortalDocuments(docs);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSaveDocument = useCallback(async (docItem: DocumentRepoItem) => {
+    const success = await saveDocumentToFirestore(docItem);
+    return success;
+  }, []);
+
+  const handleDeleteDocument = useCallback(async (docId: string) => {
+    const success = await deleteDocumentFromFirestore(docId);
+    return success;
+  }, []);
+
+  const handleSeedDefaultDocuments = useCallback(async () => {
+    const success = await seedDefaultDocumentsToFirestore();
+    return success;
+  }, []);
+
+  const handleIncrementDocumentDownload = useCallback(async (docId: string, currentCount: number) => {
+    await incrementDocumentDownloadCount(docId, currentCount);
+  }, []);
+
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
@@ -1716,6 +1768,7 @@ export default function App() {
       'user_manage',
       'task_manage',
       'faq_manage',
+      'document_repository',
     ];
 
     if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
@@ -1807,6 +1860,10 @@ export default function App() {
 
   const handleOpenFaqConsole = () => {
     navigateToTab('faq_manage');
+  };
+
+  const handleOpenDocumentRepoConsole = () => {
+    navigateToTab('document_repository');
   };
 
   const handleOpenFloatingWhatsApp = useCallback(() => {
@@ -3288,6 +3345,7 @@ export default function App() {
                   onOpenAnnouncementConsole={handleOpenAnnouncementConsole}
                   onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
                   onOpenFaqConsole={handleOpenFaqConsole}
+                  onOpenDocumentRepoConsole={handleOpenDocumentRepoConsole}
                 />
               </React.Suspense>
             )}
@@ -3480,6 +3538,18 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'document_repository' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <DocumentRepositoryPage
+            session={session}
+            documents={portalDocuments}
+            onBackToHome={handleBackToHome}
+            onSaveDocument={handleSaveDocument}
+            onDeleteDocument={handleDeleteDocument}
+            onSeedDefaults={handleSeedDefaultDocuments}
+            onIncrementDownload={handleIncrementDocumentDownload}
+          />
+        )}
+
         {currentTab === 'user_reg_history' && (
           <UserRegistrationHistoryPage
             session={session}
@@ -3530,6 +3600,7 @@ export default function App() {
               'user_manage',
               'task_manage',
               'faq_manage',
+              'document_repository',
             ];
             const isSuperadminOrDev =
               session.statusActive === 'SAH_TERDAFTAR' &&
