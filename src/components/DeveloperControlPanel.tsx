@@ -91,6 +91,7 @@ interface DeveloperControlPanelProps {
   appSettings: AppSettings;
   onSaveSettings: (newSettings: AppSettings) => Promise<void> | void;
   inline?: boolean;
+  viewFilter?: 'all' | 'settings_only' | 'info_only';
   selectedSection?: SettingsMenuSection | null;
   onSectionChange?: (section: SettingsMenuSection | null) => void;
   allPillarData?: Record<string, PSKSDataRecord[]>;
@@ -120,6 +121,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
   appSettings,
   onSaveSettings,
   inline = false,
+  viewFilter = 'all',
   selectedSection: propsSelectedSection,
   onSectionChange,
   allPillarData,
@@ -621,6 +623,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
           badge: 'SEMUA MODUL',
         };
       default:
+        if (viewFilter === 'info_only') {
+          return {
+            title: 'Informasi Website',
+            desc: 'Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa pemrograman, pustaka, database Firestore, AI, dan pengembang.',
+            badge: 'FITUR 14 • KONTROL PUSAT',
+          };
+        }
         return {
           title: 'Pengaturan',
           desc: 'Modul pengontrolan pusat yang dikhususkan untuk konfigurasi latar belakang, foto pejabat resmi, media sosial, dan saklar sistem.',
@@ -845,8 +854,9 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
           <div className="space-y-8 animate-fadeIn">
             
             {/* SECTION 1: MENU UTAMA PENGATURAN (4 CARDS) */}
-            <div className="bg-white rounded-3xl border-2 border-slate-200 overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 p-4 px-6 text-white border-b-2 border-[#d4af37] flex items-center justify-between">
+            {viewFilter !== 'info_only' && (
+              <div className="bg-white rounded-3xl border-2 border-slate-200 overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 p-4 px-6 text-white border-b-2 border-[#d4af37] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-[#d4af37] text-[#043e2e] font-black shrink-0">
                     <Sliders className="w-5 h-5" />
@@ -974,11 +984,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-[#d4af37] group-hover:translate-x-1 transition-all shrink-0" />
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
             {/* SECTION 2: INFORMASI WEBSITE (8 MENU) */}
-            <div className="bg-white rounded-3xl border-2 border-slate-200 overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 p-4 px-6 text-white border-b-2 border-[#d4af37] flex items-center justify-between">
+            {viewFilter !== 'settings_only' && (
+              <div className="bg-white rounded-3xl border-2 border-slate-200 overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 p-4 px-6 text-white border-b-2 border-[#d4af37] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-emerald-700 text-white font-black shrink-0">
                     <Info className="w-5 h-5" />
@@ -1221,6 +1233,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                 </div>
               </div>
             </div>
+            )}
 
           </div>
         )}

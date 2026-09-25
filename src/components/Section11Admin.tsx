@@ -1,6 +1,7 @@
 import React from 'react';
-import { UserSession, PillarRegistrationSubmission } from '../types';
+import { UserSession, PillarRegistrationSubmission, AppSettings } from '../types';
 import { isSubmissionPendingSuperadmin } from '../utils/submissionStatus';
+import { OfficialPsksLogo } from './OfficialPsksLogo';
 import {
   Wrench,
   ArrowRight,
@@ -20,10 +21,18 @@ import {
   Check,
   HelpCircle,
   FileDown,
+  Layers,
+  UserCheck,
+  Share2,
+  Globe,
+  Video,
+  Image as ImageIcon,
+  Info,
 } from 'lucide-react';
 
 interface Section11AdminProps {
   session: UserSession;
+  appSettings?: AppSettings;
   onOpenAccountConsole: () => void;
   onOpenMonitoringConsole: () => void;
   onOpenActivityLogConsole?: () => void;
@@ -34,12 +43,17 @@ interface Section11AdminProps {
   onOpenFloatingWaConsole?: () => void;
   onOpenFaqConsole?: () => void;
   onOpenDocumentRepoConsole?: () => void;
+  onOpenBackgroundLogoConsole?: () => void;
+  onOpenProfileKadinasConsole?: () => void;
+  onOpenSocialMediaConsole?: () => void;
+  onOpenWebsiteInfoConsole?: () => void;
   submissions?: PillarRegistrationSubmission[];
   pendingCount?: number;
 }
 
 export const Section11Admin: React.FC<Section11AdminProps> = ({
   session,
+  appSettings,
   onOpenAccountConsole,
   onOpenMonitoringConsole,
   onOpenActivityLogConsole,
@@ -50,6 +64,10 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   onOpenFloatingWaConsole,
   onOpenFaqConsole,
   onOpenDocumentRepoConsole,
+  onOpenBackgroundLogoConsole,
+  onOpenProfileKadinasConsole,
+  onOpenSocialMediaConsole,
+  onOpenWebsiteInfoConsole,
   submissions = [],
   pendingCount,
 }) => {
@@ -616,6 +634,174 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             >
               <span className="truncate">Unduh Dokumen</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 11: UBAH BACKGROUND & LOGO RESMI PSKS (Theme: Deep Emerald & Gold) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-emerald-50/20 rounded-xl sm:rounded-2xl border border-emerald-200 hover:border-emerald-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#043e2e] via-[#d4af37] to-[#043e2e] absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#043e2e] to-[#0a523e] text-emerald-200 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-emerald-400/30 shrink-0">
+                  <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                </div>
+                <span className="bg-emerald-100 text-[#043e2e] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-200 shadow-2xs leading-none">
+                  FITUR 11
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-[#043e2e] transition-colors leading-snug">
+                Ubah Background & Logo
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Ubah latar belakang video loop/foto statis beranda utama dan logo resmi PSKS Jabar ber-TTE.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0" />
+                  <span>Mode Video / Foto</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 hidden sm:block" />
+                  <span>Logo PSKS Resmi</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenBackgroundLogoConsole}
+              className="w-full bg-gradient-to-r from-[#043e2e] to-[#0a523e] hover:from-[#06503c] hover:to-[#0c6149] text-[#d4af37] font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-emerald-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-[#d4af37]/40"
+            >
+              <span className="truncate">Ubah Background & Logo</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#d4af37] group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 12: FOTO KADINAS & ISI PROFIL (Theme: Regal Navy & Gold) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-blue-50/20 rounded-xl sm:rounded-2xl border border-blue-200 hover:border-blue-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#0f2b5c] via-[#d4af37] to-[#1a4a9c] absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#0f2b5c] to-[#1a4a9c] text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-amber-400/30 shrink-0">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                </div>
+                <span className="bg-amber-100 text-[#0f2b5c] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-200 shadow-2xs leading-none">
+                  FITUR 12
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-[#0f2b5c] mb-1 sm:mb-2 group-hover:text-blue-900 transition-colors leading-snug">
+                Foto Kadinas & Isi Profil
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Pembaruan foto resmi Kepala Dinas Sosial Jabar, nama pejabat, & naskah sambutan profil kedinasan.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-700 shrink-0" />
+                  <span>Foto Pejabat Resmi</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-700 shrink-0 hidden sm:block" />
+                  <span>Sambutan & Visi Misi</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenProfileKadinasConsole}
+              className="w-full bg-gradient-to-r from-[#0f2b5c] to-[#153a75] hover:from-[#133773] hover:to-[#1a468d] text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-blue-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/40"
+            >
+              <span className="truncate">Ubah Profil & Foto</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 13: UBAH MEDIA SOSIAL RESMI (Theme: Marine Cyan & Indigo) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-cyan-50/20 rounded-xl sm:rounded-2xl border border-cyan-200 hover:border-cyan-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-cyan-600 via-teal-400 to-blue-700 absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-cyan-700 to-blue-900 text-cyan-200 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-cyan-400/30 shrink-0">
+                  <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-200" />
+                </div>
+                <span className="bg-cyan-100 text-cyan-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-cyan-200 shadow-2xs leading-none">
+                  FITUR 13
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-cyan-900 transition-colors leading-snug">
+                Ubah Media Sosial
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Pusat kelola 7 tautan media sosial resmi, kanal YouTube TV, IG, TikTok, & kontak dinas.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-700 shrink-0" />
+                  <span>7 Saluran Terhubung</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-cyan-700 shrink-0 hidden sm:block" />
+                  <span>WA, IG, YouTube, X</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenSocialMediaConsole}
+              className="w-full bg-gradient-to-r from-cyan-800 to-blue-900 hover:from-cyan-900 hover:to-blue-950 text-cyan-200 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-cyan-900/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-cyan-400/40"
+            >
+              <span className="truncate">Ubah Media Sosial</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-200 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 14: INFORMASI WEBSITE (Theme: Deep Emerald & Gold) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-emerald-50/30 rounded-xl sm:rounded-2xl border border-emerald-300 hover:border-emerald-500 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#043e2e] via-[#d4af37] to-teal-700 absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#043e2e] to-emerald-900 text-emerald-200 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-emerald-400/30 shrink-0">
+                  <Info className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
+                </div>
+                <span className="bg-emerald-100 text-emerald-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300 shadow-2xs leading-none">
+                  FITUR 14
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-emerald-900 transition-colors leading-snug">
+                Informasi Website
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa, pustaka, database, AI, & pengembang.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0" />
+                  <span>8 Modul Informasi</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 hidden sm:block" />
+                  <span>Keamanan, DB & Dev</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenWebsiteInfoConsole}
+              className="w-full bg-gradient-to-r from-[#043e2e] to-emerald-900 hover:from-[#06533e] hover:to-emerald-950 text-emerald-200 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-emerald-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-[#d4af37]/40"
+            >
+              <span className="truncate">Informasi Website</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-200 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
             </button>
           </div>
         </div>

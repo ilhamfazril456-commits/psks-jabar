@@ -70,6 +70,10 @@ const FAQManagementPage = React.lazy(() => import('./components/FAQManagementPag
 const PortalFaqSection = React.lazy(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
 const DocumentRepositoryPage = React.lazy(() => import('./components/DocumentRepositoryPage').then(m => ({ default: m.DocumentRepositoryPage })));
 const PublicDocumentRepoSection = React.lazy(() => import('./components/PublicDocumentRepoSection').then(m => ({ default: m.PublicDocumentRepoSection })));
+const BackgroundLogoManagementPage = React.lazy(() => import('./components/BackgroundLogoManagementPage').then(m => ({ default: m.BackgroundLogoManagementPage })));
+const ProfileKadinasManagementPage = React.lazy(() => import('./components/ProfileKadinasManagementPage').then(m => ({ default: m.ProfileKadinasManagementPage })));
+const SocialMediaManagementPage = React.lazy(() => import('./components/SocialMediaManagementPage').then(m => ({ default: m.SocialMediaManagementPage })));
+const WebsiteInfoManagementPage = React.lazy(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
 import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
 import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
@@ -1785,6 +1789,10 @@ export default function App() {
       'user_manage',
       'task_manage',
       'faq_manage',
+      'bg_logo_manage',
+      'profile_kadinas_manage',
+      'social_media_manage',
+      'website_info_manage',
     ];
 
     if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
@@ -1880,6 +1888,22 @@ export default function App() {
 
   const handleOpenDocumentRepoConsole = () => {
     navigateToTab('document_repository');
+  };
+
+  const handleOpenBackgroundLogoConsole = () => {
+    navigateToTab('bg_logo_manage');
+  };
+
+  const handleOpenProfileKadinasConsole = () => {
+    navigateToTab('profile_kadinas_manage');
+  };
+
+  const handleOpenSocialMediaConsole = () => {
+    navigateToTab('social_media_manage');
+  };
+
+  const handleOpenWebsiteInfoConsole = () => {
+    navigateToTab('website_info_manage');
   };
 
   const handleOpenFloatingWhatsApp = useCallback(() => {
@@ -3351,6 +3375,7 @@ export default function App() {
               <React.Suspense fallback={null}>
                 <Section11Admin
                   session={session}
+                  appSettings={appSettings}
                   submissions={submissions}
                   onOpenAccountConsole={handleOpenAccountConsole}
                   onOpenMonitoringConsole={handleOpenMonitoringConsole}
@@ -3362,6 +3387,10 @@ export default function App() {
                   onOpenFloatingWaConsole={handleOpenFloatingWaConsole}
                   onOpenFaqConsole={handleOpenFaqConsole}
                   onOpenDocumentRepoConsole={handleOpenDocumentRepoConsole}
+                  onOpenBackgroundLogoConsole={handleOpenBackgroundLogoConsole}
+                  onOpenProfileKadinasConsole={handleOpenProfileKadinasConsole}
+                  onOpenSocialMediaConsole={handleOpenSocialMediaConsole}
+                  onOpenWebsiteInfoConsole={handleOpenWebsiteInfoConsole}
                 />
               </React.Suspense>
             )}
@@ -3596,6 +3625,45 @@ export default function App() {
             }}
           />
         )}
+
+        {currentTab === 'bg_logo_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <BackgroundLogoManagementPage
+            session={session}
+            appSettings={appSettings}
+            onSaveSettings={handleSaveAppSettings}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
+        {currentTab === 'profile_kadinas_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <ProfileKadinasManagementPage
+            session={session}
+            appSettings={appSettings}
+            onSaveSettings={handleSaveAppSettings}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
+        {currentTab === 'social_media_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <SocialMediaManagementPage
+            session={session}
+            appSettings={appSettings}
+            onSaveSettings={handleSaveAppSettings}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
+        {currentTab === 'website_info_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <WebsiteInfoManagementPage
+            session={session}
+            appSettings={appSettings}
+            onSaveSettings={handleSaveAppSettings}
+            onBackToHome={handleBackToHome}
+            allPillarData={allPillarData}
+            adminAccounts={adminAccounts}
+            adminMessages={adminMessages}
+          />
+        )}
         </React.Suspense>
       </main>
 
@@ -3634,6 +3702,10 @@ export default function App() {
               'task_manage',
               'faq_manage',
               'document_repository',
+              'bg_logo_manage',
+              'profile_kadinas_manage',
+              'social_media_manage',
+              'website_info_manage',
             ];
             const isSuperadminOrDev =
               session.statusActive === 'SAH_TERDAFTAR' &&
