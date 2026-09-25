@@ -36,9 +36,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
 
   const activeVideo = getActiveVideoUrl();
 
-  // Filter out any AI-generated photos or legacy office posters
+  // Filter out any AI-generated photos, legacy posters, or data URLs
   const isAiOfficePhoto = (url?: string | null) => {
     if (!url) return false;
+    if (url.startsWith('data:image')) return true;
     const lower = url.toLowerCase();
     return (
       lower.includes('eco_office_poster') || 
@@ -145,7 +146,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
           muted
           playsInline
           webkit-playsinline="true"
-          preload="none"
+          preload="auto"
           disablePictureInPicture
           onError={handleVideoError}
           onCanPlay={() => {
@@ -161,16 +162,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
               videoRef.current.play().catch(() => {});
             }
           }}
-          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-300 brightness-[1.05] contrast-[1.08] saturate-[1.10] ${
+          className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-500 brightness-[1.05] contrast-[1.08] saturate-[1.10] ${
             isVideoReady ? 'opacity-100' : 'opacity-0'
           }`}
-          style={{
-            willChange: 'transform, opacity',
-            WebkitBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden',
-            transform: 'translateZ(0)',
-            WebkitTransform: 'translateZ(0)',
-          }}
         />
       )}
 

@@ -34,6 +34,26 @@ export const PublicDocumentRepoSection: React.FC<PublicDocumentRepoSectionProps>
 
   // State untuk ekspansi tampilan HP (Mobile)
   const [isMobileExpanded, setIsMobileExpanded] = useState<boolean>(false);
+  const sectionHeaderRef = useRef<HTMLDivElement>(null);
+
+  // Handler menutup dokumen di HP dan scroll ke atas tepat di bagian header arsip resmi
+  const handleCollapseMobile = () => {
+    setIsMobileExpanded(false);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const headerEl = sectionHeaderRef.current || document.getElementById('arsip-resmi-dinsos-jabar');
+        if (headerEl) {
+          const yOffset = -80; // Offset navbar mobile agar terlihat sempurna
+          const elementPosition = headerEl.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset + yOffset;
+          window.scrollTo({
+            top: Math.max(0, offsetPosition),
+            behavior: 'smooth',
+          });
+        }
+      }, 50);
+    });
+  };
 
   // Responsive items per view di Laptop/Desktop (3 di layar besar, 2 di tablet/laptop kecil)
   const [itemsPerView, setItemsPerView] = useState<number>(3);
@@ -243,7 +263,11 @@ export const PublicDocumentRepoSection: React.FC<PublicDocumentRepoSectionProps>
       {/* Container Utama: Polos, Bersih dengan Background Putih */}
       <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm p-4 sm:p-7 md:p-8 relative">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 sm:pb-5 border-b border-slate-100">
+        <div 
+          ref={sectionHeaderRef}
+          id="arsip-resmi-dinsos-jabar"
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 sm:pb-5 border-b border-slate-100 scroll-mt-24"
+        >
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -397,7 +421,7 @@ export const PublicDocumentRepoSection: React.FC<PublicDocumentRepoSectionProps>
                     <button
                       type="button"
                       id="btn-collapse-dokumen-mobile"
-                      onClick={() => setIsMobileExpanded(false)}
+                      onClick={handleCollapseMobile}
                       className="w-full py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
                     >
                       <span>Tampilkan Lebih Sedikit</span>

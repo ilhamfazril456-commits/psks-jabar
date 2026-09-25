@@ -138,9 +138,10 @@ export default function App() {
       const localKadinas = localStorage.getItem('dinsos_kadinas_photo_url');
       if (localKadinas && localKadinas !== 'LOCAL_STORAGE_SAVED_PHOTO') initial.kadinasPhotoUrl = localKadinas;
       const localBgPhoto = localStorage.getItem('dinsos_bg_photo_url');
-      const isAiOfficePhoto = (u: string | null) => u && (u.includes('eco_office_') || u.includes('dinsos_jabar_building') || u.includes('facade') || u.includes('poster'));
+      const isAiOfficePhoto = (u: string | null) => u && (u.startsWith('data:image') || u.includes('eco_office_') || u.includes('dinsos_jabar_building') || u.includes('facade') || u.includes('poster'));
       if (localBgPhoto && isAiOfficePhoto(localBgPhoto)) {
         localStorage.removeItem('dinsos_bg_photo_url');
+        localStorage.setItem('dinsos_bg_mode', 'video');
       } else if (localBgPhoto && localBgPhoto !== 'LOCAL_STORAGE_SAVED_PHOTO') {
         initial.bgPhotoUrl = localBgPhoto;
       }
@@ -340,7 +341,7 @@ export default function App() {
               const local = localStorage.getItem('dinsos_bg_photo_url');
               if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.bgPhotoUrl = local;
             }
-            if (settings.bgPhotoUrl && (settings.bgPhotoUrl.includes('eco_office_') || settings.bgPhotoUrl.includes('dinsos_jabar_building') || settings.bgPhotoUrl.includes('poster'))) {
+            if (settings.bgPhotoUrl && (settings.bgPhotoUrl.startsWith('data:image') || settings.bgPhotoUrl.includes('eco_office_') || settings.bgPhotoUrl.includes('dinsos_jabar_building') || settings.bgPhotoUrl.includes('poster'))) {
               settings.bgPhotoUrl = '';
               settings.bgMode = 'video';
             }
