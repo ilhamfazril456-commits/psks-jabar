@@ -146,7 +146,11 @@ export default function App() {
         initial.bgPhotoUrl = localBgPhoto;
       }
       const localBgVideo = localStorage.getItem('dinsos_bg_video_url');
-      if (localBgVideo && localBgVideo !== 'LOCAL_STORAGE_SAVED_VIDEO') initial.bgVideoUrl = localBgVideo;
+      if (localBgVideo && (localBgVideo.length < 500000 || localBgVideo === 'LOCAL_STORAGE_SAVED_VIDEO' || localBgVideo.includes('eco_office_test') || localBgVideo.includes('eco_office_valid'))) {
+        localStorage.removeItem('dinsos_bg_video_url');
+      } else if (localBgVideo) {
+        initial.bgVideoUrl = localBgVideo;
+      }
       const localBgMode = localStorage.getItem('dinsos_bg_mode') as 'photo' | 'video' | null;
       if (localBgMode === 'photo' && !initial.bgPhotoUrl) {
         initial.bgMode = 'video';
@@ -417,10 +421,8 @@ export default function App() {
     };
   }, [session.statusActive]);
 
-  // Realtime Sync Video Background across all connected devices (Gated to Admin sessions only)
+  // Realtime Sync Video Background across all connected devices
   useEffect(() => {
-    // Only subscribe to video chunks if logged in as Admin or Developer
-    if (session.statusActive !== 'SAH_TERDAFTAR' && session.role !== 'developer') return;
     let unsubVideo: (() => void) | null = null;
     import('./lib/videoSync').then(({ subscribeToRealtimeVideo }) => {
       unsubVideo = subscribeToRealtimeVideo((videoBase64) => {
@@ -434,7 +436,7 @@ export default function App() {
     return () => {
       if (unsubVideo) unsubVideo();
     };
-  }, [session.statusActive, session.role]);
+  }, []);
 
   // Instant Smart Card NFC 13.56 MHz Auto-Login Handler on URL Tap
   useEffect(() => {
