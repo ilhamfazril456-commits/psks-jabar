@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { UserSession, DocumentRepoItem, DocumentCategory } from '../types';
 import { DOCUMENT_CATEGORIES } from '../data/defaultDocuments';
 import { downloadOfficialPdf } from '../utils/officialPdfGenerator';
@@ -793,23 +794,24 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
       {/* ========================================================================= */}
       {/* MODAL 1: PREVIEW DOKUMEN & KOP RESMI */}
       {/* ========================================================================= */}
-      {previewDoc && (
-        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
-          <div className="relative w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]">
+      {previewDoc && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
+          <div className="relative w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 flex flex-col max-h-[85vh] sm:max-h-[88vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0 sticky top-0 z-10">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-amber-300" />
-                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
+            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0 sticky top-0 z-20">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <FileText className="w-5 h-5 text-amber-300 shrink-0" />
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide truncate">
                   Pratinjau Dokumen Kedinasan Resmi
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewDoc(null)}
-                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                className="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-white/20 transition-colors cursor-pointer shrink-0"
+                title="Tutup Pratinjau"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
@@ -936,29 +938,31 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: TAMBAH / EDIT DOKUMEN BARU (SUPERADMIN & DEVELOPER) */}
       {/* ========================================================================= */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm overflow-y-auto p-3 sm:p-6 flex justify-center items-start">
-          <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 overflow-hidden my-3 sm:my-6 flex flex-col max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]">
-            {/* Modal Header: Selalu tampil di atas, tidak terpotong */}
-            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-amber-300" />
-                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide">
+      {isFormOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-hidden">
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-300 flex flex-col max-h-[85vh] sm:max-h-[88vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header: Selalu tampil di atas, dijamin 100% tidak terpotong oleh navbar atau layar */}
+            <div className="bg-[#0f2b5c] text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-400/40 shrink-0 sticky top-0 z-20">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <FileText className="w-5 h-5 text-amber-300 shrink-0" />
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wide truncate">
                   {editingDoc ? 'Edit Data Dokumen Kedinasan' : 'Tambah & Unggah Dokumen PDF Baru'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                className="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-white/20 transition-colors cursor-pointer shrink-0"
+                title="Tutup Formulir"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
@@ -1183,14 +1187,15 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 3: KONFIRMASI HAPUS DOKUMEN */}
       {/* ========================================================================= */}
-      {deletingDoc && (
-        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+      {deletingDoc && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border-2 border-rose-300">
             <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center">
               <AlertTriangle className="w-6 h-6" />
@@ -1219,14 +1224,15 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 4: KONFIRMASI RESET STANDAR KEDINASAN */}
       {/* ========================================================================= */}
-      {isResetConfirmOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+      {isResetConfirmOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border-2 border-amber-300">
             <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl mx-auto flex items-center justify-center">
               <RotateCcw className="w-6 h-6" />
@@ -1255,7 +1261,8 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
