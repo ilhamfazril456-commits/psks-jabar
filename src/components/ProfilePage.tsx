@@ -28,30 +28,28 @@ import { BackToHomeButton } from './BackToHomeButton';
 interface ProfilePageProps {
   appSettings?: AppSettings;
   onBackToHome?: () => void;
+  subView?: 'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi';
+  onSwitchSubView?: (view: 'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi') => void;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ appSettings, onBackToHome }) => {
-  const [activeSection, setActiveSection] = useState<'sambutan' | 'dasar-hukum' | 'tujuan' | 'visi-misi'>('sambutan');
+export const ProfilePage: React.FC<ProfilePageProps> = ({
+  appSettings,
+  onBackToHome,
+  subView = 'kadinas',
+  onSwitchSubView,
+}) => {
+  const [currentView, setCurrentView] = useState<'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi'>(subView);
 
-  // Autoscroll down slightly when entering Profile page
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      const el =
-        document.getElementById('profile-jump-nav') ||
-        document.getElementById('profile-top-anchor') ||
-        document.getElementById('profil-section');
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const offset = 75;
-        const targetY = window.pageYOffset + rect.top - offset;
-        window.scrollTo({ top: Math.max(70, targetY), behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: 100, behavior: 'smooth' });
-      }
-    }, 100);
+    if (subView) {
+      setCurrentView(subView);
+    }
+  }, [subView]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  // Autoscroll to top of profile page when view changes
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView]);
 
   const getKadinasPhoto = React.useCallback(() => {
     const fs = appSettings?.kadinasPhotoUrl;
@@ -80,70 +78,6 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
   const profileClosing = appSettings?.profileClosing || 'Wassalamualaikum Wr. Wb.';
 
   const bodyParagraphs = profileBody.split('\n').filter((p) => p.trim().length > 0);
-
-  const isManualScrollingRef = React.useRef(false);
-  const manualScrollTimerRef = React.useRef<number | null>(null);
-
-  // Scroll spy logic: otomatis memindahkan warna aktif button kuning sesuai posisi scroll layar
-  React.useEffect(() => {
-    const handleScrollSpy = () => {
-      if (isManualScrollingRef.current) return;
-
-      const sections: { id: string; key: 'sambutan' | 'dasar-hukum' | 'tujuan' | 'visi-misi' }[] = [
-        { id: 'section-sambutan', key: 'sambutan' },
-        { id: 'section-dasar-hukum', key: 'dasar-hukum' },
-        { id: 'section-tujuan-website', key: 'tujuan' },
-        { id: 'section-visi-misi', key: 'visi-misi' },
-      ];
-
-      const scrollPosition = window.scrollY + 160;
-      let currentKey: 'sambutan' | 'dasar-hukum' | 'tujuan' | 'visi-misi' = 'sambutan';
-
-      for (let i = 0; i < sections.length; i++) {
-        const el = document.getElementById(sections[i].id);
-        if (el) {
-          const top = el.getBoundingClientRect().top + window.pageYOffset;
-          if (scrollPosition >= top - 80) {
-            currentKey = sections[i].key;
-          }
-        }
-      }
-
-      setActiveSection((prev) => (prev !== currentKey ? currentKey : prev));
-    };
-
-    window.addEventListener('scroll', handleScrollSpy, { passive: true });
-    // Initial check
-    handleScrollSpy();
-
-    return () => {
-      window.removeEventListener('scroll', handleScrollSpy);
-      if (manualScrollTimerRef.current) {
-        clearTimeout(manualScrollTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Smooth scroll handler for quick jump buttons
-  const scrollToSection = (sectionId: string, sectionKey: 'sambutan' | 'dasar-hukum' | 'tujuan' | 'visi-misi') => {
-    setActiveSection(sectionKey);
-    isManualScrollingRef.current = true;
-    if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current);
-    manualScrollTimerRef.current = window.setTimeout(() => {
-      isManualScrollingRef.current = false;
-    }, 850);
-
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const navOffset = 90;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - navOffset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   const dasarHukumList = [
     {
@@ -279,84 +213,11 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
           </div>
         )}
 
-        {/* 4 HORIZONTAL JUMP NAVIGATION BUTTONS (BERJAJAR RAPI DI PALING ATAS) */}
-        <div id="profile-jump-nav" className="bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#022219] p-3 sm:p-4 rounded-2xl sm:rounded-3xl border-2 border-[#d4af37] shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 mb-3 pb-2.5 border-b border-white/10">
-            <div className="flex items-center gap-2 text-white">
-              <Compass className="w-4 h-4 text-[#e5c158]" />
-              <span className="text-xs sm:text-sm font-black tracking-wide text-amber-200 uppercase">
-                HALAMAN PROFIL
-              </span>
-            </div>
-            <span className="text-[11px] text-emerald-200/80 font-semibold hidden md:inline-block">
-              Klik salah satu menu untuk langsung menuju bagian konten yang diinginkan
-            </span>
-          </div>
-
-          <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-            {/* Button 1: Sambutan Kepala Dinas */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('section-sambutan', 'sambutan')}
-              className={`flex items-center justify-center sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none group border ${
-                activeSection === 'sambutan'
-                  ? 'bg-gradient-to-r from-[#d4af37] to-[#e5c158] text-[#043e2e] border-amber-200 shadow-md font-black ring-2 ring-amber-300/40'
-                  : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-amber-300/40'
-              }`}
-            >
-              <UserCheck className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeSection === 'sambutan' ? 'text-[#043e2e]' : 'text-amber-300'}`} />
-              <span className="truncate">Sambutan Kepala Dinas</span>
-            </button>
-
-            {/* Button 2: Dasar Hukum */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('section-dasar-hukum', 'dasar-hukum')}
-              className={`flex items-center justify-center sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none group border ${
-                activeSection === 'dasar-hukum'
-                  ? 'bg-gradient-to-r from-[#d4af37] to-[#e5c158] text-[#043e2e] border-amber-200 shadow-md font-black ring-2 ring-amber-300/40'
-                  : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-amber-300/40'
-              }`}
-            >
-              <Scale className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeSection === 'dasar-hukum' ? 'text-[#043e2e]' : 'text-amber-300'}`} />
-              <span className="truncate">Dasar Hukum</span>
-            </button>
-
-            {/* Button 3: Tujuan Website */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('section-tujuan-website', 'tujuan')}
-              className={`flex items-center justify-center sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none group border ${
-                activeSection === 'tujuan'
-                  ? 'bg-gradient-to-r from-[#d4af37] to-[#e5c158] text-[#043e2e] border-amber-200 shadow-md font-black ring-2 ring-amber-300/40'
-                  : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-amber-300/40'
-              }`}
-            >
-              <Target className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeSection === 'tujuan' ? 'text-[#043e2e]' : 'text-amber-300'}`} />
-              <span className="truncate">Tujuan Website</span>
-            </button>
-
-            {/* Button 4: Visi & Misi */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('section-visi-misi', 'visi-misi')}
-              className={`flex items-center justify-center sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none group border ${
-                activeSection === 'visi-misi'
-                  ? 'bg-gradient-to-r from-[#d4af37] to-[#e5c158] text-[#043e2e] border-amber-200 shadow-md font-black ring-2 ring-amber-300/40'
-                  : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-amber-300/40'
-              }`}
-            >
-              <Award className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeSection === 'visi-misi' ? 'text-[#043e2e]' : 'text-amber-300'}`} />
-              <span className="truncate">Visi &amp; Misi</span>
-            </button>
-          </div>
-        </div>
-
         {/* ========================================================================= */}
         {/* BAGIAN 1: SAMBUTAN KEPALA DINAS SOSIAL PROVINSI JAWA BARAT                */}
         {/* ========================================================================= */}
-        <section id="section-sambutan" className="scroll-mt-24">
+        {currentView === 'kadinas' && (
+          <section id="section-sambutan" className="scroll-mt-24">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -487,10 +348,12 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             </div>
           </motion.div>
         </section>
+        )}
 
         {/* ========================================================================= */}
         {/* BAGIAN 2: DASAR HUKUM LENGKAP PENYELENGGARAAN PSKS & DINAS SOSIAL JABAR   */}
         {/* ========================================================================= */}
+        {currentView === 'tupoksi' && (
         <section id="section-dasar-hukum" className="scroll-mt-24">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -558,10 +421,12 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             </div>
           </motion.div>
         </section>
+        )}
 
         {/* ========================================================================= */}
         {/* BAGIAN 3: TUJUAN UTAMA WEBSITE SISTEM INFORMASI PSKS JABAR                */}
         {/* ========================================================================= */}
+        {currentView === 'struktur' && (
         <section id="section-tujuan-website" className="scroll-mt-24">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -621,10 +486,12 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             </div>
           </motion.div>
         </section>
+        )}
 
         {/* ========================================================================= */}
         {/* BAGIAN 4: VISI & MISI RESMI DINAS SOSIAL PROVINSI JAWA BARAT              */}
         {/* ========================================================================= */}
+        {currentView === 'visi_misi' && (
         <section id="section-visi-misi" className="scroll-mt-24">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
@@ -724,6 +591,7 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             </div>
           </motion.div>
         </section>
+        )}
 
         {/* BOTTOM BACK TO HOME BUTTON */}
         {onBackToHome && (

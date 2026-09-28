@@ -1650,6 +1650,8 @@ export default function App() {
 
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');
+  const [profileSubView, setProfileSubView] = useState<'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi'>('kadinas');
+  const [contactSubView, setContactSubView] = useState<'medsos' | 'lokasi'>('medsos');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
   const dashboardScrollYRef = useRef<number>(0);
   const shouldRestoreDashboardScrollRef = useRef<boolean>(false);
@@ -1808,6 +1810,7 @@ export default function App() {
     options?: {
       pillarId?: PillarId | null;
       detailData?: AnnouncementConfig | null;
+      subView?: string | null;
     }
   ) => {
     // 1. If we are currently on 'beranda', save the user's exact scroll position
@@ -1836,6 +1839,18 @@ export default function App() {
 
     if (options?.detailData) {
       setActiveAnnouncementDetail(options.detailData);
+    }
+
+    if (tab === 'profil') {
+      if (options?.subView) {
+        setProfileSubView(options.subView as any);
+      }
+    }
+
+    if (tab === 'contact') {
+      if (options?.subView) {
+        setContactSubView(options.subView as any);
+      }
     }
 
     if (tab === 'beranda') {
@@ -3225,11 +3240,11 @@ export default function App() {
       {/* Navbar */}
       <Navbar
         currentTab={currentTab}
-        onNavigate={(tab) => {
+        onNavigate={(tab, subView) => {
           if (tab === 'beranda') {
             handleBackToHome();
           } else {
-            navigateToTab(tab);
+            navigateToTab(tab, { subView });
           }
         }}
         onPrefetch={handlePrefetchTab}
@@ -3395,16 +3410,7 @@ export default function App() {
               </React.Suspense>
             )}
 
-            {/* Portal FAQ: Eksklusif berada tepat di atas navigasi footer beranda */}
-            <React.Suspense fallback={null}>
-              <PortalFaqSection
-                faqs={portalFaqs}
-                onOpenAiAssistant={handleOpenAiAssistant}
-                onOpenContact={handleOpenFloatingWhatsApp}
-              />
-            </React.Suspense>
-
-            {/* Titik Akses Publik: Pusat Unduh Dokumen & Regulasi Kedinasan (Tepat di atas navigasi footer beranda) */}
+            {/* Titik Akses Publik: Pusat Unduh Dokumen & Regulasi Kedinasan (Ditempatkan di atas Portal FAQ) */}
             <React.Suspense fallback={null}>
               <PublicDocumentRepoSection
                 documents={portalDocuments}
@@ -3418,6 +3424,15 @@ export default function App() {
                     console.error('Home download error', err);
                   }
                 }}
+              />
+            </React.Suspense>
+
+            {/* Portal FAQ: Berada di bawah Dokumen & Regulasi Kedinasan, tepat di atas footer */}
+            <React.Suspense fallback={null}>
+              <PortalFaqSection
+                faqs={portalFaqs}
+                onOpenAiAssistant={handleOpenAiAssistant}
+                onOpenContact={handleOpenFloatingWhatsApp}
               />
             </React.Suspense>
 
@@ -3484,30 +3499,53 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'profil' && <ProfilePage appSettings={appSettings} onBackToHome={handleBackToHome} />}
+        {currentTab === 'profil' && (
+          <>
+            <ProfilePage
+              appSettings={appSettings}
+              onBackToHome={handleBackToHome}
+              subView={profileSubView}
+              onSwitchSubView={(v) => setProfileSubView(v)}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
+        )}
 
-        {currentTab === 'contact' && <ContactPage appSettings={appSettings} onBackToHome={handleBackToHome} />}
+        {currentTab === 'contact' && (
+          <>
+            <ContactPage
+              appSettings={appSettings}
+              onBackToHome={handleBackToHome}
+              subView={contactSubView}
+              onSwitchSubView={(v) => setContactSubView(v)}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
+        )}
 
         {currentTab === 'akun' && (
-          <AccountPage
-            session={session}
-            adminAccounts={adminAccounts}
-            submissions={submissions}
-            onLogin={(role, nama, wilayah) => {
-              handleLogin(role, nama, wilayah);
-              setOpenLoginModalOnAkun(false);
-            }}
-            onLogout={handleLogout}
-            onAddAdminAccount={handleAddAdminAccount}
-            onUpdateAdminAccount={handleUpdateAdminAccount}
-            onDeleteAdminAccount={handleDeleteAdminAccount}
-            openLoginOnMount={openLoginModalOnAkun}
-            onBackToHome={handleBackToHome}
-            onOpenGateModal={() => setGateModalOpen(true)}
-            onOpenDeveloperPanel={() => setIsDeveloperPanelOpen(true)}
-            onNavigateToManagement={handleOpenAccountConsole}
-            onNavigateToMonitoring={handleOpenMonitoringConsole}
-          />
+          <>
+            <AccountPage
+              session={session}
+              adminAccounts={adminAccounts}
+              submissions={submissions}
+              onLogin={(role, nama, wilayah) => {
+                handleLogin(role, nama, wilayah);
+                setOpenLoginModalOnAkun(false);
+              }}
+              onLogout={handleLogout}
+              onAddAdminAccount={handleAddAdminAccount}
+              onUpdateAdminAccount={handleUpdateAdminAccount}
+              onDeleteAdminAccount={handleDeleteAdminAccount}
+              openLoginOnMount={openLoginModalOnAkun}
+              onBackToHome={handleBackToHome}
+              onOpenGateModal={() => setGateModalOpen(true)}
+              onOpenDeveloperPanel={() => setIsDeveloperPanelOpen(true)}
+              onNavigateToManagement={handleOpenAccountConsole}
+              onNavigateToMonitoring={handleOpenMonitoringConsole}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
         )}
 
         {currentTab === 'admin_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
@@ -3613,17 +3651,20 @@ export default function App() {
         )}
 
         {currentTab === 'user_reg_history' && (
-          <UserRegistrationHistoryPage
-            session={session}
-            submissions={submissions}
-            onBackToHome={handleBackToHome}
-            onNavigateToPillar={(pillarId) => {
-              handleSelectPillar(pillarId);
-            }}
-            onOpenLoginModal={() => {
-              setGateModalOpen(true);
-            }}
-          />
+          <>
+            <UserRegistrationHistoryPage
+              session={session}
+              submissions={submissions}
+              onBackToHome={handleBackToHome}
+              onNavigateToPillar={(pillarId) => {
+                handleSelectPillar(pillarId);
+              }}
+              onOpenLoginModal={() => {
+                setGateModalOpen(true);
+              }}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
         )}
 
         {currentTab === 'bg_logo_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (

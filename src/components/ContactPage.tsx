@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ExternalLink, ShieldAlert, Sparkles, MessageCircleHeart, Share2, MapPin } from 'lucide-react';
+import React from 'react';
+import { ExternalLink, ShieldAlert, Sparkles, MessageCircleHeart } from 'lucide-react';
 import { AppSettings } from '../types';
 import { motion } from 'motion/react';
 import { BackToHomeButton } from './BackToHomeButton';
@@ -21,49 +21,27 @@ interface ContactItem {
 interface ContactPageProps {
   appSettings?: AppSettings;
   onBackToHome?: () => void;
+  subView?: 'medsos' | 'lokasi';
+  onSwitchSubView?: (view: 'medsos' | 'lokasi') => void;
 }
 
-export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToHome }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'medsos' | 'lokasi'>('all');
+export const ContactPage: React.FC<ContactPageProps> = ({
+  appSettings,
+  onBackToHome,
+  subView = 'medsos',
+  onSwitchSubView,
+}) => {
+  const [currentView, setCurrentView] = React.useState<'medsos' | 'lokasi'>(subView);
 
-  const scrollToSection = (elementId: string) => {
-    const el = document.getElementById(elementId);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      const offset = 85;
-      const targetY = window.pageYOffset + rect.top - offset;
-      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-    }
-  };
-
-  // Autoscroll when entering Contact page (respects deep links like #section-lokasi-kantor)
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      const hash = window.location.hash?.replace('#', '');
-      const targetEl = hash ? document.getElementById(hash) : null;
-      if (targetEl) {
-        const rect = targetEl.getBoundingClientRect();
-        const offset = 85;
-        const targetY = window.pageYOffset + rect.top - offset;
-        window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-        return;
-      }
+    if (subView) {
+      setCurrentView(subView);
+    }
+  }, [subView]);
 
-      // Default slight autoscroll
-      const el =
-        document.getElementById('contact-main-card') ||
-        document.getElementById('contact-top-anchor') ||
-        document.getElementById('kontak-section');
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const offset = 75;
-        const targetY = window.pageYOffset + rect.top - offset;
-        window.scrollTo({ top: Math.max(70, targetY), behavior: 'smooth' });
-      }
-    }, 120);
-
-    return () => clearTimeout(timer);
-  }, []);
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView]);
 
   // Saved / Configured Official Links for Dinsos Jabar
   const officialLinks: Record<string, string> = {
@@ -212,26 +190,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToH
           </div>
         )}
 
-        {/* QUICK SECTION JUMP TABS */}
-        <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <button
-            type="button"
-            onClick={() => scrollToSection('contact-main-card')}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-gradient-to-r from-[#043e2e] to-emerald-800 hover:from-[#032f23] hover:to-emerald-900 text-white shadow-xs active:scale-98"
-          >
-            <Share2 className="w-4 h-4 text-amber-300" />
-            <span>Media Sosial Resmi (7 Saluran)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('section-lokasi-kantor')}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-gradient-to-r from-[#0f2b5c] to-blue-900 hover:from-[#091f42] hover:to-blue-950 text-white shadow-xs active:scale-98"
-          >
-            <MapPin className="w-4 h-4 text-amber-300" />
-            <span>Lokasi & Kantor Wilayah (28 Kantor se-Jabar)</span>
-          </button>
-        </div>
-
+        {/* 1. SUB-MENU: MEDIA SOSIAL RESMI */}
+        {currentView === 'medsos' && (
         <motion.div
           id="contact-main-card"
           initial={{ opacity: 0, y: 20 }}
@@ -323,9 +283,12 @@ export const ContactPage: React.FC<ContactPageProps> = ({ appSettings, onBackToH
           <span>Dinas Sosial Provinsi Jawa Barat — Melayani Sepenuh Hati</span>
         </motion.div>
       </motion.div>
+      )}
 
-      {/* DINSOS 28 REGIONAL OFFICES MAP & DIRECTORY */}
-      <DinsosOfficesMapDirectory />
+      {/* 2. SUB-MENU: DINSOS 28 REGIONAL OFFICES MAP & DIRECTORY */}
+      {currentView === 'lokasi' && (
+        <DinsosOfficesMapDirectory />
+      )}
 
       {onBackToHome && (
         <div className="pt-2 flex flex-wrap items-center justify-between gap-4">

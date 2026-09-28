@@ -29,7 +29,7 @@ import {
 
 interface NavbarProps {
   currentTab: string;
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: string, subView?: string) => void;
   onPrefetch?: (tab: string) => void;
   session: UserSession;
   onLogout: () => void;
@@ -107,30 +107,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  const handleNav = (tab: string) => {
+  const handleNav = (tab: string, subView?: string) => {
     setActiveDropdown(null);
     setMobileMenuOpen(false);
-    onNavigate(tab);
+    onNavigate(tab, subView);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
-  const navigateAndScroll = (tab: string, elementId?: string) => {
+  const navigateAndScroll = (tab: string, elementId?: string, subView?: string) => {
     setActiveDropdown(null);
     setMobileMenuOpen(false);
-    onNavigate(tab);
-    if (elementId) {
-      setTimeout(() => {
-        const el = document.getElementById(elementId);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const offset = 85;
-          const targetY = window.pageYOffset + rect.top - offset;
-          window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-        }
-      }, 150);
-    } else {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    }
+    onNavigate(tab, subView);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const handleMouseEnter = (menu: 'profil' | 'contact' | 'akun') => {
@@ -156,35 +144,35 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isBeranda = currentTab === 'beranda';
 
-  // Sub-menu definitions
+  // Sub-menu definitions with dedicated isolated sub-views
   const profilSubMenus = [
     {
       id: 'kadinas',
       title: 'Kepala Dinas Sosial',
       desc: 'Profil, Foto Resmi & Sambutan Kadinas',
       icon: Award,
-      onClick: () => navigateAndScroll('profil', 'section-sambutan'),
+      onClick: () => navigateAndScroll('profil', undefined, 'kadinas'),
     },
     {
       id: 'visi_misi',
       title: 'Visi & Misi',
       desc: 'Arah Kebijakan Kesejahteraan Sosial Jabar',
       icon: Target,
-      onClick: () => navigateAndScroll('profil', 'section-visi-misi'),
+      onClick: () => navigateAndScroll('profil', undefined, 'visi_misi'),
     },
     {
       id: 'struktur',
       title: 'Struktur Organisasi',
       desc: 'Bagan Kelembagaan & Hierarki Dinsos Jabar',
       icon: Users,
-      onClick: () => navigateAndScroll('profil', 'section-tujuan-website'),
+      onClick: () => navigateAndScroll('profil', undefined, 'struktur'),
     },
     {
       id: 'tupoksi',
       title: 'Tugas Pokok & Fungsi',
       desc: 'Dasar Hukum Regulasi & Tupoksi Kedinasan',
       icon: FileText,
-      onClick: () => navigateAndScroll('profil', 'section-dasar-hukum'),
+      onClick: () => navigateAndScroll('profil', undefined, 'tupoksi'),
     },
   ];
 
@@ -194,14 +182,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       title: 'Media Sosial Resmi',
       desc: 'YouTube TV, Instagram, TikTok & X',
       icon: Share2,
-      onClick: () => navigateAndScroll('contact', 'contact-main-card'),
+      onClick: () => navigateAndScroll('contact', undefined, 'medsos'),
     },
     {
       id: 'lokasi',
       title: 'Lokasi & Kantor Wilayah',
-      desc: 'Peta Interaktif 28 Kantor Dinsos se-Jawa Barat',
+      desc: 'Peta Presisi Google Maps 28 Kantor se-Jawa Barat',
       icon: MapPin,
-      onClick: () => navigateAndScroll('contact', 'section-lokasi-kantor'),
+      onClick: () => navigateAndScroll('contact', undefined, 'lokasi'),
     },
   ];
 
