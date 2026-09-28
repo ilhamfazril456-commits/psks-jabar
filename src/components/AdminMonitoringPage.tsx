@@ -24,6 +24,7 @@ import {
 import { BackToHomeButton } from './BackToHomeButton';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { AdminRadarMonitoringMap } from './AdminRadarMonitoringMap';
 
 interface AdminMonitoringPageProps {
   session?: UserSession;
@@ -283,6 +284,13 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
             <span className="text-xs font-bold">{actionSuccessMsg}</span>
           </div>
         )}
+
+        {/* PETA RADAR PEMANTAUAN ADMIN 28 TITIK PRESISI (LIVE SENSOR HIJAU/KUNING/OFFLINE) */}
+        <AdminRadarMonitoringMap
+          adminAccounts={adminAccounts}
+          session={session}
+          onOpenMessageModal={handleOpenPesanModal}
+        />
 
         {/* SUMMARY KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
