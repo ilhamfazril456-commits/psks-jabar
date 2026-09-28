@@ -119,9 +119,9 @@ export const DINSOS_ADDRESS_DIRECTORY: DinsosOfficeAddress[] = [
   {
     id: 'kab_kuningan',
     kabKota: 'Kabupaten Kuningan',
-    aliases: ['kabupaten kuningan', 'kab kuningan', 'kuningan', 'dinsos kuningan'],
+    aliases: ['kabupaten kuningan', 'kab kuningan', 'kuningan', 'kasturi', 'kramatmulya', 'dinsos kuningan'],
     namaDinas: 'Dinas Sosial Kabupaten Kuningan',
-    alamat: 'Jl. Pramuka KM 6, Kel. Purwawinangun, Kec. Kuningan, Kabupaten Kuningan, Jawa Barat 45512',
+    alamat: 'Jl. Raya Kuningan - Cirebon, Kel. Kasturi, Kec. Kramatmulya, Kabupaten Kuningan, Jawa Barat 45521',
     telepon: '(0232) 871661',
   },
   {
