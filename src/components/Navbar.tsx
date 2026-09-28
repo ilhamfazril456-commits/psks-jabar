@@ -22,9 +22,7 @@ import {
   Target,
   Users,
   FileText,
-  MessageCircle,
   Share2,
-  ClipboardCheck,
   Search,
   ExternalLink,
 } from 'lucide-react';
@@ -192,29 +190,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const kontakSubMenus = [
     {
-      id: 'pengaduan',
-      title: 'Layanan Pengaduan & Bantuan',
-      desc: 'Hotline WhatsApp Resmi Dinsos Jabar',
-      icon: MessageCircle,
-      onClick: () => {
-        window.open('https://wa.me/6282126030038', '_blank', 'noopener,noreferrer');
-        setActiveDropdown(null);
-        setMobileMenuOpen(false);
-      },
-    },
-    {
-      id: 'lokasi',
-      title: 'Lokasi & Kantor Wilayah',
-      desc: 'Jl. Rajawali Barat No. 107 Bandung & Peta',
-      icon: MapPin,
-      onClick: () => navigateAndScroll('contact', 'contact-main-card'),
-    },
-    {
       id: 'medsos',
       title: 'Media Sosial Resmi',
       desc: 'YouTube TV, Instagram, TikTok & X',
       icon: Share2,
       onClick: () => navigateAndScroll('contact', 'contact-main-card'),
+    },
+    {
+      id: 'lokasi',
+      title: 'Lokasi & Kantor Wilayah',
+      desc: 'Peta Interaktif 28 Kantor Dinsos se-Jawa Barat',
+      icon: MapPin,
+      onClick: () => navigateAndScroll('contact', 'section-lokasi-kantor'),
     },
   ];
 
@@ -237,21 +224,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         desc: profilDesc,
         icon: UserCheck,
         onClick: () => navigateAndScroll('akun'),
-      },
-      {
-        id: 'pendaftaran_mandiri',
-        title: 'Layanan Pendaftaran Mandiri PSKS',
-        desc: 'Registrasi Anggota Baru 10 Pilar PSKS',
-        icon: ClipboardCheck,
-        onClick: () => {
-          if (session.statusActive !== 'SAH_TERDAFTAR') {
-            setActiveDropdown(null);
-            setMobileMenuOpen(false);
-            setShowLoginConfirmModal(true);
-          } else {
-            navigateAndScroll('beranda', 'section-riwayat-pendaftaran-user');
-          }
-        },
       },
       {
         id: 'cek_status',
@@ -722,7 +694,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div>
                     <span className="block text-xs font-black">Kontak</span>
                     <span className="text-[10px] text-blue-200/80">
-                      3 Sub-Menu Saluran Resmi
+                      2 Sub-Menu Saluran Resmi
                     </span>
                   </div>
                 </div>
@@ -777,7 +749,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div>
                     <span className="block text-xs font-black">Pusat Akun</span>
                     <span className="text-[10px] text-blue-200/80">
-                      3 Sub-Menu Akses & Verifikasi
+                      2 Sub-Menu Akses & Verifikasi
                     </span>
                   </div>
                 </div>
