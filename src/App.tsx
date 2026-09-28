@@ -3251,6 +3251,7 @@ export default function App() {
         session={session}
         onLogout={handleLogout}
         onOpenGateModal={() => setGateModalOpen(true)}
+        onOpenGuestHistoryModal={() => setShowGuestHistoryModal(true)}
         onOpenDeveloperPanel={() => {
           if (session.role === 'developer') {
             setIsDeveloperPanelOpen(true);

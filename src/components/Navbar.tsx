@@ -34,6 +34,7 @@ interface NavbarProps {
   session: UserSession;
   onLogout: () => void;
   onOpenGateModal?: () => void;
+  onOpenGuestHistoryModal?: () => void;
   onOpenDeveloperPanel?: () => void;
   onOpenInbox?: () => void;
   unreadCount?: number;
@@ -49,6 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   session,
   onLogout,
   onOpenGateModal,
+  onOpenGuestHistoryModal,
   onOpenInbox,
   unreadCount = 0,
   logoUrl,
@@ -219,10 +221,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         desc: 'Pelacakan Resi & Status Verifikasi Berkas',
         icon: Search,
         onClick: () => {
+          setActiveDropdown(null);
+          setMobileMenuOpen(false);
           if (session.statusActive === 'SAH_TERDAFTAR') {
             navigateAndScroll('user_reg_history');
           } else {
-            navigateAndScroll('beranda', 'section-riwayat-pendaftaran-user');
+            // Tamu publik: tetap di halaman saat ini (tidak dilempar ke beranda), langsung tampilkan pop up Akses Dibatasi
+            if (onOpenGuestHistoryModal) {
+              onOpenGuestHistoryModal();
+            } else if (onOpenGateModal) {
+              onOpenGateModal();
+            }
           }
         },
       },
