@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Radio,
   MapPin,
   Building2,
-  Maximize2,
   ExternalLink,
-  ChevronRight,
   ShieldCheck,
   CheckCircle2,
   Activity,
@@ -14,7 +14,12 @@ import {
   RefreshCw,
   Search,
   Zap,
-  Info
+  Info,
+  Users,
+  Compass,
+  Phone,
+  Eye,
+  Maximize2
 } from 'lucide-react';
 import { DINSOS_GEO_OFFICES, DinsosGeoOffice } from '../data/dinsosGeoOfficesData';
 import { AdminAccount, UserSession } from '../types';
@@ -33,6 +38,7 @@ export interface OfficePresenceInfo {
   statusText: string;
   matchedAccount: AdminAccount | null;
   adminName: string;
+  role: string;
   lastActiveTime: string;
 }
 
@@ -41,14 +47,48 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
   session,
   onOpenMessageModal,
 }) => {
-  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('provinsi_jabar');
-  const [mapLayerMode, setMapLayerMode] = useState<'hybrid' | 'roadmap'>('hybrid');
-  const [filterPresence, setFilterPresence] = useState<'ALL' | 'ONLINE' | 'BACKGROUND' | 'OFFLINE'>('ALL');
-  const [isIframeLoading, setIsIframeLoading] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  // Helper to determine status for an account
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('provinsi_jabar');
+  const [mapTileMode, setMapTileMode] = useState<'carto_dark' | 'osm' | 'satellite'>('carto_dark');
+  const [filterPresence, setFilterPresence] = useState<'ALL' | 'ONLINE' | 'BACKGROUND' | 'OFFLINE'>('ALL');
+  const [searchFilter, setSearchFilter] = useState('');
+
+  // 1. FILTER KHUSUS ADMIN & SUPERADMIN SAJA (User, Guest, Tamu ditolak secara ketat)
+  const strictlyFilteredAdminAccounts = useMemo(() => {
+    return adminAccounts.filter((acc) => {
+      const r = (acc.role || '').toLowerCase().trim();
+      const u = (acc.username || '').toLowerCase().trim();
+      const n = (acc.namaAdmin || '').toLowerCase().trim();
+
+      // Tolak akun user, tamu, guest
+      if (
+        r === 'user' ||
+        r === 'guest' ||
+        r === 'tamu' ||
+        acc.isGuest === true ||
+        acc.statusActive === 'GUEST' ||
+        u === 'tamu' ||
+        u === 'tamu publik' ||
+        u.startsWith('user_') ||
+        u.includes('guest') ||
+        n.includes('tamu publik') ||
+        n.includes('pengunjung')
+      ) {
+        return false;
+      }
+
+      // Hanya terima superadmin, admin wilayah, dan developer
+      return r === 'superadmin' || r === 'admin' || r === 'developer' || acc.isDeveloper === true;
+    });
+  }, [adminAccounts]);
+
+  // 2. Evaluasi status presence (ONLINE = Hijau Menyala, BACKGROUND = Kuning Menyala, OFFLINE = Redup)
   const computeAccountPresence = (acc: AdminAccount): AdminPresenceStatus => {
-    // 1. If currently viewing local session user
+    // A. Cek sesi lokal pengguna saat ini
     const isCurrentSessionUser =
       session?.statusActive === 'SAH_TERDAFTAR' &&
       (((session.isDeveloper || session.role === 'developer') && acc.role === 'developer') ||
@@ -64,7 +104,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       return 'ONLINE';
     }
 
-    // 2. Heartbeat evaluation
+    // B. Cek Heartbeat Firestore
     const activeTime = acc.lastHeartbeat || acc.lastActive;
     if (!activeTime) return 'OFFLINE';
 
@@ -92,13 +132,12 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
     return 'OFFLINE';
   };
 
-  // Map 28 offices to their live presence status
+  // 3. Pasangkan 28 titik kantor dengan data admin & status live presence
   const officePresenceList: OfficePresenceInfo[] = useMemo(() => {
     return DINSOS_GEO_OFFICES.map((office) => {
-      // Find matching admin account for this office
-      const matchingAccount = adminAccounts.find((acc) => {
+      // Cari akun admin yang bertugas di wilayah kantor ini
+      const matchingAccount = strictlyFilteredAdminAccounts.find((acc) => {
         if (office.isProvinsi) {
-          // Provinsi matched by superadmin or developer
           const r = (acc.role || '').toLowerCase();
           const w = (acc.wilayahTugas || '').toLowerCase();
           return r === 'superadmin' || r === 'developer' || w.includes('provinsi') || w.includes('jawa barat');
@@ -117,20 +156,22 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       });
 
       let status: AdminPresenceStatus = 'OFFLINE';
-      let adminName = 'Tidak Ada Sesi Terhubung';
+      let adminName = 'Tidak Ada Sesi Admin';
+      let role = 'Admin Wilayah';
       let lastActiveTime = 'Offline';
 
       if (matchingAccount) {
         status = computeAccountPresence(matchingAccount);
         adminName = matchingAccount.namaAdmin || matchingAccount.username || 'Admin Wilayah';
+        role = matchingAccount.role === 'superadmin' ? 'Superadmin Jabar' : matchingAccount.role === 'developer' ? 'Developer' : 'Admin Kab/Kota';
         lastActiveTime = matchingAccount.terakhirLogin || 'Baru Saja';
       }
 
       let statusText = 'Non-Aktif / Offline';
       if (status === 'ONLINE') {
-        statusText = 'Online (Sedang Buka Layar)';
+        statusText = 'Online (Aktif di Layar)';
       } else if (status === 'BACKGROUND') {
-        statusText = 'Latar Belakang / Standby';
+        statusText = 'Latar Belakang (Standby)';
       }
 
       return {
@@ -139,49 +180,211 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         statusText,
         matchedAccount: matchingAccount || null,
         adminName,
+        role,
         lastActiveTime,
       };
     });
-  }, [adminAccounts, session]);
+  }, [strictlyFilteredAdminAccounts, session]);
 
-  // Statistics counters
+  // Hitung jumlah status
   const totalOffices = officePresenceList.length;
   const onlineCount = officePresenceList.filter((item) => item.status === 'ONLINE').length;
   const backgroundCount = officePresenceList.filter((item) => item.status === 'BACKGROUND').length;
   const offlineCount = officePresenceList.filter((item) => item.status === 'OFFLINE').length;
 
-  // Selected office data
   const selectedOfficePresence = useMemo(() => {
     return officePresenceList.find((item) => item.office.id === selectedOfficeId) || officePresenceList[0];
   }, [selectedOfficeId, officePresenceList]);
 
-  // Filtered offices for the directory sidebar
   const filteredPresenceList = useMemo(() => {
-    if (filterPresence === 'ALL') return officePresenceList;
-    return officePresenceList.filter((item) => item.status === filterPresence);
-  }, [officePresenceList, filterPresence]);
+    return officePresenceList.filter((item) => {
+      if (filterPresence !== 'ALL' && item.status !== filterPresence) {
+        return false;
+      }
+      if (searchFilter.trim()) {
+        const q = searchFilter.toLowerCase().trim();
+        const matchName = item.office.namaDinas.toLowerCase().includes(q);
+        const matchKab = item.office.kabKota.toLowerCase().includes(q);
+        const matchAdmin = item.adminName.toLowerCase().includes(q);
+        if (!matchName && !matchKab && !matchAdmin) return false;
+      }
+      return true;
+    });
+  }, [officePresenceList, filterPresence, searchFilter]);
 
-  // Google Maps Embed URL (Strictly constrained with specific lat/lng and zoom to lock precision to within tens of meters)
-  const embedMapUrl = useMemo(() => {
-    const lat = selectedOfficePresence.office.lat;
-    const lng = selectedOfficePresence.office.lng;
-    const query = selectedOfficePresence.office.googlePlaceQuery || `${selectedOfficePresence.office.namaDinas} ${selectedOfficePresence.office.alamat}`;
-    
-    // Zoom 16 memberikan ketepatan toleransi beberapa puluh meter dari atap gedung, tampak sangat jelas tanpa distorsi
-    return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&ll=${lat},${lng}&hl=id&z=16&t=${mapLayerMode === 'hybrid' ? 'k' : 'm'}&output=embed`;
-  }, [selectedOfficePresence, mapLayerMode]);
+  // 4. Inisialisasi Peta Leaflet (1 Peta Menampilkan 28 Penanda Sekaligus)
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
 
-  const handleSelectOffice = (id: string) => {
-    if (id === selectedOfficeId) return;
-    setIsIframeLoading(true);
-    setSelectedOfficeId(id);
-    setTimeout(() => {
-      setIsIframeLoading(false);
-    }, 400);
+    if (!leafletMapRef.current) {
+      // Inisialisasi peta berpusat di Jawa Barat (-6.95, 107.6)
+      const map = L.map(mapContainerRef.current, {
+        center: [-6.9147, 107.6098],
+        zoom: 8,
+        minZoom: 8,
+        maxZoom: 14,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      // Tambahkan kontrol zoom kustom di pojok kanan bawah
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Batasi geseran peta hanya dalam wilayah Jawa Barat agar tidak melompat ke luar provinsi
+      const jabarBounds = L.latLngBounds(
+        L.latLng(-7.9, 106.2), // Southwest
+        L.latLng(-5.8, 108.9)  // Northeast
+      );
+      map.setMaxBounds(jabarBounds);
+
+      markersLayerGroupRef.current = L.layerGroup().addTo(map);
+      leafletMapRef.current = map;
+    }
+
+    // Pasang Tile Layer sesuai pilihan
+    if (leafletMapRef.current) {
+      if (tileLayerRef.current) {
+        leafletMapRef.current.removeLayer(tileLayerRef.current);
+      }
+
+      let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      if (mapTileMode === 'osm') {
+        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      } else if (mapTileMode === 'satellite') {
+        tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      }
+
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        maxZoom: 18,
+      }).addTo(leafletMapRef.current);
+    }
+
+    return () => {
+      // Cleanup saat unmount
+    };
+  }, [mapTileMode]);
+
+  // 5. Render 28 Marker Sensor Sekaligus ke dalam Peta
+  useEffect(() => {
+    if (!leafletMapRef.current || !markersLayerGroupRef.current) return;
+
+    const layerGroup = markersLayerGroupRef.current;
+    layerGroup.clearLayers();
+
+    officePresenceList.forEach((item) => {
+      const isSelected = item.office.id === selectedOfficeId;
+      const isProv = item.office.isProvinsi;
+
+      // Konfigurasi visual sensor berdasarkan status
+      let coreColor = '#94a3b8'; // Abu-abu offline
+      let ringColor = 'rgba(148, 163, 184, 0.4)';
+      let pulseHtml = '';
+      let badgeLabel = item.office.kabKota.replace('Kabupaten ', 'Kab. ').replace('Kota ', 'Kota ');
+
+      if (item.status === 'ONLINE') {
+        coreColor = '#10b981'; // Hijau Emerald Menyala
+        ringColor = 'rgba(16, 185, 129, 0.6)';
+        pulseHtml = `<div class="radar-sensor-ping-green"></div>`;
+      } else if (item.status === 'BACKGROUND') {
+        coreColor = '#f59e0b'; // Kuning Amber Menyala
+        ringColor = 'rgba(245, 158, 11, 0.6)';
+        pulseHtml = `<div class="radar-sensor-ping-yellow"></div>`;
+      }
+
+      const iconHtml = `
+        <div class="relative flex items-center justify-center cursor-pointer select-none group">
+          ${pulseHtml}
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+            isSelected ? 'scale-125 ring-3 ring-amber-300' : 'hover:scale-110'
+          }" style="background-color: ${coreColor}; border: 2px solid ${isProv ? '#fde047' : '#ffffff'}; box-shadow: 0 0 12px ${coreColor};">
+            ${isProv ? '<span style="font-size: 10px;">⭐</span>' : `<span style="width: 6px; height: 6px; background: white; border-radius: 9999px;"></span>`}
+          </div>
+          <!-- Label Mini Kota yang Rapi Tanpa Tabrakan -->
+          <div class="absolute -bottom-5 whitespace-nowrap bg-slate-950/85 text-[9px] font-black px-1.5 py-0.5 rounded border border-white/20 shadow-md pointer-events-none ${
+            item.status === 'ONLINE' ? 'text-emerald-300 border-emerald-500/50' : item.status === 'BACKGROUND' ? 'text-amber-300 border-amber-500/50' : 'text-slate-300'
+          }">
+            ${badgeLabel}
+          </div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: 'custom-radar-pin',
+        html: iconHtml,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+
+      const marker = L.marker([item.office.lat, item.office.lng], {
+        icon: customIcon,
+        title: item.office.namaDinas,
+      });
+
+      // Event klik marker: update selected office
+      marker.on('click', () => {
+        setSelectedOfficeId(item.office.id);
+      });
+
+      layerGroup.addLayer(marker);
+    });
+  }, [officePresenceList, selectedOfficeId]);
+
+  // Efek geser peta halus ketika admin memilih kantor dari daftar
+  const handleSelectOfficeCard = (office: DinsosGeoOffice) => {
+    setSelectedOfficeId(office.id);
+    if (leafletMapRef.current) {
+      leafletMapRef.current.flyTo([office.lat, office.lng], 12, {
+        duration: 0.8,
+      });
+    }
+  };
+
+  const handleResetViewJabar = () => {
+    if (leafletMapRef.current) {
+      leafletMapRef.current.flyTo([-6.9147, 107.6098], 8, {
+        duration: 0.6,
+      });
+    }
   };
 
   return (
     <div className="bg-slate-900 rounded-3xl border-2 border-emerald-500/40 shadow-2xl overflow-hidden mb-6 text-white relative">
+      {/* STYLE CSS KHUSUS ANIMASI SENSOR RADAR HIJAU & KUNING MENYALA */}
+      <style>{`
+        .radar-sensor-ping-green {
+          position: absolute;
+          width: 32px;
+          height: 32px;
+          border-radius: 9999px;
+          background-color: rgba(16, 185, 129, 0.45);
+          animation: sensorPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+          pointer-events: none;
+        }
+        .radar-sensor-ping-yellow {
+          position: absolute;
+          width: 32px;
+          height: 32px;
+          border-radius: 9999px;
+          background-color: rgba(245, 158, 11, 0.45);
+          animation: sensorPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+          pointer-events: none;
+        }
+        @keyframes sensorPing {
+          0% {
+            transform: scale(0.6);
+            opacity: 0.9;
+          }
+          75%, 100% {
+            transform: scale(2.4);
+            opacity: 0;
+          }
+        }
+        .leaflet-container {
+          background-color: #020617 !important;
+          font-family: inherit;
+        }
+      `}</style>
+
       {/* TOP HEADER: RADAR COMMAND CENTER */}
       <div className="bg-gradient-to-r from-[#031d16] via-[#043e2e] to-[#0f2b5c] p-4 sm:p-5 border-b border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -200,14 +403,14 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live Sensor Presence
+                Live Sensor Presence (28 Penanda Bersamaan)
               </span>
               <span className="text-[10px] text-amber-300 font-extrabold uppercase bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-                28 Titik Kantor Wilayah Jabar
+                Khusus Superadmin & Admin
               </span>
             </div>
             <h2 className="text-base sm:text-lg lg:text-xl font-black text-white m-0 tracking-tight flex items-center gap-2">
-              Peta Radar Presensi Admin Dinas Sosial se-Jawa Barat
+              Peta Radar Presensi 28 Kantor Dinas Sosial se-Jawa Barat
             </h2>
           </div>
         </div>
@@ -228,7 +431,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
             </span>
-            <span>{onlineCount} Online</span>
+            <span>{onlineCount} Admin Online</span>
           </button>
 
           {/* BACKGROUND / IDLE */}
@@ -264,136 +467,70 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         </div>
       </div>
 
-      {/* QUICK HORIZONTAL PRESENCE RADAR PILLS (SCROLLABLE) */}
-      <div className="bg-slate-950/80 px-3 py-2.5 border-b border-white/10 overflow-x-auto flex items-center gap-2 no-scrollbar">
-        <span className="text-[10px] uppercase font-black text-slate-400 shrink-0 px-1 flex items-center gap-1">
-          <Activity className="w-3 h-3 text-emerald-400" />
-          Status Titik:
-        </span>
-        {officePresenceList.map((item) => {
-          const isSelected = item.office.id === selectedOfficeId;
-          let dotColor = 'bg-slate-500';
-          let pulseClass = '';
-          let badgeBorder = 'border-slate-800 bg-slate-900 text-slate-300';
-
-          if (item.status === 'ONLINE') {
-            dotColor = 'bg-emerald-400';
-            pulseClass = 'animate-ping';
-            badgeBorder = isSelected
-              ? 'border-emerald-400 bg-emerald-950/80 text-emerald-200 ring-2 ring-emerald-400/40 font-black'
-              : 'border-emerald-700/60 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 font-bold';
-          } else if (item.status === 'BACKGROUND') {
-            dotColor = 'bg-amber-400';
-            pulseClass = 'animate-ping';
-            badgeBorder = isSelected
-              ? 'border-amber-400 bg-amber-950/80 text-amber-200 ring-2 ring-amber-400/40 font-black'
-              : 'border-amber-700/60 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60 font-bold';
-          } else if (isSelected) {
-            badgeBorder = 'border-slate-400 bg-slate-800 text-white font-black';
-          }
-
-          return (
-            <button
-              key={item.office.id}
-              type="button"
-              onClick={() => handleSelectOffice(item.office.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] border transition-all cursor-pointer ${badgeBorder}`}
-              title={`${item.office.kabKota} - ${item.statusText}`}
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                {pulseClass && <span className={`${pulseClass} absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`} />}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
-              </span>
-              <span className="truncate max-w-[130px]">
-                {item.office.isProvinsi ? '⭐ Prov. Jabar' : item.office.kabKota.replace('Kabupaten ', 'Kab. ')}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* MAIN VIEW: 2 COLS (MAP + DETAILS DIRECTORY) */}
+      {/* MAIN VIEW: 2 COLS (PETA 28 PENANDA BERSAMAAN + PANEL DETAIL SAMPING) */}
       <div className="grid grid-cols-1 lg:grid-cols-12">
-        {/* MAP CONTAINER (8 COLS ON DESKTOP) */}
-        <div className="lg:col-span-8 relative bg-slate-950 min-h-[440px] sm:min-h-[500px] flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800">
-          {/* MAP OVERLAY CONTROLS */}
-          <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between gap-2 pointer-events-none">
-            {/* CURRENT SELECTED OFFICE BADGE */}
-            <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-emerald-500/50 shadow-lg flex items-center gap-2 text-xs">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                {selectedOfficePresence.status !== 'OFFLINE' && (
-                  <span
-                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      selectedOfficePresence.status === 'ONLINE' ? 'bg-emerald-400' : 'bg-amber-400'
-                    }`}
-                  />
-                )}
-                <span
-                  className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    selectedOfficePresence.status === 'ONLINE'
-                      ? 'bg-emerald-400'
-                      : selectedOfficePresence.status === 'BACKGROUND'
-                      ? 'bg-amber-400'
-                      : 'bg-slate-500'
-                  }`}
-                />
-              </span>
-              <span className="font-black text-white truncate max-w-[200px] sm:max-w-[320px]">
-                {selectedOfficePresence.office.namaDinas}
-              </span>
-            </div>
+        {/* LEAFLET MAP WRAPPER (8 COLS ON DESKTOP) */}
+        <div className="lg:col-span-8 relative bg-slate-950 min-h-[460px] sm:min-h-[520px] flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800">
+          {/* MAP TOP CONTROLS */}
+          <div className="absolute top-3 left-3 right-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+            {/* RESET VIEW BUTTON */}
+            <button
+              type="button"
+              onClick={handleResetViewJabar}
+              className="pointer-events-auto px-3 py-1.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 text-white text-xs font-black border border-emerald-500/40 shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+              title="Tampilkan Seluruh 28 Titik Jawa Barat"
+            >
+              <Compass className="w-3.5 h-3.5 text-amber-300" />
+              <span>Lihat Seluruh Jabar (28 Titik)</span>
+            </button>
 
-            {/* MAP STYLE TOGGLE */}
+            {/* MAP THEME TOGGLE */}
             <div className="pointer-events-auto flex items-center gap-1 bg-slate-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-700 shadow-lg text-[10px] font-bold">
               <button
                 type="button"
-                onClick={() => setMapLayerMode('hybrid')}
+                onClick={() => setMapTileMode('carto_dark')}
                 className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  mapLayerMode === 'hybrid'
+                  mapTileMode === 'carto_dark'
                     ? 'bg-emerald-600 text-white font-black'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Satelit / Hybrid
+                Radar Dark
               </button>
               <button
                 type="button"
-                onClick={() => setMapLayerMode('roadmap')}
+                onClick={() => setMapTileMode('satellite')}
                 className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  mapLayerMode === 'roadmap'
+                  mapTileMode === 'satellite'
                     ? 'bg-blue-600 text-white font-black'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Peta Jalan
+                Satelit
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapTileMode('osm')}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  mapTileMode === 'osm'
+                    ? 'bg-amber-600 text-white font-black'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Terang
               </button>
             </div>
           </div>
 
-          {/* LOADING SPINNER OVERLAY */}
-          {isIframeLoading && (
-            <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center gap-2">
-              <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin" />
-              <span className="text-xs font-black text-emerald-300">Menyesuaikan Titik Presisi Kantor...</span>
-            </div>
-          )}
+          {/* LEAFLET MAP ELEMENT CONTAINER */}
+          <div ref={mapContainerRef} className="w-full h-full min-h-[460px] sm:min-h-[520px] relative z-0" />
 
-          {/* LOCKED / BOUNDED GOOGLE MAP IFRAME */}
-          <iframe
-            key={`${selectedOfficePresence.office.id}-${mapLayerMode}`}
-            title={`Radar Lokasi - ${selectedOfficePresence.office.namaDinas}`}
-            src={embedMapUrl}
-            className="w-full h-full min-h-[440px] sm:min-h-[500px] border-0"
-            loading="lazy"
-            allowFullScreen
-          />
-
-          {/* BOTTOM MAP STATUS BAR */}
+          {/* MAP BOTTOM STATUS BAR (BERSIH TANPA TEKS BERTUMPUK) */}
           <div className="p-3 bg-slate-950/95 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 min-w-0">
-              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <span className="text-slate-300 truncate">
-                {selectedOfficePresence.office.alamat}
+                Titik Terpilih: <strong className="text-white">{selectedOfficePresence.office.namaDinas}</strong>
               </span>
             </div>
             <a
@@ -402,32 +539,43 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               rel="noreferrer"
               className="shrink-0 text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 text-[11px]"
             >
-              <span>Buka Google Maps Lengkap</span>
+              <span>Buka Navigasi Rute GPS</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         </div>
 
         {/* RADAR OFFICE DIRECTORY LIST (4 COLS ON DESKTOP) */}
-        <div className="lg:col-span-4 bg-slate-900/90 flex flex-col h-[500px] sm:h-[550px] overflow-hidden">
-          {/* DIRECTORY HEADER */}
-          <div className="p-3.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-black text-white uppercase tracking-wider">
-                Daftar 28 Titik Komando
+        <div className="lg:col-span-4 bg-slate-900/90 flex flex-col h-[520px] overflow-hidden">
+          {/* SEARCH & FILTER BAR */}
+          <div className="p-3 bg-slate-950/90 border-b border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>28 Kantor Wilayah</span>
+              </span>
+              <span className="text-[11px] font-bold text-emerald-300">
+                {filteredPresenceList.length} Ditampilkan
               </span>
             </div>
-            <span className="text-[11px] font-bold text-slate-400">
-              {filteredPresenceList.length} Titik
-            </span>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Cari kab/kota atau nama admin..."
+                className="w-full bg-slate-800/80 border border-slate-700 rounded-xl py-1.5 pl-8 pr-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
           </div>
 
-          {/* ACTIVE SELECTED CARD HIGHLIGHT */}
-          <div className="p-3.5 bg-gradient-to-br from-emerald-950/60 to-slate-950 border-b border-emerald-500/30">
+          {/* ACTIVE SELECTED CARD HIGHLIGHT (RAPI, TIDAK MENUTUPI AREA LAIN) */}
+          <div className="p-3.5 bg-gradient-to-br from-emerald-950/70 to-slate-950 border-b border-emerald-500/30">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                   {selectedOfficePresence.office.isProvinsi ? '⭐ KANTOR PUSAT PROV' : selectedOfficePresence.office.wilayahRayon}
                 </span>
                 <h4 className="text-sm font-black text-white mt-1 leading-tight">
@@ -435,7 +583,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                 </h4>
               </div>
 
-              {/* Status Pill */}
+              {/* Status Badge */}
               <div
                 className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 shrink-0 ${
                   selectedOfficePresence.status === 'ONLINE'
@@ -445,43 +593,34 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                     : 'bg-slate-800 text-slate-400 border border-slate-700'
                 }`}
               >
-                <span className="relative flex h-2 w-2">
-                  {selectedOfficePresence.status !== 'OFFLINE' && (
-                    <span
-                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        selectedOfficePresence.status === 'ONLINE' ? 'bg-emerald-400' : 'bg-amber-400'
-                      }`}
-                    />
-                  )}
-                  <span
-                    className={`relative inline-flex rounded-full h-2 w-2 ${
-                      selectedOfficePresence.status === 'ONLINE'
-                        ? 'bg-emerald-400'
-                        : selectedOfficePresence.status === 'BACKGROUND'
-                        ? 'bg-amber-400'
-                        : 'bg-slate-500'
-                    }`}
-                  />
-                </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    selectedOfficePresence.status === 'ONLINE'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : selectedOfficePresence.status === 'BACKGROUND'
+                      ? 'bg-amber-400 animate-pulse'
+                      : 'bg-slate-500'
+                  }`}
+                />
                 <span>{selectedOfficePresence.status}</span>
               </div>
             </div>
 
             <div className="space-y-1 text-[11px] text-slate-300">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Petugas / Admin:</span>
-                <span className="font-bold text-white truncate max-w-[160px]">
+                <span className="text-slate-400">Petugas Admin:</span>
+                <span className="font-bold text-white truncate max-w-[170px]">
                   {selectedOfficePresence.adminName}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Status Layar:</span>
+                <span className="text-slate-400">Status Presensi:</span>
                 <span className="font-extrabold text-amber-300">
                   {selectedOfficePresence.statusText}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Telepon Kantor:</span>
+                <span className="text-slate-400">Telepon Resmi:</span>
                 <span className="font-mono text-emerald-300">
                   {selectedOfficePresence.office.telepon}
                 </span>
@@ -495,7 +634,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                 className="mt-2.5 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
-                <span>Kirim Instruksi Radar Cepat</span>
+                <span>Kirim Instruksi Cepat ke Admin Wilayah</span>
               </button>
             )}
           </div>
@@ -505,25 +644,18 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
             {filteredPresenceList.map((item) => {
               const isSelected = item.office.id === selectedOfficeId;
               let dotBg = 'bg-slate-500';
-              let pulseElem = null;
 
               if (item.status === 'ONLINE') {
                 dotBg = 'bg-emerald-400';
-                pulseElem = (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                );
               } else if (item.status === 'BACKGROUND') {
                 dotBg = 'bg-amber-400';
-                pulseElem = (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                );
               }
 
               return (
                 <button
                   key={item.office.id}
                   type="button"
-                  onClick={() => handleSelectOffice(item.office.id)}
+                  onClick={() => handleSelectOfficeCard(item.office)}
                   className={`w-full text-left p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
                     isSelected
                       ? 'bg-emerald-950/80 border border-emerald-500/50 shadow-md'
@@ -531,10 +663,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="relative flex h-3 w-3 shrink-0">
-                      {pulseElem}
-                      <span className={`relative inline-flex rounded-full h-3 w-3 ${dotBg}`} />
-                    </div>
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotBg} ${item.status !== 'OFFLINE' ? 'animate-pulse' : ''}`} />
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
