@@ -72,6 +72,9 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   // Delete Modal State
   const [deletingAccount, setDeletingAccount] = useState<AdminAccount | null>(null);
 
+  // Verval Approval Modal State (Pop Up Konfirmasi Penerimaan Akun)
+  const [approvingAccount, setApprovingAccount] = useState<AdminAccount | null>(null);
+
   // Verval Rejection Modal State
   const [rejectingAccount, setRejectingAccount] = useState<AdminAccount | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('Data wilayah domisili tidak sesuai');
@@ -305,8 +308,14 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
     });
   };
 
-  // 4. VERVAL ACTION: TERIMA PENDAFTARAN AKUN USER
-  const handleApproveUser = (account: AdminAccount) => {
+  // 4. VERVAL ACTION: BUKA POP UP KONFIRMASI TERIMA PENDAFTARAN
+  const handleOpenApproveModal = (account: AdminAccount) => {
+    setApprovingAccount(account);
+  };
+
+  const handleConfirmApprove = () => {
+    if (!approvingAccount) return;
+    const account = approvingAccount;
     const updatedAccount: AdminAccount = {
       ...account,
       statusVerval: 'DISETUJUI',
@@ -319,6 +328,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
     };
 
     onUpdateUserAccount(updatedAccount);
+    setApprovingAccount(null);
 
     setActionSuccessModal({
       type: 'VERVAL_APPROVE',
@@ -886,7 +896,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                               {/* TOMBOL TERIMA (APPROVE) */}
                               <button
                                 type="button"
-                                onClick={() => handleApproveUser(user)}
+                                onClick={() => handleOpenApproveModal(user)}
                                 className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3 py-1.5 rounded-xl text-xs shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 border border-emerald-700"
                                 title="Terima dan Sahkan Pendaftaran Akun User"
                               >
@@ -920,7 +930,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => handleApproveUser(user)}
+                                onClick={() => handleOpenApproveModal(user)}
                                 className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                                 title="Terima Ulang Pendaftaran"
                               >
@@ -1223,6 +1233,86 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       )}
 
       {/* ========================================================================= */}
+      {/* MODAL 4B: KONFIRMASI TERIMA PENDAFTARAN AKUN USER (VERVAL APPROVE POP UP) */}
+      {/* ========================================================================= */}
+      {approvingAccount && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-2 border-emerald-500 max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+            
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700 font-black shadow-xs">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    Apakah Anda Yakin Ingin Menerima Akun Ini?
+                  </h3>
+                  <p className="text-xs text-emerald-800 font-bold">
+                    Konfirmasi Pengesahan Pendaftaran Akun
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovingAccount(null)}
+                className="text-slate-400 hover:text-slate-700 font-black cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* DETAIL DATA CALON PENGGUNA */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Username:</span>
+                <span className="font-black text-slate-900 font-mono text-sm">{approvingAccount.username}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Wilayah Tugas:</span>
+                <span className="font-bold text-slate-800">{approvingAccount.wilayahTugas || 'Jawa Barat'}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">No. Registrasi:</span>
+                <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  {approvingAccount.noRegistrasi || '-'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Waktu Pengajuan:</span>
+                <span className="font-medium text-slate-700">
+                  {approvingAccount.tanggalPendaftaranFormatted || (approvingAccount.waktuPendaftaran ? new Date(approvingAccount.waktuPendaftaran).toLocaleString('id-ID') : 'Baru Saja')}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 font-medium leading-relaxed">
+              ✅ <strong>Konfirmasi Realtime:</strong> Dengan menyetujui, akun ini akan sah terdaftar dan langsung dapat digunakan login. Layar perangkat pendaftar akan <strong>seketika berubah menjadi Disetujui</strong> secara realtime detik ini juga.
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setApprovingAccount(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApprove}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Ya, Terima & Sahkan Akun</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL 5: TOLAK PENDAFTARAN AKUN USER (VERVAL REJECT MODAL) */}
       {/* ========================================================================= */}
       {rejectingAccount && (
@@ -1231,14 +1321,14 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
             
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-rose-100 text-rose-700 font-black">
-                  <XCircle className="w-5 h-5" />
+                <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 font-black shadow-xs">
+                  <XCircle className="w-6 h-6 text-rose-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">
-                    Tolak Pendaftaran Akun
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    Apakah Anda Yakin Ingin Menolak Akun Ini?
                   </h3>
-                  <p className="text-xs text-slate-500 font-semibold">
+                  <p className="text-xs text-rose-700 font-semibold">
                     Akun: <strong>{rejectingAccount.username}</strong> ({rejectingAccount.wilayahTugas})
                   </p>
                 </div>
@@ -1246,7 +1336,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
               <button
                 type="button"
                 onClick={() => setRejectingAccount(null)}
-                className="text-slate-400 hover:text-slate-700 font-black cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 font-black cursor-pointer text-sm"
               >
                 ✕
               </button>
@@ -1300,8 +1390,8 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
               )}
             </div>
 
-            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-900 font-medium">
-              💡 <strong>Pemberitahuan Realtime:</strong> Status penolakan beserta alasan ini akan seketika terkirim ke layar pendaftaran calon pengguna secara realtime detik ini juga.
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-900 font-medium leading-relaxed">
+              ⚠️ <strong>Pemberitahuan Realtime:</strong> Status penolakan beserta alasan ini akan seketika terkirim ke layar pendaftaran calon pengguna secara realtime detik ini juga. Pengguna dapat membaca alasan dan disediakan tombol <strong>Daftar Ulang</strong>.
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2">
@@ -1315,9 +1405,10 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmReject}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
               >
-                Konfirmasi Tolak Pendaftaran
+                <XCircle className="w-4 h-4" />
+                <span>Ya, Tolak Pendaftaran</span>
               </button>
             </div>
 
