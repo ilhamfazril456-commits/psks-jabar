@@ -190,16 +190,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     };
   });
 
-  // Real-time lookup of client's registered account across ticket, quota, deviceId, and public IP
+  // Real-time lookup of client's registered account strictly for THIS specific physical device
   const clientRegisteredAccount = useMemo(() => {
-    // 1. First priority: from registration ticket
+    const devId = detectedDeviceId || getStableDeviceId();
+
+    // 1. First priority: from registration ticket created on THIS device
     if (registrationTicket?.username) {
       const u = registrationTicket.username.toLowerCase().trim();
       const found = adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === u);
       if (found) return found;
     }
 
-    // 2. Second priority: from quotaInfo registeredAccounts
+    // 2. Second priority: from quotaInfo registeredAccounts for THIS device
     if (quotaInfo?.registeredAccounts && quotaInfo.registeredAccounts.length > 0) {
       for (const uname of quotaInfo.registeredAccounts) {
         const u = uname.toLowerCase().trim();
@@ -208,21 +210,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       }
     }
 
-    // 3. Third priority: by deviceId match
-    const devId = detectedDeviceId || getStableDeviceId();
+    // 3. Third priority: by deviceId match in adminAccounts
     if (devId) {
       const found = adminAccounts.find((a) => a.deviceId === devId && a.role === 'user');
       if (found) return found;
     }
 
-    // 4. Fourth priority: by public IP match (only if genuine public IP)
-    if (detectedIp && !isPrivateOrLocalIp(detectedIp)) {
-      const found = adminAccounts.find((a) => a.registeredIp === detectedIp && a.role === 'user');
-      if (found) return found;
-    }
-
     return null;
-  }, [registrationTicket, quotaInfo?.registeredAccounts, adminAccounts, detectedDeviceId, detectedIp]);
+  }, [registrationTicket, quotaInfo?.registeredAccounts, adminAccounts, detectedDeviceId]);
 
   // Real-time listener lookup for this user from adminAccounts
   const liveRegisteredAccount = clientRegisteredAccount;
@@ -1000,7 +995,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                               : 'bg-amber-200 text-amber-950'
                           }`}>
                             {!clientRegisteredAccount
-                              ? '1 Akun / IP (Tersedia)'
+                              ? '1 Akun / Perangkat (Tersedia)'
                               : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
                               ? 'Terverifikasi (1/1)'
                               : clientRegisteredAccount.statusVerval === 'DITOLAK'
@@ -1010,9 +1005,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         </div>
                         <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
                           {!clientRegisteredAccount
-                            ? 'Registrasi mandiri 1 akun per IP untuk warga & personil sosial Jabar.'
+                            ? 'Registrasi mandiri 1 akun per perangkat untuk warga & personil potensi sosial Jabar.'
                             : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
-                            ? `Akun "${clientRegisteredAccount.username}" telah disahkan. Klik untuk masuk ke akun.`
+                            ? `Akun "${clientRegisteredAccount.username}" telah disahkan di perangkat ini. Klik untuk masuk.`
                             : clientRegisteredAccount.statusVerval === 'DITOLAK'
                             ? `Pendaftaran "${clientRegisteredAccount.username}" ditolak. Klik untuk daftar ulang.`
                             : `Pengajuan "${clientRegisteredAccount.username}" sedang ditinjau Superadmin.`}
@@ -1423,7 +1418,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           <div className="p-2 rounded-xl bg-amber-100/90 border border-amber-300 text-[10px] text-amber-950 font-semibold flex items-start gap-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-800 shrink-0 mt-0.5" />
                             <span className="leading-tight">
-                              <strong>Pemberitahuan Sistem:</strong> Karena saat ini Anda telah mengajukan pendaftaran akun yang sedang dalam proses verifikasi, saat ini Anda <strong>tidak bisa melakukan proses pendaftaran akun</strong> baru lagi (Pembatasan 1 Akun per IP).
+                              <strong>Pemberitahuan Sistem:</strong> Karena saat ini Anda telah mengajukan pendaftaran akun yang sedang dalam proses verifikasi pada perangkat ini, saat ini Anda <strong>tidak bisa melakukan proses pendaftaran akun</strong> baru lagi (Pembatasan 1 Akun per Perangkat).
                             </span>
                           </div>
 
