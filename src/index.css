@@ -400,3 +400,12 @@ input, select, textarea, button {
   border-top-color: #ffffff !important;
 }
 
+/* Ensure Leaflet layers stay contained below sticky headers and modals */
+.leaflet-pane {
+  z-index: 10 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 20 !important;
+}
+

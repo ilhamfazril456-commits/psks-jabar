@@ -241,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const akunSubMenus = getPusatAkunSubMenus();
 
   return (
-    <header className="sticky top-0 z-50 w-full select-none font-sans group">
+    <header className="sticky top-0 z-[1000] w-full select-none font-sans group">
       {/* MAIN NAVBAR CONTAINER */}
       <div 
         className={`w-full relative transition-all duration-500 ease-in-out shadow-sm ${

@@ -53,7 +53,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   const [selectedOfficeId, setSelectedOfficeId] = useState<string>('provinsi_jabar');
-  const [mapTileMode, setMapTileMode] = useState<'carto_dark' | 'osm' | 'satellite'>('carto_dark');
+  const [mapTileMode, setMapTileMode] = useState<'osm' | 'satellite' | 'carto_dark'>('osm');
   const [filterPresence, setFilterPresence] = useState<'ALL' | 'ONLINE' | 'BACKGROUND' | 'OFFLINE'>('ALL');
   const [searchFilter, setSearchFilter] = useState('');
 
@@ -247,15 +247,17 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         leafletMapRef.current.removeLayer(tileLayerRef.current);
       }
 
-      let tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      if (mapTileMode === 'osm') {
-        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      } else if (mapTileMode === 'satellite') {
+      let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      if (mapTileMode === 'satellite') {
         tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      } else if (mapTileMode === 'carto_dark') {
+        // High quality dark tile without intrusive watermark
+        tileUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
       }
 
       tileLayerRef.current = L.tileLayer(tileUrl, {
         maxZoom: 18,
+        subdomains: 'abcd',
       }).addTo(leafletMapRef.current);
     }
 
@@ -282,26 +284,26 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       let badgeLabel = item.office.kabKota.replace('Kabupaten ', 'Kab. ').replace('Kota ', 'Kota ');
 
       if (item.status === 'ONLINE') {
-        coreColor = '#10b981'; // Hijau Emerald Menyala
-        ringColor = 'rgba(16, 185, 129, 0.6)';
+        coreColor = '#00ff88'; // Hijau Neon Super Terang & Bercahaya
+        ringColor = 'rgba(0, 255, 136, 0.9)';
         pulseHtml = `<div class="radar-sensor-ping-green"></div>`;
       } else if (item.status === 'BACKGROUND') {
-        coreColor = '#f59e0b'; // Kuning Amber Menyala
-        ringColor = 'rgba(245, 158, 11, 0.6)';
+        coreColor = '#fbbf24'; // Kuning Amber Menyala
+        ringColor = 'rgba(251, 191, 36, 0.8)';
         pulseHtml = `<div class="radar-sensor-ping-yellow"></div>`;
       }
 
       const iconHtml = `
         <div class="relative flex items-center justify-center cursor-pointer select-none group">
           ${pulseHtml}
-          <div class="w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+          <div class="w-6 h-6 rounded-full flex items-center justify-center shadow-2xl transition-transform ${
             isSelected ? 'scale-125 ring-3 ring-amber-300' : 'hover:scale-110'
-          }" style="background-color: ${coreColor}; border: 2px solid ${isProv ? '#fde047' : '#ffffff'}; box-shadow: 0 0 12px ${coreColor};">
-            ${isProv ? '<span style="font-size: 10px;">⭐</span>' : `<span style="width: 6px; height: 6px; background: white; border-radius: 9999px;"></span>`}
+          }" style="background-color: ${coreColor}; border: 2px solid ${isProv ? '#fde047' : '#ffffff'}; box-shadow: 0 0 16px ${coreColor}, 0 0 28px ${coreColor};">
+            ${isProv ? '<span style="font-size: 10px;">⭐</span>' : `<span style="width: 7px; height: 7px; background: white; border-radius: 9999px; box-shadow: 0 0 6px white;"></span>`}
           </div>
           <!-- Label Mini Kota yang Rapi Tanpa Tabrakan -->
-          <div class="absolute -bottom-5 whitespace-nowrap bg-slate-950/85 text-[9px] font-black px-1.5 py-0.5 rounded border border-white/20 shadow-md pointer-events-none ${
-            item.status === 'ONLINE' ? 'text-emerald-300 border-emerald-500/50' : item.status === 'BACKGROUND' ? 'text-amber-300 border-amber-500/50' : 'text-slate-300'
+          <div class="absolute -bottom-5 whitespace-nowrap bg-slate-950/90 text-[9px] font-black px-1.5 py-0.5 rounded border shadow-lg pointer-events-none ${
+            item.status === 'ONLINE' ? 'text-emerald-200 border-emerald-400 shadow-emerald-500/30' : item.status === 'BACKGROUND' ? 'text-amber-200 border-amber-400 shadow-amber-500/30' : 'text-slate-300 border-white/20'
           }">
             ${badgeLabel}
           </div>
@@ -353,29 +355,44 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       <style>{`
         .radar-sensor-ping-green {
           position: absolute;
-          width: 32px;
-          height: 32px;
+          width: 38px;
+          height: 38px;
           border-radius: 9999px;
-          background-color: rgba(16, 185, 129, 0.45);
-          animation: sensorPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.9) 0%, rgba(52, 211, 153, 0.6) 50%, rgba(16, 185, 129, 0) 100%);
+          box-shadow: 0 0 20px #10b981, 0 0 35px #34d399;
+          animation: sensorPingGreen 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
           pointer-events: none;
         }
         .radar-sensor-ping-yellow {
           position: absolute;
-          width: 32px;
-          height: 32px;
+          width: 34px;
+          height: 34px;
           border-radius: 9999px;
-          background-color: rgba(245, 158, 11, 0.45);
-          animation: sensorPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+          background: radial-gradient(circle, rgba(245, 158, 11, 0.85) 0%, rgba(251, 191, 36, 0.5) 50%, rgba(245, 158, 11, 0) 100%);
+          box-shadow: 0 0 16px #f59e0b, 0 0 28px #fbbf24;
+          animation: sensorPingYellow 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
           pointer-events: none;
         }
-        @keyframes sensorPing {
+        @keyframes sensorPingGreen {
           0% {
-            transform: scale(0.6);
-            opacity: 0.9;
+            transform: scale(0.4);
+            opacity: 1;
+          }
+          60% {
+            opacity: 0.85;
+          }
+          100% {
+            transform: scale(2.8);
+            opacity: 0;
+          }
+        }
+        @keyframes sensorPingYellow {
+          0% {
+            transform: scale(0.5);
+            opacity: 0.95;
           }
           75%, 100% {
-            transform: scale(2.4);
+            transform: scale(2.5);
             opacity: 0;
           }
         }
@@ -472,7 +489,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         {/* LEAFLET MAP WRAPPER (8 COLS ON DESKTOP) */}
         <div className="lg:col-span-8 relative bg-slate-950 min-h-[460px] sm:min-h-[520px] flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800">
           {/* MAP TOP CONTROLS */}
-          <div className="absolute top-3 left-3 right-3 z-[400] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
             {/* RESET VIEW BUTTON */}
             <button
               type="button"
@@ -484,25 +501,25 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               <span>Lihat Seluruh Jabar (28 Titik)</span>
             </button>
 
-            {/* MAP THEME TOGGLE */}
+            {/* MAP THEME TOGGLE (URUTAN: Terang, Satelit, Radar Dark) */}
             <div className="pointer-events-auto flex items-center gap-1 bg-slate-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-700 shadow-lg text-[10px] font-bold">
               <button
                 type="button"
-                onClick={() => setMapTileMode('carto_dark')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  mapTileMode === 'carto_dark'
-                    ? 'bg-emerald-600 text-white font-black'
+                onClick={() => setMapTileMode('osm')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  mapTileMode === 'osm'
+                    ? 'bg-amber-600 text-white font-black shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Radar Dark
+                Terang
               </button>
               <button
                 type="button"
                 onClick={() => setMapTileMode('satellite')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                   mapTileMode === 'satellite'
-                    ? 'bg-blue-600 text-white font-black'
+                    ? 'bg-blue-600 text-white font-black shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -510,14 +527,14 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               </button>
               <button
                 type="button"
-                onClick={() => setMapTileMode('osm')}
-                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                  mapTileMode === 'osm'
-                    ? 'bg-amber-600 text-white font-black'
+                onClick={() => setMapTileMode('carto_dark')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  mapTileMode === 'carto_dark'
+                    ? 'bg-emerald-600 text-white font-black shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Terang
+                Radar Dark
               </button>
             </div>
           </div>
