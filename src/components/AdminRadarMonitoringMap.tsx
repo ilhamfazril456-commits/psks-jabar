@@ -54,6 +54,30 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
   const [filterPresence, setFilterPresence] = useState<'ALL' | 'ONLINE' | 'BACKGROUND' | 'OFFLINE'>('ALL');
   const [searchFilter, setSearchFilter] = useState('');
 
+  // Live real-time heartbeat ticker (memperbarui status presensi setiap 2 detik secara instan)
+  const [liveTick, setLiveTick] = useState<number>(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveTick((t) => t + 1);
+    }, 2000);
+
+    const handleVisAndFocus = () => {
+      setLiveTick((t) => t + 1);
+    };
+
+    document.addEventListener('visibilitychange', handleVisAndFocus);
+    window.addEventListener('focus', handleVisAndFocus);
+    window.addEventListener('blur', handleVisAndFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisAndFocus);
+      window.removeEventListener('focus', handleVisAndFocus);
+      window.removeEventListener('blur', handleVisAndFocus);
+    };
+  }, []);
+
   // 1. FILTER KHUSUS ADMIN & SUPERADMIN SAJA
   const strictlyFilteredAdminAccounts = useMemo(() => {
     return adminAccounts.filter((acc) => {
@@ -83,13 +107,15 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
 
   // 2. Evaluasi status presence (ONLINE = Hijau Neon Menyala, BACKGROUND = Kuning Menyala, OFFLINE = Redup)
   const computeAccountPresence = (acc: AdminAccount): AdminPresenceStatus => {
+    // A. Cek jika akun ini adalah sesi pengguna yang sedang login saat ini di tab ini
     const isCurrentSessionUser =
+      Boolean(session) &&
       session?.statusActive === 'SAH_TERDAFTAR' &&
-      (((session.isDeveloper || session.role === 'developer') && acc.role === 'developer') ||
-        (session.role === 'superadmin' && acc.role === 'superadmin') ||
-        (acc.role === session.role && (acc.wilayahTugas || '').toLowerCase().trim() === (session.wilayah || '').toLowerCase().trim()) ||
-        (acc.username || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-        (acc.namaAdmin || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim());
+      (((session?.isDeveloper || session?.role === 'developer') && acc.role === 'developer') ||
+        (session?.role === 'superadmin' && acc.role === 'superadmin') ||
+        (session?.username && (acc.username || '').toLowerCase().trim() === session.username.toLowerCase().trim()) ||
+        (session?.nama && (acc.namaAdmin || '').toLowerCase().trim() === session.nama.toLowerCase().trim()) ||
+        (acc.role === session?.role && (acc.wilayahTugas || '').toLowerCase().trim() === (session?.wilayah || '').toLowerCase().trim()));
 
     if (isCurrentSessionUser) {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
@@ -98,11 +124,12 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       return 'ONLINE';
     }
 
+    // B. Cek status realtime akun lain (Heartbeat Firestore & Signal Live)
     const activeTime = acc.lastHeartbeat || acc.lastActive;
     if (!activeTime) return 'OFFLINE';
 
     const timeDiff = Date.now() - new Date(activeTime).getTime();
-    if (isNaN(timeDiff) || timeDiff > 90 * 1000) {
+    if (isNaN(timeDiff) || timeDiff > 120 * 1000) {
       return 'OFFLINE';
     }
 
@@ -110,7 +137,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       if (timeDiff > 15 * 1000) return 'OFFLINE';
     }
 
-    if (acc.statusLayar === 'LATAR_BELAKANG') {
+    if (acc.statusLayar === 'LATAR_BELAKANG' || acc.statusKoneksi === 'IDLE' || acc.statusLayar === 'AFK_IDLE') {
       return 'BACKGROUND';
     }
 
@@ -118,21 +145,30 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       return 'ONLINE';
     }
 
-    if (acc.statusLayar === 'AFK_IDLE' || acc.statusKoneksi === 'IDLE') {
-      return 'BACKGROUND';
+    // Jika memiliki heartbeat terbaru dalam 90 detik terakhir
+    if (timeDiff <= 90 * 1000) {
+      return 'ONLINE';
     }
 
     return 'OFFLINE';
   };
 
-  // 3. Pasangkan 28 titik kantor dengan data admin & status live presence
+  // 3. Pasangkan 28 titik kantor dengan data admin & status live presence secara presisi & realtime
   const officePresenceList: OfficePresenceInfo[] = useMemo(() => {
     return DINSOS_GEO_OFFICES.map((office) => {
-      const matchingAccount = strictlyFilteredAdminAccounts.find((acc) => {
+      // A. Kumpulkan seluruh akun yang bertugas di wilayah kantor ini
+      const matchedAccounts = strictlyFilteredAdminAccounts.filter((acc) => {
         if (office.isProvinsi) {
           const r = (acc.role || '').toLowerCase();
           const w = (acc.wilayahTugas || '').toLowerCase();
-          return r === 'superadmin' || r === 'developer' || w.includes('provinsi') || w.includes('jawa barat');
+          const u = (acc.username || '').toLowerCase();
+          return (
+            r === 'superadmin' ||
+            r === 'developer' ||
+            w.includes('provinsi') ||
+            w.includes('jawa barat') ||
+            u.includes('superadmin')
+          );
         }
 
         const accWilayah = (acc.wilayahTugas || '').toLowerCase().trim();
@@ -147,16 +183,84 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         );
       });
 
+      // B. Cek apakah sesi login saat ini bertugas di kantor ini
+      const isSessionAtThisOffice = (() => {
+        if (!session) return false;
+        if (office.isProvinsi) {
+          const r = (session.role || '').toLowerCase();
+          const w = (session.wilayah || '').toLowerCase();
+          return r === 'superadmin' || r === 'developer' || w.includes('provinsi') || w.includes('jawa barat');
+        }
+        const sw = (session.wilayah || '').toLowerCase().trim();
+        const ok = office.kabKota.toLowerCase().trim();
+        return sw === ok || ok.includes(sw) || sw.includes(ok);
+      })();
+
+      // C. Tentukan akun representatif & status kehadiran
+      let activeAccount: AdminAccount | null = null;
       let status: AdminPresenceStatus = 'OFFLINE';
+
+      if (isSessionAtThisOffice) {
+        // JIKA AKUN YANG SEDANG LOGIN BERTUGAS DI KANTOR INI (e.g. SUPERADMIN di KANTOR PROVINSI):
+        // Prioritaskan akun yang sedang login tersebut (pasti ONLINE saat aktif di layar)
+        const sessionAccount = matchedAccounts.find(
+          (a) =>
+            (session.username && (a.username || '').toLowerCase().trim() === session.username.toLowerCase().trim()) ||
+            (session.nama && (a.namaAdmin || '').toLowerCase().trim() === session.nama.toLowerCase().trim()) ||
+            (session.role === a.role)
+        );
+        activeAccount = sessionAccount || matchedAccounts.find((a) => a.role === session.role) || matchedAccounts[0] || null;
+
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+          status = 'BACKGROUND';
+        } else {
+          status = 'ONLINE';
+        }
+      } else {
+        // JIKA BUKAN SESI LOGIN DI PERANGKAT INI:
+        // Evaluasi seluruh akun admin kantor ini, utamakan akun yang sedang ONLINE
+        let bestAcc: AdminAccount | null = null;
+        let bestStatus: AdminPresenceStatus = 'OFFLINE';
+
+        for (const acc of matchedAccounts) {
+          const presence = computeAccountPresence(acc);
+          if (presence === 'ONLINE') {
+            bestAcc = acc;
+            bestStatus = 'ONLINE';
+            break;
+          } else if (presence === 'BACKGROUND' && bestStatus === 'OFFLINE') {
+            bestAcc = acc;
+            bestStatus = 'BACKGROUND';
+          }
+        }
+
+        if (!bestAcc) {
+          // Jika tidak ada yang online, ambil akun default representatif kantor
+          if (office.isProvinsi) {
+            bestAcc = matchedAccounts.find((a) => a.role === 'superadmin') || matchedAccounts[0] || null;
+          } else {
+            bestAcc = matchedAccounts[0] || null;
+          }
+          bestStatus = 'OFFLINE';
+        }
+
+        activeAccount = bestAcc;
+        status = bestStatus;
+      }
+
+      // D. Susun Nama Petugas & Label Status
       let adminName = 'Tidak Ada Sesi Admin';
-      let role = 'Admin Wilayah';
+      let role = office.isProvinsi ? 'Superadmin Jabar' : 'Admin Wilayah';
       let lastActiveTime = 'Offline';
 
-      if (matchingAccount) {
-        status = computeAccountPresence(matchingAccount);
-        adminName = matchingAccount.namaAdmin || matchingAccount.username || 'Admin Wilayah';
-        role = matchingAccount.role === 'superadmin' ? 'Superadmin Jabar' : matchingAccount.role === 'developer' ? 'Developer' : 'Admin Kab/Kota';
-        lastActiveTime = matchingAccount.terakhirLogin || 'Baru Saja';
+      if (isSessionAtThisOffice && session) {
+        adminName = session.nama || session.username || (office.isProvinsi ? 'Super Admin Dinsos Jabar' : 'Admin Wilayah');
+        role = session.role === 'superadmin' ? 'Superadmin Jabar' : session.role === 'developer' ? 'Developer' : 'Admin Kab/Kota';
+        lastActiveTime = status === 'ONLINE' ? 'Sedang Aktif di Layar Saat Ini' : 'Standby di Latar Belakang';
+      } else if (activeAccount) {
+        adminName = activeAccount.namaAdmin || activeAccount.username || 'Admin Wilayah';
+        role = activeAccount.role === 'superadmin' ? 'Superadmin Jabar' : activeAccount.role === 'developer' ? 'Developer' : 'Admin Kab/Kota';
+        lastActiveTime = activeAccount.terakhirLogin || 'Baru Saja';
       }
 
       let statusText = 'Non-Aktif / Offline';
@@ -170,13 +274,13 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         office,
         status,
         statusText,
-        matchedAccount: matchingAccount || null,
+        matchedAccount: activeAccount,
         adminName,
         role,
         lastActiveTime,
       };
     });
-  }, [strictlyFilteredAdminAccounts, session]);
+  }, [strictlyFilteredAdminAccounts, session, liveTick]);
 
   // Hitung jumlah status
   const totalOffices = officePresenceList.length;
@@ -871,7 +975,13 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Status Presensi:</span>
-                <span className="font-extrabold text-amber-300">
+                <span className={`font-extrabold ${
+                  selectedOfficePresence.status === 'ONLINE'
+                    ? 'text-emerald-400 font-black'
+                    : selectedOfficePresence.status === 'BACKGROUND'
+                    ? 'text-amber-300'
+                    : 'text-slate-400'
+                }`}>
                   {selectedOfficePresence.statusText}
                 </span>
               </div>
