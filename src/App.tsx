@@ -3107,6 +3107,18 @@ export default function App() {
           }
         }
 
+        // Also clean up any lingering local registration ticket if matching deleted account
+        const rawTicket = localStorage.getItem('psks_latest_user_registration_ticket');
+        if (rawTicket) {
+          try {
+            const parsedTicket = JSON.parse(rawTicket);
+            const ticketUname = (parsedTicket?.username || '').toLowerCase().trim();
+            if (newItems.includes(ticketUname) || nextDeleted.includes(ticketUname) || ticketUname === targetUname) {
+              localStorage.removeItem('psks_latest_user_registration_ticket');
+            }
+          } catch {}
+        }
+
         // Clean up quota in Firestore
         removeAccountFromQuota(targetUname, target?.registeredIp, target?.deviceId);
       } catch {}

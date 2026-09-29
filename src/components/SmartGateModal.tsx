@@ -45,6 +45,7 @@ import {
   detectClientIp,
   subscribeToClientQuota,
   recordAccountRegistration,
+  isPrivateOrLocalIp,
   QuotaInfo,
 } from '../services/ipRegistrationService';
 import { getFirestoreDoc } from '../services/firestoreDataService';
@@ -117,13 +118,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return null;
   });
 
-  // Real-time listener lookup for this user from adminAccounts
-  const liveRegisteredAccount = useMemo(() => {
-    if (!registrationTicket?.username) return null;
-    const uname = registrationTicket.username.toLowerCase().trim();
-    return adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === uname) || null;
-  }, [registrationTicket, adminAccounts]);
-
   // Visual copy indicator for registration ticket number
   const [ticketCopied, setTicketCopied] = useState(false);
   const handleCopyTicket = (text: string) => {
@@ -177,7 +171,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return getStableDeviceId();
   });
 
-  // Realtime Quota Information state
+  // Realtime Quota Information state (Strict 1 Account per IP / Perangkat)
   const [quotaInfo, setQuotaInfo] = useState<QuotaInfo>(() => {
     const rawLocal = localStorage.getItem('simpsks_device_registered_accounts');
     let localList: string[] = [];
@@ -187,18 +181,69 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       } catch {}
     }
     return {
-      registeredAccounts: localList,
-      count: localList.length,
-      isQuotaFull: localList.length >= 3,
+      registeredAccounts: localList.slice(0, 1),
+      count: Math.min(localList.length, 1),
+      isQuotaFull: localList.length >= 1,
       ip: '',
       deviceId: getStableDeviceId(),
       isRealtimeSynced: false,
     };
   });
 
-  // Detect IP dynamically only when registration view is actively accessed
+  // Real-time lookup of client's registered account across ticket, quota, deviceId, and public IP
+  const clientRegisteredAccount = useMemo(() => {
+    // 1. First priority: from registration ticket
+    if (registrationTicket?.username) {
+      const u = registrationTicket.username.toLowerCase().trim();
+      const found = adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === u);
+      if (found) return found;
+    }
+
+    // 2. Second priority: from quotaInfo registeredAccounts
+    if (quotaInfo?.registeredAccounts && quotaInfo.registeredAccounts.length > 0) {
+      for (const uname of quotaInfo.registeredAccounts) {
+        const u = uname.toLowerCase().trim();
+        const found = adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === u);
+        if (found) return found;
+      }
+    }
+
+    // 3. Third priority: by deviceId match
+    const devId = detectedDeviceId || getStableDeviceId();
+    if (devId) {
+      const found = adminAccounts.find((a) => a.deviceId === devId && a.role === 'user');
+      if (found) return found;
+    }
+
+    // 4. Fourth priority: by public IP match (only if genuine public IP)
+    if (detectedIp && !isPrivateOrLocalIp(detectedIp)) {
+      const found = adminAccounts.find((a) => a.registeredIp === detectedIp && a.role === 'user');
+      if (found) return found;
+    }
+
+    return null;
+  }, [registrationTicket, quotaInfo?.registeredAccounts, adminAccounts, detectedDeviceId, detectedIp]);
+
+  // Real-time listener lookup for this user from adminAccounts
+  const liveRegisteredAccount = clientRegisteredAccount;
+
+  // Auto-clean stale ticket if account was removed/deleted from database by Superadmin
   useEffect(() => {
-    if (view !== 'register') return;
+    if (registrationTicket?.username && adminAccounts.length > 0) {
+      const u = registrationTicket.username.toLowerCase().trim();
+      const stillInDb = adminAccounts.some((a) => (a.username || '').toLowerCase().trim() === u);
+      if (!stillInDb) {
+        setRegistrationTicket(null);
+        try {
+          localStorage.removeItem('psks_latest_user_registration_ticket');
+        } catch {}
+      }
+    }
+  }, [adminAccounts, registrationTicket]);
+
+  // Detect IP dynamically whenever gate modal is open
+  useEffect(() => {
+    if (!isOpen) return;
     let isMounted = true;
     detectClientIp().then((ip) => {
       if (isMounted && ip) {
@@ -208,11 +253,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [view]);
+  }, [isOpen]);
 
-  // Subscribe to real-time Firestore quota updates for this device only when register view is actively open
+  // Subscribe to real-time Firestore quota updates for this device/IP whenever modal is open
   useEffect(() => {
-    if (!isOpen || view !== 'register') return;
+    if (!isOpen) return;
 
     const unsubscribe = subscribeToClientQuota(
       detectedIp,
@@ -226,13 +271,28 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess, view]);
+  }, [isOpen, detectedIp, detectedDeviceId, adminAccounts, regSuccess]);
 
   const deviceRegisteredAccounts = quotaInfo.registeredAccounts;
-  const isDeviceQuotaFull = quotaInfo.count >= 3;
+  const isDeviceQuotaFull = quotaInfo.count >= 1 || Boolean(clientRegisteredAccount);
 
   const getDeviceRegisteredAccounts = (): string[] => {
     return quotaInfo.registeredAccounts;
+  };
+
+  // Handler Pintar Klik "Daftar Akun Baru" sesuai 4 Kondisi Realtime
+  const handleDaftarAkunBaruClick = () => {
+    setErrorMessage('');
+    
+    // KONDISI 1: Belum pernah mendaftar (atau akun lama sudah dihapus oleh Superadmin)
+    if (!clientRegisteredAccount) {
+      setView('register');
+      return;
+    }
+
+    // KONDISI 2, 3, 4: Sudah ada akun yang diajukan dari IP/perangkat ini
+    // Langsung arahkan ke halaman informasi pendaftaran akun (Pending, Ditolak, atau Disetujui)
+    setView('register_status');
   };
 
 
@@ -444,12 +504,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       // Record this registration on the device and in Firestore in real-time
       await recordAccountRegistration(uTrim, detectedIp, detectedDeviceId || getStableDeviceId());
 
-      // Update quota info immediately in local state
-      const updatedAccounts = Array.from(new Set([...deviceRegisteredAccounts, uTrim])).slice(0, 3);
+      // Update quota info immediately in local state (Strict 1 account per IP / device)
+      const updatedAccounts = [uTrim];
       setQuotaInfo({
         registeredAccounts: updatedAccounts,
-        count: updatedAccounts.length,
-        isQuotaFull: updatedAccounts.length >= 3,
+        count: 1,
+        isQuotaFull: true,
         ip: detectedIp,
         deviceId: detectedDeviceId || getStableDeviceId(),
         isRealtimeSynced: true,
@@ -915,44 +975,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     className="space-y-2 my-auto animate-scaleUp"
                   >
 
-                    {/* BANNER STATUS TIKET VERVAL (JIKA PENGGUNA SUDAH PERNAH DAFTAR) */}
-                    {registrationTicket && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setErrorMessage('');
-                          setView('register_status');
-                        }}
-                        className="w-full text-left p-2 sm:p-2.5 rounded-xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-300 text-amber-950 transition-all flex items-center justify-between gap-2 shadow-2xs group cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Radio className="w-3.5 h-3.5 text-amber-600 animate-pulse shrink-0" />
-                          <div className="truncate">
-                            <span className="text-[10px] sm:text-[10.5px] font-black text-amber-950 block leading-tight truncate">
-                              Tiket Verval: {registrationTicket.username} ({registrationTicket.wilayah})
-                            </span>
-                            <span className="text-[9px] text-amber-800 font-semibold truncate block">
-                              {liveRegisteredAccount?.statusVerval === 'DISETUJUI' || liveRegisteredAccount?.statusActive === 'SAH_TERDAFTAR'
-                                ? '✅ Disetujui Superadmin — Akun Siap Digunakan'
-                                : liveRegisteredAccount?.statusVerval === 'DITOLAK'
-                                ? '❌ Pendaftaran Ditolak — Klik untuk Detail Catatan'
-                                : '⏳ Sedang Ditinjau Superadmin (Sinkron Realtime)'}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-[9px] font-black bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full shrink-0 group-hover:bg-amber-300 transition-colors">
-                          Pantau Status →
-                        </span>
-                      </button>
-                    )}
-                    
-                    {/* JALUR 1: TOMBOL DAFTAR AKUN BARU */}
+                    {/* JALUR 1: TOMBOL DAFTAR AKUN BARU (DENGAN LOGIKA 4 KONDISI CERDAS PER-IP) */}
                     <button
                       type="button"
-                      onClick={() => {
-                        setErrorMessage('');
-                        setView('register');
-                      }}
+                      id="btn-jalur-daftar-akun-baru"
+                      onClick={handleDaftarAkunBaruClick}
                       className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
@@ -964,15 +991,31 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             Daftar Akun Baru
                           </span>
                           <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase ${
-                            isDeviceQuotaFull
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-blue-200 text-blue-900'
+                            !clientRegisteredAccount
+                              ? 'bg-blue-200 text-blue-900'
+                              : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
+                              ? 'bg-emerald-200 text-emerald-950'
+                              : clientRegisteredAccount.statusVerval === 'DITOLAK'
+                              ? 'bg-rose-200 text-rose-950'
+                              : 'bg-amber-200 text-amber-950'
                           }`}>
-                            {isDeviceQuotaFull ? 'Perangkat Penuh (3/3)' : `${deviceRegisteredAccounts.length}/3 Akun`}
+                            {!clientRegisteredAccount
+                              ? '1 Akun / IP (Tersedia)'
+                              : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
+                              ? 'Terverifikasi (1/1)'
+                              : clientRegisteredAccount.statusVerval === 'DITOLAK'
+                              ? 'Ditolak (Daftar Ulang)'
+                              : 'Menunggu Verval (1/1)'}
                           </span>
                         </div>
                         <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
-                          Registrasi mandiri untuk warga & personil potensi sosial Jawa Barat.
+                          {!clientRegisteredAccount
+                            ? 'Registrasi mandiri 1 akun per IP untuk warga & personil sosial Jabar.'
+                            : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
+                            ? `Akun "${clientRegisteredAccount.username}" telah disahkan. Klik untuk masuk ke akun.`
+                            : clientRegisteredAccount.statusVerval === 'DITOLAK'
+                            ? `Pendaftaran "${clientRegisteredAccount.username}" ditolak. Klik untuk daftar ulang.`
+                            : `Pengajuan "${clientRegisteredAccount.username}" sedang ditinjau Superadmin.`}
                         </p>
                       </div>
                     </button>
@@ -1078,7 +1121,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       />
                     </div>
 
-                    {/* Device Quota Info Badge */}
+                    {/* Device / IP Quota Info Badge */}
                     <div className={`p-2 rounded-xl border flex flex-wrap items-center justify-between gap-1.5 text-[9.5px] font-black ${
                       isDeviceQuotaFull 
                         ? 'bg-rose-50 border-rose-300 text-rose-800' 
@@ -1086,10 +1129,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     }`}>
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <Laptop className="w-3.5 h-3.5 text-blue-800 shrink-0" />
-                        <span className="whitespace-nowrap">Batas Pendaftaran Perangkat Ini:</span>
+                        <span className="whitespace-nowrap">Batas Kuota Pendaftaran:</span>
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[8px] bg-blue-100 text-blue-800 rounded font-semibold">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                          Perangkat Mandiri
+                          1 Akun per IP
                         </span>
                       </div>
                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 shadow-xs ${
@@ -1097,7 +1140,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           ? 'bg-rose-600 text-white'
                           : 'bg-blue-800 text-white'
                       }`}>
-                        {deviceRegisteredAccounts.length}/3 Akun {isDeviceQuotaFull ? '(Maksimal)' : `(Tersedia ${3 - deviceRegisteredAccounts.length})`}
+                        {deviceRegisteredAccounts.length}/1 Akun {isDeviceQuotaFull ? '(Penuh)' : '(Tersedia 1)'}
                       </span>
                     </div>
 
@@ -1281,7 +1324,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         {isRegistering ? (
                           <span>Mendaftarkan Akun...</span>
                         ) : isDeviceQuotaFull ? (
-                          <span>Pendaftaran Perangkat Dikunci (Max 3)</span>
+                          <span>Pendaftaran IP / Perangkat Dikunci (1 Akun Terdaftar)</span>
                         ) : (
                           <>
                             <Check className="w-3 h-3 text-[#d4af37]" />
@@ -1371,16 +1414,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                                   <span>Sedang Ditinjau</span>
                                 </span>
                               </div>
-                              <p className="text-[10.5px] text-amber-800 font-medium leading-relaxed mt-1">
-                                Pendaftaran akun Anda telah terkirim secara <strong>realtime</strong> ke Superadmin Dinas Sosial Provinsi Jawa Barat.
+                              <p className="text-[10.5px] text-amber-900 font-medium leading-relaxed mt-1">
+                                Saat ini Anda telah mengajukan pendaftaran akun atas nama <strong className="text-slate-900 font-black">{uname}</strong> ({wil}) dan sedang dalam proses verifikasi & validasi oleh Superadmin Dinas Sosial Provinsi Jawa Barat.
                               </p>
                             </div>
                           </div>
 
-                          <div className="bg-amber-100/80 rounded-xl p-2 border border-amber-300/80 text-[10px] text-amber-900 flex items-center gap-2">
-                            <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                          <div className="p-2 rounded-xl bg-amber-100/90 border border-amber-300 text-[10px] text-amber-950 font-semibold flex items-start gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-800 shrink-0 mt-0.5" />
+                            <span className="leading-tight">
+                              <strong>Pemberitahuan Sistem:</strong> Karena saat ini Anda telah mengajukan pendaftaran akun yang sedang dalam proses verifikasi, saat ini Anda <strong>tidak bisa melakukan proses pendaftaran akun</strong> baru lagi (Pembatasan 1 Akun per IP).
+                            </span>
+                          </div>
+
+                          <div className="bg-amber-100/60 rounded-xl p-1.5 border border-amber-200 text-[9.5px] text-amber-900 flex items-center gap-2">
+                            <Sparkles className="w-3 h-3 text-amber-700 shrink-0" />
                             <span>
-                              <strong>Live Update:</strong> Halaman ini akan otomatis berganti status begitu disetujui tanpa perlu refresh.
+                              <strong>Live Realtime:</strong> Layar ini otomatis berganti detik ini juga begitu disetujui atau ditolak tanpa refresh.
                             </span>
                           </div>
                         </div>
@@ -1395,16 +1445,24 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-1">
                                 <h4 className="text-xs sm:text-sm font-black text-emerald-900 leading-tight">
-                                  Pendaftaran Disetujui & Sah!
+                                  Pendaftaran Akun Diterima & Disahkan!
                                 </h4>
                                 <span className="inline-flex items-center gap-1 bg-emerald-200 text-emerald-950 text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
-                                  <span>TERVERIFIKASI</span>
+                                  <span>SAH TERDAFTAR</span>
                                 </span>
                               </div>
-                              <p className="text-[10.5px] text-emerald-800 font-medium leading-relaxed mt-1">
-                                Selamat! Akun Anda telah resmi disahkan oleh Superadmin Dinas Sosial Provinsi Jawa Barat. Anda dapat langsung masuk sekarang.
+                              <p className="text-[10.5px] text-emerald-900 font-medium leading-relaxed mt-1">
+                                🎉 <strong>Selamat!</strong> Pendaftaran akun atas nama <strong className="text-emerald-950 font-black">{uname}</strong> sudah diterima dan resmi disahkan oleh Superadmin Dinas Sosial Provinsi Jawa Barat.
+                              </p>
+                              <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
+                                Akun Anda kini aktif untuk wilayah <strong>{wil}</strong>. Silakan klik tombol di bawah untuk masuk ke akun Anda.
                               </p>
                             </div>
+                          </div>
+
+                          <div className="bg-white/80 rounded-xl p-2 border border-emerald-300 text-[10px] text-emerald-950 flex items-center justify-between">
+                            <span>Kode Pendaftaran: <code className="font-mono font-black text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded">{ticketNo}</code></span>
+                            <span className="text-[9px] font-black bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">AKUN AKTIF</span>
                           </div>
 
                           <button
@@ -1412,15 +1470,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             onClick={() => {
                               setErrorMessage('');
                               setUsernameInput(uname);
-                              if (registrationTicket?.passwordPolos) {
-                                setPasswordInput(registrationTicket.passwordPolos);
+                              if (registrationTicket?.passwordPolos || liveRegisteredAccount?.passwordPolos) {
+                                setPasswordInput(registrationTicket?.passwordPolos || liveRegisteredAccount?.passwordPolos || '');
                               }
                               setView('login_manual');
                             }}
                             className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                           >
                             <LogIn className="w-3.5 h-3.5" />
-                            <span>Masuk Ke Akun Anda Sekarang</span>
+                            <span>Masuk Ke Akun</span>
                           </button>
                         </div>
                       )}
@@ -1440,24 +1498,40 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                                   <span>DITOLAK</span>
                                 </span>
                               </div>
-                              <div className="mt-1 p-2 rounded-xl bg-white border border-rose-200 text-[10.5px] text-rose-900 font-semibold">
-                                Alasan: &quot;{liveRegisteredAccount?.alasanPenolakan || 'Data yang diajukan belum memenuhi persyaratan verifikasi wilayah.'}&quot;
+                              <p className="text-[10.5px] text-rose-900 font-medium leading-relaxed mt-1">
+                                Mohon maaf yang sebesar-besarnya, pengajuan pendaftaran akun atas nama <strong className="text-rose-950 font-black">{uname}</strong> belum dapat kami setujui oleh Superadmin Dinas Sosial Provinsi Jawa Barat.
+                              </p>
+                              <div className="mt-1.5 p-2 rounded-xl bg-white border border-rose-200 text-[10.5px] text-rose-900 font-semibold shadow-2xs">
+                                <span className="text-[9px] font-black uppercase text-rose-700 block mb-0.5">Catatan Alasan Penolakan:</span>
+                                &quot;{liveRegisteredAccount?.alasanPenolakan || 'Data yang diajukan belum memenuhi persyaratan verifikasi wilayah.'}&quot;
                               </div>
                             </div>
+                          </div>
+
+                          <div className="bg-white/80 rounded-xl p-2 border border-rose-200 text-[10px] text-rose-950 flex items-center justify-between">
+                            <span>Kode Pendaftaran: <code className="font-mono font-black text-rose-900 bg-rose-100 px-1.5 py-0.5 rounded">{ticketNo}</code></span>
+                            <span className="text-[9px] font-black bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full">STATUS DITOLAK</span>
                           </div>
 
                           <button
                             type="button"
                             onClick={() => {
                               setErrorMessage('');
-                              setRegUsername(uname);
-                              setSelectedRegisterRegion(wil);
+                              // Reset data pendaftaran lama yang ditolak agar form bersih untuk pendaftaran ulang
+                              setRegistrationTicket(null);
+                              try {
+                                localStorage.removeItem('psks_latest_user_registration_ticket');
+                              } catch {}
+                              setRegUsername('');
+                              setRegPassword('');
+                              setRegConfirmPassword('');
+                              setSelectedRegisterRegion('');
                               setView('register');
                             }}
                             className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Ajukan Pendaftaran Ulang</span>
+                            <span>Daftar Ulang</span>
                           </button>
                         </div>
                       )}

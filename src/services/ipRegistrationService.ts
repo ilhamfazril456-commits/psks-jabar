@@ -496,13 +496,11 @@ export async function reconcileDeviceAndIpQuota(
 
 /**
  * Real-time Quota Subscription
- * Listens to Firestore ip_registrations documents for THIS client's specific Device ONLY,
+ * Listens to Firestore ip_registrations documents for THIS client's specific Device/IP ONLY,
  * combined with instant real-time listening to deleted accounts broadcast.
- * Ensures strict device-level quota isolation:
- * - Device with 2 accounts shows 2/3 (Tersedia 1)
- * - Device with 1 account shows 1/3 (Tersedia 2)
- * - Device with 0 accounts shows 0/3 (Tersedia 3)
- * - Device with 3 accounts shows 3/3 (Maksimal)
+ * Ensures strict quota isolation (1 akun per IP / perangkat):
+ * - Device with 0 account shows 0/1 (Tersedia 1)
+ * - Device with 1 account shows 1/1 (Maksimal 1)
  * When Superadmin deletes an account, quota refunds automatically in real time without refreshing or deleting browser history.
  */
 export function subscribeToClientQuota(
@@ -595,7 +593,7 @@ export function subscribeToClientQuota(
       });
     }
 
-    const validAccounts = Array.from(normalizedMap.values()).slice(0, 3);
+    const validAccounts = Array.from(normalizedMap.values()).slice(0, 1);
     const count = validAccounts.length;
 
     // Automatically clean & synchronize localStorage so deleted accounts don't linger
@@ -606,7 +604,7 @@ export function subscribeToClientQuota(
     callback({
       registeredAccounts: validAccounts,
       count,
-      isQuotaFull: count >= 3,
+      isQuotaFull: count >= 1,
       ip: '',
       deviceId,
       isRealtimeSynced: isDevDocLoaded,
