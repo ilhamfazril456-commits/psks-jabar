@@ -204,21 +204,21 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
 
               {/* Title & Description */}
               <h4 className="text-[11px] sm:text-base font-black text-blue-950 mb-1 sm:mb-2 group-hover:text-blue-800 transition-colors leading-snug">
-                Akun User
+                Verval Akun User
               </h4>
               <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
-                Pusat data & manajemen seluruh akun user terdaftar, ganti kata sandi, status aktif, dan bekukan akun.
+                Verifikasi dan validasi pendaftaran akun user baru secara realtime, terima/tolak pengajuan, kelola kredensial, dan bekukan akun.
               </p>
 
               {/* Highlight Bullets */}
               <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 shrink-0" />
-                  <span>Semua Akun Terdaftar</span>
+                  <span>Verval Realtime (Terima/Tolak)</span>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0 hidden sm:block" />
-                  <span>Edit, Bekukan, & Hapus</span>
+                  <span>Edit Sandi, Bekukan, & Hapus</span>
                 </div>
               </div>
             </div>
@@ -228,7 +228,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
               onClick={onOpenUserAccountConsole}
               className="w-full bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-blue-700/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer"
             >
-              <span className="truncate">Konsol User</span>
+              <span className="truncate">Konsol Verval User</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
             </button>
           </div>

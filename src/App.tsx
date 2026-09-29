@@ -3271,18 +3271,19 @@ export default function App() {
             isTabActive={currentTab === 'beranda'}
           />
           <AboutSection />
-            <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData]}>
-              <React.Suspense fallback={null}>
-                <HomePSKSAnalytics
-                  allPillarData={allPillarData}
-                  session={session}
-                  onSelectPillar={handleSelectPillar}
-                  onScrollToGrid={handleScrollToGrid}
-                />
-              </React.Suspense>
-            </ErrorBoundary>
-            <BannerBadge session={session} />
-            <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} />
+          <BannerBadge session={session} />
+          <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} />
+
+          <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData]}>
+            <React.Suspense fallback={null}>
+              <HomePSKSAnalytics
+                allPillarData={allPillarData}
+                session={session}
+                onSelectPillar={handleSelectPillar}
+                onScrollToGrid={handleScrollToGrid}
+              />
+            </React.Suspense>
+          </ErrorBoundary>
 
             {/* Button Panjang Elegan "RIWAYAT PENGAJUAN" Khusus Tamu Publik & User (Bukan Superadmin / Developer / Admin) Di Atas Peta Sebaran Interaktif */}
             {(session.role === 'user' || session.statusActive === 'GUEST') && session.role !== 'superadmin' && session.role !== 'developer' && session.role !== 'admin' && (

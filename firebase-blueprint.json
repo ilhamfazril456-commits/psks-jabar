@@ -11,7 +11,17 @@
         "wilayahTugas": { "type": "string" },
         "role": { "type": "string" },
         "passwordPolos": { "type": "string" },
-        "terakhirLogin": { "type": "string" }
+        "terakhirLogin": { "type": "string" },
+        "statusVerval": { "type": "string" },
+        "statusActive": { "type": "string" },
+        "statusAkun": { "type": "string" },
+        "noRegistrasi": { "type": "string" },
+        "waktuPendaftaran": { "type": "string" },
+        "tanggalPendaftaranFormatted": { "type": "string" },
+        "alasanPenolakan": { "type": "string" },
+        "vervalAt": { "type": "number" },
+        "vervalBy": { "type": "string" },
+        "lastUpdatedTimestamp": { "type": "number" }
       },
       "required": ["username", "wilayahTugas", "role"]
     },

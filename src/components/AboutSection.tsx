@@ -88,10 +88,10 @@ export const AboutSection: React.FC = () => {
               </span>
             </h2>
             <p className="text-slate-700 leading-relaxed text-xs sm:text-base">
-              <strong>Potensi dan Sumber Kesejahteraan Sosial (PSKS)</strong> adalah modal kemanusiaan dan sosial utama yang bergerak sinergis di bawah naungan Dinas Sosial Provinsi Jawa Barat. PSKS merangkum seluruh potensi, kemampuan, dan kekuatan swadaya yang berasal dari, oleh, dan untuk masyarakat di 27 Kabupaten/Kota.
+              <strong>Potensi dan Sumber Kesejahteraan Sosial</strong> yang selanjutnya disebut <strong>PSKS</strong> adalah perseorangan, keluarga, kelompok, dan/atau masyarakat yang dapat berperan serta untuk menjaga, menciptakan, mendukung, dan memperkuat penyelenggaraan kesejahteraan sosial.
             </p>
             <p className="text-slate-600 leading-relaxed text-xs sm:text-base">
-              Melalui integrasi data satu pintu ini, kami berkomitmen memperkuat kapasitas para pejuang sosial di lapangan. Melalui penguatan pilar perorangan, kelompok, hingga lembaga, kita bersama-sama menciptakan sistem pemulihan, perlindungan, dan pemberdayaan sosial yang adaptif serta tepat sasaran.
+              Melalui integrasi data satu pintu ini, Dinas Sosial Provinsi Jawa Barat berkomitmen merangkum seluruh potensi dan memperkuat kapasitas para pejuang sosial di 27 Kabupaten/Kota demi mewujudkan sistem pemulihan, perlindungan, dan pemberdayaan sosial yang adaptif serta tepat sasaran.
             </p>
           </div>
 

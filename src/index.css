@@ -409,3 +409,15 @@ input, select, textarea, button {
   z-index: 20 !important;
 }
 
+/* Ensure Leaflet tiles render seamlessly without black gaps or loading squares */
+.leaflet-tile-container img {
+  width: 256px !important;
+  height: 256px !important;
+}
+
+.radar-map-leaflet-container {
+  background: #f1f5f9 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+

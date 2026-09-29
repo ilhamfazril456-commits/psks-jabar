@@ -460,7 +460,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
 
   // Active Region data logic: default to entire Jawa Barat if no specific kab/kota selected
   const isAllSelected = selectedKabKota === 'Semua Kabupaten/Kota';
-  const activeRegionName = isAllSelected ? 'Provinsi Jawa Barat (Seluruh Wilayah)' : selectedKabKota;
+  const activeRegionName = isAllSelected ? 'Provinsi Jawa Barat (27 Kab/Kota)' : selectedKabKota;
 
   const activeRegionData = useMemo(() => {
     if (isAllSelected) {
@@ -1279,7 +1279,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
               {/* Total Card */}
               <div className="bg-gradient-to-r from-emerald-950 to-slate-900 rounded-2xl border border-emerald-500/40 p-4 mb-4 text-center shadow-inner">
                 <div className="text-xs text-emerald-200/90 font-bold uppercase tracking-wider mb-0.5">
-                  TOTAL PERSONIL PSKS TERDATA
+                  TOTAL PSKS TERDATA
                 </div>
                 <div className="text-3xl font-black text-amber-300 tracking-tight">
                   {(activeRegionData?.total ?? 0).toLocaleString('id-ID')}

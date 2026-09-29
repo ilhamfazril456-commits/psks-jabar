@@ -221,8 +221,8 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       const map = L.map(mapContainerRef.current, {
         center: [-6.9147, 107.6098],
         zoom: 8,
-        minZoom: 8,
-        maxZoom: 14,
+        minZoom: 7,
+        maxZoom: 15,
         zoomControl: false,
         attributionControl: false,
       });
@@ -241,30 +241,70 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       leafletMapRef.current = map;
     }
 
-    // Pasang Tile Layer sesuai pilihan
+    // Pasang Tile Layer sesuai pilihan (Menggunakan tile server stabil dan andal)
     if (leafletMapRef.current) {
       if (tileLayerRef.current) {
         leafletMapRef.current.removeLayer(tileLayerRef.current);
       }
 
       let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      let subdomains = 'abc';
+      let maxZoom = 18;
+
       if (mapTileMode === 'satellite') {
         tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+        subdomains = '';
+        maxZoom = 18;
       } else if (mapTileMode === 'carto_dark') {
-        // High quality dark tile without intrusive watermark
-        tileUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+        tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        subdomains = 'abcd';
+        maxZoom = 19;
       }
 
-      tileLayerRef.current = L.tileLayer(tileUrl, {
-        maxZoom: 18,
-        subdomains: 'abcd',
+      const newTileLayer = L.tileLayer(tileUrl, {
+        maxZoom,
+        subdomains,
       }).addTo(leafletMapRef.current);
+
+      tileLayerRef.current = newTileLayer;
+
+      // Invalidate size immediately and periodically to ensure zero black tiles
+      leafletMapRef.current.invalidateSize();
+      const t1 = setTimeout(() => leafletMapRef.current?.invalidateSize(), 150);
+      const t2 = setTimeout(() => leafletMapRef.current?.invalidateSize(), 500);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [mapTileMode]);
+
+  // Robust observer to eliminate black tile glitch upon container resize or tab mount
+  useEffect(() => {
+    if (!leafletMapRef.current || !mapContainerRef.current) return;
+
+    const handleResize = () => {
+      if (leafletMapRef.current) {
+        leafletMapRef.current.invalidateSize();
+      }
+    };
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        handleResize();
+      });
+      ro.observe(mapContainerRef.current);
     }
 
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      // Cleanup saat unmount
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', handleResize);
     };
-  }, [mapTileMode]);
+  }, []);
 
   // 5. Render 28 Marker Sensor Sekaligus ke dalam Peta
   useEffect(() => {
@@ -547,7 +587,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <span className="text-slate-300 truncate">
-                Titik Terpilih: <strong className="text-white">{selectedOfficePresence.office.namaDinas}</strong>
+                Titik Terpilih: <strong className="text-white">{selectedOfficePresence.office.namaDinas.replace(/\s*\(kantor pusat\)/gi, '')}</strong>
               </span>
             </div>
             <a
@@ -593,10 +633,10 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
             <div className="flex items-start justify-between gap-2 mb-2">
               <div>
                 <span className="text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  {selectedOfficePresence.office.isProvinsi ? '⭐ KANTOR PUSAT PROV' : selectedOfficePresence.office.wilayahRayon}
+                  {selectedOfficePresence.office.isProvinsi ? 'PROVINSI JAWA BARAT' : selectedOfficePresence.office.wilayahRayon}
                 </span>
                 <h4 className="text-sm font-black text-white mt-1 leading-tight">
-                  {selectedOfficePresence.office.namaDinas}
+                  {selectedOfficePresence.office.namaDinas.replace(/\s*\(kantor pusat\)/gi, '')}
                 </h4>
               </div>
 
@@ -687,11 +727,6 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                         <span className={`text-xs font-bold truncate ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
                           {item.office.kabKota}
                         </span>
-                        {item.office.isProvinsi && (
-                          <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-sm shrink-0">
-                            PUSAT
-                          </span>
-                        )}
                       </div>
                       <div className="text-[10px] text-slate-400 truncate">
                         {item.adminName}

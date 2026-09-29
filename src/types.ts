@@ -199,6 +199,14 @@ export interface AdminAccount {
   isGuest?: boolean;
   isDeveloper?: boolean;
   statusActive?: 'SAH_TERDAFTAR' | 'GUEST' | string;
+  statusVerval?: 'MENUNGGU_VERIFIKASI' | 'DISETUJUI' | 'DITOLAK';
+  alasanPenolakan?: string;
+  catatanVerval?: string;
+  vervalAt?: number;
+  vervalBy?: string;
+  waktuPendaftaran?: string;
+  tanggalPendaftaranFormatted?: string;
+  noRegistrasi?: string;
   registeredIp?: string;
   deviceId?: string;
   lastLoginDeviceId?: string;

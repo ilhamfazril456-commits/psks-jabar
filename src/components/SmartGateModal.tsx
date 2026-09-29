@@ -29,7 +29,10 @@ import {
   Laptop,
   Wifi,
   CreditCard,
-  Radio
+  Radio,
+  Copy,
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 
 const CaptchaWidget = React.lazy(() => import('./CaptchaWidget').then(m => ({ default: m.CaptchaWidget })));
@@ -74,11 +77,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // Navigation Flow State:
   // 'main' -> Layar Utama (3 Jalur Utama)
   // 'register' -> Jalur 1 (Pendaftaran Akun Baru)
+  // 'register_status' -> Halaman Informasi Pendaftaran Akun (Status Verval Realtime)
   // 'login_choice' -> Jalur 2 (Pilihan Metode Masuk: Manual / Smart Card)
   // 'login_manual' -> Jalur 2: Pilihan A (Login Manual Form)
   // 'login_smart_card' -> Jalur 2: Pilihan B (Layar Transisi & Animasi Smart Card)
   // 'guest' -> Jalur 3 (Akses Tamu Publik & Pilih Wilayah)
-  const [view, setView] = useState<'main' | 'register' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest'>('main');
+  const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest'>('main');
 
   // Khusus Tampilan Layar HP: Lapisan Pertama (Intro Selamat Datang & Tombol MULAI)
   // Ketika tombol MULAI ditekan, berlanjut ke Lapisan Kedua (Pilihan Login yang sudah ada)
@@ -97,6 +101,39 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const [isRegistering, setIsRegistering] = useState(false);
   const [regSuccess, setRegSuccess] = useState(false);
   const [registeredUserData, setRegisteredUserData] = useState<{ username: string; wilayah: string } | null>(null);
+
+  // Registration Ticket & Realtime Verval Status Tracking
+  const [registrationTicket, setRegistrationTicket] = useState<{
+    username: string;
+    wilayah: string;
+    waktuPendaftaran: string;
+    noRegistrasi: string;
+    passwordPolos?: string;
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem('psks_latest_user_registration_ticket');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  // Real-time listener lookup for this user from adminAccounts
+  const liveRegisteredAccount = useMemo(() => {
+    if (!registrationTicket?.username) return null;
+    const uname = registrationTicket.username.toLowerCase().trim();
+    return adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === uname) || null;
+  }, [registrationTicket, adminAccounts]);
+
+  // Visual copy indicator for registration ticket number
+  const [ticketCopied, setTicketCopied] = useState(false);
+  const handleCopyTicket = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setTicketCopied(true);
+    setTimeout(() => {
+      setTicketCopied(false);
+    }, 2000);
+  };
 
   // Login Form States (Universal for User, Admin, Superadmin, Developer)
   const [usernameInput, setUsernameInput] = useState('');
@@ -369,6 +406,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
     try {
       const { hashPassword } = await import('../utils/crypto');
+      const nowMs = Date.now();
+      const ticketNumber = `REG-PSKS-${Date.now().toString().slice(-6)}`;
+      const formattedDate = new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'full',
+        timeStyle: 'medium',
+        timeZone: 'Asia/Jakarta',
+      }).format(new Date(nowMs)) + ' WIB';
+
       const newAccountData: Omit<AdminAccount, 'id'> = {
         username: uTrim,
         namaAdmin: uTrim,
@@ -376,12 +421,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         role: 'user',
         passwordPolos: pTrim,
         passwordHash: hashPassword(pTrim),
-        terakhirLogin: 'Baru terdaftar',
+        terakhirLogin: 'Baru mendaftar',
         isOnline: false,
         statusKoneksi: 'OFFLINE',
         statusLayar: 'OFFLINE',
         registeredIp: detectedIp || undefined,
         deviceId: detectedDeviceId || getStableDeviceId(),
+        // Realtime Verval Fields
+        statusVerval: 'MENUNGGU_VERIFIKASI',
+        statusActive: 'PENDING_VERIFIKASI',
+        statusAkun: 'AKTIF',
+        noRegistrasi: ticketNumber,
+        waktuPendaftaran: new Date(nowMs).toISOString(),
+        tanggalPendaftaranFormatted: formattedDate,
+        lastUpdatedTimestamp: nowMs,
       };
 
       if (onRegisterAccount) {
@@ -402,19 +455,26 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         isRealtimeSynced: true,
       });
 
-      setRegSuccess(true);
-      setSuccessMessage('Pendaftaran Akun Berhasil! Silahkan Masukkan Akun nya!');
-      
-      // Auto populate login form for easy entry
+      // Simpan tiket registrasi ke state & local storage untuk dipantau secara realtime
+      const ticketData = {
+        username: uTrim,
+        wilayah: selectedRegisterRegion,
+        waktuPendaftaran: formattedDate,
+        noRegistrasi: ticketNumber,
+        passwordPolos: pTrim,
+      };
+      setRegistrationTicket(ticketData);
+      try {
+        localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(ticketData));
+      } catch {}
+
+      // Auto populate login form for easy entry once approved
       setUsernameInput(uTrim);
       setPasswordInput(pTrim);
       setIsRegistering(false);
 
-      // Trigger the 1-second animated green checkmark modal, which automatically redirects to login_manual
-      setRegisteredUserData({
-        username: uTrim,
-        wilayah: selectedRegisterRegion,
-      });
+      // LANGSUNG ARAHKAN KE HALAMAN INFORMASI PENDAFTARAN AKUN (STATUS VERVAL REALTIME)
+      setView('register_status');
     } catch (err) {
       setIsRegistering(false);
       setErrorMessage('❌ Gagal menyimpan pendaftaran akun ke server. Silakan coba kembali.');
@@ -615,6 +675,35 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
       const isValid = comparePassword(pInput, matchedAccount.passwordHash || matchedAccount.passwordPolos) || (matchedAccount.passwordPolos && pInput === matchedAccount.passwordPolos);
       if (isValid) {
+        // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
+        if (matchedAccount.role === 'user') {
+          const isPending = matchedAccount.statusVerval === 'MENUNGGU_VERIFIKASI' || matchedAccount.statusActive === 'PENDING_VERIFIKASI';
+          const isRejected = matchedAccount.statusVerval === 'DITOLAK' || matchedAccount.statusActive === 'DITOLAK';
+
+          if (isPending) {
+            const ticketData = {
+              username: matchedAccount.username,
+              wilayah: matchedAccount.wilayahTugas,
+              waktuPendaftaran: matchedAccount.tanggalPendaftaranFormatted || matchedAccount.waktuPendaftaran || 'Baru mendaftar',
+              noRegistrasi: matchedAccount.noRegistrasi || `REG-PSKS-${(matchedAccount.id || '').slice(-6)}`,
+              passwordPolos: matchedAccount.passwordPolos || pInput,
+            };
+            setRegistrationTicket(ticketData);
+            try {
+              localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(ticketData));
+            } catch {}
+
+            setErrorMessage('⏳ AKUN MENUNGGU VERIFIKASI: Pendaftaran akun Anda sedang dalam proses verifikasi oleh Superadmin Dinas Sosial Provinsi Jawa Barat.');
+            return;
+          }
+
+          if (isRejected) {
+            const reason = matchedAccount.alasanPenolakan || 'Data yang diajukan belum memenuhi persyaratan.';
+            setErrorMessage(`❌ PENDAFTARAN DITOLAK: Pengajuan akun Anda ditolak oleh Superadmin (${reason}). Silakan lakukan pendaftaran ulang.`);
+            return;
+          }
+        }
+
         // Explicitly set isFrozen false & statusAkun AKTIF on successful authenticated login
         matchedAccount = {
           ...matchedAccount,
@@ -825,6 +914,37 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     key="view-main"
                     className="space-y-2 my-auto animate-scaleUp"
                   >
+
+                    {/* BANNER STATUS TIKET VERVAL (JIKA PENGGUNA SUDAH PERNAH DAFTAR) */}
+                    {registrationTicket && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMessage('');
+                          setView('register_status');
+                        }}
+                        className="w-full text-left p-2 sm:p-2.5 rounded-xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-300 text-amber-950 transition-all flex items-center justify-between gap-2 shadow-2xs group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Radio className="w-3.5 h-3.5 text-amber-600 animate-pulse shrink-0" />
+                          <div className="truncate">
+                            <span className="text-[10px] sm:text-[10.5px] font-black text-amber-950 block leading-tight truncate">
+                              Tiket Verval: {registrationTicket.username} ({registrationTicket.wilayah})
+                            </span>
+                            <span className="text-[9px] text-amber-800 font-semibold truncate block">
+                              {liveRegisteredAccount?.statusVerval === 'DISETUJUI' || liveRegisteredAccount?.statusActive === 'SAH_TERDAFTAR'
+                                ? '✅ Disetujui Superadmin — Akun Siap Digunakan'
+                                : liveRegisteredAccount?.statusVerval === 'DITOLAK'
+                                ? '❌ Pendaftaran Ditolak — Klik untuk Detail Catatan'
+                                : '⏳ Sedang Ditinjau Superadmin (Sinkron Realtime)'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-black bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full shrink-0 group-hover:bg-amber-300 transition-colors">
+                          Pantau Status →
+                        </span>
+                      </button>
+                    )}
                     
                     {/* JALUR 1: TOMBOL DAFTAR AKUN BARU */}
                     <button
@@ -1170,6 +1290,19 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         )}
                       </button>
 
+                      {registrationTicket && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setErrorMessage('');
+                            setView('register_status');
+                          }}
+                          className="w-full py-1 text-blue-900 hover:text-blue-950 font-bold text-[9.5px] text-center cursor-pointer hover:underline block"
+                        >
+                          Sudah pernah mendaftar? Klik di sini untuk pantau status verval akun →
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1185,6 +1318,214 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                   </form>
                 )}
+
+                {/* ========================================================================= */}
+                {/* JALUR 1B: HALAMAN INFORMASI PENDAFTARAN AKUN (STATUS VERVAL REALTIME) */}
+                {/* ========================================================================= */}
+                {view === 'register_status' && (() => {
+                  const currentStatus = liveRegisteredAccount
+                    ? (liveRegisteredAccount.statusVerval || (liveRegisteredAccount.statusActive === 'SAH_TERDAFTAR' ? 'DISETUJUI' : 'MENUNGGU_VERIFIKASI'))
+                    : 'MENUNGGU_VERIFIKASI';
+                  const isPending = currentStatus === 'MENUNGGU_VERIFIKASI';
+                  const isApproved = currentStatus === 'DISETUJUI';
+                  const isRejected = currentStatus === 'DITOLAK';
+
+                  const ticketNo = registrationTicket?.noRegistrasi || liveRegisteredAccount?.noRegistrasi || 'REG-PSKS-PENDING';
+                  const uname = registrationTicket?.username || liveRegisteredAccount?.username || regUsername || 'User Baru';
+                  const wil = registrationTicket?.wilayah || liveRegisteredAccount?.wilayahTugas || selectedRegisterRegion || 'Jawa Barat';
+                  const waktuDaftar = registrationTicket?.waktuPendaftaran || liveRegisteredAccount?.tanggalPendaftaranFormatted || liveRegisteredAccount?.waktuPendaftaran || 'Baru Saja';
+
+                  return (
+                    <div
+                      key="view-register-status"
+                      className="space-y-2.5 my-auto animate-scaleUp text-left"
+                    >
+                      {/* HEADER KOP KECIL */}
+                      <div className="text-center space-y-0.5">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-[#0f2b5c] text-[9.5px] font-black tracking-wide border border-blue-200">
+                          <Radio className="w-3 h-3 text-blue-700 animate-pulse" />
+                          <span>STATUS VERVAL AKUN REALTIME</span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-[#0f2b5c] leading-tight">
+                          Informasi Pendaftaran Akun
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          Data pendaftaran Anda tersinkronisasi langsung ke Superadmin Provinsi.
+                        </p>
+                      </div>
+
+                      {/* STATUS BANNER BOX SECARA REALTIME */}
+                      {isPending && (
+                        <div className="p-3 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 shadow-xs relative overflow-hidden space-y-2">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                              <Clock className="w-4 h-4 animate-spin" style={{ animationDuration: '4s' }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs font-black text-amber-900 leading-tight">
+                                  Menunggu Verifikasi & Validasi
+                                </h4>
+                                <span className="inline-flex items-center gap-1 bg-amber-200 text-amber-950 text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+                                  <span>Sedang Ditinjau</span>
+                                </span>
+                              </div>
+                              <p className="text-[10.5px] text-amber-800 font-medium leading-relaxed mt-1">
+                                Pendaftaran akun Anda telah terkirim secara <strong>realtime</strong> ke Superadmin Dinas Sosial Provinsi Jawa Barat.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="bg-amber-100/80 rounded-xl p-2 border border-amber-300/80 text-[10px] text-amber-900 flex items-center gap-2">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            <span>
+                              <strong>Live Update:</strong> Halaman ini akan otomatis berganti status begitu disetujui tanpa perlu refresh.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {isApproved && (
+                        <div className="p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950 shadow-md relative overflow-hidden space-y-2.5 animate-fadeIn">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                              <CheckCircle2 className="w-5 h-5 animate-bounce" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs sm:text-sm font-black text-emerald-900 leading-tight">
+                                  Pendaftaran Disetujui & Sah!
+                                </h4>
+                                <span className="inline-flex items-center gap-1 bg-emerald-200 text-emerald-950 text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  <span>TERVERIFIKASI</span>
+                                </span>
+                              </div>
+                              <p className="text-[10.5px] text-emerald-800 font-medium leading-relaxed mt-1">
+                                Selamat! Akun Anda telah resmi disahkan oleh Superadmin Dinas Sosial Provinsi Jawa Barat. Anda dapat langsung masuk sekarang.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage('');
+                              setUsernameInput(uname);
+                              if (registrationTicket?.passwordPolos) {
+                                setPasswordInput(registrationTicket.passwordPolos);
+                              }
+                              setView('login_manual');
+                            }}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                          >
+                            <LogIn className="w-3.5 h-3.5" />
+                            <span>Masuk Ke Akun Anda Sekarang</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {isRejected && (
+                        <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-500 text-rose-950 shadow-md relative overflow-hidden space-y-2.5 animate-fadeIn">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                              <XCircle className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs sm:text-sm font-black text-rose-950 leading-tight">
+                                  Pendaftaran Akun Ditolak
+                                </h4>
+                                <span className="inline-flex items-center gap-1 bg-rose-200 text-rose-950 text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  <span>DITOLAK</span>
+                                </span>
+                              </div>
+                              <div className="mt-1 p-2 rounded-xl bg-white border border-rose-200 text-[10.5px] text-rose-900 font-semibold">
+                                Alasan: &quot;{liveRegisteredAccount?.alasanPenolakan || 'Data yang diajukan belum memenuhi persyaratan verifikasi wilayah.'}&quot;
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage('');
+                              setRegUsername(uname);
+                              setSelectedRegisterRegion(wil);
+                              setView('register');
+                            }}
+                            className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Ajukan Pendaftaran Ulang</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* DETAIL CARD INFORMASI PENDAFTARAN */}
+                      <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            No. Tiket Pendaftaran
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <code className="text-[10.5px] font-mono font-black text-[#0f2b5c] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                              {ticketNo}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTicket(ticketNo)}
+                              className="px-1.5 py-0.5 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center gap-1 transition-all"
+                              title="Salin Nomor Registrasi"
+                            >
+                              {ticketCopied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  <span className="text-[9px] font-bold text-emerald-600">Tersalin</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span className="text-[9px] font-semibold text-slate-500">Salin</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="block text-[9.5px] font-bold text-slate-400 uppercase">Username</span>
+                            <span className="font-black text-slate-900 text-[11px] truncate block">{uname}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[9.5px] font-bold text-slate-400 uppercase">Wilayah Domisili</span>
+                            <span className="font-black text-[#0f2b5c] text-[11px] truncate block">{wil}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="block text-[9.5px] font-bold text-slate-400 uppercase">Waktu Pengajuan</span>
+                            <span className="font-semibold text-slate-700 text-[10.5px] block">{waktuDaftar}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TOMBOL AKSI KEMBALI */}
+                      <div className="pt-1 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setErrorMessage('');
+                            setView('main');
+                          }}
+                          className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10.5px] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <ArrowLeft className="w-3 h-3" />
+                          <span>Kembali ke Menu Utama</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* ========================================================================= */}
                 {/* JALUR 2: PILIHAN METODE MASUK (LOGIN CHOICE) */}
@@ -1213,7 +1554,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             Masuk Ke Akun Anda
                           </span>
                           <span className="text-[8.5px] font-black bg-blue-200 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase">
-                            Kredensial
+                            User & Admin
                           </span>
                         </div>
                         <p className="text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5">
@@ -1241,7 +1582,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             <Sparkles className="w-3 h-3 text-[#d4af37]" />
                           </span>
                           <span className="text-[8.5px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase">
-                            QR / TAP
+                            Superadmin
                           </span>
                         </div>
                         <p className="text-[10.5px] text-slate-300 font-medium leading-tight mt-0.5">
@@ -1417,9 +1758,37 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     )}
 
                     {errorMessage && lockoutRemaining === 0 && (
-                      <div className="bg-gradient-to-r from-red-600 to-rose-700 text-white p-1.5 rounded-xl text-[10.5px] font-bold flex items-start gap-1.5 shadow-xs">
-                        <AlertTriangle className="w-3 h-3 text-amber-200 shrink-0 mt-0.5" />
-                        <span className="flex-1 font-bold leading-tight">{errorMessage}</span>
+                      <div className="bg-gradient-to-r from-red-600 to-rose-700 text-white p-2 rounded-xl text-[10.5px] font-bold flex flex-col gap-1.5 shadow-xs">
+                        <div className="flex items-start gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-200 shrink-0 mt-0.5" />
+                          <span className="flex-1 font-bold leading-tight">{errorMessage}</span>
+                        </div>
+                        {errorMessage.includes('MENUNGGU VERIFIKASI') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage('');
+                              setView('register_status');
+                            }}
+                            className="self-start text-[10px] font-black bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1 rounded-full shadow-xs cursor-pointer flex items-center gap-1 transition-all mt-0.5"
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>Lihat Status Pendaftaran Sekarang →</span>
+                          </button>
+                        )}
+                        {errorMessage.includes('DITOLAK') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage('');
+                              setView('register');
+                            }}
+                            className="self-start text-[10px] font-black bg-white hover:bg-slate-100 text-rose-700 px-3 py-1 rounded-full shadow-xs cursor-pointer flex items-center gap-1 transition-all mt-0.5"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Ajukan Pendaftaran Baru →</span>
+                          </button>
+                        )}
                       </div>
                     )}
 

@@ -15,13 +15,13 @@ export interface DinsosGeoOffice {
 }
 
 export const DINSOS_GEO_OFFICES: DinsosGeoOffice[] = [
-  // 1. KANTOR DINAS SOSIAL PROVINSI JAWA BARAT (PUSAT)
+  // 1. KANTOR DINAS SOSIAL PROVINSI JAWA BARAT
   {
     id: 'provinsi_jabar',
     kabKota: 'Provinsi Jawa Barat',
     isProvinsi: true,
     type: 'Provinsi',
-    namaDinas: 'Dinas Sosial Provinsi Jawa Barat (Kantor Pusat)',
+    namaDinas: 'Dinas Sosial Provinsi Jawa Barat',
     alamat: 'Jl. Jend. H. Amir Machmud No. 331, Cigugur Tengah, Kec. Cimahi Tengah, Kota Cimahi, Jawa Barat 40522',
     telepon: '(022) 6641564 / Hotline WA: +62 821-2603-0038',
     email: 'dinsos@jabarprov.go.id',
