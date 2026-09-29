@@ -8,10 +8,6 @@ import {
   Search,
   Zap,
   Compass,
-  Play,
-  Pause,
-  Gauge,
-  Sliders,
   Crosshair,
   Signal
 } from 'lucide-react';
@@ -44,6 +40,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const radarLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   // Kantor Provinsi sebagai Titik Pusat Radar
@@ -56,14 +53,6 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
   const [mapTileMode, setMapTileMode] = useState<'radar_black' | 'satellite' | 'osm'>('radar_black');
   const [filterPresence, setFilterPresence] = useState<'ALL' | 'ONLINE' | 'BACKGROUND' | 'OFFLINE'>('ALL');
   const [searchFilter, setSearchFilter] = useState('');
-
-  // Kontrol Radar Monitor
-  const [isRadarActive, setIsRadarActive] = useState<boolean>(true);
-  const [radarSpeed, setRadarSpeed] = useState<'normal' | 'fast'>('normal');
-  const [showRangeRings, setShowRangeRings] = useState<boolean>(true);
-
-  // Posisi Pixel Pusat Radar (Kantor Provinsi) di layar peta
-  const [radarCenterPixel, setRadarCenterPixel] = useState<{ x: number; y: number } | null>(null);
 
   // 1. FILTER KHUSUS ADMIN & SUPERADMIN SAJA
   const strictlyFilteredAdminAccounts = useMemo(() => {
@@ -215,20 +204,6 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
     });
   }, [officePresenceList, filterPresence, searchFilter]);
 
-  // Fungsi sinkronisasi koordinat titik pusat radar ke pixel kontainer Leaflet
-  const syncRadarCenterPosition = () => {
-    if (!leafletMapRef.current || !provinsiOffice) return;
-    try {
-      const containerPoint = leafletMapRef.current.latLngToContainerPoint([
-        provinsiOffice.lat,
-        provinsiOffice.lng,
-      ]);
-      setRadarCenterPixel({ x: containerPoint.x, y: containerPoint.y });
-    } catch {
-      // map not ready
-    }
-  };
-
   // 4. Inisialisasi Peta Leaflet Berpusat di Jawa Barat
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -252,17 +227,15 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       );
       map.setMaxBounds(jabarBounds);
 
+      // Layer khusus untuk radar gelombang (hanya aktif di radar_black)
+      radarLayerGroupRef.current = L.layerGroup().addTo(map);
+      // Layer khusus untuk 28 marker sensor kantor
       markersLayerGroupRef.current = L.layerGroup().addTo(map);
-      leafletMapRef.current = map;
 
-      // Event listener agar visualisasi radar selalu mengunci Kantor Provinsi secara realtime
-      map.on('move', syncRadarCenterPosition);
-      map.on('zoom', syncRadarCenterPosition);
-      map.on('viewreset', syncRadarCenterPosition);
-      map.on('resize', syncRadarCenterPosition);
+      leafletMapRef.current = map;
     }
 
-    // Tile Layer: Menggunakan OpenStreetMap murni + CSS Filter Dark Radar (Bebas Watermark & 100% Cepat)
+    // Pasang Tile Layer sesuai pilihan
     if (leafletMapRef.current) {
       if (tileLayerRef.current) {
         leafletMapRef.current.removeLayer(tileLayerRef.current);
@@ -271,28 +244,36 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       let tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
       let subdomains = 'abc';
       let maxZoom = 19;
+      let tileClassName = '';
 
       if (mapTileMode === 'satellite') {
+        // Mode Satelit Asli Tanpa Filter Gelap
         tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
         subdomains = '';
         maxZoom = 18;
-      } else if (mapTileMode === 'radar_black') {
-        // High-contrast clean dark tiles tanpa API Key required
+        tileClassName = '';
+      } else if (mapTileMode === 'osm') {
+        // Mode Terang Asli Tanpa Filter Gelap
         tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         subdomains = 'abc';
         maxZoom = 19;
+        tileClassName = '';
+      } else if (mapTileMode === 'radar_black') {
+        // Mode Radar Black: Filter gelap yang pas (tidak terlalu gelap, batas & jalan tetap jelas)
+        tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        subdomains = 'abc';
+        maxZoom = 19;
+        tileClassName = 'radar-black-tile-filter';
       }
 
       const newTileLayer = L.tileLayer(tileUrl, {
         maxZoom,
         subdomains,
+        className: tileClassName,
       }).addTo(leafletMapRef.current);
 
       tileLayerRef.current = newTileLayer;
-
       leafletMapRef.current.invalidateSize();
-      setTimeout(syncRadarCenterPosition, 100);
-      setTimeout(syncRadarCenterPosition, 400);
     }
   }, [mapTileMode]);
 
@@ -303,7 +284,6 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
     const handleResize = () => {
       if (leafletMapRef.current) {
         leafletMapRef.current.invalidateSize();
-        syncRadarCenterPosition();
       }
     };
 
@@ -323,7 +303,87 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
     };
   }, []);
 
-  // 5. Render 28 Marker Sensor ke dalam Peta dengan Gaya Tactical Sleek Black
+  // 5. Render Lapisan Radar Gelombang (HANYA DITAMPILKAN DI MODE "RADAR BLACK")
+  // Terkunci langsung di layer peta Leaflet pada koordinat Kantor Provinsi (Anti-geser & Anti-lag)
+  useEffect(() => {
+    if (!leafletMapRef.current || !radarLayerGroupRef.current) return;
+
+    const radarGroup = radarLayerGroupRef.current;
+    radarGroup.clearLayers();
+
+    // Radar HANYA diperuntukkan untuk "radar_black" saja. Di mode Satelit & Terang TIDAK ADA RADAR sama sekali.
+    if (mapTileMode !== 'radar_black' || !provinsiOffice) {
+      return;
+    }
+
+    // HTML SVG Radar yang terpusat tepat pada koordinat Kantor Provinsi
+    // Center SVG berada di (400, 400), di-offset -400px -400px sehingga menempel absolut pada titik koordinat
+    const radarHtml = `
+      <div style="position: relative; width: 0; height: 0; pointer-events: none;">
+        <svg
+          width="800"
+          height="800"
+          viewBox="0 0 800 800"
+          style="position: absolute; left: -400px; top: -400px; pointer-events: none; overflow: visible;"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <radialGradient id="radarBlackWaveGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#00ff88" stop-opacity="0.35" />
+              <stop offset="35%" stop-color="#00ff88" stop-opacity="0.14" />
+              <stop offset="70%" stop-color="#10b981" stop-opacity="0.04" />
+              <stop offset="100%" stop-color="#00ff88" stop-opacity="0" />
+            </radialGradient>
+
+            <linearGradient id="radarBlackSweepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00ff88" stop-opacity="0.5" />
+              <stop offset="45%" stop-color="#00ff88" stop-opacity="0.12" />
+              <stop offset="100%" stop-color="#00ff88" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+
+          <!-- 1. LINGKARAN JANGKAUAN BERSIH TANPA TEKS KM KM -->
+          <circle cx="400" cy="400" r="70" fill="none" stroke="rgba(0, 255, 136, 0.35)" stroke-dasharray="4 4" stroke-width="1.2" />
+          <circle cx="400" cy="400" r="150" fill="none" stroke="rgba(0, 255, 136, 0.28)" stroke-dasharray="5 5" stroke-width="1.2" />
+          <circle cx="400" cy="400" r="250" fill="none" stroke="rgba(0, 255, 136, 0.22)" stroke-dasharray="6 6" stroke-width="1.2" />
+          <circle cx="400" cy="400" r="370" fill="none" stroke="rgba(0, 255, 136, 0.16)" stroke-dasharray="8 8" stroke-width="1.2" />
+
+          <!-- Garis Sumbu Koordinat Halus -->
+          <line x1="30" y1="400" x2="770" y2="400" stroke="rgba(0, 255, 136, 0.2)" stroke-dasharray="4 6" stroke-width="1" />
+          <line x1="400" y1="30" x2="400" y2="770" stroke="rgba(0, 255, 136, 0.2)" stroke-dasharray="4 6" stroke-width="1" />
+
+          <!-- 2. GELOMBANG MEMANCAR MEMBESAR KE ARAH LUAR SECARA TERUS MENERUS (RADIAL PULSE / RIPPLE) -->
+          <circle cx="400" cy="400" fill="url(#radarBlackWaveGlow)" stroke="#00ff88" class="radar-wave-ripple-1" />
+          <circle cx="400" cy="400" fill="url(#radarBlackWaveGlow)" stroke="#00ff88" class="radar-wave-ripple-2" />
+          <circle cx="400" cy="400" fill="url(#radarBlackWaveGlow)" stroke="#00ff88" class="radar-wave-ripple-3" />
+          <circle cx="400" cy="400" fill="url(#radarBlackWaveGlow)" stroke="#00ff88" class="radar-wave-ripple-4" />
+
+          <!-- 3. SAPUAN SINAR PEMINDAI RADAR 360 DERAJAT -->
+          <g style="transform-origin: 400px 400px; animation: radarSweepRotate 4.5s linear infinite;">
+            <path d="M 400 400 L 770 400 A 370 370 0 0 1 720 585 Z" fill="url(#radarBlackSweepGradient)" />
+            <line x1="400" y1="400" x2="770" y2="400" stroke="#00ff88" stroke-width="2.2" style="filter: drop-shadow(0 0 6px #00ff88);" />
+          </g>
+        </svg>
+      </div>
+    `;
+
+    const radarIcon = L.divIcon({
+      className: 'radar-black-layer-icon',
+      html: radarHtml,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    const radarMarker = L.marker([provinsiOffice.lat, provinsiOffice.lng], {
+      icon: radarIcon,
+      zIndexOffset: -50,
+      interactive: false,
+    });
+
+    radarGroup.addLayer(radarMarker);
+  }, [mapTileMode, provinsiOffice]);
+
+  // 6. Render 28 Marker Sensor Kantor
   useEffect(() => {
     if (!leafletMapRef.current || !markersLayerGroupRef.current) return;
 
@@ -397,8 +457,6 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
 
       layerGroup.addLayer(marker);
     });
-
-    syncRadarCenterPosition();
   }, [officePresenceList, selectedOfficeId]);
 
   // Efek geser peta ketika memilih kantor dari daftar
@@ -430,11 +488,11 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
 
   return (
     <div className="bg-[#030712] rounded-3xl border-2 border-emerald-500/40 shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden mb-6 text-white relative">
-      {/* STYLE CSS KHUSUS TEMA RADAR BLACK & ANIMASI MEMADAI (RIPPLE + SWEEP) */}
+      {/* STYLE CSS KHUSUS TEMA RADAR BLACK & GELOMBANG MEMANCAR */}
       <style>{`
-        /* 1. TEMA HITAM DOMINAN BASIK MAP (Radar Black Tiles Tanpa API Key) */
-        .radar-black-tiles .leaflet-tile {
-          filter: invert(100%) hue-rotate(180deg) brightness(78%) contrast(135%) grayscale(85%) !important;
+        /* 1. FILTER TILE RADAR BLACK PROPORSIONAL (TIDAK TERLALU GELAP & TIDAK NUMPUK) */
+        .radar-black-tile-filter {
+          filter: invert(90%) hue-rotate(190deg) brightness(88%) contrast(108%) saturate(30%) !important;
         }
 
         /* 2. BEACON PUSAT RADAR (Kantor Provinsi) */
@@ -489,7 +547,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
           75%, 100% { transform: scale(2.6); opacity: 0; }
         }
 
-        /* 4. GELOMBANG RADAR EXPANDING RIPPLE (PULSE DARI KANTOR PROVINSI KE LUAR) */
+        /* 4. GELOMBANG RADAR EXPANDING RIPPLE (PULSE DARI KANTOR PROVINSI KE LUAR SECARA LOOPING) */
         @keyframes radarRippleExpand {
           0% {
             r: 6px;
@@ -498,33 +556,33 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
           }
           40% {
             opacity: 0.75;
-            stroke-width: 2.5px;
+            stroke-width: 2.2px;
           }
           75% {
-            opacity: 0.4;
-            stroke-width: 1.5px;
+            opacity: 0.35;
+            stroke-width: 1.4px;
           }
           100% {
-            r: 450px;
+            r: 420px;
             opacity: 0;
             stroke-width: 0.8px;
           }
         }
 
         .radar-wave-ripple-1 {
-          animation: radarRippleExpand 4.8s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
+          animation: radarRippleExpand 4.4s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
         }
         .radar-wave-ripple-2 {
-          animation: radarRippleExpand 4.8s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
-          animation-delay: 1.2s;
+          animation: radarRippleExpand 4.4s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
+          animation-delay: 1.1s;
         }
         .radar-wave-ripple-3 {
-          animation: radarRippleExpand 4.8s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
-          animation-delay: 2.4s;
+          animation: radarRippleExpand 4.4s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
+          animation-delay: 2.2s;
         }
         .radar-wave-ripple-4 {
-          animation: radarRippleExpand 4.8s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
-          animation-delay: 3.6s;
+          animation: radarRippleExpand 4.4s cubic-bezier(0.15, 0.45, 0.35, 1) infinite;
+          animation-delay: 3.3s;
         }
 
         /* 5. RADAR SWEEP ROTATION 360 DERAJAT */
@@ -539,7 +597,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         }
       `}</style>
 
-      {/* TOP HEADER: RADAR BLACK COMMAND CENTER (THEMA HITAM DOMINAN) */}
+      {/* TOP HEADER: RADAR BLACK COMMAND CENTER */}
       <div className="bg-gradient-to-r from-black via-[#060e1d] to-black p-4 sm:p-5 border-b border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
         {/* Glow ambient background effect */}
         <div className="absolute -top-12 left-1/4 w-96 h-28 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -573,7 +631,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
           </div>
         </div>
 
-        {/* PRESENCE COUNTER BADGES & RADAR TELEMETRY */}
+        {/* PRESENCE COUNTER BADGES */}
         <div className="flex flex-wrap items-center gap-2 relative z-10">
           {/* ONLINE BUTTON FILTER */}
           <button
@@ -630,7 +688,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         {/* LEAFLET MAP WRAPPER (8 COLS ON DESKTOP) */}
         <div className="lg:col-span-8 relative bg-black min-h-[480px] sm:min-h-[550px] flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800/80">
           
-          {/* MAP TOP CONTROLS (HUD TACTICAL BAR) */}
+          {/* MAP TOP CONTROLS (HUD TACTICAL BAR - TANPA TOMBOL ON/PAUSE DAN NORMAL/CEPAT) */}
           <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
             {/* LEFT ACTIONS: RESET VIEW & PUSAT PROVINSI */}
             <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
@@ -655,295 +713,53 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
               </button>
             </div>
 
-            {/* RIGHT ACTIONS: RADAR TOGGLE & TILE THEME PICKER */}
-            <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-              {/* TOGGLE GELOMBANG RADAR */}
-              <div className="flex items-center gap-1 bg-black/90 backdrop-blur-md p-1 rounded-xl border border-emerald-500/40 shadow-lg text-[10px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setIsRadarActive(!isRadarActive)}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    isRadarActive
-                      ? 'bg-emerald-600 text-black font-black shadow-[0_0_10px_rgba(0,255,136,0.4)]'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title={isRadarActive ? 'Jeda Gelombang Radar' : 'Aktifkan Gelombang Radar'}
-                >
-                  {isRadarActive ? <Play className="w-3 h-3 fill-current" /> : <Pause className="w-3 h-3" />}
-                  <span>{isRadarActive ? 'Radar ON' : 'Radar PAUSE'}</span>
-                </button>
-
-                {isRadarActive && (
-                  <button
-                    type="button"
-                    onClick={() => setRadarSpeed(radarSpeed === 'normal' ? 'fast' : 'normal')}
-                    className="px-2 py-1 rounded-lg text-slate-300 hover:text-emerald-300 transition-colors cursor-pointer flex items-center gap-1 border border-slate-800"
-                    title="Ubah Kecepatan Sapuan Radar"
-                  >
-                    <Gauge className="w-3 h-3 text-emerald-400" />
-                    <span>{radarSpeed === 'fast' ? 'Cepat' : 'Normal'}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* MAP THEME TOGGLE (Radar Black, Satelit, Terang) */}
-              <div className="flex items-center gap-1 bg-black/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 shadow-lg text-[10px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setMapTileMode('radar_black')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    mapTileMode === 'radar_black'
-                      ? 'bg-emerald-600 text-black font-black shadow-[0_0_12px_rgba(0,255,136,0.5)]'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Radar Dark</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMapTileMode('satellite')}
-                  className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                    mapTileMode === 'satellite'
-                      ? 'bg-blue-600 text-white font-black shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Satelit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMapTileMode('osm')}
-                  className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
-                    mapTileMode === 'osm'
-                      ? 'bg-amber-600 text-white font-black shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Terang
-                </button>
-              </div>
+            {/* RIGHT ACTIONS: MAP THEME TOGGLE (Radar Dark, Satelit, Terang) */}
+            <div className="pointer-events-auto flex items-center gap-1 bg-black/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 shadow-lg text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => setMapTileMode('radar_black')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  mapTileMode === 'radar_black'
+                    ? 'bg-emerald-600 text-black font-black shadow-[0_0_12px_rgba(0,255,136,0.5)]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Mode Radar Black (Dengan Efek Radar Aktif)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Radar Dark</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapTileMode('satellite')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  mapTileMode === 'satellite'
+                    ? 'bg-blue-600 text-white font-black shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Mode Citra Satelit Murni"
+              >
+                Satelit
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapTileMode('osm')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  mapTileMode === 'osm'
+                    ? 'bg-amber-600 text-white font-black shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Mode Peta Terang Murni"
+              >
+                Terang
+              </button>
             </div>
           </div>
 
           {/* LEAFLET MAP ELEMENT CONTAINER */}
           <div
             ref={mapContainerRef}
-            className={`w-full h-full min-h-[480px] sm:min-h-[550px] relative z-0 ${
-              mapTileMode === 'radar_black' ? 'radar-black-tiles' : ''
-            }`}
+            className="w-full h-full min-h-[480px] sm:min-h-[550px] relative z-0"
           />
-
-          {/* ========================================================================= */}
-          {/* VISUALISASI RADAR MONITOR LINGKARAN & ANIMASI GELOMBANG MEMADAI */}
-          {/* Titik Pusat (Anchor) mengunci posisi geografis "Kantor Provinsi" */}
-          {/* ========================================================================= */}
-          {isRadarActive && radarCenterPixel && (
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-[400] overflow-hidden"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                {/* Radial Glow untuk Gelombang Memancar */}
-                <radialGradient id="radarRadialGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#00ff88" stopOpacity="0.45" />
-                  <stop offset="35%" stopColor="#00ff88" stopOpacity="0.2" />
-                  <stop offset="70%" stopColor="#10b981" stopOpacity="0.08" />
-                  <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
-                </radialGradient>
-
-                {/* Sektor Sapuan Radar 360 Derajat */}
-                <linearGradient id="radarSweepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00ff88" stopOpacity="0.6" />
-                  <stop offset="50%" stopColor="#00ff88" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              {/* 1. LINGKARAN CINCIN STATIS TACTICAL (Range Rings 50 KM, 100 KM, 160 KM, 220 KM) */}
-              {showRangeRings && (
-                <g opacity="0.85">
-                  {/* Sumbu Silang Derajat (Cardinal Crosshair Lines) */}
-                  <line
-                    x1={radarCenterPixel.x - 480}
-                    y1={radarCenterPixel.y}
-                    x2={radarCenterPixel.x + 480}
-                    y2={radarCenterPixel.y}
-                    stroke="rgba(0, 255, 136, 0.25)"
-                    strokeDasharray="4 6"
-                    strokeWidth="1"
-                  />
-                  <line
-                    x1={radarCenterPixel.x}
-                    y1={radarCenterPixel.y - 480}
-                    x2={radarCenterPixel.x}
-                    y2={radarCenterPixel.y + 480}
-                    stroke="rgba(0, 255, 136, 0.25)"
-                    strokeDasharray="4 6"
-                    strokeWidth="1"
-                  />
-
-                  {/* Ring 1 (Radius ~50 KM) */}
-                  <circle
-                    cx={radarCenterPixel.x}
-                    cy={radarCenterPixel.y}
-                    r="75"
-                    fill="none"
-                    stroke="rgba(0, 255, 136, 0.35)"
-                    strokeDasharray="4 4"
-                    strokeWidth="1.2"
-                  />
-                  <text
-                    x={radarCenterPixel.x + 80}
-                    y={radarCenterPixel.y - 6}
-                    fill="#00ff88"
-                    opacity="0.8"
-                    fontSize="8.5"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    50 KM
-                  </text>
-
-                  {/* Ring 2 (Radius ~100 KM) */}
-                  <circle
-                    cx={radarCenterPixel.x}
-                    cy={radarCenterPixel.y}
-                    r="160"
-                    fill="none"
-                    stroke="rgba(0, 255, 136, 0.3)"
-                    strokeDasharray="5 5"
-                    strokeWidth="1.2"
-                  />
-                  <text
-                    x={radarCenterPixel.x + 165}
-                    y={radarCenterPixel.y - 6}
-                    fill="#00ff88"
-                    opacity="0.8"
-                    fontSize="8.5"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    100 KM
-                  </text>
-
-                  {/* Ring 3 (Radius ~160 KM) */}
-                  <circle
-                    cx={radarCenterPixel.x}
-                    cy={radarCenterPixel.y}
-                    r="270"
-                    fill="none"
-                    stroke="rgba(0, 255, 136, 0.25)"
-                    strokeDasharray="6 6"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={radarCenterPixel.x + 275}
-                    y={radarCenterPixel.y - 6}
-                    fill="#00ff88"
-                    opacity="0.75"
-                    fontSize="8.5"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    160 KM
-                  </text>
-
-                  {/* Ring 4 (Radius Jangkauan Maksimal Se-Jawa Barat ~220 KM) */}
-                  <circle
-                    cx={radarCenterPixel.x}
-                    cy={radarCenterPixel.y}
-                    r="400"
-                    fill="none"
-                    stroke="rgba(0, 255, 136, 0.2)"
-                    strokeDasharray="8 8"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={radarCenterPixel.x + 405}
-                    y={radarCenterPixel.y - 6}
-                    fill="#00ff88"
-                    opacity="0.7"
-                    fontSize="8"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    220 KM • COVERAGE JABAR
-                  </text>
-                </g>
-              )}
-
-              {/* 2. EFEK GELOMBANG RADAR MEMANCAR (Radial Pulse / Ripple Effect yang Membesar ke Arah Luar secara Terus-Menerus) */}
-              <g>
-                <circle
-                  cx={radarCenterPixel.x}
-                  cy={radarCenterPixel.y}
-                  fill="url(#radarRadialGlow)"
-                  stroke="#00ff88"
-                  className="radar-wave-ripple-1"
-                />
-                <circle
-                  cx={radarCenterPixel.x}
-                  cy={radarCenterPixel.y}
-                  fill="url(#radarRadialGlow)"
-                  stroke="#00ff88"
-                  className="radar-wave-ripple-2"
-                />
-                <circle
-                  cx={radarCenterPixel.x}
-                  cy={radarCenterPixel.y}
-                  fill="url(#radarRadialGlow)"
-                  stroke="#00ff88"
-                  className="radar-wave-ripple-3"
-                />
-                <circle
-                  cx={radarCenterPixel.x}
-                  cy={radarCenterPixel.y}
-                  fill="url(#radarRadialGlow)"
-                  stroke="#00ff88"
-                  className="radar-wave-ripple-4"
-                />
-              </g>
-
-              {/* 3. EFEK SAPUAN PEMINDAI RADAR 360 DERAJAT (Radar Scanner Sweep Beam) */}
-              <g
-                style={{
-                  transformOrigin: `${radarCenterPixel.x}px ${radarCenterPixel.y}px`,
-                  animation: `radarSweepRotate ${radarSpeed === 'fast' ? '2.5s' : '5s'} linear infinite`,
-                }}
-              >
-                {/* Sektor Sapuan Transparan ke Hijau Neon */}
-                <path
-                  d={`M ${radarCenterPixel.x} ${radarCenterPixel.y} L ${radarCenterPixel.x + 430} ${
-                    radarCenterPixel.y
-                  } A 430 430 0 0 1 ${radarCenterPixel.x + 372} ${radarCenterPixel.y + 215} Z`}
-                  fill="url(#radarSweepGradient)"
-                />
-
-                {/* Garis Sapuan Paling Depan (Sharp Scanning Beam Line) */}
-                <line
-                  x1={radarCenterPixel.x}
-                  y1={radarCenterPixel.y}
-                  x2={radarCenterPixel.x + 430}
-                  y2={radarCenterPixel.y}
-                  stroke="#00ff88"
-                  strokeWidth="2.5"
-                  style={{ filter: 'drop-shadow(0 0 6px #00ff88)' }}
-                />
-              </g>
-
-              {/* 4. BEACON CORE DI PUSAT (KANTOR PROVINSI) */}
-              <circle
-                cx={radarCenterPixel.x}
-                cy={radarCenterPixel.y}
-                r="7"
-                fill="#f59e0b"
-                stroke="#ffffff"
-                strokeWidth="2"
-                style={{ filter: 'drop-shadow(0 0 8px #f59e0b)' }}
-              />
-            </svg>
-          )}
 
           {/* MAP BOTTOM STATUS & TELEMETRY BAR */}
           <div className="p-3 bg-black/95 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -956,17 +772,19 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
                 </strong>
                 {selectedOfficePresence.office.isProvinsi && (
                   <span className="ml-2 text-[10px] font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-400/40">
-                    ⭐ Pusat Komando Radar
+                    ⭐ Pusat Radar Provinsi
                   </span>
                 )}
               </span>
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              <span className="text-[10px] font-mono text-emerald-400/80 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30 hidden md:inline-flex items-center gap-1">
-                <Signal className="w-3 h-3 text-emerald-400" />
-                <span>FREKUENSI: LIVE 28 TITIK SENSOR</span>
-              </span>
+              {mapTileMode === 'radar_black' && (
+                <span className="text-[10px] font-mono text-emerald-400/90 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-500/40 hidden md:inline-flex items-center gap-1 shadow-xs">
+                  <Signal className="w-3 h-3 text-emerald-400 animate-pulse" />
+                  <span>RADAR BLACK: JANGKAUAN 28 TITIK SENSOR AKTIF</span>
+                </span>
+              )}
 
               <a
                 href={selectedOfficePresence.office.googleMapsUrl}
