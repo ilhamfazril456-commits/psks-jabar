@@ -5,7 +5,7 @@ import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, Al
 import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
 import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
-import { sortRecordsByJabarRegion } from '../utils/regionSort';
+import { getRegionSortIndex, sortRecordsByJabarRegion } from '../utils/regionSort';
 import { BackToHomeButton } from './BackToHomeButton';
 
 interface AnimatedCounterProps {
@@ -136,6 +136,107 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<PSKSDataRecord | null>(null);
   const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; type: 'success' | 'error' } | null>(null);
+
+  // State untuk Hapus Checkbox Satuan & Massal Terpilih
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+
+  // State untuk Hapus Bersih Data per Wilayah
+  const [showDeleteByRegionModal, setShowDeleteByRegionModal] = useState(false);
+  const [regionToDelete, setRegionToDelete] = useState('');
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+
+  // Daftar wilayah yang ada di pilar ini beserta jumlah anggotanya
+  const availableRegionsWithCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    dataRecords.forEach((r) => {
+      const w = r.wilayah || 'Lainnya';
+      counts[w] = (counts[w] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => {
+      const idxA = getRegionSortIndex(a[0]);
+      const idxB = getRegionSortIndex(b[0]);
+      if (idxA !== idxB) return idxA - idxB;
+      return b[1] - a[1];
+    });
+  }, [dataRecords]);
+
+  const handleToggleSelectRecord = (recordId: string) => {
+    setSelectedRecordIds((prev) =>
+      prev.includes(recordId) ? prev.filter((id) => id !== recordId) : [...prev, recordId]
+    );
+  };
+
+  const handleToggleSelectAll = (records: PSKSDataRecord[]) => {
+    const ids = records.map((r) => r.id);
+    const allSelected = ids.length > 0 && ids.every((id) => selectedRecordIds.includes(id));
+    if (allSelected) {
+      setSelectedRecordIds((prev) => prev.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedRecordIds((prev) => Array.from(new Set([...prev, ...ids])));
+    }
+  };
+
+  const handleExecuteBatchDelete = async () => {
+    if (!selectedRecordIds.length || !onBatchDeleteRecords) return;
+    setIsDeletingBatch(true);
+    try {
+      await onBatchDeleteRecords(selectedRecordIds, pillarId);
+      setAlertInfo({
+        title: 'Berhasil Menghapus',
+        message: `Sebanyak ${selectedRecordIds.length} data anggota berhasil dihapus bersih.`,
+        type: 'success',
+      });
+      setSelectedRecordIds([]);
+      setShowBatchDeleteConfirm(false);
+    } catch (err: any) {
+      setAlertInfo({
+        title: 'Gagal Menghapus',
+        message: err?.message || 'Terjadi kesalahan saat menghapus data terpilih.',
+        type: 'error',
+      });
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
+
+  const handleExecuteDeleteByRegion = async () => {
+    if (!regionToDelete || !onBatchDeleteRecords) return;
+    const targetRecords = dataRecords.filter(
+      (r) => (r.wilayah || '').toLowerCase().trim() === regionToDelete.toLowerCase().trim()
+    );
+    if (!targetRecords.length) {
+      setAlertInfo({
+        title: 'Tidak Ada Data',
+        message: `Tidak ditemukan data anggota di wilayah ${regionToDelete}.`,
+        type: 'error',
+      });
+      setShowDeleteByRegionModal(false);
+      return;
+    }
+
+    const idsToDelete = targetRecords.map((r) => r.id);
+    setIsDeletingBatch(true);
+    try {
+      await onBatchDeleteRecords(idsToDelete, pillarId);
+      setAlertInfo({
+        title: 'Berhasil Menghapus Wilayah',
+        message: `Seluruh data (${idsToDelete.length} anggota) di ${regionToDelete} berhasil dibersihkan dari Pilar ${pillar.shortName}.`,
+        type: 'success',
+      });
+      setSelectedRecordIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+      setShowDeleteByRegionModal(false);
+      setRegionToDelete('');
+    } catch (err: any) {
+      setAlertInfo({
+        title: 'Gagal Menghapus Wilayah',
+        message: err?.message || 'Terjadi kesalahan saat menghapus data wilayah.',
+        type: 'error',
+      });
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
 
   // Helper for PEKSOS status classification
   const isPeksosGov = (r: PSKSDataRecord) => {
@@ -1336,16 +1437,29 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 </button>
 
                 {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && (
-                  <button
-                    id={`btn-import-excel-${pillarId}`}
-                    type="button"
-                    onClick={() => setShowImportModal(true)}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
-                    title="Import data anggota massal dari file Excel (.xlsx / .csv) dengan pemetaan kolom otomatis"
-                  >
-                    <UploadCloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
-                    <span><span className="hidden sm:inline">Import </span>Excel</span>
-                  </button>
+                  <>
+                    <button
+                      id={`btn-import-excel-${pillarId}`}
+                      type="button"
+                      onClick={() => setShowImportModal(true)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                      title="Import data anggota massal dari file Excel (.xlsx / .csv) dengan pemetaan kolom otomatis"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
+                      <span><span className="hidden sm:inline">Import </span>Excel</span>
+                    </button>
+
+                    <button
+                      id={`btn-delete-by-region-${pillarId}`}
+                      type="button"
+                      onClick={() => setShowDeleteByRegionModal(true)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-800 hover:bg-slate-900 text-rose-300 hover:text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap border border-rose-500/40"
+                      title="Hapus bersih seluruh data anggota pilar ini berdasarkan pilihan wilayah kabupaten/kota"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
+                      <span>Hapus per Wilayah</span>
+                    </button>
+                  </>
                 )}
               </>
             )}
@@ -1405,7 +1519,40 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             }
             setRecordToDelete(record);
           }}
+          selectedRecordIds={selectedRecordIds}
+          onToggleSelectRecord={handleToggleSelectRecord}
+          onToggleSelectAll={handleToggleSelectAll}
         />
+
+        {/* Floating Action Bar jika ada data dicentang */}
+        {selectedRecordIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-rose-500/80 flex items-center gap-4 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                {selectedRecordIds.length}
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-slate-200">
+                Data Anggota Terpilih
+              </span>
+            </div>
+            <div className="h-5 w-px bg-slate-700" />
+            <button
+              type="button"
+              onClick={() => setSelectedRecordIds([])}
+              className="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer px-2 py-1 transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBatchDeleteConfirm(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm px-4 py-2 rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Hapus {selectedRecordIds.length} Data Terpilih</span>
+            </button>
+          </div>
+        )}
 
         {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KIRI BAWAH) */}
         <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1485,6 +1632,129 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
               >
                 Ya, Hapus Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Delete Selected Records Confirmation Modal */}
+      {showBatchDeleteConfirm && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border-2 border-rose-500 p-6 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-300 shadow-sm">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+              Hapus Massal {selectedRecordIds.length} Data Terpilih
+            </h3>
+            <p className="text-slate-600 text-xs sm:text-sm mt-2 leading-relaxed">
+              Apakah Anda yakin ingin menghapus <strong>{selectedRecordIds.length} data anggota</strong> yang Anda centang secara permanen dari database Firestore? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowBatchDeleteConfirm(false)}
+                disabled={isDeletingBatch}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteBatchDelete}
+                disabled={isDeletingBatch}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingBatch ? 'Sedang Menghapus...' : `Ya, Hapus ${selectedRecordIds.length} Data`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete by Region Modal */}
+      {showDeleteByRegionModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border-2 border-rose-500 p-6 text-left animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-black">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Hapus Data per Wilayah
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Pilar {pillar.title} ({pillar.shortName})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteByRegionModal(false)}
+                disabled={isDeletingBatch}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 space-y-1">
+              <div className="font-black flex items-center gap-1.5 text-rose-800">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Pembersihan Bersih Data Khusus Satu Wilayah</span>
+              </div>
+              <p className="text-rose-800/90 leading-relaxed">
+                Fitur ini akan menghapus <strong>seluruh data anggota di wilayah yang Anda pilih</strong> pada pilar ini. Data wilayah lainnya tetap aman dan tidak akan tersentuh.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-700 block">
+                Pilih Wilayah Yang Ingin Dihapus Bersih:
+              </label>
+              <select
+                value={regionToDelete}
+                onChange={(e) => setRegionToDelete(e.target.value)}
+                className="w-full bg-white border-2 border-slate-300 focus:border-rose-500 rounded-xl p-3 text-xs font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer"
+              >
+                <option value="">-- Pilih Wilayah / Kabupaten / Kota --</option>
+                {availableRegionsWithCount.map(([regionName, count]) => (
+                  <option key={regionName} value={regionName}>
+                    📍 {regionName} ({count} Data Anggota)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {regionToDelete && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold">
+                ⚠️ Anda akan menghapus{' '}
+                <strong className="text-rose-700">
+                  {availableRegionsWithCount.find(([r]) => r === regionToDelete)?.[1] || 0} data anggota
+                </strong>{' '}
+                di wilayah <strong>{regionToDelete}</strong>.
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowDeleteByRegionModal(false)}
+                disabled={isDeletingBatch}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDeleteByRegion}
+                disabled={!regionToDelete || isDeletingBatch}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingBatch ? 'Sedang Menghapus...' : `Hapus Bersih Data ${regionToDelete || 'Wilayah'}`}
               </button>
             </div>
           </div>

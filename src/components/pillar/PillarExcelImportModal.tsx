@@ -875,6 +875,79 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     if (!rawWorkbook) return;
     try {
       setSelectedSheet(sheetName);
+
+      if (sheetName === '__ALL_SHEETS__') {
+        // Mode Gabungkan Seluruh Sheet Sekaligus (All Sheets at Once)
+        let combinedHeaders: string[] = [];
+        let combinedRows: any[][] = [];
+        let detectedHeaderIdx = 0;
+
+        rawWorkbook.SheetNames.forEach((sName, sIdx) => {
+          const sheet = rawWorkbook.Sheets[sName];
+          if (!sheet) return;
+          const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          if (!jsonData || jsonData.length === 0) return;
+
+          // Cari baris header untuk sheet ini
+          let sHeaderIdx = 0;
+          let maxCols = 0;
+          for (let i = 0; i < Math.min(jsonData.length, 12); i++) {
+            const row = jsonData[i] || [];
+            const nonEmptyCount = row.filter((c) => c !== null && String(c).trim() !== '').length;
+            if (nonEmptyCount > maxCols && nonEmptyCount >= 2) {
+              maxCols = nonEmptyCount;
+              sHeaderIdx = i;
+            }
+          }
+
+          if (combinedHeaders.length === 0) {
+            detectedHeaderIdx = sHeaderIdx;
+            const rawHeaderRow = jsonData[sHeaderIdx] || [];
+            combinedHeaders = rawHeaderRow.map((h, idx) => {
+              const text = String(h || '').trim();
+              return text ? text : `Kolom_${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`;
+            });
+          }
+
+          // Ambil baris data setelah baris header sheet ini
+          const rows = jsonData
+            .slice(sHeaderIdx + 1)
+            .filter((row) => row && row.some((cell) => cell !== null && String(cell).trim() !== ''));
+
+          combinedRows.push(...rows);
+        });
+
+        setRawSheetRows(combinedRows);
+        setHeaderRowIndex(detectedHeaderIdx);
+        setExcelHeaders(combinedHeaders);
+        setDataRows(combinedRows);
+
+        // Auto-detect pemetaan kolom
+        const initialMapping: Record<string, string> = {};
+        targetFields.forEach((target) => {
+          let bestMatch = '';
+          for (const header of combinedHeaders) {
+            const cleanHeader = header.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+            const targetClean = target.label.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+
+            if (cleanHeader === targetClean || cleanHeader.includes(targetClean) || targetClean.includes(cleanHeader)) {
+              bestMatch = header;
+              break;
+            }
+
+            if (target.synonyms.some((syn) => cleanHeader === syn || cleanHeader.includes(syn) || syn.includes(cleanHeader))) {
+              bestMatch = header;
+              break;
+            }
+          }
+          initialMapping[target.key] = bestMatch;
+        });
+
+        setColumnMapping(initialMapping);
+        return;
+      }
+
+      // Lembar kerja tunggal (Single Sheet)
       const sheet = rawWorkbook.Sheets[sheetName];
       if (!sheet) {
         throw new Error(`Lembar kerja "${sheetName}" tidak ditemukan.`);
@@ -1225,6 +1298,9 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                         onChange={(e) => handleSheetChange(e.target.value)}
                         className="w-full bg-white border-2 border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-emerald-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
                       >
+                        <option value="__ALL_SHEETS__" className="font-extrabold text-emerald-900 bg-emerald-100">
+                          🌟 [SEMUA LEMBAR KERJA] Gabungkan Seluruh Sheet Sekaligus ({sheetNames.length} Sheet)
+                        </option>
                         {sheetNames.map((sName, sIdx) => (
                           <option key={sName} value={sName}>
                             📑 Sheet {sIdx + 1}: {sName}
@@ -1236,7 +1312,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                   <div className="flex items-center gap-2 text-[11px] text-emerald-900 font-bold bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-300">
                     <Info className="w-4 h-4 text-emerald-700 shrink-0" />
                     <span>
-                      Sedang memproses <strong>Sheet "{selectedSheet}"</strong> ({dataRows.length} baris data terdeteksi).
+                      {selectedSheet === '__ALL_SHEETS__' ? (
+                        <>Sedang memproses <strong>SELURUH LEMBAR KERJA SEKALIGUS</strong> ({sheetNames.length} sheet digabungkan • {dataRows.length} total baris terdeteksi).</>
+                      ) : (
+                        <>Sedang memproses <strong>Sheet "{selectedSheet}"</strong> ({dataRows.length} baris data terdeteksi).</>
+                      )}
                     </span>
                   </div>
                 </div>

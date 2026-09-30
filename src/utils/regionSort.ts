@@ -130,31 +130,34 @@ export const matchJabarRegion = (rawStr: any): string | null => {
 
 /**
  * Sorts data records hierarchically by West Java regions (Prov. Jabar -> Kab. Bogor -> ... -> Kota Banjar).
- * Within the same region, insertion/chronological order is preserved.
- * If records have explicit orderIndex (e.g. from Excel file upload), their exact sequence is strictly preserved!
+ * Within the same region, insertion/chronological order (orderIndex) is preserved.
  */
 export const sortRecordsByJabarRegion = (records?: PSKSDataRecord[] | null): PSKSDataRecord[] => {
   if (!records || !Array.isArray(records)) return [];
 
-  // Jika data memiliki orderIndex (misal dari upload Excel), jangan acak urutannya!
-  const hasOrderIndex = records.some((r) => typeof (r as any).orderIndex === 'number');
-  if (hasOrderIndex) {
-    return [...records].sort((a, b) => {
-      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : 999999;
-      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : 999999;
-      if (ordA !== ordB) return ordA - ordB;
-      return 0;
-    });
-  }
-
   return [...records]
     .filter((r): r is PSKSDataRecord => Boolean(r && typeof r === 'object'))
     .sort((a, b) => {
+      // 1. Urutan utama: Pengelompokan hierarki 27 Kabupaten/Kota Jawa Barat (Kab. Bogor -> ... -> Kota Banjar)
       const indexA = getRegionSortIndex(a.wilayah);
       const indexB = getRegionSortIndex(b.wilayah);
       if (indexA !== indexB) {
         return indexA - indexB;
       }
-      return 0;
+
+      // 2. Di dalam wilayah yang sama, pertahankan urutan baris asli (orderIndex / createdAt)
+      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : 999999;
+      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : 999999;
+      if (ordA !== ordB) {
+        return ordA - ordB;
+      }
+
+      const timeA = (a as any).createdAt || 0;
+      const timeB = (b as any).createdAt || 0;
+      if (timeA && timeB && timeA !== timeB) {
+        return timeA - timeB;
+      }
+
+      return a.id.localeCompare(b.id);
     });
 };
