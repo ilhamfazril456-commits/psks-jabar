@@ -618,20 +618,29 @@ function normalizeJabarRegion(val: any, defaultWilayah: string): string {
   const raw = val.trim().toLowerCase();
   if (!raw) return defaultWilayah;
 
-  for (const reg of JABAR_REGIONS) {
-    if (reg.toLowerCase() === raw) return reg;
-  }
+  // Prioritas utama: Nama wilayah majemuk (Bandung Barat vs Bandung, dll)
+  if (raw.includes('bandung barat') || raw.includes('kbb')) return 'Kab. Bandung Barat';
+  if (raw.includes('kota bandung')) return 'Kota Bandung';
+  if (raw.includes('kab. bandung') || raw.includes('kabupaten bandung')) return 'Kab. Bandung';
+
+  if (raw.includes('kota bogor')) return 'Kota Bogor';
+  if (raw.includes('kab. bogor') || raw.includes('kabupaten bogor')) return 'Kab. Bogor';
+
+  if (raw.includes('kota bekasi')) return 'Kota Bekasi';
+  if (raw.includes('kab. bekasi') || raw.includes('kabupaten bekasi')) return 'Kab. Bekasi';
+
+  if (raw.includes('kota cirebon')) return 'Kota Cirebon';
+  if (raw.includes('kab. cirebon') || raw.includes('kabupaten cirebon')) return 'Kab. Cirebon';
+
+  if (raw.includes('kota sukabumi')) return 'Kota Sukabumi';
+  if (raw.includes('kab. sukabumi') || raw.includes('kabupaten sukabumi')) return 'Kab. Sukabumi';
+
+  if (raw.includes('kota tasikmalaya') || raw.includes('kota tasik')) return 'Kota Tasikmalaya';
+  if (raw.includes('kab. tasikmalaya') || raw.includes('kabupaten tasikmalaya') || raw.includes('kab. tasik')) return 'Kab. Tasikmalaya';
 
   if (raw.includes('cimahi')) return 'Kota Cimahi';
   if (raw.includes('depok')) return 'Kota Depok';
   if (raw.includes('banjar')) return 'Kota Banjar';
-  if (raw.includes('sukabumi')) return raw.includes('kota') ? 'Kota Sukabumi' : 'Kab. Sukabumi';
-  if (raw.includes('cirebon')) return raw.includes('kota') ? 'Kota Cirebon' : 'Kab. Cirebon';
-  if (raw.includes('bekasi')) return raw.includes('kota') ? 'Kota Bekasi' : 'Kab. Bekasi';
-  if (raw.includes('tasik')) return raw.includes('kota') ? 'Kota Tasikmalaya' : 'Kab. Tasikmalaya';
-  if (raw.includes('bandung barat') || raw.includes('kbb')) return 'Kab. Bandung Barat';
-  if (raw.includes('bandung')) return raw.includes('kota') ? 'Kota Bandung' : 'Kab. Bandung';
-  if (raw.includes('bogor')) return raw.includes('kota') ? 'Kota Bogor' : 'Kab. Bogor';
   if (raw.includes('cianjur')) return 'Kab. Cianjur';
   if (raw.includes('garut')) return 'Kab. Garut';
   if (raw.includes('ciamis')) return 'Kab. Ciamis';
@@ -643,7 +652,17 @@ function normalizeJabarRegion(val: any, defaultWilayah: string): string {
   if (raw.includes('purwakarta')) return 'Kab. Purwakarta';
   if (raw.includes('karawang')) return 'Kab. Karawang';
   if (raw.includes('pangandaran')) return 'Kab. Pangandaran';
-  if (raw.includes('prov') || raw.includes('jabar') || raw.includes('jawa barat')) return 'Prov. Jabar';
+
+  if (raw.includes('bandung')) return 'Kab. Bandung';
+  if (raw.includes('bogor')) return 'Kab. Bogor';
+  if (raw.includes('bekasi')) return 'Kota Bekasi';
+  if (raw.includes('cirebon')) return 'Kota Cirebon';
+  if (raw.includes('sukabumi')) return 'Kab. Sukabumi';
+  if (raw.includes('tasik')) return 'Kab. Tasikmalaya';
+
+  for (const reg of JABAR_REGIONS) {
+    if (reg.toLowerCase() === raw) return reg;
+  }
 
   return defaultWilayah;
 }
@@ -743,6 +762,10 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         const val = dataRows[r]?.[colIdx];
         if (val !== null && val !== undefined && String(val).trim() !== '') {
           const str = String(val).trim();
+          // Jika bukan kolom nomor urut pertama, abaikan angka tunggal baris nomor kolom (1, 2, 3, 4) & KOP dinas
+          if (colIdx > 0 && /^\d{1,2}$/.test(str)) continue;
+          if (str.toLowerCase().includes('pemerintah daerah') || str.toLowerCase().includes('dinas sosial')) continue;
+
           if (!items.includes(str)) {
             items.push(str);
             if (items.length >= 6) break;
@@ -946,15 +969,18 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
   const mappedRecords = useMemo(() => {
     if (!dataRows.length || !excelHeaders.length) return [];
 
-    const defaultWilayah = session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kota Bandung';
+    const defaultWilayah = selectedSheet && selectedSheet !== '__ALL_SHEETS__'
+      ? normalizeJabarRegion(selectedSheet, session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kab. Bandung Barat')
+      : session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kab. Bandung Barat';
     const baseTimestamp = Date.now();
 
     return dataRows.map((row, index) => {
       const getVal = (targetKey: string): any => {
         const headerName = columnMapping[targetKey];
         if (!headerName) return '';
-        const colIdx = excelHeaders.indexOf(headerName);
-        if (colIdx === -1) return '';
+        const match = headerName.match(/\d+/);
+        const colIdx = match ? parseInt(match[0], 10) - 1 : excelHeaders.indexOf(headerName);
+        if (colIdx < 0 || colIdx >= row.length) return '';
         return row[colIdx] ?? '';
       };
 
@@ -1001,10 +1027,6 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       if (record.namaBadanUsaha) record.nama = record.namaBadanUsaha;
       if (record.namaSlrt) record.nama = record.namaSlrt;
 
-      if (!record.nama) {
-        record.nama = `Anggota Terimport #${index + 1}`;
-      }
-
       // Default jika wilayah tidak terpetakan
       if (!record.wilayah) {
         record.wilayah = defaultWilayah;
@@ -1012,11 +1034,31 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       return record as Omit<PSKSDataRecord, 'id'>;
     }).filter((r) => {
-      // Abaikan baris kosong atau baris nomor kolom header (misal '1', '2', '3', '4' atau 'NO.')
+      // Saring baris kosong atau baris nomor kolom header (misal '1', '2', '3', '4' atau 'NO.')
       const n = (r.nama || '').trim();
-      if (!n || n === '-' || n === 'NO.' || n === 'NO') return false;
-      // Jika nama hanya berisi angka (seperti baris nomor urut kolom 1, 2, 3, 4), abaikan
+      if (!n || n === '-' || n === 'NO.' || n === 'NO' || n === 'No') return false;
+      // Jika nama hanya berisi angka tunggal, abaikan (bukan nama orang/lembaga)
       if (/^\d+$/.test(n)) return false;
+
+      // Filter KOP surat dinas atau baris total rekapitulasi agar tidak pernah masuk
+      const lower = n.toLowerCase();
+      if (
+        lower.includes('pemerintah daerah') ||
+        lower.includes('dinas sosial') ||
+        lower.includes('provinsi jawa barat') ||
+        lower.includes('master data') ||
+        lower.includes('jumlah lks') ||
+        lower.includes('jumlah') ||
+        lower.includes('total') ||
+        lower.includes('rekapitulasi') ||
+        lower.includes('bidang pelayanan') ||
+        lower.includes('nama lks') ||
+        lower.includes('nama lembaga') ||
+        lower.startsWith('anggota terimport')
+      ) {
+        return false;
+      }
+
       return true;
     });
   }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah]);

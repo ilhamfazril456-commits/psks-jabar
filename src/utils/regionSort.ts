@@ -32,36 +32,11 @@ export const getRegionSortIndex = (wilayahStr?: string): number => {
     }
   }
 
-  // Clean matching without 'Kab.' / 'Kota' prefix
-  const cleanW = wLower
-    .replace('kabupaten ', '')
-    .replace('kab. ', '')
-    .replace('kota ', '')
-    .trim();
-
-  for (let i = 0; i < JABAR_REGIONS.length; i++) {
-    const cleanR = JABAR_REGIONS[i]
-      .toLowerCase()
-      .replace('kabupaten ', '')
-      .replace('kab. ', '')
-      .replace('kota ', '')
-      .trim();
-    if (cleanW === cleanR) {
-      return i;
-    }
-  }
-
-  // Substring matching
-  for (let i = 0; i < JABAR_REGIONS.length; i++) {
-    const cleanR = JABAR_REGIONS[i]
-      .toLowerCase()
-      .replace('kabupaten ', '')
-      .replace('kab. ', '')
-      .replace('kota ', '')
-      .trim();
-    if (wLower.includes(cleanR)) {
-      return i;
-    }
+  // Gunakan matchJabarRegion yang memprioritaskan pencocokan spesifik (Bandung Barat vs Bandung)
+  const matched = matchJabarRegion(wilayahStr);
+  if (matched) {
+    const idx = JABAR_REGIONS.indexOf(matched);
+    if (idx !== -1) return idx;
   }
 
   return 999;
