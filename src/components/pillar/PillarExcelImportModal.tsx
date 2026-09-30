@@ -908,6 +908,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     if (!dataRows.length || !excelHeaders.length) return [];
 
     const defaultWilayah = session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kota Bandung';
+    const baseTimestamp = Date.now();
 
     return dataRows.map((row, index) => {
       const getVal = (targetKey: string): any => {
@@ -921,6 +922,8 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       const record: any = {
         pillarId,
         status: 'Aktif',
+        orderIndex: index,
+        createdAt: baseTimestamp + index,
       };
 
       // Isi semua field yang dipetakan sesuai pilar
@@ -934,10 +937,23 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
           record[field.key] = sanitizePhone(rawVal) || '-';
         } else if (field.key === 'jenisKelamin') {
           record[field.key] = sanitizeGender(rawVal) || 'Laki-laki';
+        } else if (field.key === 'nomorTandaDaftar' || field.key === 'sertifikasi') {
+          const str = String(rawVal || '').trim();
+          record[field.key] = str === 'CERT-2026' ? '' : str;
         } else {
           record[field.key] = String(rawVal || '').trim();
         }
       });
+
+      // Jika pilar LKS dan nomor tanda daftar kosong, jangan isi CERT-2026 (biarkan kosong murni)
+      if (pillarId === 'lks') {
+        if (!record.nomorTandaDaftar || record.nomorTandaDaftar === 'CERT-2026') {
+          record.nomorTandaDaftar = '';
+        }
+        if (record.sertifikasi === 'CERT-2026') {
+          record.sertifikasi = '';
+        }
+      }
 
       // Sinkronisasi alias untuk tabel
       if (record.namaLks) record.nama = record.namaLks;

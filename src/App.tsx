@@ -809,10 +809,28 @@ export default function App() {
                 kec: typeof record.kec === 'string' ? record.kec : 'Kecamatan Pusat',
                 nama: typeof record.nama === 'string' ? record.nama : 'Anggota PSKS',
                 nik: typeof record.nik === 'string' ? record.nik : '',
-                sertifikasi: typeof record.sertifikasi === 'string' ? record.sertifikasi : 'CERT-2026',
+                sertifikasi: typeof record.sertifikasi === 'string' && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '',
+                nomorTandaDaftar: typeof (record as any).nomorTandaDaftar === 'string' && (record as any).nomorTandaDaftar !== 'CERT-2026' ? (record as any).nomorTandaDaftar : '',
                 hp: typeof record.hp === 'string' ? record.hp : '081234567890',
                 lembaga: typeof record.lembaga === 'string' ? record.lembaga : 'Lembaga Pemerintah',
                 status: typeof record.status === 'string' ? record.status : 'Aktif',
+              });
+            });
+
+            // Urutkan data per pilar agar urutan file Excel / orderIndex selalu terjaga
+            Object.keys(loaded).forEach((k) => {
+              loaded[k].sort((a, b) => {
+                const ordA = (a as any).orderIndex;
+                const ordB = (b as any).orderIndex;
+                if (typeof ordA === 'number' && typeof ordB === 'number') {
+                  return ordA - ordB;
+                }
+                const timeA = (a as any).createdAt || 0;
+                const timeB = (b as any).createdAt || 0;
+                if (timeA && timeB && timeA !== timeB) {
+                  return timeA - timeB;
+                }
+                return a.id.localeCompare(b.id);
               });
             });
 
@@ -1452,7 +1470,7 @@ export default function App() {
                 kec: typeof sub.kec === 'string' ? sub.kec : '',
                 nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar',
                 nik: typeof sub.nik === 'string' ? sub.nik : '',
-                sertifikasi: 'CERT-2026',
+                sertifikasi: '',
                 hp: typeof sub.hp === 'string' ? sub.hp : '',
                 status: 'Aktif',
               },
@@ -2566,11 +2584,16 @@ export default function App() {
     if (!pillarKey || !records.length) return 0;
 
     const baseTimestamp = Date.now();
-    const newRecordsWithId: PSKSDataRecord[] = records.map((rec, idx) => ({
-      ...rec,
-      id: `${pillarKey}-${baseTimestamp}-${idx + 1}`,
-      pillarId: pillarKey,
-    }));
+    const newRecordsWithId: PSKSDataRecord[] = records.map((rec, idx) => {
+      const orderIdx = typeof (rec as any).orderIndex === 'number' ? (rec as any).orderIndex : idx;
+      return {
+        ...rec,
+        id: `${pillarKey}-${baseTimestamp}-${String(orderIdx + 1).padStart(6, '0')}`,
+        pillarId: pillarKey,
+        orderIndex: orderIdx,
+        createdAt: (rec as any).createdAt || (baseTimestamp + idx),
+      };
+    });
 
     setAllPillarData((prev) => {
       const updated = {

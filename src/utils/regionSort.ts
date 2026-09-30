@@ -70,9 +70,22 @@ export const getRegionSortIndex = (wilayahStr?: string): number => {
 /**
  * Sorts data records hierarchically by West Java regions (Prov. Jabar -> Kab. Bogor -> ... -> Kota Banjar).
  * Within the same region, insertion/chronological order is preserved.
+ * If records have explicit orderIndex (e.g. from Excel file upload), their exact sequence is strictly preserved!
  */
 export const sortRecordsByJabarRegion = (records?: PSKSDataRecord[] | null): PSKSDataRecord[] => {
   if (!records || !Array.isArray(records)) return [];
+
+  // Jika data memiliki orderIndex (misal dari upload Excel), jangan acak urutannya!
+  const hasOrderIndex = records.some((r) => typeof (r as any).orderIndex === 'number');
+  if (hasOrderIndex) {
+    return [...records].sort((a, b) => {
+      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : 999999;
+      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : 999999;
+      if (ordA !== ordB) return ordA - ordB;
+      return 0;
+    });
+  }
+
   return [...records]
     .filter((r): r is PSKSDataRecord => Boolean(r && typeof r === 'object'))
     .sort((a, b) => {

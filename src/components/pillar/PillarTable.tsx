@@ -442,7 +442,9 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.bidangPelayanan || '-'}</td>
                       <td className="py-3 px-3 text-slate-800 font-bold whitespace-nowrap border-r border-slate-100">{record.ketua || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 text-xs max-w-[200px] truncate border-r border-slate-100" title={record.alamat || record.kec || '-'}>{record.alamat || record.kec || '-'}</td>
-                      <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">{record.nomorTandaDaftar || record.sertifikasi || '-'}</td>
+                      <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">
+                        {record.nomorTandaDaftar || (record.sertifikasi && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '-')}
+                      </td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.masaBerlaku || '-'}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
