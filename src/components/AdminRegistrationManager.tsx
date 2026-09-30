@@ -1050,7 +1050,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
             <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#d4af37] max-w-2xl w-full my-auto max-h-[90vh] flex flex-col text-slate-800 overflow-hidden">
               {/* Modal Header */}
-              <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37]">
+              <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
                 <div>
                   <span className="bg-[#d4af37] text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
                     Verifikasi Berkas Wilayah
@@ -1062,14 +1062,14 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                 <button
                   type="button"
                   onClick={() => setSelectedSubmissionForDetail(null)}
-                  className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer"
+                  className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1 min-h-0">
                 {/* 2-Tier Visual Timeline */}
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Alur Verifikasi 2-Tier:</div>
@@ -1242,7 +1242,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="bg-slate-100 p-3.5 sm:p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+              <div className="bg-slate-100 p-3.5 sm:p-4 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 shrink-0">
                 {isDetPending ? (
                   <>
                     <button

@@ -71,6 +71,7 @@ interface PillarDetailViewProps {
   dataRecords: PSKSDataRecord[];
   onBackToDashboard: () => void;
   onAddRecord: (newRecord: Omit<PSKSDataRecord, 'id'>) => void;
+  onUpdateRecord?: (recordId: string, updatedRecord: Partial<PSKSDataRecord>, targetPillarId?: PillarId) => void;
   onDeleteRecord: (recordId: string) => void;
   onAddSubmission?: (
     newSubmission: Omit<
@@ -87,6 +88,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   dataRecords,
   onBackToDashboard,
   onAddRecord,
+  onUpdateRecord,
   onDeleteRecord,
   onAddSubmission,
   onOpenGateModal,
@@ -94,6 +96,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const pillar = PILLARS_CONFIG[pillarId] || PILLARS_CONFIG.peksos;
   const [searchTerm, setSearchTerm] = useState('');
   const [showGuestLoginModal, setShowGuestLoginModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<PSKSDataRecord | null>(null);
 
   const [chartVisible, setChartVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -376,7 +379,72 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const swastaCount = filteredByRoleRecords.filter((r) => !isPeksosGov(r)).length;
 
   const handleOpenModal = () => {
+    setEditingRecord(null);
     setFormData(getInitialFormData());
+    setIsModalOpen(true);
+  };
+
+  const handleEditClick = (record: PSKSDataRecord) => {
+    setEditingRecord(record);
+    const initial = getInitialFormData();
+    setFormData({
+      ...initial,
+      ...record,
+      wilayah: record.wilayah || '',
+      wilayahKerja: (record as any).wilayahKerja || record.wilayah || '',
+      nama: record.nama || '',
+      nik: record.nik || '',
+      jenisKelamin: record.jenisKelamin || '',
+      pendidikan: record.pendidikan || '',
+      noTglSertifikasi: record.noTglSertifikasi || '',
+      sertifikasiKompetensi: record.sertifikasiKompetensi || '',
+      jenjangJabatan: record.jenjangJabatan || '',
+      tempatBertugas: record.tempatBertugas || '',
+      instansiBertugas: record.instansiBertugas || '',
+      statusPeksos: record.statusPeksos || '',
+      jenjangJabatanPemerintah: record.jenjangJabatanPemerintah || '',
+      masaBerlakuSk: record.masaBerlakuSk || '',
+      noSkKeanggotaan: record.noSkKeanggotaan || '',
+      statusKeaktifan: record.statusKeaktifan || 'Aktif',
+      bimtekDiikuti: Array.isArray(record.bimtekDiikuti) ? record.bimtekDiikuti : [],
+      hp: record.hp || '',
+      email: record.email || '',
+      nomorKontak: record.nomorKontak || '',
+      kec: record.kec || '',
+      kelDesa: record.kelDesa || '',
+      alamat: record.alamat || '',
+      masaBakti: record.masaBakti || '',
+      noSk: record.noSk || '',
+      statusAktif: record.statusAktif || 'Aktif',
+      nomorInduk: record.nomorInduk || '',
+      sertifikat: record.sertifikat || '',
+      keahlian: record.keahlian || '',
+      pelatihan: record.pelatihan || '',
+      namaLks: (record as any).namaLks || record.nama || '',
+      bidangPelayanan: (record as any).bidangPelayanan || record.sertifikasi || '',
+      ketua: (record as any).ketua || record.hp || '',
+      nomorTandaDaftar: (record as any).nomorTandaDaftar || record.nik || '',
+      masaBerlaku: (record as any).masaBerlaku || '',
+      namaKarangTaruna: (record as any).namaKarangTaruna || record.nama || '',
+      tahunBerdiri: (record as any).tahunBerdiri || '',
+      namaLk3: (record as any).namaLk3 || record.nama || '',
+      kontak: (record as any).kontak || record.hp || '',
+      jenisLayanan: (record as any).jenisLayanan || record.sertifikasi || '',
+      instansi: (record as any).instansi || '',
+      jabatan: (record as any).jabatan || '',
+      skPengangkatan: (record as any).skPengangkatan || record.sertifikasi || '',
+      masaTugas: (record as any).masaTugas || '',
+      namaBadanUsaha: (record as any).namaBadanUsaha || record.nama || '',
+      jenisUsaha: (record as any).jenisUsaha || record.sertifikasi || '',
+      bentukCsr: (record as any).bentukCsr || '',
+      bidangBantuan: (record as any).bidangBantuan || '',
+      namaSlrt: (record as any).namaSlrt || record.nama || '',
+      operator: (record as any).operator || record.hp || '',
+      berkasFotoUrl: (record as any).berkasFotoUrl || '',
+      berkasFotoNama: (record as any).berkasFotoNama || '',
+      berkasFotoSizeKb: (record as any).berkasFotoSizeKb || 0,
+      berkasFotoOriginalSizeKb: (record as any).berkasFotoOriginalSizeKb || 0,
+    });
     setIsModalOpen(true);
   };
 
@@ -463,6 +531,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             : `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan dan dikirim ke Admin Wilayah (${subWilayah}) untuk Verifikasi Berkas Wilayah. Setelah disetujui wilayah, otomatis diteruskan ke Superadmin Jabar untuk Pengesahan & Penerimaan Anggota.`,
           type: 'success',
         });
+      } else if (editingRecord && onUpdateRecord) {
+        onUpdateRecord(editingRecord.id, recordPayload, pillarId);
+        setAlertInfo({
+          title: 'Perubahan Data Berhasil Disimpan!',
+          message: `Data "${recordPayload.nama || (recordPayload as any).namaLks || (recordPayload as any).namaKarangTaruna || (recordPayload as any).namaLk3 || (recordPayload as any).namaBadanUsaha || (recordPayload as any).namaSlrt || 'Anggota'}" berhasil diperbarui dan tersimpan realtime ke Database Firestore.`,
+          type: 'success',
+        });
       } else {
         onAddRecord(recordPayload);
         setAlertInfo({
@@ -472,6 +547,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         });
       }
       setIsModalOpen(false);
+      setEditingRecord(null);
     };
 
     const cleanNik = (formData.nik || '').replace(/\D/g, '').trim();
@@ -1292,6 +1368,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           session={session}
           displayRecords={displayRecords}
           isPeksosGov={isPeksosGov}
+          onEditClick={handleEditClick}
           onDeleteClick={(record) => {
             if (
               session.role === 'admin' &&
@@ -1320,7 +1397,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Registration Modal */}
+      {/* Registration / Edit Modal */}
       {isModalOpen && (
         <PillarModal
           pillarId={pillarId}
@@ -1329,8 +1406,12 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           formData={formData}
           setFormData={setFormData}
           regionOptions={regionOptions}
+          isEditMode={!!editingRecord}
           onSubmit={handleFormSubmit}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingRecord(null);
+          }}
         />
       )}
 

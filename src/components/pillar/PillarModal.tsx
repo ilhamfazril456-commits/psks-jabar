@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Lock,
@@ -89,6 +90,7 @@ interface PillarModalProps {
   regionOptions: string[];
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
+  isEditMode?: boolean;
 }
 
 export const PillarModal: React.FC<PillarModalProps> = ({
@@ -100,6 +102,7 @@ export const PillarModal: React.FC<PillarModalProps> = ({
   regionOptions,
   onSubmit,
   onClose,
+  isEditMode = false,
 }) => {
   const isUserRole = session.role === 'user';
   const isUserCimahi = isUserRole && (session.wilayah || '').toLowerCase().trim() === 'kota cimahi';
@@ -270,32 +273,52 @@ export const PillarModal: React.FC<PillarModalProps> = ({
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 my-auto max-h-[92vh] flex flex-col">
-        {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#043e2e] to-[#064e3b] text-white p-4 sm:p-5 border-b-4 border-[#d4af37] flex items-center justify-between shrink-0">
-          <div>
-            <h4 className="font-extrabold text-sm sm:text-base tracking-wide flex items-center gap-2">
-              <span>Formulir {session.role === 'user' ? 'Ajukan Pendaftaran' : 'Registrasi'} {pillar.shortName} Baru</span>
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[999999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fadeIn"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-emerald-600/40 flex flex-col max-h-[92dvh] sm:max-h-[88vh] h-[92dvh] sm:h-auto overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+        {/* Modal Header: Selalu tampil di atas, dijamin 100% tidak terpotong */}
+        <div className="bg-gradient-to-r from-[#043e2e] to-[#064e3b] text-white p-4 sm:p-5 border-b-4 border-[#d4af37] flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
+          <div className="min-w-0 pr-2">
+            <h4 className="font-extrabold text-sm sm:text-base tracking-wide flex items-center gap-2 truncate">
+              {isEditMode ? (
+                <>
+                  <span>Edit Data Anggota {pillar.shortName}</span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 uppercase tracking-wider">
+                    Mode Edit
+                  </span>
+                </>
+              ) : (
+                <span>Formulir {session.role === 'user' ? 'Ajukan Pendaftaran' : 'Registrasi'} {pillar.shortName} Baru</span>
+              )}
             </h4>
             <p className="text-[11px] text-emerald-200 mt-0.5 font-medium">
-              Semua kolom formulir bertanda bintang (<span className="text-red-400 font-bold">*</span>) wajib diisi lengkap &amp; tersinkronisasi.
+              {isEditMode
+                ? 'Perubahan data akan disimpan langsung secara realtime ke server Database Firestore.'
+                : 'Semua kolom formulir bertanda bintang (*) wajib diisi lengkap & tersinkronisasi.'}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white p-1.5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors"
+            className="text-white/80 hover:text-white p-2 rounded-xl cursor-pointer hover:bg-white/10 transition-colors shrink-0"
+            title="Tutup Formulir"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Form - 1 Jajar 1 Baris Kolom (Single Column Layout) */}
-        <form onSubmit={onSubmit} className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-4.5">
+        {/* Modal Form: Form scrollable langsung sebagai flex child dengan overflow-y-auto */}
+        <form
+          id="form-pilar-pendaftaran"
+          onSubmit={onSubmit}
+          className="p-4 sm:p-6 pb-8 overflow-y-auto flex-1 min-h-0 space-y-4 sm:space-y-4.5 overscroll-contain"
+        >
           {/* 1. PEKSOS */}
-          {pillarId === 'peksos' && (
+            {pillarId === 'peksos' && (
             <div className="flex flex-col gap-4">
               {/* 1. Nama Lengkap */}
               <div>
@@ -1674,71 +1697,76 @@ export const PillarModal: React.FC<PillarModalProps> = ({
               </div>
             )}
           </div>
+        </form>
 
-          {/* Modal Preview Zoom Foto Berkas */}
-          {showPhotoModal && formData.berkasFotoUrl && (
+        {/* Modal Actions (Permanent Fixed Footer - Always Visible & Never Cut Off) */}
+        <div className="flex items-center justify-end gap-3 p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200 shrink-0 z-20 shadow-xs">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs sm:text-sm cursor-pointer transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            form="form-pilar-pendaftaran"
+            className="px-6 py-2.5 bg-gradient-to-r from-[#043e2e] to-[#064e3b] hover:from-[#032f23] hover:to-[#043e2e] text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-600/40"
+          >
+            {isEditMode ? 'Simpan Perubahan Data' : (session.role === 'user' ? 'Ajukan Pendaftaran' : 'Simpan Data')}
+          </button>
+        </div>
+
+        {/* Modal Preview Zoom Foto Berkas (Z-index tertinggi) */}
+        {showPhotoModal && formData.berkasFotoUrl && (
+          <div
+            className="fixed inset-0 z-[1000000] bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+            onClick={() => setShowPhotoModal(false)}
+          >
             <div
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
-              onClick={() => setShowPhotoModal(false)}
+              className="bg-white rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="bg-white rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl relative"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-emerald-700" />
-                    <span className="text-xs font-black text-slate-800">
-                      Pratinjau Berkas: {formData.berkasFotoNama || 'Dokumen Pendukung'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPhotoModal(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-emerald-700" />
+                  <span className="text-xs font-black text-slate-800">
+                    Pratinjau Berkas: {formData.berkasFotoNama || 'Dokumen Pendukung'}
+                  </span>
                 </div>
-                <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-900 rounded-xl p-2">
-                  <img
-                    src={formData.berkasFotoUrl}
-                    alt="Pratinjau Berkas Pendaftaran"
-                    className="max-h-[65vh] w-auto object-contain rounded-lg shadow-lg"
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-600 font-medium pt-1">
-                  <span>Ukuran Terkompresi: {formData.berkasFotoSizeKb || 50} KB (Aman Memori Firebase)</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPhotoModal(false)}
-                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-slate-700 cursor-pointer"
-                  >
-                    Tutup
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-900 rounded-xl p-2">
+                <img
+                  src={formData.berkasFotoUrl}
+                  alt="Pratinjau Berkas Pendaftaran"
+                  className="max-h-[65vh] w-auto object-contain rounded-lg shadow-lg"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-600 font-medium pt-1">
+                <span>Ukuran Terkompresi: {formData.berkasFotoSizeKb || 50} KB (Aman Memori Firebase)</span>
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoModal(false)}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-slate-700 cursor-pointer"
+                >
+                  Tutup
+                </button>
               </div>
             </div>
-          )}
-
-          {/* Modal Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-[#064e3b] hover:bg-[#047857] text-white font-bold rounded-xl text-xs shadow-sm cursor-pointer transition-colors"
-            >
-              {session.role === 'user' ? 'Ajukan Pendaftaran' : 'Simpan Data'}
-            </button>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };

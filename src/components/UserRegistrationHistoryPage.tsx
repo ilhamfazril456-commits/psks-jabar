@@ -534,9 +534,9 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
 
       {/* MODAL SALINAN BERKAS PENDAFTARAN */}
       {selectedSubmission && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn overflow-hidden">
           <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#d4af37] max-w-2xl w-full my-auto max-h-[90vh] flex flex-col text-slate-800 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37]">
+            <div className="bg-gradient-to-r from-[#043e2e] via-[#065e44] to-[#043e2e] text-white p-5 sm:p-6 flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
               <div>
                 <span className="bg-[#d4af37] text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1">
                   Bukti Tanda Terima Pendaftaran Mandiri
@@ -548,13 +548,13 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}
-                className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer"
+                className="text-white/80 hover:text-white bg-black/20 p-2 rounded-full transition-colors cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1 min-h-0">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="text-[11px] text-slate-500 font-bold block">Status Verifikasi</span>
@@ -620,7 +620,7 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
               )}
             </div>
 
-            <div className="bg-slate-100 p-4 border-t border-slate-200 flex items-center justify-end gap-2">
+            <div className="bg-slate-100 p-4 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}

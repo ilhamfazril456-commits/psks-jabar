@@ -2492,6 +2492,71 @@ export default function App() {
     }
   };
 
+  const handleUpdateRecord = async (
+    recordId: string,
+    updatedData: Partial<PSKSDataRecord>,
+    targetPillarId?: PillarId
+  ) => {
+    const pillarKey = targetPillarId || activePillar;
+    if (!pillarKey) return;
+
+    let fullUpdatedRecord: PSKSDataRecord | null = null;
+
+    setAllPillarData((prev) => {
+      const currentList = prev[pillarKey] || [];
+      const updatedList = currentList.map((r) => {
+        if (r.id === recordId) {
+          fullUpdatedRecord = { ...r, ...updatedData, id: recordId, pillarId: pillarKey };
+          return fullUpdatedRecord;
+        }
+        return r;
+      });
+      const updated = {
+        ...prev,
+        [pillarKey]: updatedList,
+      };
+      try {
+        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (!fullUpdatedRecord) return;
+
+    const pilarName = (pillarKey || 'PSKS').toUpperCase();
+    const memberName = (fullUpdatedRecord as PSKSDataRecord).nama || (fullUpdatedRecord as any).namaLks || (fullUpdatedRecord as any).namaKarangTaruna || (fullUpdatedRecord as any).namaLk3 || (fullUpdatedRecord as any).namaBadanUsaha || (fullUpdatedRecord as any).namaSlrt || 'Anggota';
+    const memberWilayah = (fullUpdatedRecord as PSKSDataRecord).wilayah || session.wilayah || 'Jawa Barat';
+    const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Developer [${session.nama}]`;
+
+    // Record audit activity log (bypassed for developer)
+    recordSystemActivity({
+      session,
+      category: 'PSKS',
+      actionType: 'UPDATE',
+      targetCollection: 'psks_records',
+      targetId: recordId,
+      targetName: memberName,
+      targetPillar: pilarName,
+      targetWilayah: memberWilayah,
+      details: `${actorLabel} telah MENGEDIT data anggota Pilar ${pilarName} atas nama [${memberName}] (Wilayah: ${memberWilayah})`,
+    });
+
+    if (quotaExceededRef.current || isQuotaExceeded) {
+      addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'SET', data: fullUpdatedRecord });
+      return;
+    }
+
+    try {
+      await setFirestoreDoc('psks_records', recordId, cleanFirestoreData(fullUpdatedRecord), { merge: true });
+    } catch (err) {
+      if (isQuotaError(err)) {
+        quotaExceededRef.current = true;
+        setIsQuotaExceeded(true);
+      }
+      addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'SET', data: fullUpdatedRecord });
+    }
+  };
+
   const handleAddSubmission = async (
     newSubmission: Omit<
       PillarRegistrationSubmission,
@@ -3507,6 +3572,7 @@ export default function App() {
             dataRecords={allPillarData[activePillar] || []}
             onBackToDashboard={handleBackToDashboard}
             onAddRecord={handleAddRecord}
+            onUpdateRecord={handleUpdateRecord}
             onDeleteRecord={handleDeleteRecord}
             onAddSubmission={handleAddSubmission}
             onOpenGateModal={() => setGateModalOpen(true)}

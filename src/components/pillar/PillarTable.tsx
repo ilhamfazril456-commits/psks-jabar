@@ -1,5 +1,5 @@
 import React from 'react';
-import { Landmark, Building2, Trash2 } from 'lucide-react';
+import { Landmark, Building2, Trash2, Pencil } from 'lucide-react';
 import { PSKSDataRecord, UserSession } from '../../types';
 import { sortRecordsByJabarRegion } from '../../utils/regionSort';
 import { maskNIK, maskPhoneNumber, maskEmail } from '../../utils/privacyMask';
@@ -11,6 +11,7 @@ interface PillarTableProps {
   displayRecords: PSKSDataRecord[];
   isPeksosGov: (record: PSKSDataRecord) => boolean;
   onDeleteClick: (record: PSKSDataRecord) => void;
+  onEditClick?: (record: PSKSDataRecord) => void;
 }
 
 export const PillarTable: React.FC<PillarTableProps> = ({
@@ -20,6 +21,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
   displayRecords,
   isPeksosGov,
   onDeleteClick,
+  onEditClick,
 }) => {
   const isSuperOrDev =
     session.role === 'superadmin' ||
@@ -586,15 +588,28 @@ export const PillarTable: React.FC<PillarTableProps> = ({
 
                   {session.role !== 'user' && (
                     <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => onDeleteClick(record)}
-                        className="px-2.5 py-1.5 text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg border border-red-200 transition-all inline-flex items-center gap-1 font-bold text-xs cursor-pointer shadow-xs active:scale-95"
-                        title={`Hapus Data ${record.nama || record.namaLks || record.namaKarangTaruna || record.namaLk3 || record.namaBadanUsaha || record.namaSlrt}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Hapus</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {isSuperOrDev && onEditClick && (
+                          <button
+                            type="button"
+                            onClick={() => onEditClick(record)}
+                            className="px-2.5 py-1.5 text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg border border-blue-200 transition-all inline-flex items-center gap-1 font-bold text-xs cursor-pointer shadow-xs active:scale-95"
+                            title={`Edit Data ${record.nama || record.namaLks || record.namaKarangTaruna || record.namaLk3 || record.namaBadanUsaha || record.namaSlrt || 'Anggota'}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onDeleteClick(record)}
+                          className="px-2.5 py-1.5 text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg border border-red-200 transition-all inline-flex items-center gap-1 font-bold text-xs cursor-pointer shadow-xs active:scale-95"
+                          title={`Hapus Data ${record.nama || record.namaLks || record.namaKarangTaruna || record.namaLk3 || record.namaBadanUsaha || record.namaSlrt || 'Anggota'}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
