@@ -103,6 +103,7 @@ import {
   setFirestoreDoc,
   batchSetFirestoreDocs,
   deleteFirestoreDoc,
+  batchDeleteFirestoreDocs,
   checkServerConnectivity,
   cleanFirestoreData,
   OperationType,
@@ -3059,6 +3060,71 @@ export default function App() {
     }
   };
 
+  const handleBatchDeleteRecords = async (
+    recordIds: string[],
+    targetPillarId?: PillarId
+  ) => {
+    if (!recordIds.length) return;
+    const pillarKey = targetPillarId || activePillar;
+
+    // 1. Add to deletedIds list and persist to localStorage
+    const nextDeleted = Array.from(new Set([...deletedIds, ...recordIds]));
+    setDeletedIds(nextDeleted);
+    try {
+      localStorage.setItem('psks_deleted_ids', JSON.stringify(nextDeleted));
+    } catch (e) {
+      console.error('Failed to save deleted IDs', e);
+    }
+
+    // 2. Remove immediately from allPillarData state
+    setAllPillarData((prev) => {
+      const updated: Record<string, PSKSDataRecord[]> = {};
+      for (const [k, records] of Object.entries(prev)) {
+        updated[k] = records.filter((r) => !recordIds.includes(r.id));
+      }
+      try {
+        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    const pilarName = (pillarKey || 'PSKS').toUpperCase();
+    const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
+
+    // Record audit activity log
+    recordSystemActivity({
+      session,
+      category: 'PSKS',
+      actionType: 'DELETE',
+      targetCollection: 'psks_records',
+      targetId: `batch-delete-${Date.now()}`,
+      targetName: `${recordIds.length} Data Anggota`,
+      targetPillar: pilarName,
+      targetWilayah: session.wilayah || 'Jawa Barat',
+      details: `${actorLabel} telah MENGHAPUS MASSAL ${recordIds.length} anggota Pilar ${pilarName}`,
+    });
+
+    // 3. Remove from Firestore psks_records
+    if (quotaExceededRef.current || isQuotaExceeded) {
+      recordIds.forEach((id) => {
+        addToSyncQueue({ collection: 'psks_records', docId: id, type: 'DELETE' });
+      });
+      return;
+    }
+
+    try {
+      await batchDeleteFirestoreDocs('psks_records', recordIds);
+    } catch (err) {
+      if (isQuotaError(err)) {
+        quotaExceededRef.current = true;
+        setIsQuotaExceeded(true);
+      }
+      recordIds.forEach((id) => {
+        addToSyncQueue({ collection: 'psks_records', docId: id, type: 'DELETE' });
+      });
+    }
+  };
+
   const handleAddAdminAccount = async (newAdmin: Omit<AdminAccount, 'id'>) => {
     const adminId = `adm-${Date.now()}`;
     const fullAdmin: AdminAccount = {
@@ -3664,6 +3730,7 @@ export default function App() {
             onUpdateRecord={handleUpdateRecord}
             onBatchAddRecords={handleBatchAddRecords}
             onDeleteRecord={handleDeleteRecord}
+            onBatchDeleteRecords={handleBatchDeleteRecords}
             onAddSubmission={handleAddSubmission}
             onOpenGateModal={() => setGateModalOpen(true)}
           />

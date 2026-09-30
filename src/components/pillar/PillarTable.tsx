@@ -12,6 +12,9 @@ interface PillarTableProps {
   isPeksosGov: (record: PSKSDataRecord) => boolean;
   onDeleteClick: (record: PSKSDataRecord) => void;
   onEditClick?: (record: PSKSDataRecord) => void;
+  selectedRecordIds?: string[];
+  onToggleSelectRecord?: (recordId: string) => void;
+  onToggleSelectAll?: (records: PSKSDataRecord[]) => void;
 }
 
 export const PillarTable: React.FC<PillarTableProps> = ({
@@ -22,6 +25,9 @@ export const PillarTable: React.FC<PillarTableProps> = ({
   isPeksosGov,
   onDeleteClick,
   onEditClick,
+  selectedRecordIds = [],
+  onToggleSelectRecord,
+  onToggleSelectAll,
 }) => {
   const isSuperOrDev =
     session.role === 'superadmin' ||
@@ -38,31 +44,69 @@ export const PillarTable: React.FC<PillarTableProps> = ({
     ? sortRecordsByJabarRegion(safeDisplayRecords)
     : safeDisplayRecords;
 
+  const renderCheckboxTh = () => {
+    if (!isStaffOrAdmin || !onToggleSelectAll) return null;
+    const isAllSelected = recordsToRender.length > 0 && selectedRecordIds.length === recordsToRender.length;
+    const isSomeSelected = selectedRecordIds.length > 0 && !isAllSelected;
+    return (
+      <th className="py-3.5 px-3 text-center w-10 whitespace-nowrap border-r border-blue-800/70 bg-[#0c234b]">
+        <input
+          type="checkbox"
+          ref={(el) => {
+            if (el) el.indeterminate = isSomeSelected;
+          }}
+          checked={isAllSelected}
+          onChange={() => onToggleSelectAll(recordsToRender)}
+          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+          title="Centang / Pilih Semua Data di Tabel Ini"
+        />
+      </th>
+    );
+  };
+
+  const renderCheckboxTd = (record: PSKSDataRecord) => {
+    if (!isStaffOrAdmin || !onToggleSelectRecord) return null;
+    const isSelected = selectedRecordIds.includes(record.id);
+    return (
+      <td className="py-3 px-3 text-center border-r border-slate-100 whitespace-nowrap bg-inherit">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelectRecord(record.id)}
+          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+          title={`Pilih ${record.nama || 'data ini'}`}
+        />
+      </td>
+    );
+  };
+
   const getColSpan = () => {
     const hasAction = session.role !== 'user';
+    const hasCheckbox = isStaffOrAdmin && Boolean(onToggleSelectAll);
+    const cb = hasCheckbox ? 1 : 0;
     switch (pillarId) {
       case 'peksos':
-        return 17 + (hasAction ? 1 : 0);
+        return 17 + (hasAction ? 1 : 0) + cb;
       case 'psm':
-        return 9 + (hasAction ? 1 : 0);
+        return 9 + (hasAction ? 1 : 0) + cb;
       case 'tagana':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       case 'lks':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       case 'karangtaruna':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       case 'lk3':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       case 'pensos':
-        return 6 + (hasAction ? 1 : 0);
+        return 6 + (hasAction ? 1 : 0) + cb;
       case 'tksk':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       case 'badanusaha':
-        return 7 + (hasAction ? 1 : 0);
+        return 7 + (hasAction ? 1 : 0) + cb;
       case 'slrt_puskesos':
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
       default:
-        return 8 + (hasAction ? 1 : 0);
+        return 8 + (hasAction ? 1 : 0) + cb;
     }
   };
 
@@ -73,6 +117,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
           <thead className="bg-[#0f2b5c] text-white border-b-2 border-[#d4af37]">
             {pillarId === 'peksos' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -101,6 +146,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'psm' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -121,13 +167,14 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'tagana' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama</th>
                 {!isSuperOrDev && (
-                  <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
+                  <th className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor Induk</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Sertifikat</th>
@@ -140,6 +187,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'lks' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -159,6 +207,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'karangtaruna' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -178,6 +227,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'lk3' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -197,6 +247,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'pensos' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -214,6 +265,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'tksk' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -233,6 +285,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'badanusaha' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -251,6 +304,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : pillarId === 'slrt_puskesos' ? (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-3 font-bold text-center w-10 whitespace-nowrap border-r border-blue-800/70">No</th>
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
@@ -270,6 +324,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : (
               <tr>
+                {renderCheckboxTh()}
                 <th className="py-3.5 px-4 font-bold text-center w-12 border-r border-blue-800/70">No</th>
                 <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Kabupaten/Kota</th>
                 <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Nama Lengkap</th>
@@ -295,7 +350,11 @@ export const PillarTable: React.FC<PillarTableProps> = ({
               </tr>
             ) : (
               recordsToRender.map((record, index) => (
-                <tr key={record.id} className="hover:bg-slate-50 transition-colors">
+                <tr
+                  key={record.id}
+                  className={`transition-colors ${(selectedRecordIds || []).includes(record.id) ? 'bg-amber-50/80 hover:bg-amber-100/70' : 'hover:bg-slate-50'}`}
+                >
+                  {renderCheckboxTd(record)}
                   <td className="py-3 px-3 text-center font-bold text-slate-500 whitespace-nowrap border-r border-slate-100">
                     {index + 1}
                   </td>

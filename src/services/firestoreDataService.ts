@@ -296,6 +296,26 @@ export async function deleteFirestoreDoc(
 }
 
 /**
+ * Delete multiple documents from Firestore using writeBatch in chunks
+ */
+export async function batchDeleteFirestoreDocs(
+  collectionName: string,
+  docIds: string[]
+): Promise<void> {
+  const { firestore, db } = await getFirestoreModule();
+  const CHUNK_SIZE = 450;
+  for (let i = 0; i < docIds.length; i += CHUNK_SIZE) {
+    const chunk = docIds.slice(i, i + CHUNK_SIZE);
+    const batch = firestore.writeBatch(db);
+    for (const id of chunk) {
+      const docRef = firestore.doc(db, collectionName, id);
+      batch.delete(docRef);
+    }
+    await batch.commit();
+  }
+}
+
+/**
  * Fetch a single document directly from Firestore
  */
 export async function getFirestoreDoc(
