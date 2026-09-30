@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PillarId, PSKSDataRecord, UserSession, PillarRegistrationSubmission } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY, JABAR_REGIONS } from '../data/initialData';
-import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText, UploadCloud, ChevronDown, CheckSquare, MapPin } from 'lucide-react';
 import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
 import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
@@ -137,7 +137,21 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const [recordToDelete, setRecordToDelete] = useState<PSKSDataRecord | null>(null);
   const [alertInfo, setAlertInfo] = useState<{ title: string; message: string; type: 'success' | 'error' } | null>(null);
 
-  // State untuk Hapus Checkbox Satuan & Massal Terpilih
+  // State untuk Hapus Checkbox Satuan & Massal Terpilih (Default: Nonaktif / Tertutup)
+  const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
+  const [showDeleteMenuDropdown, setShowDeleteMenuDropdown] = useState(false);
+  const deleteMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deleteMenuRef.current && !deleteMenuRef.current.contains(e.target as Node)) {
+        setShowDeleteMenuDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
@@ -1449,16 +1463,90 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                       <span><span className="hidden sm:inline">Import </span>Excel</span>
                     </button>
 
-                    <button
-                      id={`btn-delete-by-region-${pillarId}`}
-                      type="button"
-                      onClick={() => setShowDeleteByRegionModal(true)}
-                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-800 hover:bg-slate-900 text-rose-300 hover:text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap border border-rose-500/40"
-                      title="Hapus bersih seluruh data anggota pilar ini berdasarkan pilihan wilayah kabupaten/kota"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
-                      <span>Hapus per Wilayah</span>
-                    </button>
+                    <div className="relative inline-block" ref={deleteMenuRef}>
+                      <button
+                        id={`btn-delete-menu-${pillarId}`}
+                        type="button"
+                        onClick={() => setShowDeleteMenuDropdown((prev) => !prev)}
+                        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap border ${
+                          isSelectionModeActive
+                            ? 'bg-rose-700 hover:bg-rose-800 text-white border-rose-600 ring-2 ring-rose-400/50'
+                            : 'bg-slate-800 hover:bg-slate-900 text-rose-300 hover:text-white border-rose-500/40'
+                        }`}
+                        title="Opsi penghapusan data: Hapus Checkbox atau Hapus Data per Wilayah"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
+                        <span>Hapus</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showDeleteMenuDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Dropdown Menu 2 Opsi */}
+                      {showDeleteMenuDropdown && (
+                        <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-left">
+                          <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
+                              Pilih Fitur Hapus
+                            </span>
+                          </div>
+
+                          {/* Opsi 1: Hapus Checkbox (Toggle Buka / Tutup) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsSelectionModeActive((prev) => !prev);
+                              if (isSelectionModeActive) {
+                                setSelectedRecordIds([]);
+                              }
+                              setShowDeleteMenuDropdown(false);
+                            }}
+                            className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-rose-50 text-left transition-colors cursor-pointer group"
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold transition-colors ${
+                              isSelectionModeActive ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700 group-hover:bg-rose-100 group-hover:text-rose-700'
+                            }`}>
+                              <CheckSquare className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-slate-800 group-hover:text-rose-900 block">
+                                  Hapus Checkbox
+                                </span>
+                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                                  isSelectionModeActive ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {isSelectionModeActive ? 'Aktif' : 'Buka'}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-slate-500 leading-tight block mt-0.5">
+                                {isSelectionModeActive ? 'Klik untuk menutup kolom centang' : 'Munculkan kotak centang di tabel'}
+                              </span>
+                            </div>
+                          </button>
+
+                          {/* Opsi 2: Hapus Data Per Wilayah/Kab/Kota */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowDeleteMenuDropdown(false);
+                              setShowDeleteByRegionModal(true);
+                            }}
+                            className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-rose-50 text-left transition-colors cursor-pointer group mt-1"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 group-hover:bg-rose-100 group-hover:text-rose-700 flex items-center justify-center shrink-0 font-bold transition-colors">
+                              <MapPin className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-black text-slate-800 group-hover:text-rose-900 block">
+                                Hapus per Wilayah
+                              </span>
+                              <span className="text-[11px] text-slate-500 leading-tight block mt-0.5">
+                                Bersihkan seluruh data anggota 1 kab/kota
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </>
@@ -1494,6 +1582,37 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           </div>
         </div>
 
+        {/* Notifikasi / Penanda jika Mode Centang (Checkbox) sedang Aktif */}
+        {isSelectionModeActive && (
+          <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3 sm:p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-rose-950 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center font-black shrink-0">
+                <CheckSquare className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-black text-rose-900 block">
+                  Mode Hapus Checkbox Sedang Aktif
+                </span>
+                <span className="text-[11px] text-rose-700">
+                  Silakan centang satu per satu atau centang seluruhnya di header tabel untuk menghapus data terpilih.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectionModeActive(false);
+                setSelectedRecordIds([]);
+              }}
+              className="text-xs font-black text-rose-700 hover:text-white bg-white hover:bg-rose-600 border border-rose-400 px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1.5 shadow-xs shrink-0"
+              title="Sembunyikan kolom kotak centang dari tabel"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Tutup Mode Checkbox</span>
+            </button>
+          </div>
+        )}
+
         {/* 6. Data Table */}
         <PillarTable
           pillarId={pillarId}
@@ -1519,6 +1638,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             }
             setRecordToDelete(record);
           }}
+          showCheckbox={isSelectionModeActive}
           selectedRecordIds={selectedRecordIds}
           onToggleSelectRecord={handleToggleSelectRecord}
           onToggleSelectAll={handleToggleSelectAll}
@@ -1526,13 +1646,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
         {/* Floating Action Bar jika ada data dicentang */}
         {selectedRecordIds.length > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-rose-500/80 flex items-center gap-4 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-rose-500/80 flex items-center gap-3 sm:gap-4 backdrop-blur-md animate-in fade-in slide-in-from-bottom-4">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
                 {selectedRecordIds.length}
               </span>
               <span className="text-xs sm:text-sm font-bold text-slate-200">
-                Data Anggota Terpilih
+                Data Terpilih
               </span>
             </div>
             <div className="h-5 w-px bg-slate-700" />
@@ -1542,6 +1662,18 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               className="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer px-2 py-1 transition-colors"
             >
               Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectionModeActive(false);
+                setSelectedRecordIds([]);
+              }}
+              className="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer px-2 py-1 transition-colors flex items-center gap-1"
+              title="Tutup kolom checkbox dan bersihkan pilihan"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tutup Checkbox</span>
             </button>
             <button
               type="button"

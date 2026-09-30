@@ -15,6 +15,7 @@ interface PillarTableProps {
   selectedRecordIds?: string[];
   onToggleSelectRecord?: (recordId: string) => void;
   onToggleSelectAll?: (records: PSKSDataRecord[]) => void;
+  showCheckbox?: boolean;
 }
 
 export const PillarTable: React.FC<PillarTableProps> = ({
@@ -28,6 +29,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
   selectedRecordIds = [],
   onToggleSelectRecord,
   onToggleSelectAll,
+  showCheckbox = false,
 }) => {
   const isSuperOrDev =
     session.role === 'superadmin' ||
@@ -45,7 +47,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
     : safeDisplayRecords;
 
   const renderCheckboxTh = () => {
-    if (!isStaffOrAdmin || !onToggleSelectAll) return null;
+    if (!showCheckbox || !isStaffOrAdmin || !onToggleSelectAll) return null;
     const isAllSelected = recordsToRender.length > 0 && selectedRecordIds.length === recordsToRender.length;
     const isSomeSelected = selectedRecordIds.length > 0 && !isAllSelected;
     return (
@@ -65,7 +67,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
   };
 
   const renderCheckboxTd = (record: PSKSDataRecord) => {
-    if (!isStaffOrAdmin || !onToggleSelectRecord) return null;
+    if (!showCheckbox || !isStaffOrAdmin || !onToggleSelectRecord) return null;
     const isSelected = selectedRecordIds.includes(record.id);
     return (
       <td className="py-3 px-3 text-center border-r border-slate-100 whitespace-nowrap bg-inherit">
@@ -82,7 +84,7 @@ export const PillarTable: React.FC<PillarTableProps> = ({
 
   const getColSpan = () => {
     const hasAction = session.role !== 'user';
-    const hasCheckbox = isStaffOrAdmin && Boolean(onToggleSelectAll);
+    const hasCheckbox = Boolean(showCheckbox && isStaffOrAdmin && onToggleSelectAll);
     const cb = hasCheckbox ? 1 : 0;
     switch (pillarId) {
       case 'peksos':
