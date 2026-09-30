@@ -17,7 +17,8 @@ import {
   Info,
   Check,
   HelpCircle,
-  Eye
+  Eye,
+  MapPin
 } from 'lucide-react';
 import { PillarId, PSKSDataRecord, UserSession } from '../../types';
 import { JABAR_REGIONS } from '../../data/initialData';
@@ -730,20 +731,21 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     return PILLAR_FIELD_DEFINITIONS[pillarId] || PILLAR_FIELD_DEFINITIONS.peksos;
   }, [pillarId]);
 
-  // Cuplikan contoh isi nyata untuk setiap kolom di Excel (sampel 3 data pertama)
+  // Cuplikan contoh isi nyata untuk setiap kolom di Excel (sampel nilai unik)
   const columnSampleValues = useMemo(() => {
     const samples: Record<string, string[]> = {};
     if (!excelHeaders.length || !dataRows.length) return samples;
 
     excelHeaders.forEach((header, colIdx) => {
       const items: string[] = [];
-      for (let r = 0; r < Math.min(dataRows.length, 30); r++) {
+      // Telusuri baris untuk mengumpulkan hingga 6 nilai unik (sangat berguna untuk melihat variasi kota/wilayah)
+      for (let r = 0; r < dataRows.length; r++) {
         const val = dataRows[r]?.[colIdx];
         if (val !== null && val !== undefined && String(val).trim() !== '') {
           const str = String(val).trim();
           if (!items.includes(str)) {
             items.push(str);
-            if (items.length >= 3) break;
+            if (items.length >= 6) break;
           }
         }
       }
@@ -769,6 +771,28 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     setParseError(null);
     setImportProgress(null);
     onClose();
+  };
+
+  // Helper untuk mengecek apakah sebuah baris benar-benar baris judul tabel (Header), bukan baris data yayasan/orang
+  const isLikelyHeaderRow = (row: any[]): boolean => {
+    if (!row || !Array.isArray(row)) return false;
+    const text = row.map((c) => String(c || '').toLowerCase().trim()).join(' ');
+    
+    // Kata kunci penanda header tabel
+    const hasHeaderKeywords = 
+      (text.includes('nama') || text.includes('lembaga') || text.includes('yayasan')) &&
+      (text.includes('kabupaten') || text.includes('kota') || text.includes('alamat') || text.includes('wilayah') || text.includes('no'));
+
+    if (hasHeaderKeywords) return true;
+
+    // Jika sel pertama adalah angka urut (1, 2, 3...) dan sel kedua berisi nama lembaga/jalan, ini PASTI DATA BUKAN HEADER!
+    const firstCell = String(row[0] || '').trim();
+    const secondCell = String(row[1] || '').toLowerCase().trim();
+    if (/^\d+$/.test(firstCell) && (secondCell.includes('yayasan') || secondCell.includes('panti') || secondCell.length > 5)) {
+      return false;
+    }
+
+    return false;
   };
 
   // Baca file Excel
@@ -798,16 +822,12 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       setRawSheetRows(jsonData);
 
-      // Otomatis cari baris yang paling mungkin merupakan baris header tabel (bukan kop judul)
-      let detectedHeaderIdx = 0;
-      let maxCols = 0;
+      // Otomatis cari baris yang paling mungkin merupakan baris header tabel
+      let detectedHeaderIdx = -1; // Default: jika tidak ada header resmi, langsung data baris 1
       for (let i = 0; i < Math.min(jsonData.length, 12); i++) {
-        const row = jsonData[i] || [];
-        const nonEmptyCount = row.filter((c) => c !== null && String(c).trim() !== '').length;
-        // Baris header biasanya memiliki banyak kolom terisi
-        if (nonEmptyCount > maxCols && nonEmptyCount >= 2) {
-          maxCols = nonEmptyCount;
+        if (isLikelyHeaderRow(jsonData[i])) {
           detectedHeaderIdx = i;
+          break;
         }
       }
 
@@ -822,42 +842,119 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     }
   };
 
-  // Terapkan indeks baris header tabel
+  // Terapkan indeks baris header tabel (mendukung hIdx === -1 untuk file langsung data)
   const applyHeaderIndex = (sheetData: any[][], hIdx: number) => {
-    const rawHeaderRow = sheetData[hIdx] || [];
-    const headers = rawHeaderRow.map((h, idx) => {
-      const text = String(h || '').trim();
-      return text ? text : `Kolom_${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`;
-    });
+    let headers: string[] = [];
+    let rows: any[][] = [];
 
-    // Baris data adalah baris setelah header
-    const rows = sheetData
-      .slice(hIdx + 1)
-      .filter((row) => row && row.some((cell) => cell !== null && String(cell).trim() !== ''));
+    if (hIdx === -1) {
+      // File langsung berisi data dari baris pertama (tanpa header judul)
+      rows = sheetData.filter((row) => row && row.some((cell) => cell !== null && String(cell).trim() !== ''));
+      const maxColCount = Math.max(...rows.map((r) => r.length), 4);
+      headers = Array.from({ length: maxColCount }, (_, idx) => {
+        const colLetter = String.fromCharCode(65 + (idx % 26));
+        return `Kolom ${colLetter}`;
+      });
+    } else {
+      const rawHeaderRow = sheetData[hIdx] || [];
+      headers = rawHeaderRow.map((h, idx) => {
+        const text = String(h || '').trim();
+        return text ? text : `Kolom_${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`;
+      });
+
+      rows = sheetData
+        .slice(hIdx + 1)
+        .filter((row) => row && row.some((cell) => cell !== null && String(cell).trim() !== ''));
+    }
 
     setExcelHeaders(headers);
     setDataRows(rows);
 
-    // Auto-detect pemetaan kolom berdasarkan nama tabel pilar saat ini
+    // Analisis cerdas isi data di setiap kolom untuk mendeteksi mana kolom wilayah kota, nama lembaga, dan alamat
+    const colAnalysis = headers.map((_, colIdx) => {
+      let wilayahHits = 0;
+      let namaHits = 0;
+      let alamatHits = 0;
+      let validCount = 0;
+
+      for (let r = 0; r < Math.min(rows.length, 60); r++) {
+        const val = String(rows[r]?.[colIdx] || '').trim();
+        if (!val) continue;
+        validCount++;
+        const lower = val.toLowerCase();
+
+        if (
+          lower.includes('kota') || lower.includes('kab') || lower.includes('cirebon') ||
+          lower.includes('bekasi') || lower.includes('bandung') || lower.includes('bogor') ||
+          lower.includes('tasik') || lower.includes('sukabumi') || lower.includes('garut') ||
+          lower.includes('karawang') || lower.includes('subang') || lower.includes('purwakarta') ||
+          lower.includes('majalengka') || lower.includes('kuningan') || lower.includes('indramayu') ||
+          lower.includes('sumedang') || lower.includes('ciamis') || lower.includes('banjar') ||
+          lower.includes('cianjur') || lower.includes('depok') || lower.includes('cimahi')
+        ) {
+          wilayahHits++;
+        }
+
+        if (
+          lower.includes('yayasan') || lower.includes('panti') || lower.includes('lks') ||
+          lower.includes('lk3') || lower.includes('karang taruna') || lower.includes('puskesos') ||
+          lower.includes('badan usaha') || lower.includes('sentra')
+        ) {
+          namaHits++;
+        }
+
+        if (
+          lower.includes('jl') || lower.includes('jalan') || lower.includes('blok') ||
+          lower.includes('rt') || lower.includes('rw') || lower.includes('kel.') ||
+          lower.includes('kec.') || lower.includes('desa') || lower.includes('no.')
+        ) {
+          alamatHits++;
+        }
+      }
+
+      return {
+        colIdx,
+        isWilayah: validCount > 0 && wilayahHits / validCount >= 0.35,
+        isNama: validCount > 0 && namaHits / validCount >= 0.35,
+        isAlamat: validCount > 0 && alamatHits / validCount >= 0.25,
+      };
+    });
+
+    // Auto-detect pemetaan kolom
     const initialMapping: Record<string, string> = {};
     targetFields.forEach((target) => {
       let bestMatch = '';
-      for (const header of headers) {
-        const cleanHeader = header.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-        const targetClean = target.label.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
 
-        // 1. Cek kecocokan langsung dengan judul kolom tabel
-        if (cleanHeader === targetClean || cleanHeader.includes(targetClean) || targetClean.includes(cleanHeader)) {
-          bestMatch = header;
-          break;
-        }
+      // 1. Deteksi berbasis analisis cerdas isi sel kolom
+      if (target.key === 'wilayah' || target.key === 'wilayahKerja') {
+        const match = colAnalysis.find((a) => a.isWilayah);
+        if (match !== undefined) bestMatch = headers[match.colIdx];
+      } else if (target.key === 'nama' || target.key === 'namaLks' || target.key === 'namaKarangTaruna' || target.key === 'namaLk3' || target.key === 'namaBadanUsaha' || target.key === 'namaSlrt') {
+        const match = colAnalysis.find((a) => a.isNama);
+        if (match !== undefined) bestMatch = headers[match.colIdx];
+      } else if (target.key === 'alamat' || target.key === 'alamatLks' || target.key === 'alamatSekretariat') {
+        const match = colAnalysis.find((a) => a.isAlamat);
+        if (match !== undefined) bestMatch = headers[match.colIdx];
+      }
 
-        // 2. Cek kamus sinonim
-        if (target.synonyms.some((syn) => cleanHeader === syn || cleanHeader.includes(syn) || syn.includes(cleanHeader))) {
-          bestMatch = header;
-          break;
+      // 2. Jika belum cocok, cek teks judul header
+      if (!bestMatch) {
+        for (const header of headers) {
+          const cleanHeader = header.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+          const targetClean = target.label.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+
+          if (cleanHeader === targetClean || cleanHeader.includes(targetClean) || targetClean.includes(cleanHeader)) {
+            bestMatch = header;
+            break;
+          }
+
+          if (target.synonyms.some((syn) => cleanHeader === syn || cleanHeader.includes(syn) || syn.includes(cleanHeader))) {
+            bestMatch = header;
+            break;
+          }
         }
       }
+
       initialMapping[target.key] = bestMatch;
     });
 
@@ -878,72 +975,47 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       if (sheetName === '__ALL_SHEETS__') {
         // Mode Gabungkan Seluruh Sheet Sekaligus (All Sheets at Once)
-        let combinedHeaders: string[] = [];
         let combinedRows: any[][] = [];
-        let detectedHeaderIdx = 0;
+        let primaryHeaders: string[] = [];
+        let hasRealHeader = false;
 
-        rawWorkbook.SheetNames.forEach((sName, sIdx) => {
+        rawWorkbook.SheetNames.forEach((sName) => {
           const sheet = rawWorkbook.Sheets[sName];
           if (!sheet) return;
           const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
           if (!jsonData || jsonData.length === 0) return;
 
-          // Cari baris header untuk sheet ini
-          let sHeaderIdx = 0;
-          let maxCols = 0;
+          // Cek apakah sheet ini punya baris header
+          let sHeaderIdx = -1;
           for (let i = 0; i < Math.min(jsonData.length, 12); i++) {
-            const row = jsonData[i] || [];
-            const nonEmptyCount = row.filter((c) => c !== null && String(c).trim() !== '').length;
-            if (nonEmptyCount > maxCols && nonEmptyCount >= 2) {
-              maxCols = nonEmptyCount;
+            if (isLikelyHeaderRow(jsonData[i])) {
               sHeaderIdx = i;
+              break;
             }
           }
 
-          if (combinedHeaders.length === 0) {
-            detectedHeaderIdx = sHeaderIdx;
-            const rawHeaderRow = jsonData[sHeaderIdx] || [];
-            combinedHeaders = rawHeaderRow.map((h, idx) => {
-              const text = String(h || '').trim();
-              return text ? text : `Kolom_${String.fromCharCode(65 + (idx % 26))}${idx >= 26 ? Math.floor(idx / 26) : ''}`;
-            });
+          if (sHeaderIdx !== -1) {
+            hasRealHeader = true;
+            if (primaryHeaders.length === 0) {
+              const rawH = jsonData[sHeaderIdx] || [];
+              primaryHeaders = rawH.map((h, idx) => {
+                const text = String(h || '').trim();
+                return text ? text : `Kolom_${String.fromCharCode(65 + (idx % 26))}`;
+              });
+            }
           }
 
-          // Ambil baris data setelah baris header sheet ini
-          const rows = jsonData
-            .slice(sHeaderIdx + 1)
+          // Ambil baris data (jika tidak ada header, ambil semua baris dari awal)
+          const rows = (sHeaderIdx !== -1 ? jsonData.slice(sHeaderIdx + 1) : jsonData)
             .filter((row) => row && row.some((cell) => cell !== null && String(cell).trim() !== ''));
 
           combinedRows.push(...rows);
         });
 
         setRawSheetRows(combinedRows);
-        setHeaderRowIndex(detectedHeaderIdx);
-        setExcelHeaders(combinedHeaders);
-        setDataRows(combinedRows);
-
-        // Auto-detect pemetaan kolom
-        const initialMapping: Record<string, string> = {};
-        targetFields.forEach((target) => {
-          let bestMatch = '';
-          for (const header of combinedHeaders) {
-            const cleanHeader = header.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-            const targetClean = target.label.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
-
-            if (cleanHeader === targetClean || cleanHeader.includes(targetClean) || targetClean.includes(cleanHeader)) {
-              bestMatch = header;
-              break;
-            }
-
-            if (target.synonyms.some((syn) => cleanHeader === syn || cleanHeader.includes(syn) || syn.includes(cleanHeader))) {
-              bestMatch = header;
-              break;
-            }
-          }
-          initialMapping[target.key] = bestMatch;
-        });
-
-        setColumnMapping(initialMapping);
+        const activeHeaderIdx = hasRealHeader ? 0 : -1;
+        setHeaderRowIndex(activeHeaderIdx);
+        applyHeaderIndex(combinedRows, activeHeaderIdx);
         return;
       }
 
@@ -962,14 +1034,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       setRawSheetRows(jsonData);
 
       // Otomatis cari baris header tabel untuk sheet ini
-      let detectedHeaderIdx = 0;
-      let maxCols = 0;
+      let detectedHeaderIdx = -1;
       for (let i = 0; i < Math.min(jsonData.length, 12); i++) {
-        const row = jsonData[i] || [];
-        const nonEmptyCount = row.filter((c) => c !== null && String(c).trim() !== '').length;
-        if (nonEmptyCount > maxCols && nonEmptyCount >= 2) {
-          maxCols = nonEmptyCount;
+        if (isLikelyHeaderRow(jsonData[i])) {
           detectedHeaderIdx = i;
+          break;
         }
       }
       setHeaderRowIndex(detectedHeaderIdx);
@@ -1100,6 +1169,16 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       return true;
     });
   }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah]);
+
+  // Ringkasan persebaran wilayah/kota yang berhasil terpetakan
+  const detectedRegionsSummary = useMemo(() => {
+    const counts: Record<string, number> = {};
+    mappedRecords.forEach((r) => {
+      const w = r.wilayah || 'Tidak Terpetakan';
+      counts[w] = (counts[w] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [mappedRecords]);
 
   // Eksekusi Import Massal ke Database
   const handleExecuteImport = async () => {
@@ -1354,6 +1433,9 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                       onChange={(e) => handleHeaderRowChange(Number(e.target.value))}
                       className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
                     >
+                      <option value={-1} className="font-extrabold text-emerald-800 bg-emerald-50">
+                        🚀 File Langsung Berisi Data (Baris Pertama Langsung Data Anggota / Tanpa Judul)
+                      </option>
                       {rawSheetRows.slice(0, 10).map((row, idx) => {
                         const preview = row.filter((c) => c !== null && String(c).trim() !== '').slice(0, 3).join(', ');
                         return (
@@ -1476,6 +1558,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                                     "{s}"
                                   </span>
                                 ))}
+                                {(field.key === 'wilayah' || field.key === 'wilayahKerja') && samples.length > 1 && (
+                                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-900 font-extrabold text-[10px]">
+                                    ✨ Terdeteksi Beragam Wilayah Berbeda ({samples.length}+ kota/kab)
+                                  </span>
+                                )}
                               </div>
                             ) : (
                               <span className="text-slate-400 italic">(Kolom ini kosong di baris-baris awal)</span>
@@ -1509,6 +1596,37 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                   <span>Struktur Sesuai Tabel Resmi</span>
                 </div>
               </div>
+
+              {/* Rincian Persebaran Kabupaten/Kota yang Terdeteksi */}
+              {detectedRegionsSummary.length > 0 && (
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs">
+                        <MapPin className="w-3.5 h-3.5 text-amber-300" />
+                      </div>
+                      <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                        Distribusi {detectedRegionsSummary.length} Kabupaten/Kota Terdeteksi:
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-800">
+                      Total: <strong>{mappedRecords.length} Data</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pt-1 overscroll-contain">
+                    {detectedRegionsSummary.map(([regionName, count]) => (
+                      <span
+                        key={regionName}
+                        className="bg-white border border-emerald-300 text-emerald-900 text-xs font-bold px-3 py-1 rounded-xl shadow-2xs flex items-center gap-1.5"
+                      >
+                        <span>📍 {regionName}:</span>
+                        <strong className="text-emerald-950 font-black">{count} Data</strong>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Tabel Pratinjau dengan Kolom Persis Seperti PilarTable */}
               <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
