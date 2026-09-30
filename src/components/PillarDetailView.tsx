@@ -75,6 +75,7 @@ interface PillarDetailViewProps {
   onUpdateRecord?: (recordId: string, updatedRecord: Partial<PSKSDataRecord>, targetPillarId?: PillarId) => void;
   onBatchAddRecords?: (records: Omit<PSKSDataRecord, 'id'>[], targetPillarId?: PillarId) => Promise<number>;
   onDeleteRecord: (recordId: string) => void;
+  onBatchDeleteRecords?: (recordIds: string[], targetPillarId?: PillarId) => Promise<void>;
   onAddSubmission?: (
     newSubmission: Omit<
       PillarRegistrationSubmission,
@@ -93,6 +94,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   onUpdateRecord,
   onBatchAddRecords,
   onDeleteRecord,
+  onBatchDeleteRecords,
   onAddSubmission,
   onOpenGateModal,
 }) => {

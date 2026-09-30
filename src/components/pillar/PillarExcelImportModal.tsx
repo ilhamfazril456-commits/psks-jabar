@@ -870,6 +870,52 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     applyHeaderIndex(rawSheetRows, newIdx);
   };
 
+  // Ganti lembar kerja (sheet) aktif jika file Excel memiliki banyak sheet (misal: per kota)
+  const handleSheetChange = (sheetName: string) => {
+    if (!rawWorkbook) return;
+    try {
+      setSelectedSheet(sheetName);
+      const sheet = rawWorkbook.Sheets[sheetName];
+      if (!sheet) {
+        throw new Error(`Lembar kerja "${sheetName}" tidak ditemukan.`);
+      }
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (!jsonData || jsonData.length === 0) {
+        setRawSheetRows([]);
+        setExcelHeaders([]);
+        setDataRows([]);
+        return;
+      }
+      setRawSheetRows(jsonData);
+
+      // Otomatis cari baris header tabel untuk sheet ini
+      let detectedHeaderIdx = 0;
+      let maxCols = 0;
+      for (let i = 0; i < Math.min(jsonData.length, 12); i++) {
+        const row = jsonData[i] || [];
+        const nonEmptyCount = row.filter((c) => c !== null && String(c).trim() !== '').length;
+        if (nonEmptyCount > maxCols && nonEmptyCount >= 2) {
+          maxCols = nonEmptyCount;
+          detectedHeaderIdx = i;
+        }
+      }
+      setHeaderRowIndex(detectedHeaderIdx);
+      applyHeaderIndex(jsonData, detectedHeaderIdx);
+    } catch (err: any) {
+      console.error('Error switching sheet:', err);
+      setParseError(err?.message || 'Gagal memuat lembar kerja yang dipilih.');
+    }
+  };
+
+  // Lanjut import sheet berikutnya dari file yang sama
+  const handleContinueToNextSheet = () => {
+    const currentIdx = sheetNames.indexOf(selectedSheet);
+    const nextIdx = currentIdx + 1 < sheetNames.length ? currentIdx + 1 : 0;
+    const nextSheetName = sheetNames[nextIdx];
+    handleSheetChange(nextSheetName);
+    setStep(2);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
@@ -972,6 +1018,13 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       }
 
       return record as Omit<PSKSDataRecord, 'id'>;
+    }).filter((r) => {
+      // Abaikan baris kosong atau baris nomor kolom header (misal '1', '2', '3', '4' atau 'NO.')
+      const n = (r.nama || '').trim();
+      if (!n || n === '-' || n === 'NO.' || n === 'NO') return false;
+      // Jika nama hanya berisi angka (seperti baris nomor urut kolom 1, 2, 3, 4), abaikan
+      if (/^\d+$/.test(n)) return false;
+      return true;
     });
   }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah]);
 
@@ -1149,6 +1202,46 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
           {/* ========================================================================= */}
           {step === 2 && (
             <div className="space-y-4">
+              {/* Pilihan Lembar Kerja (Sheet Selector) jika file memiliki banyak sheet */}
+              {sheetNames.length > 1 && (
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 shadow-sm space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <FileSpreadsheet className="w-5 h-5 text-amber-300" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-black uppercase text-emerald-900 tracking-wider block">
+                          Pilih Lembar Kerja (Sheet / Kota) Yang Ingin Di-Import:
+                        </span>
+                        <span className="text-xs text-emerald-800 font-medium">
+                          File Excel ini memiliki <strong>{sheetNames.length} sheet/kota berbeda</strong>:
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full sm:w-80">
+                      <select
+                        value={selectedSheet}
+                        onChange={(e) => handleSheetChange(e.target.value)}
+                        className="w-full bg-white border-2 border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-emerald-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                      >
+                        {sheetNames.map((sName, sIdx) => (
+                          <option key={sName} value={sName}>
+                            📑 Sheet {sIdx + 1}: {sName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-emerald-900 font-bold bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-300">
+                    <Info className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>
+                      Sedang memproses <strong>Sheet "{selectedSheet}"</strong> ({dataRows.length} baris data terdeteksi).
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Info File & Pengaturan Baris Header jika ada KOP */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -1438,10 +1531,20 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                   Import Data Excel Berhasil!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                  Sebanyak <strong>{importResultCount} data anggota</strong> berhasil dimasukkan dan disinkronkan secara realtime ke database Firestore untuk Tabel <strong>{pillar.shortName}</strong>.
+                  Sebanyak <strong>{importResultCount} data anggota</strong> berhasil dimasukkan dan disinkronkan secara realtime ke database Firestore untuk Tabel <strong>{pillar.shortName}</strong> dari <strong>Sheet "{selectedSheet}"</strong>.
                 </p>
               </div>
-              <div className="pt-4 flex justify-center">
+              <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+                {sheetNames.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleContinueToNextSheet}
+                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-slate-950" />
+                    <span>Lanjut Import Sheet Lainnya ({sheetNames.length} Sheet Tersedia)</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleClose}
