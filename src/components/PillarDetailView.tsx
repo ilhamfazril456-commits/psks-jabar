@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PillarId, PSKSDataRecord, UserSession, PillarRegistrationSubmission } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY, JABAR_REGIONS } from '../data/initialData';
-import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText } from 'lucide-react';
+import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText, UploadCloud } from 'lucide-react';
 import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
+import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
 import { sortRecordsByJabarRegion } from '../utils/regionSort';
 import { BackToHomeButton } from './BackToHomeButton';
 
@@ -72,6 +73,7 @@ interface PillarDetailViewProps {
   onBackToDashboard: () => void;
   onAddRecord: (newRecord: Omit<PSKSDataRecord, 'id'>) => void;
   onUpdateRecord?: (recordId: string, updatedRecord: Partial<PSKSDataRecord>, targetPillarId?: PillarId) => void;
+  onBatchAddRecords?: (records: Omit<PSKSDataRecord, 'id'>[], targetPillarId?: PillarId) => Promise<number>;
   onDeleteRecord: (recordId: string) => void;
   onAddSubmission?: (
     newSubmission: Omit<
@@ -89,6 +91,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   onBackToDashboard,
   onAddRecord,
   onUpdateRecord,
+  onBatchAddRecords,
   onDeleteRecord,
   onAddSubmission,
   onOpenGateModal,
@@ -97,6 +100,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showGuestLoginModal, setShowGuestLoginModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PSKSDataRecord | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const [chartVisible, setChartVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1328,6 +1332,19 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span><span className="hidden sm:inline">Export Ke </span>PDF</span>
                 </button>
+
+                {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && (
+                  <button
+                    id={`btn-import-excel-${pillarId}`}
+                    type="button"
+                    onClick={() => setShowImportModal(true)}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                    title="Import data anggota massal dari file Excel (.xlsx / .csv) dengan pemetaan kolom otomatis"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
+                    <span><span className="hidden sm:inline">Import </span>Excel</span>
+                  </button>
+                )}
               </>
             )}
 
@@ -1411,6 +1428,20 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           onClose={() => {
             setIsModalOpen(false);
             setEditingRecord(null);
+          }}
+        />
+      )}
+
+      {/* Excel Bulk Import Modal (Khusus Superadmin & Developer) */}
+      {showImportModal && onBatchAddRecords && (
+        <PillarExcelImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          pillarId={pillarId}
+          pillar={pillar}
+          session={session}
+          onBatchImport={async (records) => {
+            return await onBatchAddRecords(records, pillarId);
           }}
         />
       )}

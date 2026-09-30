@@ -264,6 +264,26 @@ export async function setFirestoreDoc(
 }
 
 /**
+ * Persist multiple documents to Firestore using writeBatch in chunks
+ */
+export async function batchSetFirestoreDocs(
+  collectionName: string,
+  docs: Array<{ id: string; data: Record<string, any> }>
+): Promise<void> {
+  const { firestore, db } = await getFirestoreModule();
+  const CHUNK_SIZE = 450;
+  for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
+    const chunk = docs.slice(i, i + CHUNK_SIZE);
+    const batch = firestore.writeBatch(db);
+    for (const item of chunk) {
+      const docRef = firestore.doc(db, collectionName, item.id);
+      batch.set(docRef, cleanFirestoreData(item.data), { merge: true });
+    }
+    await batch.commit();
+  }
+}
+
+/**
  * Delete document from Firestore
  */
 export async function deleteFirestoreDoc(

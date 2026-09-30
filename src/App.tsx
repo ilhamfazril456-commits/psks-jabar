@@ -101,6 +101,7 @@ import {
   subscribeToCollection,
   subscribeToIndexedQuery,
   setFirestoreDoc,
+  batchSetFirestoreDocs,
   deleteFirestoreDoc,
   checkServerConnectivity,
   cleanFirestoreData,
@@ -2557,6 +2558,71 @@ export default function App() {
     }
   };
 
+  const handleBatchAddRecords = async (
+    records: Omit<PSKSDataRecord, 'id'>[],
+    targetPillarId?: PillarId
+  ): Promise<number> => {
+    const pillarKey = targetPillarId || activePillar;
+    if (!pillarKey || !records.length) return 0;
+
+    const baseTimestamp = Date.now();
+    const newRecordsWithId: PSKSDataRecord[] = records.map((rec, idx) => ({
+      ...rec,
+      id: `${pillarKey}-${baseTimestamp}-${idx + 1}`,
+      pillarId: pillarKey,
+    }));
+
+    setAllPillarData((prev) => {
+      const updated = {
+        ...prev,
+        [pillarKey]: [...(prev[pillarKey] || []), ...newRecordsWithId],
+      };
+      try {
+        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    const pilarName = (pillarKey || 'PSKS').toUpperCase();
+    const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Developer [${session.nama}]`;
+
+    recordSystemActivity({
+      session,
+      category: 'PSKS',
+      actionType: 'IMPORT',
+      targetCollection: 'psks_records',
+      targetId: `batch-import-${baseTimestamp}`,
+      targetName: `${newRecordsWithId.length} Data Anggota`,
+      targetPillar: pilarName,
+      targetWilayah: session.wilayah || 'Jawa Barat',
+      details: `${actorLabel} telah MENGIMPORT massal ${newRecordsWithId.length} data anggota baru ke Pilar ${pilarName} via file Excel (.xlsx)`,
+    });
+
+    if (quotaExceededRef.current || isQuotaExceeded) {
+      newRecordsWithId.forEach((rec) => {
+        addToSyncQueue({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec });
+      });
+      return newRecordsWithId.length;
+    }
+
+    try {
+      await batchSetFirestoreDocs(
+        'psks_records',
+        newRecordsWithId.map((rec) => ({ id: rec.id, data: cleanFirestoreData(rec) }))
+      );
+    } catch (err) {
+      if (isQuotaError(err)) {
+        quotaExceededRef.current = true;
+        setIsQuotaExceeded(true);
+      }
+      newRecordsWithId.forEach((rec) => {
+        addToSyncQueue({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec });
+      });
+    }
+
+    return newRecordsWithId.length;
+  };
+
   const handleAddSubmission = async (
     newSubmission: Omit<
       PillarRegistrationSubmission,
@@ -3573,6 +3639,7 @@ export default function App() {
             onBackToDashboard={handleBackToDashboard}
             onAddRecord={handleAddRecord}
             onUpdateRecord={handleUpdateRecord}
+            onBatchAddRecords={handleBatchAddRecords}
             onDeleteRecord={handleDeleteRecord}
             onAddSubmission={handleAddSubmission}
             onOpenGateModal={() => setGateModalOpen(true)}
