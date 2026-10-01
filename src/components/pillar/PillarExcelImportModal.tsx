@@ -621,7 +621,8 @@ export const PILLAR_FIELD_DEFINITIONS: Record<PillarId, TargetFieldDef[]> = {
 };
 
 // Normalisasi nama wilayah resmi Jawa Barat
-function normalizeJabarRegion(val: any, defaultWilayah: string = ''): string {
+// Normalisasi nama wilayah resmi Jawa Barat
+function normalizeJabarRegion(val: any, defaultWilayah: string = '', contextSheets?: string[]): string {
   if (!val || typeof val !== 'string') return defaultWilayah;
   const raw = val.trim().toLowerCase();
   if (!raw) return defaultWilayah;
@@ -637,55 +638,328 @@ function normalizeJabarRegion(val: any, defaultWilayah: string = ''): string {
     return defaultWilayah;
   }
 
-  // Prioritas utama: Nama wilayah majemuk (Bandung Barat vs Bandung, dll)
-  if (raw.includes('bandung barat') || raw.includes('kbb')) return 'Kab. Bandung Barat';
-  if (raw.includes('kota bandung')) return 'Kota Bandung';
-  if (raw.includes('kab. bandung') || raw.includes('kabupaten bandung')) return 'Kab. Bandung';
+  // Bersihkan tanda baca dan rapikan spasi: "kab. bekasi" -> "kab bekasi", "kab_bekasi" -> "kab bekasi"
+  const clean = raw.replace(/[._\-–—]/g, ' ').replace(/\s+/g, ' ').trim();
 
-  if (raw.includes('kota bogor')) return 'Kota Bogor';
-  if (raw.includes('kab. bogor') || raw.includes('kabupaten bogor')) return 'Kab. Bogor';
-
-  if (raw.includes('kota bekasi')) return 'Kota Bekasi';
-  if (raw.includes('kab. bekasi') || raw.includes('kabupaten bekasi')) return 'Kab. Bekasi';
-
-  if (raw.includes('kota cirebon')) return 'Kota Cirebon';
-  if (raw.includes('kab. cirebon') || raw.includes('kabupaten cirebon')) return 'Kab. Cirebon';
-
-  if (raw.includes('kota sukabumi')) return 'Kota Sukabumi';
-  if (raw.includes('kab. sukabumi') || raw.includes('kabupaten sukabumi')) return 'Kab. Sukabumi';
-
-  if (raw.includes('kota tasikmalaya') || raw.includes('kota tasik')) return 'Kota Tasikmalaya';
+  // 1. BEKASI (Prioritas tinggi agar Kota vs Kab tidak pernah tertukar atau bocor)
   if (
-    raw.includes('kab. tasikmalaya') ||
-    raw.includes('kabupaten tasikmalaya') ||
-    raw.includes('kab. tasik') ||
-    raw.includes('tasikmalaya') ||
-    raw.includes('tasik')
-  ) return 'Kab. Tasikmalaya';
+    clean.includes('kota bekasi') ||
+    clean.includes('bekasi kota') ||
+    clean.includes('kodya bekasi') ||
+    clean.includes('kotamadya bekasi') ||
+    clean === 'kota bks' ||
+    clean === 'bks kota' ||
+    clean === 'kt bekasi' ||
+    clean === 'kot bekasi' ||
+    clean === 'kt bks' ||
+    // Kecamatan resmi Kota Bekasi
+    clean.includes('bekasi timur') ||
+    clean.includes('bekasi barat') ||
+    clean.includes('bekasi selatan') ||
+    clean.includes('bekasi utara') ||
+    clean.includes('rawalumbu') ||
+    clean.includes('medan satria') ||
+    clean.includes('bantargebang') ||
+    clean.includes('bantar gebang') ||
+    clean.includes('pondok gede') ||
+    clean.includes('jatisampurna') ||
+    clean.includes('jati sampurna') ||
+    clean.includes('jatiasih') ||
+    clean.includes('jati asih') ||
+    clean.includes('pondok melati') ||
+    clean.includes('mustikajaya') ||
+    clean.includes('mustika jaya')
+  ) {
+    return 'Kota Bekasi';
+  }
 
-  if (raw.includes('cimahi')) return 'Kota Cimahi';
-  if (raw.includes('depok')) return 'Kota Depok';
-  if (raw.includes('banjar')) return 'Kota Banjar';
-  if (raw.includes('cianjur')) return 'Kab. Cianjur';
-  if (raw.includes('garut')) return 'Kab. Garut';
-  if (raw.includes('ciamis')) return 'Kab. Ciamis';
-  if (raw.includes('kuningan')) return 'Kab. Kuningan';
-  if (raw.includes('majalengka')) return 'Kab. Majalengka';
-  if (raw.includes('sumedang')) return 'Kab. Sumedang';
-  if (raw.includes('indramayu')) return 'Kab. Indramayu';
-  if (raw.includes('subang')) return 'Kab. Subang';
-  if (raw.includes('purwakarta')) return 'Kab. Purwakarta';
-  if (raw.includes('karawang')) return 'Kab. Karawang';
-  if (raw.includes('pangandaran')) return 'Kab. Pangandaran';
+  if (
+    clean.includes('kab bekasi') ||
+    clean.includes('kabupaten bekasi') ||
+    clean.includes('bekasi kab') ||
+    clean.includes('bekasi kabupaten') ||
+    clean === 'kab bks' ||
+    clean === 'bks kab' ||
+    clean === 'kbp bekasi' ||
+    clean === 'kb bekasi' ||
+    // Kecamatan resmi Kabupaten Bekasi
+    clean.includes('cikarang') ||
+    clean.includes('tambun') ||
+    clean.includes('cibitung') ||
+    clean.includes('babelan') ||
+    clean.includes('tarumajaya') ||
+    clean.includes('sukatani') ||
+    clean.includes('sukakarya') ||
+    clean.includes('sukawangi') ||
+    clean.includes('kedungwaringin') ||
+    clean.includes('karangbahagia') ||
+    clean.includes('pebayuran') ||
+    clean.includes('cabangbungin') ||
+    clean.includes('muaragembong') ||
+    clean.includes('setu bekasi') ||
+    clean.includes('serang baru') ||
+    clean.includes('bojongmangu')
+  ) {
+    return 'Kab. Bekasi';
+  }
 
-  if (raw.includes('bandung')) return 'Kab. Bandung';
-  if (raw.includes('bogor')) return 'Kab. Bogor';
-  if (raw.includes('bekasi')) return 'Kab. Bekasi';
-  if (raw.includes('cirebon')) return 'Kab. Cirebon';
-  if (raw.includes('sukabumi')) return 'Kab. Sukabumi';
+  // 2. BANDUNG (Bandung Barat vs Kota Bandung vs Kab Bandung)
+  if (
+    clean.includes('bandung barat') ||
+    clean.includes('barat bandung') ||
+    clean === 'kbb' ||
+    clean === 'kab kbb' ||
+    clean.includes('ngamprah') ||
+    clean.includes('padalarang') ||
+    clean.includes('lembang') ||
+    clean.includes('parongpong') ||
+    clean.includes('cililin') ||
+    clean.includes('batujajar') ||
+    clean.includes('cipatat') ||
+    clean.includes('cihampelas') ||
+    clean.includes('sindangkerta') ||
+    clean.includes('gununghalu')
+  ) {
+    return 'Kab. Bandung Barat';
+  }
+
+  if (
+    clean.includes('kota bandung') ||
+    clean.includes('bandung kota') ||
+    clean.includes('kotamadya bandung') ||
+    clean === 'kota bdg' ||
+    clean === 'bdg kota' ||
+    clean === 'kt bandung' ||
+    clean === 'kot bandung' ||
+    clean.includes('coblong') ||
+    clean.includes('dago') ||
+    clean.includes('antapani') ||
+    clean.includes('arcamanik') ||
+    clean.includes('buahbatu') ||
+    clean.includes('lengkong') ||
+    clean.includes('cicendo') ||
+    clean.includes('kiaracondong') ||
+    clean.includes('ujungberung') ||
+    clean.includes('cibeunying')
+  ) {
+    return 'Kota Bandung';
+  }
+
+  if (
+    clean.includes('kab bandung') ||
+    clean.includes('kabupaten bandung') ||
+    clean.includes('bandung kab') ||
+    clean.includes('bandung kabupaten') ||
+    clean === 'kab bdg' ||
+    clean === 'bdg kab' ||
+    clean.includes('soreang') ||
+    clean.includes('baleendah') ||
+    clean.includes('dayeuhkolot') ||
+    clean.includes('banjaran') ||
+    clean.includes('majalaya') ||
+    clean.includes('ciwidey') ||
+    clean.includes('pangalengan') ||
+    clean.includes('rancaekek') ||
+    clean.includes('cileunyi') ||
+    clean.includes('ciparay')
+  ) {
+    return 'Kab. Bandung';
+  }
+
+  // 3. BOGOR (Kota Bogor vs Kab Bogor)
+  if (
+    clean.includes('kota bogor') ||
+    clean.includes('bogor kota') ||
+    clean === 'kota bgr' ||
+    clean === 'bgr kota' ||
+    clean === 'kt bogor' ||
+    clean === 'kot bogor' ||
+    clean.includes('tanah sareal') ||
+    clean.includes('bogor timur') ||
+    clean.includes('bogor barat') ||
+    clean.includes('bogor selatan') ||
+    clean.includes('bogor utara') ||
+    clean.includes('bogor tengah')
+  ) {
+    return 'Kota Bogor';
+  }
+
+  if (
+    clean.includes('kab bogor') ||
+    clean.includes('kabupaten bogor') ||
+    clean.includes('bogor kab') ||
+    clean.includes('bogor kabupaten') ||
+    clean === 'kab bgr' ||
+    clean === 'bgr kab' ||
+    clean.includes('cibinong') ||
+    clean.includes('cileungsi') ||
+    clean.includes('gunung putri') ||
+    clean.includes('bojong gede') ||
+    clean.includes('parung') ||
+    clean.includes('citeureup') ||
+    clean.includes('sukaraja') ||
+    clean.includes('ciawi bogor') ||
+    clean.includes('megamendung') ||
+    clean.includes('jasinga') ||
+    clean.includes('leuwiliang')
+  ) {
+    return 'Kab. Bogor';
+  }
+
+  // 4. CIREBON (Kota Cirebon vs Kab Cirebon)
+  if (
+    clean.includes('kota cirebon') ||
+    clean.includes('cirebon kota') ||
+    clean === 'kota crb' ||
+    clean === 'crb kota' ||
+    clean === 'kt cirebon' ||
+    clean === 'kot cirebon' ||
+    clean.includes('kejaksan') ||
+    clean.includes('kesambi') ||
+    clean.includes('harjamukti') ||
+    clean.includes('lemahwungkuk') ||
+    clean.includes('pekalipan')
+  ) {
+    return 'Kota Cirebon';
+  }
+
+  if (
+    clean.includes('kab cirebon') ||
+    clean.includes('kabupaten cirebon') ||
+    clean.includes('cirebon kab') ||
+    clean.includes('cirebon kabupaten') ||
+    clean === 'kab crb' ||
+    clean === 'crb kab' ||
+    clean.includes('sumber cirebon') ||
+    clean.includes('palimanan') ||
+    clean.includes('arjawinangun') ||
+    clean.includes('weru')
+  ) {
+    return 'Kab. Cirebon';
+  }
+
+  // 5. SUKABUMI (Kota Sukabumi vs Kab Sukabumi)
+  if (
+    clean.includes('kota sukabumi') ||
+    clean.includes('sukabumi kota') ||
+    clean === 'kota smi' ||
+    clean === 'smi kota' ||
+    clean === 'kt sukabumi' ||
+    clean === 'kot sukabumi' ||
+    clean.includes('cikole') ||
+    clean.includes('citamiang') ||
+    clean.includes('warudoyong') ||
+    clean.includes('gunungpuyuh')
+  ) {
+    return 'Kota Sukabumi';
+  }
+
+  if (
+    clean.includes('kab sukabumi') ||
+    clean.includes('kabupaten sukabumi') ||
+    clean.includes('sukabumi kab') ||
+    clean.includes('sukabumi kabupaten') ||
+    clean === 'kab smi' ||
+    clean === 'smi kab' ||
+    clean.includes('palabuhanratu') ||
+    clean.includes('pelabuhan ratu') ||
+    clean.includes('cibadak') ||
+    clean.includes('cisaat') ||
+    clean.includes('cicurug') ||
+    clean.includes('parungkuda') ||
+    clean.includes('surade')
+  ) {
+    return 'Kab. Sukabumi';
+  }
+
+  // 6. TASIKMALAYA (Kota Tasikmalaya vs Kab Tasikmalaya)
+  if (
+    clean.includes('kota tasikmalaya') ||
+    clean.includes('tasikmalaya kota') ||
+    clean.includes('kota tasik') ||
+    clean.includes('tasik kota') ||
+    clean === 'kota tsm' ||
+    clean === 'tsm kota' ||
+    clean === 'kt tasik' ||
+    clean.includes('cihideung') ||
+    clean.includes('cipedes') ||
+    clean.includes('tawang') ||
+    clean.includes('indihiang') ||
+    clean.includes('kawalu') ||
+    clean.includes('mangkubumi')
+  ) {
+    return 'Kota Tasikmalaya';
+  }
+
+  if (
+    clean.includes('kab tasikmalaya') ||
+    clean.includes('kabupaten tasikmalaya') ||
+    clean.includes('tasikmalaya kab') ||
+    clean.includes('tasikmalaya kabupaten') ||
+    clean.includes('kab tasik') ||
+    clean.includes('tasik kab') ||
+    clean === 'kab tsm' ||
+    clean === 'tsm kab' ||
+    clean.includes('singaparna') ||
+    clean.includes('karangnunggal')
+  ) {
+    return 'Kab. Tasikmalaya';
+  }
+
+  // 7. KOTA MANDIRI (tanpa pasangan kabupaten)
+  if (clean.includes('cimahi')) return 'Kota Cimahi';
+  if (clean.includes('depok') || clean.includes('sawangan') || clean.includes('cinere') || clean.includes('cimanggis')) return 'Kota Depok';
+  if (clean.includes('banjar')) return 'Kota Banjar';
+
+  // 8. KABUPATEN MANDIRI (tanpa pasangan kota)
+  if (clean.includes('cianjur')) return 'Kab. Cianjur';
+  if (clean.includes('garut')) return 'Kab. Garut';
+  if (clean.includes('ciamis')) return 'Kab. Ciamis';
+  if (clean.includes('kuningan')) return 'Kab. Kuningan';
+  if (clean.includes('majalengka')) return 'Kab. Majalengka';
+  if (clean.includes('sumedang') || clean.includes('jatinangor')) return 'Kab. Sumedang';
+  if (clean.includes('indramayu') || clean.includes('jatibarang')) return 'Kab. Indramayu';
+  if (clean.includes('subang') || clean.includes('pamanukan')) return 'Kab. Subang';
+  if (clean.includes('purwakarta')) return 'Kab. Purwakarta';
+  if (clean.includes('karawang') || clean.includes('cikampek') || clean.includes('klari')) return 'Kab. Karawang';
+  if (clean.includes('pangandaran')) return 'Kab. Pangandaran';
+
+  // 9. Konteks Sheet Names Cerdas jika teks hanya kata tunggal "bekasi", "bandung", "bogor", dll
+  if (clean === 'bekasi' || clean === 'bks') {
+    if (contextSheets && contextSheets.length > 0) {
+      const hasKab = contextSheets.some((s) => s.toLowerCase().includes('kab'));
+      const hasKota = contextSheets.some((s) => s.toLowerCase().includes('kota'));
+      if (hasKab && !hasKota) return 'Kota Bekasi';
+      if (hasKota && !hasKab) return 'Kab. Bekasi';
+    }
+    // Jika defaultWilayah adalah salah satu varian Bekasi, ikuti defaultWilayah
+    if (defaultWilayah === 'Kota Bekasi' || defaultWilayah === 'Kab. Bekasi') return defaultWilayah;
+    return 'Kota Bekasi';
+  }
+
+  if (clean === 'bandung' || clean === 'bdg') {
+    if (defaultWilayah.includes('Bandung')) return defaultWilayah;
+    return 'Kota Bandung';
+  }
+  if (clean === 'bogor' || clean === 'bgr') {
+    if (defaultWilayah.includes('Bogor')) return defaultWilayah;
+    return 'Kota Bogor';
+  }
+  if (clean === 'cirebon' || clean === 'crb') {
+    if (defaultWilayah.includes('Cirebon')) return defaultWilayah;
+    return 'Kota Cirebon';
+  }
+  if (clean === 'sukabumi' || clean === 'smi') {
+    if (defaultWilayah.includes('Sukabumi')) return defaultWilayah;
+    return 'Kota Sukabumi';
+  }
+  if (clean === 'tasikmalaya' || clean === 'tasik' || clean === 'tsm') {
+    if (defaultWilayah.includes('Tasik')) return defaultWilayah;
+    return 'Kota Tasikmalaya';
+  }
 
   for (const reg of JABAR_REGIONS) {
-    if (reg.toLowerCase() === raw) return reg;
+    if (reg.toLowerCase() === raw || reg.toLowerCase() === clean) return reg;
   }
 
   return defaultWilayah;
@@ -822,37 +1096,89 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     onClose();
   };
 
-  // Deteksi cerdas baris mana yang merupakan baris judul (header) tabel di Excel
+  // Deteksi cerdas dan 100% presisi baris judul (header) tabel di Excel
+  // Mencegah baris data terpotong (misal 185 jadi 178) atau baris header masuk jadi data (misal 457 jadi 458)
   const detectHeaderRowIndex = (rows: any[][]): number => {
     if (!rows || rows.length === 0) return 0;
+
+    // 1. Prioritas Utama: Cari keberadaan nomor urut data (1, 2, 3...) di kolom awal
+    // Di hampir seluruh file Excel dinas, baris tepat di bawah header dimulai dengan angka 1 dan 2
+    for (let r = 0; r < Math.min(15, rows.length - 1); r++) {
+      const rowCurr = rows[r] || [];
+      const rowNext = rows[r + 1] || [];
+
+      const c0Curr = String(rowCurr[0] ?? '').trim();
+      const c0Next = String(rowNext[0] ?? '').trim();
+      const c1Curr = String(rowCurr[1] ?? '').trim();
+      const c1Next = String(rowNext[1] ?? '').trim();
+
+      const isCol0Seq = c0Curr === '1' && c0Next === '2';
+      const isCol1Seq = c1Curr === '1' && c1Next === '2';
+
+      if (isCol0Seq || isCol1Seq) {
+        // Baris r adalah baris data anggota pertama!
+        // Berarti baris judul tabel adalah baris r - 1
+        if (r === 0) return -1; // File langsung berisi data anggota tanpa header
+
+        // Jika r >= 2, periksa apakah baris r - 1 adalah baris penomoran kolom (1) | (2) | (3)
+        if (r >= 2) {
+          const prevRow = rows[r - 1] || [];
+          const nonEmpties = prevRow.filter((c) => c !== null && String(c).trim() !== '').map((c) => String(c).trim());
+          const isColumnNumbering = nonEmpties.length >= 3 && nonEmpties.every((c) => /^\(?\d+\)?$/.test(c));
+          if (isColumnNumbering) {
+            return r - 2;
+          }
+        }
+        return r - 1;
+      }
+    }
+
+    // 2. Prioritas Kedua: Penilaian Cerdas Berdasarkan Kata Kunci Header Kolom
     const maxSearch = Math.min(10, rows.length);
     let bestIdx = 0;
-    let bestScore = -1;
+    let bestScore = -100;
 
-    const headerKeywords = [
-      'no', 'nama', 'alamat', 'kabupaten', 'kota', 'lembaga', 'yayasan',
-      'nik', 'ketua', 'tanda daftar', 'izin', 'telepon', 'hp', 'status',
-      'desa', 'kelurahan', 'kecamatan', 'jabatan', 'pendidikan', 'keahlian',
-      'sektor', 'bidang', 'operator', 'puskesos', 'slrt'
+    const exactHeaderWords = [
+      'no', 'no.', 'nomor', 'nama', 'nama lks', 'nama yayasan', 'nama lembaga', 'nama organisasi',
+      'bidang', 'bidang pelayanan', 'jenis pelayanan', 'ketua', 'nama ketua', 'pimpinan',
+      'alamat', 'alamat sekretariat', 'alamat kantor', 'domisili',
+      'nomor tanda daftar', 'no tanda daftar', 'tanda daftar', 'izin', 'no izin', 'izin operasional',
+      'masa berlaku', 'berlaku sampai', 'periode', 'telepon', 'hp', 'kontak', 'status',
+      'kabupaten', 'kota', 'kab/kota', 'wilayah', 'kecamatan', 'kelurahan', 'desa',
+      'nik', 'nik/no ktp', 'ktp', 'sertifikasi', 'keaktifan'
     ];
 
     for (let i = 0; i < maxSearch; i++) {
       const row = rows[i];
       if (!row || !Array.isArray(row)) continue;
-      const nonEmptyCells = row.filter((c) => c !== null && String(c).trim() !== '');
-      if (nonEmptyCells.length < 2) continue; // Baris judul tunggal/KOP
+      const nonEmptyCells = row.filter((c) => c !== null && c !== undefined && String(c).trim() !== '');
+      if (nonEmptyCells.length < 2) continue; // Baris judul tunggal/KOP dinas
 
       let score = 0;
-      const rowTexts = nonEmptyCells.map((c) => String(c).toLowerCase().trim());
-      rowTexts.forEach((text) => {
-        if (headerKeywords.some((k) => text === k || text.startsWith(k + ' ') || text.includes(k))) {
-          score += 3;
+      const texts = nonEmptyCells.map((c) => String(c).trim().toLowerCase());
+
+      // Jika sel pertama adalah angka urut 1, 2, 3... ini jelas baris data, bukan header!
+      const firstCell = texts[0] || '';
+      if (/^\d+$/.test(firstCell) && parseInt(firstCell, 10) > 0) {
+        score -= 50;
+      }
+
+      texts.forEach((text) => {
+        // Teks yang sangat panjang (> 45 karakter) seperti alamat lengkap atau deskripsi adalah data, bukan nama kolom
+        if (text.length > 45) {
+          score -= 10;
+        } else if (text.length > 0 && text.length <= 35) {
+          if (exactHeaderWords.includes(text)) {
+            score += 15;
+          } else if (exactHeaderWords.some((w) => text.startsWith(w + ' ') || text.endsWith(' ' + w))) {
+            score += 10;
+          } else if (exactHeaderWords.some((w) => text.includes(w))) {
+            if (text.length <= 25) {
+              score += 4;
+            }
+          }
         }
       });
-
-      // Jika baris berisi angka banyak atau nomor telepon/NIK panjang, kurangi skor (bukan header)
-      const longDigits = nonEmptyCells.filter((c) => /^\d{5,}$/.test(String(c).trim())).length;
-      if (longDigits > 0) score -= 6;
 
       if (score > bestScore) {
         bestScore = score;
@@ -860,7 +1186,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       }
     }
 
-    return bestScore >= 3 ? bestIdx : 0;
+    return bestScore >= 5 ? bestIdx : 0;
   };
 
   // Terapkan pilihan baris header dan muat seluruh data di bawahnya secara utuh 100%
@@ -895,11 +1221,19 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
     setExcelHeaders(headers);
 
-    // Seluruh baris DI BAWAH baris header adalah data utuh!
-    // HANYA abaikan jika baris 100% kosong (semua sel kosong/null)
-    const dataRowsAfterHeader = allRows.slice(hIdx + 1).filter((r) => {
+    // Seluruh baris DI BAWAH baris header adalah data utuh 100%!
+    // Saring baris yang 100% kosong atau baris nomor urut indeks kolom (1) | (2) | (3)
+    const dataRowsAfterHeader = (hIdx === -1 ? allRows : allRows.slice(hIdx + 1)).filter((r) => {
       if (!r || !Array.isArray(r)) return false;
-      return r.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== '');
+      const hasContent = r.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== '');
+      if (!hasContent) return false;
+
+      // Saring jika baris ini HANYA baris penomoran indeks kolom "(1) | (2) | (3)"
+      const nonEmpties = r.filter((c) => c !== null && String(c).trim() !== '').map((c) => String(c).trim());
+      if (nonEmpties.length >= 3 && nonEmpties.every((c) => /^\(?\d+\)?$/.test(c))) {
+        return false;
+      }
+      return true;
     });
 
     setDataRows(dataRowsAfterHeader);
@@ -1022,9 +1356,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         throw new Error(`Lembar kerja "${firstSheet}" kosong.`);
       }
 
+      const sRegion = normalizeJabarRegion(firstSheet, '', workbook.SheetNames);
       jsonData.forEach((row) => {
         if (row && typeof row === 'object') {
           (row as any).__sourceSheet = firstSheet;
+          (row as any).__sheetRegion = sRegion;
         }
       });
 
@@ -1048,24 +1384,65 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       if (sheetName === '__ALL_SHEETS__') {
         // Mode Gabungkan Seluruh Sheet Sekaligus (All Sheets at Once)
-        let combinedRows: any[][] = [];
+        // KUNCI PRESISI 100%: Setiap Sheet diproses dan dipotong Header-nya secara MANDIRI!
+        let referenceHeaders: string[] = [];
+        let allProcessedDataRows: any[][] = [];
 
         rawWorkbook.SheetNames.forEach((sName) => {
           const sheet = rawWorkbook.Sheets[sName];
           if (!sheet) return;
           const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
           if (!jsonData || jsonData.length === 0) return;
-          jsonData.forEach((row) => {
-            if (row && typeof row === 'object') {
-              (row as any).__sourceSheet = sName;
+
+          const sRegion = normalizeJabarRegion(sName, '', rawWorkbook.SheetNames);
+
+          // 1. Deteksi baris header untuk sheet ini secara spesifik & akurat
+          const sHeaderIdx = detectHeaderRowIndex(jsonData);
+          const sHeaderRow = sHeaderIdx >= 0 ? (jsonData[sHeaderIdx] || []) : [];
+          const currentSheetHeaders = sHeaderRow.map((c) => String(c || '').trim());
+
+          if (referenceHeaders.length === 0 && currentSheetHeaders.length > 0) {
+            referenceHeaders = currentSheetHeaders;
+          }
+
+          // 2. Ambil baris data HANYA di bawah header sheet ini (Header sheet ini TIDAK AKAN masuk sebagai baris data palsu!)
+          const rawDataRows = sHeaderIdx === -1 ? jsonData : jsonData.slice(sHeaderIdx + 1);
+
+          // 3. Saring baris yang benar-benar kosong
+          rawDataRows.forEach((row) => {
+            if (!row || !Array.isArray(row)) return;
+            const hasContent = row.some((c) => c !== null && c !== undefined && String(c).trim() !== '');
+            if (!hasContent) return;
+
+            // Saring jika baris ini adalah baris penomoran indeks kolom (1) | (2) | (3)
+            const nonEmpties = row.filter((c) => c !== null && String(c).trim() !== '').map((c) => String(c).trim());
+            if (nonEmpties.length >= 3 && nonEmpties.every((c) => /^\(?\d+\)?$/.test(c))) {
+              return;
             }
+
+            // Buat row object dengan metadata sheet dan wilayah sheet tersebut
+            const taggedRow = [...row];
+            (taggedRow as any).__sourceSheet = sName;
+            (taggedRow as any).__sheetHeaders = currentSheetHeaders;
+            (taggedRow as any).__sheetRegion = sRegion;
+
+            allProcessedDataRows.push(taggedRow);
           });
-          combinedRows.push(...jsonData);
         });
 
-        setRawSheetRows(combinedRows);
-        const detectedIdx = detectHeaderRowIndex(combinedRows);
-        applyHeaderRowIndex(detectedIdx, combinedRows, '__ALL_SHEETS__');
+        // Bentuk headers acuan dari sheet yang memiliki header valid
+        const maxCols = Math.max(referenceHeaders.length, 4);
+        const headers: string[] = [];
+        for (let c = 0; c < maxCols; c++) {
+          const rawTitle = String(referenceHeaders[c] || '').trim();
+          headers.push(rawTitle ? rawTitle : `Kolom ${c + 1}`);
+        }
+
+        setHeaderRowIndex(0);
+        setRawSheetRows(allProcessedDataRows);
+        setExcelHeaders(headers);
+        setDataRows(allProcessedDataRows);
+        autoMapColumns(headers, allProcessedDataRows, '__ALL_SHEETS__');
         return;
       }
 
@@ -1081,9 +1458,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         setDataRows([]);
         return;
       }
+      const sRegion = normalizeJabarRegion(sheetName, '', rawWorkbook.SheetNames);
       jsonData.forEach((row) => {
         if (row && typeof row === 'object') {
           (row as any).__sourceSheet = sheetName;
+          (row as any).__sheetRegion = sRegion;
         }
       });
       setRawSheetRows(jsonData);
@@ -1142,37 +1521,69 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     if (!dataRows.length || !excelHeaders.length) return [];
 
     const defaultWilayah = selectedSheet && selectedSheet !== '__ALL_SHEETS__'
-      ? normalizeJabarRegion(selectedSheet, session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kab. Bandung Barat')
+      ? normalizeJabarRegion(selectedSheet, session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kab. Bandung Barat', rawWorkbook?.SheetNames)
       : session.wilayah && session.wilayah !== 'Semua Wilayah' ? session.wilayah : 'Kab. Bandung Barat';
     const baseTimestamp = Date.now();
 
     return dataRows.map((row, index) => {
+      const rowSourceSheet = (row as any).__sourceSheet || (selectedSheet !== '__ALL_SHEETS__' ? selectedSheet : '');
+      const rowSheetRegion = (row as any).__sheetRegion || (rowSourceSheet ? normalizeJabarRegion(rowSourceSheet, '', rawWorkbook?.SheetNames) : '');
+      const sheetHeaders = (row as any).__sheetHeaders as string[] | undefined;
+
       const getVal = (targetKey: string): any => {
         const mappingChoice = columnMapping[targetKey];
         if (!mappingChoice) return '';
         if (mappingChoice === '__SHEET_NAME__') return '';
 
-        let colIdx = -1;
+        let refColIdx = -1;
         if (typeof mappingChoice === 'string' && mappingChoice.startsWith('col_')) {
-          colIdx = parseInt(mappingChoice.replace('col_', ''), 10);
+          refColIdx = parseInt(mappingChoice.replace('col_', ''), 10);
         } else if (typeof mappingChoice === 'number') {
-          colIdx = mappingChoice;
+          refColIdx = mappingChoice;
         } else if (typeof mappingChoice === 'string') {
           const strictKolomMatch = mappingChoice.match(/^kolom\s+(\d+)$/i);
           if (strictKolomMatch) {
-            colIdx = parseInt(strictKolomMatch[1], 10) - 1;
+            refColIdx = parseInt(strictKolomMatch[1], 10) - 1;
           } else {
-            colIdx = excelHeaders.indexOf(mappingChoice);
-            if (colIdx < 0) {
-              colIdx = excelHeaders.findIndex(
+            refColIdx = excelHeaders.indexOf(mappingChoice);
+            if (refColIdx < 0) {
+              refColIdx = excelHeaders.findIndex(
                 (h) => h.toLowerCase().trim() === mappingChoice.toLowerCase().trim()
               );
             }
           }
         }
 
-        if (colIdx < 0 || colIdx >= row.length) return '';
-        return row[colIdx] ?? '';
+        // Jika baris ini berasal dari sheet yang memiliki header tersendiri (__sheetHeaders):
+        // Periksa apakah posisi kolom di sheet ini bergeser dengan mencocokkan nama judul kolom!
+        if (sheetHeaders && Array.isArray(sheetHeaders) && sheetHeaders.length > 0) {
+          const refHeaderTitle = excelHeaders[refColIdx] ? excelHeaders[refColIdx].toLowerCase().trim() : '';
+
+          // 1. Cocokkan persis dengan nama judul kolom acuan (jika bukan nama default "Kolom X")
+          if (refHeaderTitle && !refHeaderTitle.startsWith('kolom ')) {
+            const matchedColInSheet = sheetHeaders.findIndex(
+              (sh) => sh.toLowerCase().trim() === refHeaderTitle
+            );
+            if (matchedColInSheet >= 0 && matchedColInSheet < row.length) {
+              return row[matchedColInSheet] ?? '';
+            }
+          }
+
+          // 2. Cocokkan dengan sinonim target field pilar
+          const targetDef = targetFields.find((tf) => tf.key === targetKey);
+          if (targetDef && targetDef.synonyms.length > 0) {
+            const matchedSynonymIdx = sheetHeaders.findIndex((sh) => {
+              const shLow = sh.toLowerCase().trim();
+              return targetDef.synonyms.some((s) => s.toLowerCase() === shLow || shLow.includes(s.toLowerCase()));
+            });
+            if (matchedSynonymIdx >= 0 && matchedSynonymIdx < row.length) {
+              return row[matchedSynonymIdx] ?? '';
+            }
+          }
+        }
+
+        if (refColIdx < 0 || refColIdx >= row.length) return '';
+        return row[refColIdx] ?? '';
       };
 
       const record: any = {
@@ -1190,25 +1601,29 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         } else if (field.key === 'wilayah' || field.key === 'wilayahKerja') {
           const mappingChoice = columnMapping[field.key];
           let regionFound = '';
-          const rowSourceSheet = (row as any).__sourceSheet || (selectedSheet !== '__ALL_SHEETS__' ? selectedSheet : '');
 
-          if (mappingChoice === '__SHEET_NAME__') {
-            regionFound = normalizeJabarRegion(rowSourceSheet, '');
+          // 1. OTORITAS TERTINGGI & ANTI-BERCAMPUR:
+          // Jika baris berasal dari sheet tertentu (misal Sheet "Kota Bekasi" atau "Kab. Bekasi"),
+          // MAKA SELURUH DATA DALAM SHEET TERSEBUT 100% PASTI ADALAH MILIK WILAYAH TERSEBUT!
+          // TEKS DI DALAM ALAMAT ATAU KOLOM LAIN TIDAK BOLEH MENUKAR NAMA TAB SHEET!
+          if (rowSheetRegion) {
+            regionFound = rowSheetRegion;
+          } else if (mappingChoice === '__SHEET_NAME__' && rowSourceSheet) {
+            regionFound = normalizeJabarRegion(rowSourceSheet, '', rawWorkbook?.SheetNames);
           } else {
+            // Jika nama sheet bukan nama kota (misal "Sheet1", "Data 2024"), baru ambil dari kolom yang dipetakan
             if (rawVal) {
-              regionFound = normalizeJabarRegion(rawVal, '');
-            }
-            if (!regionFound && rowSourceSheet) {
-              regionFound = normalizeJabarRegion(rowSourceSheet, '');
+              regionFound = normalizeJabarRegion(rawVal, '', rawWorkbook?.SheetNames);
             }
           }
+
           if (!regionFound) {
             if (pillarId === 'peksos' && session.wilayah === 'Prov. Jabar') {
               regionFound = 'Prov. Jabar';
             } else if (session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah') {
               regionFound = session.wilayah;
             } else {
-              regionFound = 'Kab. Bandung Barat';
+              regionFound = defaultWilayah || 'Kab. Bandung Barat';
             }
           }
           record[field.key] = regionFound;
@@ -1254,15 +1669,21 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       }
 
       return record as Omit<PSKSDataRecord, 'id'>;
-    }).filter((r) => {
-      // Saring baris kosong atau baris nomor kolom header (misal '1', '2', '3', '4' atau 'NO.')
-      const n = (r.nama || '').trim();
-      if (!n || n === '-' || n === 'NO.' || n === 'NO' || n === 'No') return false;
-      // Jika nama hanya berisi angka tunggal, abaikan (bukan nama orang/lembaga)
-      if (/^\d+$/.test(n)) return false;
+    }).filter((r, index) => {
+      // Baris data valid jika memiliki minimal satu konten yang berarti
+      const hasAnyData = Object.entries(r).some(([k, v]) => {
+        if (['pillarId', 'status', 'orderIndex', 'createdAt', 'wilayah'].includes(k)) return false;
+        const s = String(v || '').trim();
+        return s !== '' && s !== '-';
+      });
 
-      // Filter KOP surat dinas atau baris total rekapitulasi agar tidak pernah masuk
+      if (!hasAnyData) return false;
+
+      const n = (r.nama || '').trim();
       const lower = n.toLowerCase();
+
+      // Saring jika baris ini adalah baris pengulangan KOP atau header tabel
+      if (n === 'NO.' || n === 'NO' || n === 'No') return false;
       if (
         lower === 'pemerintah daerah provinsi jawa barat' ||
         lower === 'dinas sosial' ||
@@ -1272,14 +1693,26 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         lower === 'jumlah' ||
         lower === 'total' ||
         lower.startsWith('total ') ||
-        lower.startsWith('jumlah ')
+        lower.startsWith('jumlah ') ||
+        lower === 'nama lks' ||
+        lower === 'nama yayasan' ||
+        lower === 'nama lembaga' ||
+        lower === 'nama organisasi' ||
+        lower === 'nama'
       ) {
         return false;
       }
 
+      // Jangan pernah buang data anggota hanya karena kolom nama kosong di file
+      if (!n || n === '-') {
+        r.nama = r.nomorTandaDaftar
+          ? `LKS (${r.nomorTandaDaftar})`
+          : (r.ketua ? `LKS [Ketua: ${r.ketua}]` : `[Data Anggota ${index + 1}]`);
+      }
+
       return true;
     });
-  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah]);
+  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah, selectedSheet, rawWorkbook]);
 
   // Ringkasan persebaran wilayah/kota yang berhasil terpetakan
   const detectedRegionsSummary = useMemo(() => {
@@ -1528,23 +1961,32 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                     <select
                       value={headerRowIndex}
                       onChange={(e) => handleHeaderRowChange(Number(e.target.value))}
-                      className="w-full bg-white border-2 border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-emerald-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                      disabled={selectedSheet === '__ALL_SHEETS__'}
+                      className="w-full bg-white border-2 border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-emerald-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer disabled:bg-emerald-50 disabled:text-emerald-900 disabled:cursor-default"
                     >
-                      <option value={-1} className="font-bold text-amber-900 bg-amber-50">
-                        🚀 [File Langsung Berisi Data (Baris 1 Sudah Data Anggota)]
-                      </option>
-                      {rawSheetRows.slice(0, Math.min(10, rawSheetRows.length)).map((row, rIdx) => {
-                        const preview = row
-                          .filter((c) => c !== null && String(c).trim() !== '')
-                          .slice(0, 4)
-                          .map((c) => String(c).trim())
-                          .join(' | ');
-                        return (
-                          <option key={rIdx} value={rIdx}>
-                            📑 Baris ke-{rIdx + 1}: {preview ? `[ ${preview.slice(0, 45)}... ]` : '(Baris Kosong)'}
+                      {selectedSheet === '__ALL_SHEETS__' ? (
+                        <option value={0}>
+                          ⚡ Otomatis: Baris judul dipotong mandiri per masing-masing sheet
+                        </option>
+                      ) : (
+                        <>
+                          <option value={-1} className="font-bold text-amber-900 bg-amber-50">
+                            🚀 [File Langsung Berisi Data (Baris 1 Sudah Data Anggota)]
                           </option>
-                        );
-                      })}
+                          {rawSheetRows.slice(0, Math.min(10, rawSheetRows.length)).map((row, rIdx) => {
+                            const preview = row
+                              .filter((c) => c !== null && String(c).trim() !== '')
+                              .slice(0, 4)
+                              .map((c) => String(c).trim())
+                              .join(' | ');
+                            return (
+                              <option key={rIdx} value={rIdx}>
+                                📑 Baris ke-{rIdx + 1}: {preview ? `[ ${preview.slice(0, 45)}... ]` : '(Baris Kosong)'}
+                              </option>
+                            );
+                          })}
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
