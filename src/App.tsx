@@ -218,6 +218,35 @@ export default function App() {
     }
   };
 
+  // Tambah data antrean massal sekaligus (sangat cepat, 0 lag, tidak membuat browser hang)
+  const addBatchToSyncQueue = (items: Array<{ collection: string; docId: string; type: 'SET' | 'DELETE'; data?: any }>) => {
+    if (!items || !items.length) return;
+    try {
+      const raw = localStorage.getItem('psks_sync_queue');
+      const queue: any[] = raw ? JSON.parse(raw) : [];
+      const itemKeySet = new Set(items.map((it) => `${it.collection}__${it.docId}`));
+      const filtered = queue.filter((q: any) => !itemKeySet.has(`${q.collection}__${q.docId}`));
+      const now = Date.now();
+      items.forEach((it, idx) => {
+        filtered.push({ ...it, id: `${it.collection}-${it.docId}-${now}-${idx}` });
+      });
+      localStorage.setItem('psks_sync_queue', JSON.stringify(filtered));
+      setPendingSyncCount(filtered.length);
+    } catch (e) {
+      console.error('Failed to add batch items to sync queue', e);
+    }
+  };
+
+  // Batalkan / kosongkan seluruh antrean tertunda jika user ingin menghentikan sinkronisasi menggantung
+  const clearSyncQueue = () => {
+    try {
+      localStorage.removeItem('psks_sync_queue');
+      setPendingSyncCount(0);
+    } catch (e) {
+      console.error('Failed to clear sync queue', e);
+    }
+  };
+
   const processSyncQueue = async (isManualClick: boolean = false) => {
     setIsSyncing(true);
     try {
@@ -248,7 +277,7 @@ export default function App() {
         }
       }
 
-      // 2. Jika koneksi server aman, lakukan proses sinkronisasi antrean offline
+      // 2. Jika koneksi server aman, lakukan proses sinkronisasi antrean offline secara MASSAL (BULK BATCH)
       const raw = localStorage.getItem('psks_sync_queue');
       const queue = raw ? JSON.parse(raw) : [];
 
@@ -266,48 +295,80 @@ export default function App() {
         return;
       }
 
-      const remainingQueue = [...queue];
-      let successCount = 0;
+      // Pisahkan antrean SET dan DELETE untuk optimasi batching paralel
+      const setRecords: Array<{ id: string; data: any; collection: string }> = [];
+      const deleteIdsByCollection: Record<string, string[]> = {};
+      const otherItems: any[] = [];
 
-      for (let i = 0; i < queue.length; i++) {
-        const item = queue[i];
-        try {
-          if (item.type === 'SET' && item.data) {
-            await setFirestoreDoc(item.collection, item.docId, item.data);
-          } else if (item.type === 'DELETE') {
-            await deleteFirestoreDoc(item.collection, item.docId);
+      queue.forEach((item) => {
+        if (item.type === 'SET' && item.data) {
+          setRecords.push({ id: item.docId, data: item.data, collection: item.collection });
+        } else if (item.type === 'DELETE') {
+          if (!deleteIdsByCollection[item.collection]) {
+            deleteIdsByCollection[item.collection] = [];
           }
-          successCount++;
-          remainingQueue.shift();
+          deleteIdsByCollection[item.collection].push(item.docId);
+        } else {
+          otherItems.push(item);
+        }
+      });
+
+      let successCount = 0;
+      let hasError = false;
+
+      // Eksekusi SET secara bulk batch per koleksi (misal psks_records, app_settings)
+      const setByCollection: Record<string, Array<{ id: string; data: any }>> = {};
+      setRecords.forEach((r) => {
+        if (!setByCollection[r.collection]) setByCollection[r.collection] = [];
+        setByCollection[r.collection].push({ id: r.id, data: r.data });
+      });
+
+      for (const [coll, docs] of Object.entries(setByCollection)) {
+        try {
+          await batchSetFirestoreDocs(coll, docs);
+          successCount += docs.length;
         } catch (err) {
+          hasError = true;
           if (isQuotaError(err)) {
             quotaExceededRef.current = true;
             setIsQuotaExceeded(true);
-            if (isManualClick) {
-              try {
-                if (typeof window !== 'undefined' && window.alert) {
-                  window.alert(`⚠️ Kuota terlampaui saat proses sinkronisasi. ${successCount} data berhasil terkirim sebelum kuota habis kembali.`);
-                }
-              } catch {}
-            }
             break;
           }
-          console.error(`Sync queue item failed (${item.collection}/${item.docId}):`, err);
         }
       }
 
-      localStorage.setItem('psks_sync_queue', JSON.stringify(remainingQueue));
-      setPendingSyncCount(remainingQueue.length);
-
-      if (remainingQueue.length === 0) {
-        quotaExceededRef.current = false;
-        setIsQuotaExceeded(false);
+      // Eksekusi DELETE secara bulk batch
+      if (!quotaExceededRef.current) {
+        for (const [coll, ids] of Object.entries(deleteIdsByCollection)) {
+          try {
+            await batchDeleteFirestoreDocs(coll, ids);
+            successCount += ids.length;
+          } catch (err) {
+            hasError = true;
+            if (isQuotaError(err)) {
+              quotaExceededRef.current = true;
+              setIsQuotaExceeded(true);
+              break;
+            }
+          }
+        }
       }
 
-      if (successCount > 0 && remainingQueue.length === 0 && isManualClick) {
+      if (!hasError) {
+        clearSyncQueue();
+        quotaExceededRef.current = false;
+        setIsQuotaExceeded(false);
+      } else {
+        // Kurangi jumlah item yang sudah sukses tersimpan
+        const remaining = queue.slice(successCount);
+        localStorage.setItem('psks_sync_queue', JSON.stringify(remaining));
+        setPendingSyncCount(remaining.length);
+      }
+
+      if (successCount > 0 && !hasError && isManualClick) {
         try {
           if (typeof window !== 'undefined' && window.alert) {
-            window.alert(`✅ Sinkronisasi Berhasil!\n\n${successCount} data perubahan offline/cache lokal telah sukses tersimpan permanen ke server Firestore.`);
+            window.alert(`✅ Sinkronisasi Cepat Berhasil!\n\n${successCount} data perubahan offline telah sukses tersimpan permanen ke server Firestore secara massal dalam hitungan detik.`);
           }
         } catch {}
       }
@@ -2623,9 +2684,9 @@ export default function App() {
     });
 
     if (quotaExceededRef.current || isQuotaExceeded) {
-      newRecordsWithId.forEach((rec) => {
-        addToSyncQueue({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec });
-      });
+      addBatchToSyncQueue(
+        newRecordsWithId.map((rec) => ({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec }))
+      );
       return newRecordsWithId.length;
     }
 
@@ -2639,9 +2700,9 @@ export default function App() {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      newRecordsWithId.forEach((rec) => {
-        addToSyncQueue({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec });
-      });
+      addBatchToSyncQueue(
+        newRecordsWithId.map((rec) => ({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec }))
+      );
     }
 
     return newRecordsWithId.length;
@@ -3454,9 +3515,23 @@ export default function App() {
             ⏰ Reset Harian Google: ~14:00 - 15:00 WIB (Midnight PST)
           </span>
           {pendingSyncCount > 0 && (
-            <span className="bg-amber-900/80 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-500/30 text-[11px]">
-              {pendingSyncCount} Perubahan Tersimpan Offline
-            </span>
+            <>
+              <span className="bg-amber-900/80 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-500/30 text-[11px]">
+                {pendingSyncCount} Perubahan Tersimpan Offline
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Apakah Anda yakin ingin membatalkan dan membersihkan ${pendingSyncCount} antrean offline yang belum tersimpan ke server?`)) {
+                    clearSyncQueue();
+                  }
+                }}
+                className="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold text-[11px] px-2 py-0.5 rounded border border-rose-500/40 transition-colors cursor-pointer"
+                title="Hapus antrean sinkronisasi tertunda jika ingin membatalkannya"
+              >
+                Hapus Antrean
+              </button>
+            </>
           )}
           <button
             type="button"
