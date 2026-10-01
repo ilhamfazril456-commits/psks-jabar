@@ -21,8 +21,20 @@ export function getFirestoreModule() {
 export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
   const cleaned: Record<string, any> = {};
   Object.keys(obj).forEach((key) => {
-    if (obj[key] !== undefined) {
-      cleaned[key] = obj[key];
+    const val = obj[key];
+    if (val !== undefined) {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (key === 'nama' && trimmed.length > 900) {
+          cleaned[key] = trimmed.slice(0, 900);
+        } else if (key === 'wilayah' && trimmed.length > 190) {
+          cleaned[key] = trimmed.slice(0, 190);
+        } else {
+          cleaned[key] = trimmed;
+        }
+      } else {
+        cleaned[key] = val;
+      }
     }
   });
   return cleaned;

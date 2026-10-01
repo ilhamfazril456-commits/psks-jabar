@@ -379,6 +379,48 @@ export default function App() {
     }
   };
 
+  const [isRescueSyncing, setIsRescueSyncing] = useState(false);
+
+  const handleRescueSyncAllPillarsToCloud = async () => {
+    if (isRescueSyncing) return;
+    setIsRescueSyncing(true);
+    try {
+      let totalPushed = 0;
+      const pillars = Object.keys(allPillarData);
+      
+      for (const pKey of pillars) {
+        const records = allPillarData[pKey];
+        if (Array.isArray(records) && records.length > 0) {
+          const docs = records.map((rec, idx) => ({
+            id: rec.id || `${pKey}-${Date.now()}-${String(idx + 1).padStart(6, '0')}`,
+            data: cleanFirestoreData({ ...rec, pillarId: pKey }),
+          }));
+          await batchSetFirestoreDocs('psks_records', docs);
+          totalPushed += docs.length;
+        }
+      }
+
+      clearSyncQueue();
+      quotaExceededRef.current = false;
+      setIsQuotaExceeded(false);
+
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(
+          `✅ PENYELAMATAN & SINKRONISASI BERHASIL!\n\n` +
+          `Sebanyak ${totalPushed} total data (termasuk ${allPillarData['lks']?.length || 0} Data LKS) telah sukses tersimpan resmi ke Google Cloud Firestore.\n\n` +
+          `Semua perangkat (HP, Laptop, dsb) sekarang otomatis sinkron dan menampilkan data terbaru.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Rescue sync failed:', err);
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(`⚠️ Gagal menyinkronkan data: ${err?.message || 'Koneksi terputus'}. Silakan coba lagi.`);
+      }
+    } finally {
+      setIsRescueSyncing(false);
+    }
+  };
+
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     let timer: any = null;
@@ -2752,19 +2794,15 @@ export default function App() {
       details: `${actorLabel} telah MENGIMPORT massal ${newRecordsWithId.length} data anggota baru ke Pilar ${pilarName} via file Excel (.xlsx)`,
     });
 
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addBatchToSyncQueue(
-        newRecordsWithId.map((rec) => ({ collection: 'psks_records', docId: rec.id, type: 'SET', data: rec }))
-      );
-      return newRecordsWithId.length;
-    }
-
     try {
       await batchSetFirestoreDocs(
         'psks_records',
         newRecordsWithId.map((rec) => ({ id: rec.id, data: cleanFirestoreData(rec) }))
       );
+      quotaExceededRef.current = false;
+      setIsQuotaExceeded(false);
     } catch (err) {
+      console.warn('Batch write encountered error, fallback to sync queue:', err);
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
@@ -3571,44 +3609,39 @@ export default function App() {
         />
       </React.Suspense>
 
-      {/* Quota Exceeded Cache Mode Banner (Visible only to authorized operators/admins who need offline queue info) */}
-      {isQuotaExceeded && (session.statusActive === 'SAH_TERDAFTAR' || session.role === 'superadmin' || session.role === 'admin' || session.role === 'developer') && (
+      {/* Quota Exceeded / Offline Cache Mode / Rescue Sync Banner (Visible only to authorized operators/admins who need offline queue info) */}
+      {(isQuotaExceeded || pendingSyncCount > 0) && (session.statusActive === 'SAH_TERDAFTAR' || session.role === 'superadmin' || session.role === 'admin' || session.role === 'developer') && (
         <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-amber-950 border-b border-amber-500/40 text-amber-200 text-xs py-2 px-4 text-center font-medium shadow-md flex flex-wrap items-center justify-center gap-2 z-50">
           <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">
-            MODE CACHE LOKAL (OPERATOR)
+            {pendingSyncCount > 0 ? 'ANTREAN DATA LOKAL' : 'MODE CACHE LOKAL (OPERATOR)'}
           </span>
           <span>
-            Batas kuota harian Firestore tercapai. Perubahan data tersimpan aman di Cache Lokal & Antrean Offline.
-          </span>
-          <span className="text-amber-300/80 text-[11px] font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/20">
-            ⏰ Reset Harian Google: ~14:00 - 15:00 WIB (Midnight PST)
+            {pendingSyncCount > 0
+              ? `Terdapat ${pendingSyncCount} data tersimpan di memori perangkat ini yang siap dikirim ke cloud.`
+              : 'Batas kuota harian Firestore tercapai. Perubahan data tersimpan aman di Cache Lokal & Antrean Offline.'}
           </span>
           {pendingSyncCount > 0 && (
-            <>
-              <span className="bg-amber-900/80 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-500/30 text-[11px]">
-                {pendingSyncCount} Perubahan Tersimpan Offline
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(`Apakah Anda yakin ingin membatalkan dan membersihkan ${pendingSyncCount} antrean offline yang belum tersimpan ke server?`)) {
-                    clearSyncQueue();
-                  }
-                }}
-                className="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold text-[11px] px-2 py-0.5 rounded border border-rose-500/40 transition-colors cursor-pointer"
-                title="Hapus antrean sinkronisasi tertunda jika ingin membatalkannya"
-              >
-                Hapus Antrean
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`Apakah Anda yakin ingin membatalkan dan membersihkan ${pendingSyncCount} antrean offline yang belum tersimpan ke server?`)) {
+                  clearSyncQueue();
+                }
+              }}
+              className="bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold text-[11px] px-2 py-0.5 rounded border border-rose-500/40 transition-colors cursor-pointer"
+              title="Hapus antrean sinkronisasi tertunda jika ingin membatalkannya"
+            >
+              Hapus Antrean
+            </button>
           )}
           <button
             type="button"
-            onClick={() => processSyncQueue(true)}
-            disabled={isSyncing}
-            className="ml-1 bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] hover:from-amber-400 hover:to-amber-200 text-slate-950 font-black text-[11px] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow active:scale-95 flex items-center gap-1 disabled:opacity-60"
+            onClick={handleRescueSyncAllPillarsToCloud}
+            disabled={isRescueSyncing}
+            className="ml-1 bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] hover:from-amber-400 hover:to-amber-200 text-slate-950 font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow active:scale-95 flex items-center gap-1.5 disabled:opacity-60"
+            title="Dorong dan sinkronkan seluruh data lokal di perangkat ini ke Cloud Firestore"
           >
-            <span>{isSyncing ? '🔄 Menguji Server...' : '🔄 Sinkronkan Ke Server'}</span>
+            <span>{isRescueSyncing ? '🔄 Menyinkronkan...' : `🚀 Selamatkan & Dorong Data ke Cloud (${allPillarData['lks']?.length || 0} LKS)`}</span>
           </button>
         </div>
       )}
@@ -3877,6 +3910,8 @@ export default function App() {
             onBatchDeleteRecords={handleBatchDeleteRecords}
             onAddSubmission={handleAddSubmission}
             onOpenGateModal={() => setGateModalOpen(true)}
+            onRescueSync={handleRescueSyncAllPillarsToCloud}
+            isRescueSyncing={isRescueSyncing}
           />
         )}
 

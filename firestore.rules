@@ -34,11 +34,11 @@ service cloud.firestore {
     match /psks_records/{recordId} {
       allow read: if true;
       allow create, update: if isValidId(recordId)
-                            && request.resource.data.keys().size() <= 60
-                            && (!('nama' in request.resource.data) || isReasonableString(request.resource.data.nama, 200))
-                            && (!('wilayah' in request.resource.data) || isReasonableString(request.resource.data.wilayah, 100))
-                            && (!('pillarId' in request.resource.data) || isReasonableString(request.resource.data.pillarId, 50))
-                            && (!('nik' in request.resource.data) || isReasonableString(request.resource.data.nik, 30));
+                            && request.resource.data.keys().size() <= 80
+                            && (!('nama' in request.resource.data) || isReasonableString(request.resource.data.nama, 1000))
+                            && (!('wilayah' in request.resource.data) || isReasonableString(request.resource.data.wilayah, 200))
+                            && (!('pillarId' in request.resource.data) || isReasonableString(request.resource.data.pillarId, 100))
+                            && (!('nik' in request.resource.data) || isReasonableString(request.resource.data.nik, 50));
       allow delete: if isValidId(recordId);
     }
 
