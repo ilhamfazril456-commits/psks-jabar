@@ -18,6 +18,7 @@ interface PillarTableProps {
   pillar: any;
   session: UserSession;
   displayRecords: PSKSDataRecord[];
+  searchTerm?: string;
   isPeksosGov: (record: PSKSDataRecord) => boolean;
   onDeleteClick: (record: PSKSDataRecord) => void;
   onEditClick?: (record: PSKSDataRecord) => void;
@@ -27,11 +28,12 @@ interface PillarTableProps {
   showCheckbox?: boolean;
 }
 
-export const PillarTable: React.FC<PillarTableProps> = ({
+export const PillarTable: React.FC<PillarTableProps> = React.memo(({
   pillarId,
   pillar,
   session,
   displayRecords,
+  searchTerm,
   isPeksosGov,
   onDeleteClick,
   onEditClick,
@@ -47,26 +49,33 @@ export const PillarTable: React.FC<PillarTableProps> = ({
 
   const isStaffOrAdmin = session.role !== 'user';
 
-  // Ensure records are always a valid array
-  const safeDisplayRecords = Array.isArray(displayRecords) ? displayRecords : [];
+  // Pastikan array selalu valid (sudah disortir secara presisi di komponen induk)
+  const recordsToRender = Array.isArray(displayRecords) ? displayRecords : [];
 
-  // For Superadmin and Developer, sort records by West Java regional hierarchy (Prov. Jabar -> Kab. Bogor -> ... -> Kota Banjar)
-  const recordsToRender = isSuperOrDev
-    ? sortRecordsByJabarRegion(safeDisplayRecords)
-    : safeDisplayRecords;
-
-  // Paginasi: 100 baris per halaman untuk performa super cepat dan mencegah lag/crash browser
+  // Paginasi: Tetap 100 baris per halaman untuk performa super cepat tanpa lag
   const PAGE_SIZE = 100;
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Reset ke halaman 1 jika daftar data atau pencarian berubah
+  // KUNCI HALAMAN: Hanya reset ke halaman 1 jika kata kunci pencarian berubah
+  // Mencegah mental kembali ke halaman 1 saat sinkronisasi realtime server berjalan di latar belakang
+  const prevSearchRef = React.useRef(searchTerm || '');
   useEffect(() => {
-    setCurrentPage(1);
-  }, [displayRecords]);
+    if (prevSearchRef.current !== (searchTerm || '')) {
+      prevSearchRef.current = searchTerm || '';
+      setCurrentPage(1);
+    }
+  }, [searchTerm]);
 
   const totalRecords = recordsToRender.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  // Jika total halaman berkurang di bawah halaman aktif, sesuaikan secara halus tanpa melempar ke halaman 1
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [totalPages, currentPage]);
 
   const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
   const paginatedRecords = recordsToRender.slice(startIndex, startIndex + PAGE_SIZE);
@@ -805,4 +814,4 @@ export const PillarTable: React.FC<PillarTableProps> = ({
       )}
     </div>
   );
-};
+});

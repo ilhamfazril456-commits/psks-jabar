@@ -896,6 +896,75 @@ export default function App() {
               });
             });
 
+            // Hybrid Smart Merge 1: Gabungkan data dari antrean offline (psks_sync_queue) yang belum tersimpan di server
+            try {
+              const rawQueue = localStorage.getItem('psks_sync_queue');
+              if (rawQueue) {
+                const queueItems = JSON.parse(rawQueue);
+                if (Array.isArray(queueItems)) {
+                  queueItems.forEach((qItem: any) => {
+                    if (qItem.collection === 'psks_records' && qItem.type === 'SET' && qItem.data) {
+                      const rec = qItem.data;
+                      const pKey = rec.pillarId && DEFAULT_PILLAR_DATA[rec.pillarId] ? rec.pillarId : 'peksos';
+                      if (!loaded[pKey]) loaded[pKey] = [];
+                      const exists = loaded[pKey].some((existing) => existing.id === qItem.docId || existing.id === rec.id);
+                      if (!exists && !deletedIds.includes(qItem.docId)) {
+                        loaded[pKey].push({
+                          ...rec,
+                          id: qItem.docId || rec.id,
+                        });
+                      }
+                    }
+                  });
+                }
+              }
+            } catch (err) {
+              console.warn('Error merging sync queue into realtime snapshot:', err);
+            }
+
+            // Hybrid Smart Merge 2: Gabungkan data cache lokal yang baru diimport agar tidak tertimpa snapshot server
+            try {
+              const cachedRaw = localStorage.getItem('psks_all_pillar_data');
+              if (cachedRaw) {
+                const cachedData = JSON.parse(cachedRaw);
+                if (cachedData && typeof cachedData === 'object') {
+                  Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+                    const localList = cachedData[k];
+                    if (Array.isArray(localList)) {
+                      localList.forEach((localRec: any) => {
+                        if (!localRec || !localRec.id) return;
+                        if (deletedIds.includes(localRec.id)) return;
+                        if (!loaded[k]) loaded[k] = [];
+                        const exists = loaded[k].some((r) => r.id === localRec.id);
+                        if (!exists) {
+                          loaded[k].push(localRec);
+                        }
+                      });
+                    }
+                  });
+                }
+              }
+            } catch (err) {
+              console.warn('Error merging local cache into realtime snapshot:', err);
+            }
+
+            // Urutkan kembali seluruh data setelah penggabungan cerdas
+            Object.keys(loaded).forEach((k) => {
+              loaded[k].sort((a, b) => {
+                const ordA = (a as any).orderIndex;
+                const ordB = (b as any).orderIndex;
+                if (typeof ordA === 'number' && typeof ordB === 'number') {
+                  return ordA - ordB;
+                }
+                const timeA = (a as any).createdAt || 0;
+                const timeB = (b as any).createdAt || 0;
+                if (timeA && timeB && timeA !== timeB) {
+                  return timeA - timeB;
+                }
+                return a.id.localeCompare(b.id);
+              });
+            });
+
             // Fallback merge for features that have no docs in Firestore yet
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
               if (!loaded[k] || loaded[k].length === 0) {

@@ -16,55 +16,19 @@ interface AnimatedCounterProps {
   trigger: boolean;
 }
 
-const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
+const AnimatedCounter: React.FC<AnimatedCounterProps> = React.memo(({
   end,
-  duration = 1200,
   prefix = '',
   suffix = '',
-  trigger,
 }) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (!trigger) {
-      setCount(0);
-      return;
-    }
-
-    if (end === 0) {
-      setCount(0);
-      return;
-    }
-
-    let startTime: number | null = null;
-    let animationFrameId: number;
-
-    const updateCounter = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const easedProgress = 1 - Math.pow(1 - progress, 2);
-      setCount(Math.floor(easedProgress * end));
-
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(updateCounter);
-      } else {
-        setCount(end);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(updateCounter);
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [end, duration, trigger]);
-
   return (
     <span>
       {prefix}
-      {count.toLocaleString('id-ID')}
+      {Number(end || 0).toLocaleString('id-ID')}
       {suffix}
     </span>
   );
-};
+});
 
 interface PillarDetailViewProps {
   pillarId: PillarId;
@@ -1619,6 +1583,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           pillar={pillar}
           session={session}
           displayRecords={displayRecords}
+          searchTerm={searchTerm}
           isPeksosGov={isPeksosGov}
           onEditClick={handleEditClick}
           onDeleteClick={(record) => {
@@ -1722,7 +1687,14 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           pillar={pillar}
           session={session}
           onBatchImport={async (records) => {
-            return await onBatchAddRecords(records, pillarId);
+            const count = await onBatchAddRecords(records, pillarId);
+            setSearchTerm('');
+            setAlertInfo({
+              title: 'Import Massal Berhasil!',
+              message: `Sebanyak ${count} data anggota telah berhasil ditambahkan dan disinkronkan ke tabel ${pillar.title}.`,
+              type: 'success',
+            });
+            return count;
           }}
         />
       )}
