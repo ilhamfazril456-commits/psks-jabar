@@ -1,5 +1,14 @@
-import React from 'react';
-import { Landmark, Building2, Trash2, Pencil } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Landmark,
+  Building2,
+  Trash2,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 import { PSKSDataRecord, UserSession } from '../../types';
 import { sortRecordsByJabarRegion } from '../../utils/regionSort';
 import { maskNIK, maskPhoneNumber, maskEmail } from '../../utils/privacyMask';
@@ -45,6 +54,22 @@ export const PillarTable: React.FC<PillarTableProps> = ({
   const recordsToRender = isSuperOrDev
     ? sortRecordsByJabarRegion(safeDisplayRecords)
     : safeDisplayRecords;
+
+  // Paginasi: 100 baris per halaman untuk performa super cepat dan mencegah lag/crash browser
+  const PAGE_SIZE = 100;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset ke halaman 1 jika daftar data atau pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [displayRecords]);
+
+  const totalRecords = recordsToRender.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const paginatedRecords = recordsToRender.slice(startIndex, startIndex + PAGE_SIZE);
 
   const renderCheckboxTh = () => {
     if (!showCheckbox || !isStaffOrAdmin || !onToggleSelectAll) return null;
@@ -351,14 +376,14 @@ export const PillarTable: React.FC<PillarTableProps> = ({
                 </td>
               </tr>
             ) : (
-              recordsToRender.map((record, index) => (
+              paginatedRecords.map((record, index) => (
                 <tr
                   key={record.id}
                   className={`transition-colors ${(selectedRecordIds || []).includes(record.id) ? 'bg-amber-50/80 hover:bg-amber-100/70' : 'hover:bg-slate-50'}`}
                 >
                   {renderCheckboxTd(record)}
                   <td className="py-3 px-3 text-center font-bold text-slate-500 whitespace-nowrap border-r border-slate-100">
-                    {index + 1}
+                    {startIndex + index + 1}
                   </td>
 
                   {pillarId === 'peksos' ? (
@@ -681,6 +706,103 @@ export const PillarTable: React.FC<PillarTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Bar (Per 100 Data) */}
+      {totalRecords > 0 && (
+        <div className="bg-slate-50 border-t border-slate-200 px-4 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="text-slate-600 font-semibold flex items-center gap-2">
+            <span>
+              Menampilkan <strong className="text-slate-900 font-bold">{startIndex + 1} - {Math.min(startIndex + PAGE_SIZE, totalRecords)}</strong> dari{' '}
+              <strong className="text-slate-900 font-bold">{totalRecords.toLocaleString('id-ID')}</strong> data
+            </span>
+            {totalPages > 1 && (
+              <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-bold text-[11px]">
+                Halaman {safeCurrentPage} dari {totalPages}
+              </span>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={safeCurrentPage === 1}
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="Halaman Pertama (1 - 100)"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors"
+                title="Halaman Sebelumnya"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Sebelumnya</span>
+              </button>
+
+              {/* Page buttons */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    return p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 2;
+                  })
+                  .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    typeof p === 'string' ? (
+                      <span key={`dots-${idx}`} className="px-1 text-slate-400 font-bold">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-8 h-8 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                          p === safeCurrentPage
+                            ? 'bg-[#0f2b5c] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                        title={`Pindah ke baris ${(p - 1) * PAGE_SIZE + 1} - ${Math.min(p * PAGE_SIZE, totalRecords)}`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors"
+                title="Halaman Berikutnya"
+              >
+                <span className="hidden sm:inline">Selanjutnya</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safeCurrentPage === totalPages}
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title={`Halaman Terakhir (${totalPages})`}
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -613,10 +613,21 @@ export const PILLAR_FIELD_DEFINITIONS: Record<PillarId, TargetFieldDef[]> = {
 };
 
 // Normalisasi nama wilayah resmi Jawa Barat
-function normalizeJabarRegion(val: any, defaultWilayah: string): string {
+function normalizeJabarRegion(val: any, defaultWilayah: string = ''): string {
   if (!val || typeof val !== 'string') return defaultWilayah;
   const raw = val.trim().toLowerCase();
   if (!raw) return defaultWilayah;
+
+  // Header atau nama provinsi umum - jangan anggap sebagai nama kabupaten/kota!
+  if (
+    raw === 'provinsi jawa barat' ||
+    raw === 'jawa barat' ||
+    raw === 'jabar' ||
+    raw.includes('pemerintah daerah') ||
+    raw.includes('dinas sosial')
+  ) {
+    return defaultWilayah;
+  }
 
   // Prioritas utama: Nama wilayah majemuk (Bandung Barat vs Bandung, dll)
   if (raw.includes('bandung barat') || raw.includes('kbb')) return 'Kab. Bandung Barat';
@@ -636,7 +647,13 @@ function normalizeJabarRegion(val: any, defaultWilayah: string): string {
   if (raw.includes('kab. sukabumi') || raw.includes('kabupaten sukabumi')) return 'Kab. Sukabumi';
 
   if (raw.includes('kota tasikmalaya') || raw.includes('kota tasik')) return 'Kota Tasikmalaya';
-  if (raw.includes('kab. tasikmalaya') || raw.includes('kabupaten tasikmalaya') || raw.includes('kab. tasik')) return 'Kab. Tasikmalaya';
+  if (
+    raw.includes('kab. tasikmalaya') ||
+    raw.includes('kabupaten tasikmalaya') ||
+    raw.includes('kab. tasik') ||
+    raw.includes('tasikmalaya') ||
+    raw.includes('tasik')
+  ) return 'Kab. Tasikmalaya';
 
   if (raw.includes('cimahi')) return 'Kota Cimahi';
   if (raw.includes('depok')) return 'Kota Depok';
@@ -655,10 +672,9 @@ function normalizeJabarRegion(val: any, defaultWilayah: string): string {
 
   if (raw.includes('bandung')) return 'Kab. Bandung';
   if (raw.includes('bogor')) return 'Kab. Bogor';
-  if (raw.includes('bekasi')) return 'Kota Bekasi';
-  if (raw.includes('cirebon')) return 'Kota Cirebon';
+  if (raw.includes('bekasi')) return 'Kab. Bekasi';
+  if (raw.includes('cirebon')) return 'Kab. Cirebon';
   if (raw.includes('sukabumi')) return 'Kab. Sukabumi';
-  if (raw.includes('tasik')) return 'Kab. Tasikmalaya';
 
   for (const reg of JABAR_REGIONS) {
     if (reg.toLowerCase() === raw) return reg;
@@ -797,15 +813,27 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
   };
 
   // Muat baris-baris data dan bentuk kolom sederhana berurutan: Kolom 1, Kolom 2, Kolom 3, Kolom 4...
-  const loadSheetDataAndColumns = (sheetData: any[][]) => {
-    // Saring baris kosong dan baris judul (jika ada baris yang bertuliskan 'NAMA YAYASAN', 'KABUPATEN')
+  const loadSheetDataAndColumns = (sheetData: any[][], currentSheetName?: string) => {
+    // Saring baris kosong dan baris judul (jika ada baris yang bertuliskan 'NAMA YAYASAN', 'KABUPATEN', atau KOP dinas)
     const validRows = sheetData.filter((row) => {
       if (!row || !Array.isArray(row)) return false;
       const nonEmpty = row.filter((c) => c !== null && String(c).trim() !== '');
       if (nonEmpty.length === 0) return false;
       // Jika baris adalah teks header bertuliskan 'NO' dan 'NAMA', lewati baris ini
       const text = row.map((c) => String(c || '').toLowerCase().trim()).join(' ');
-      if ((text.includes('nama') || text.includes('lembaga') || text.includes('yayasan')) && (text.includes('kabupaten') || text.includes('kota') || text.includes('alamat'))) {
+      if (
+        (text.includes('nama') || text.includes('lembaga') || text.includes('yayasan')) &&
+        (text.includes('kabupaten') || text.includes('kota') || text.includes('alamat') || text.includes('wilayah'))
+      ) {
+        return false;
+      }
+      if (
+        text.includes('pemerintah daerah') ||
+        text.includes('dinas sosial') ||
+        text.includes('provinsi jawa barat') ||
+        text.includes('rekapitulasi') ||
+        text.includes('master data')
+      ) {
         return false;
       }
       return true;
@@ -817,21 +845,39 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     setExcelHeaders(headers);
     setDataRows(validRows);
 
-    // Default mapping yang super jelas dan intuitif:
-    // Kolom 1 = No / NIK
-    // Kolom 2 = Nama / Lembaga / Yayasan
-    // Kolom 3 = Kabupaten / Kota
-    // Kolom 4 = Alamat
-    // Kolom 5 = Nomor Kontak / Telepon (jika ada)
-    // Kolom 6 = Sertifikasi / Akreditasi (jika ada)
+    // Cek apakah ada kolom yang secara konsisten berisi nama kabupaten/kota di Jawa Barat
+    let detectedWilayahCol = '';
+    headers.forEach((h, colIdx) => {
+      const matchCityCount = validRows.slice(0, 20).filter((r) => {
+        const val = String(r[colIdx] || '').toLowerCase().trim();
+        return JABAR_REGIONS.some((reg) => {
+          const simple = reg.toLowerCase().replace('kab. ', '').replace('kota ', '').trim();
+          return val.includes(simple);
+        });
+      }).length;
+      if (matchCityCount >= 2 && !detectedWilayahCol) {
+        detectedWilayahCol = h;
+      }
+    });
+
+    // Default mapping yang super jelas dan intuitif (Kolom 1, Kolom 2, Kolom 3, Kolom 4...)
     const initialMapping: Record<string, string> = {};
+    const activeSheet = currentSheetName || selectedSheet;
+    const hasMultipleSheets = sheetNames.length > 1;
+
     targetFields.forEach((target) => {
       if (target.key === 'nama' || target.key === 'namaLks' || target.key === 'namaKarangTaruna' || target.key === 'namaLk3' || target.key === 'namaBadanUsaha' || target.key === 'namaSlrt') {
         initialMapping[target.key] = headers[1] || headers[0] || ''; // Kolom 2
       } else if (target.key === 'wilayah' || target.key === 'wilayahKerja') {
-        initialMapping[target.key] = headers[2] || ''; // Kolom 3
+        if (detectedWilayahCol) {
+          initialMapping[target.key] = detectedWilayahCol;
+        } else if (hasMultipleSheets || (activeSheet && normalizeJabarRegion(activeSheet, '') !== '')) {
+          initialMapping[target.key] = '__SHEET_NAME__';
+        } else {
+          initialMapping[target.key] = headers[2] || ''; // Kolom 3
+        }
       } else if (target.key === 'alamat' || target.key === 'alamatLks' || target.key === 'alamatSekretariat') {
-        initialMapping[target.key] = headers[3] || ''; // Kolom 4
+        initialMapping[target.key] = headers[3] || headers[2] || ''; // Kolom 4
       } else if (target.key === 'nik' || target.key === 'nomorInduk') {
         initialMapping[target.key] = headers[0] || ''; // Kolom 1
       } else if (target.key === 'hp' || target.key === 'nomorKontak' || target.key === 'kontak') {
@@ -869,8 +915,14 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         throw new Error(`Lembar kerja "${firstSheet}" kosong.`);
       }
 
+      jsonData.forEach((row) => {
+        if (row && typeof row === 'object') {
+          (row as any).__sourceSheet = firstSheet;
+        }
+      });
+
       setRawSheetRows(jsonData);
-      loadSheetDataAndColumns(jsonData);
+      loadSheetDataAndColumns(jsonData, firstSheet);
       setStep(2);
     } catch (err: any) {
       console.error('Error parsing Excel:', err);
@@ -895,11 +947,16 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
           if (!sheet) return;
           const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
           if (!jsonData || jsonData.length === 0) return;
+          jsonData.forEach((row) => {
+            if (row && typeof row === 'object') {
+              (row as any).__sourceSheet = sName;
+            }
+          });
           combinedRows.push(...jsonData);
         });
 
         setRawSheetRows(combinedRows);
-        loadSheetDataAndColumns(combinedRows);
+        loadSheetDataAndColumns(combinedRows, '__ALL_SHEETS__');
         return;
       }
 
@@ -915,8 +972,13 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         setDataRows([]);
         return;
       }
+      jsonData.forEach((row) => {
+        if (row && typeof row === 'object') {
+          (row as any).__sourceSheet = sheetName;
+        }
+      });
       setRawSheetRows(jsonData);
-      loadSheetDataAndColumns(jsonData);
+      loadSheetDataAndColumns(jsonData, sheetName);
     } catch (err: any) {
       console.error('Error switching sheet:', err);
       setParseError(err?.message || 'Gagal memuat lembar kerja yang dipilih.');
@@ -997,7 +1059,30 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         if (field.key === 'nik' || field.key === 'nomorInduk') {
           record[field.key] = sanitizeNIK(rawVal) || `${Date.now()}${String(index).padStart(4, '0')}`;
         } else if (field.key === 'wilayah' || field.key === 'wilayahKerja') {
-          record[field.key] = normalizeJabarRegion(rawVal, defaultWilayah);
+          const mappingChoice = columnMapping[field.key];
+          let regionFound = '';
+          const rowSourceSheet = (row as any).__sourceSheet || (selectedSheet !== '__ALL_SHEETS__' ? selectedSheet : '');
+
+          if (mappingChoice === '__SHEET_NAME__') {
+            regionFound = normalizeJabarRegion(rowSourceSheet, '');
+          } else {
+            if (rawVal) {
+              regionFound = normalizeJabarRegion(rawVal, '');
+            }
+            if (!regionFound && rowSourceSheet) {
+              regionFound = normalizeJabarRegion(rowSourceSheet, '');
+            }
+          }
+          if (!regionFound) {
+            if (pillarId === 'peksos' && session.wilayah === 'Prov. Jabar') {
+              regionFound = 'Prov. Jabar';
+            } else if (session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah') {
+              regionFound = session.wilayah;
+            } else {
+              regionFound = 'Kab. Bandung Barat';
+            }
+          }
+          record[field.key] = regionFound;
         } else if (field.key === 'hp' || field.key === 'nomorKontak' || field.key === 'kontak') {
           record[field.key] = sanitizePhone(rawVal) || '-';
         } else if (field.key === 'jenisKelamin') {
@@ -1339,6 +1424,37 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                 </div>
               </div>
 
+              {/* Rangkuman Persebaran Wilayah Terdeteksi (Langsung Kelihatan di Langkah 2) */}
+              {detectedRegionsSummary.length > 0 && (
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 sm:p-4 space-y-2 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs">
+                        <MapPin className="w-3.5 h-3.5 text-amber-300" />
+                      </div>
+                      <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                        Persebaran Wilayah Terdeteksi ({detectedRegionsSummary.length} Kabupaten/Kota):
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-800">
+                      Total: <strong>{mappedRecords.length} Data</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1 overscroll-contain">
+                    {detectedRegionsSummary.map(([regionName, count]) => (
+                      <span
+                        key={regionName}
+                        className="bg-white border border-emerald-300 text-emerald-900 text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs flex items-center gap-1.5"
+                      >
+                        <span>📍 {regionName}:</span>
+                        <strong className="text-emerald-950 font-black">{count} Data</strong>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Daftar Pemetaan Kolom */}
               <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="bg-gradient-to-r from-[#043e2e] to-[#064e3b] px-4 py-3 text-white flex items-center justify-between">
@@ -1408,6 +1524,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                               }`}
                             >
                               <option value="">-- [ Kosongkan / Lewati Kolom Ini ] --</option>
+                              {(field.key === 'wilayah' || field.key === 'wilayahKerja') && (
+                                <option value="__SHEET_NAME__" className="font-extrabold text-emerald-900 bg-emerald-50">
+                                  🏷️ [Otomatis dari Nama Sheet/Kota (Cianjur, Tasik, KBB, dll)]
+                                </option>
+                              )}
                               {excelHeaders.map((header) => {
                                 const sample = columnSampleValues[header]?.[0] || '';
                                 return (
@@ -1423,29 +1544,38 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                         {/* FITUR PENJELAS: Contoh Data Asli dari Excel Anda */}
                         {isMatched && (
                           <div className="mt-2 pt-2 border-t border-emerald-200/60 ml-0 sm:ml-7 flex flex-wrap items-center gap-2 text-[11px]">
-                            <span className="font-bold text-emerald-800 flex items-center gap-1">
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              Contoh Data di Excel Anda:
-                            </span>
-                            {samples.length > 0 ? (
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {samples.map((s, sIdx) => (
-                                  <span
-                                    key={sIdx}
-                                    className="px-2 py-0.5 rounded-md bg-white border border-emerald-300 text-emerald-950 font-mono text-[10px] font-semibold truncate max-w-[200px]"
-                                    title={s}
-                                  >
-                                    "{s}"
-                                  </span>
-                                ))}
-                                {(field.key === 'wilayah' || field.key === 'wilayahKerja') && samples.length > 1 && (
-                                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-900 font-extrabold text-[10px]">
-                                    ✨ Terdeteksi Beragam Wilayah Berbeda ({samples.length}+ kota/kab)
-                                  </span>
-                                )}
+                            {selectedHeader === '__SHEET_NAME__' ? (
+                              <div className="flex items-center gap-1.5 text-emerald-900 font-bold bg-emerald-100/80 px-2.5 py-1 rounded-lg border border-emerald-300">
+                                <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Wilayah diambil otomatis dari nama tab sheet (Cianjur, Tasikmalaya, Kab. Bandung Barat, dll).</span>
                               </div>
                             ) : (
-                              <span className="text-slate-400 italic">(Kolom ini kosong di baris-baris awal)</span>
+                              <>
+                                <span className="font-bold text-emerald-800 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  Contoh Data di Excel Anda:
+                                </span>
+                                {samples.length > 0 ? (
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {samples.map((s, sIdx) => (
+                                      <span
+                                        key={sIdx}
+                                        className="px-2 py-0.5 rounded-md bg-white border border-emerald-300 text-emerald-950 font-mono text-[10px] font-semibold truncate max-w-[200px]"
+                                        title={s}
+                                      >
+                                        "{s}"
+                                      </span>
+                                    ))}
+                                    {(field.key === 'wilayah' || field.key === 'wilayahKerja') && samples.length > 1 && (
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-900 font-extrabold text-[10px]">
+                                        ✨ Terdeteksi Beragam Wilayah Berbeda ({samples.length}+ kota/kab)
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 italic">(Kolom ini kosong di baris-baris awal)</span>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
