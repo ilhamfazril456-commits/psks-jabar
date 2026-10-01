@@ -23,7 +23,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { PillarId, PSKSDataRecord, UserSession } from '../../types';
-import { JABAR_REGIONS } from '../../data/initialData';
+import { JABAR_REGIONS, KAB_KOTA_ONLY } from '../../data/initialData';
 
 interface PillarExcelImportModalProps {
   isOpen: boolean;
@@ -1044,6 +1044,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [previewPage, setPreviewPage] = useState<number>(1);
+  const [forceTargetRegion, setForceTargetRegion] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isCancelledRef = useRef<boolean>(false);
 
@@ -1352,6 +1353,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       const firstSheet = workbook.SheetNames[0];
       setSelectedSheet(firstSheet);
       setFile(selectedFile);
+      setForceTargetRegion('');
 
       // Parse baris mentah
       const sheet = workbook.Sheets[firstSheet];
@@ -1603,6 +1605,10 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         if (field.key === 'nik' || field.key === 'nomorInduk') {
           record[field.key] = sanitizeNIK(rawVal) || `${Date.now()}${String(index).padStart(4, '0')}`;
         } else if (field.key === 'wilayah' || field.key === 'wilayahKerja') {
+          if (forceTargetRegion) {
+            record[field.key] = forceTargetRegion;
+            return;
+          }
           const mappingChoice = columnMapping[field.key];
           let regionFound = '';
 
@@ -1668,8 +1674,8 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       if (record.namaSlrt) record.nama = record.namaSlrt;
 
       // Default jika wilayah tidak terpetakan
-      if (!record.wilayah) {
-        record.wilayah = defaultWilayah;
+      if (!record.wilayah || forceTargetRegion) {
+        record.wilayah = forceTargetRegion || record.wilayah || defaultWilayah;
       }
 
       return record as Omit<PSKSDataRecord, 'id'>;
@@ -1716,7 +1722,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       return true;
     });
-  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah, selectedSheet, rawWorkbook]);
+  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah, selectedSheet, rawWorkbook, forceTargetRegion]);
 
   // Ringkasan persebaran wilayah/kota yang berhasil terpetakan
   const detectedRegionsSummary = useMemo(() => {
@@ -2021,6 +2027,51 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                 </div>
               </div>
 
+              {/* FITUR SOLUSI POIN 1: KUNCI WILAYAH TARGET (PILIHAN MANUAL PASTI MASUK 100%) */}
+              <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-2 border-amber-400 rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                      <MapPin className="w-5 h-5 text-amber-100" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-black uppercase text-amber-950 tracking-wider block">
+                        Kunci Wilayah Tujuan (Solusi Praktis &amp; 100% Pasti Masuk):
+                      </span>
+                      <span className="text-xs text-amber-900 font-medium">
+                        Jika file ini khusus untuk 1 kabupaten/kota (Garut, Tasikmalaya, Kuningan, Indramayu, Sukabumi, dll), pilih di sini:
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full sm:w-80 shrink-0">
+                    <select
+                      value={forceTargetRegion}
+                      onChange={(e) => setForceTargetRegion(e.target.value)}
+                      className="w-full bg-white border-2 border-amber-500 rounded-xl px-3.5 py-2.5 text-xs font-black text-amber-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                    >
+                      <option value="">⚡ [OTOMATIS]: Deteksi dari Kolom / Sheet Excel</option>
+                      {KAB_KOTA_ONLY.map((r) => (
+                        <option key={r} value={r}>
+                          📍 Kunci ke: {r} (100% Seluruh Baris Masuk Sini)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {forceTargetRegion ? (
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950 bg-amber-100/90 px-3.5 py-2 rounded-xl border border-amber-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>
+                      Wilayah Dikunci: Seluruh <strong>{mappedRecords.length} data</strong> di file ini <strong>100% dipastikan masuk ke {forceTargetRegion}</strong> tanpa terpengaruh ada/tidaknya kolom wilayah di Excel.
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-800 italic">
+                    Tips: Jika file Excel Anda tidak memiliki kolom bertuliskan nama kabupaten/kota, pilih nama wilayahnya pada menu di atas agar data langsung tercatat 100% akurat.
+                  </p>
+                )}
+              </div>
+
               {/* Panduan Pemetaan yang Jelas */}
               <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-3.5 text-xs text-amber-950 flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
@@ -2224,7 +2275,15 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                     Kesiapan Import Data:
                   </span>
                   <p className="text-emerald-950 font-black text-sm">
-                    Sebanyak <strong>{mappedRecords.length} baris data anggota</strong> siap dimasukkan ke dalam Tabel <strong>{pillar.shortName}</strong> secara realtime ke database.
+                    {forceTargetRegion ? (
+                      <>
+                        Siap Menyimpan <strong>{mappedRecords.length} Data Anggota</strong> ke Wilayah <span className="text-emerald-950 bg-amber-300 font-extrabold px-2.5 py-0.5 rounded-lg border border-amber-500 shadow-2xs">📍 {forceTargetRegion}</span> secara realtime ke database.
+                      </>
+                    ) : (
+                      <>
+                        Sebanyak <strong>{mappedRecords.length} baris data anggota</strong> siap dimasukkan ke dalam Tabel <strong>{pillar.shortName}</strong> secara realtime ke database.
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-extrabold shadow-sm">
@@ -2234,35 +2293,46 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
               </div>
 
               {/* Rincian Persebaran Kabupaten/Kota yang Terdeteksi */}
-              {detectedRegionsSummary.length > 0 && (
-                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 space-y-2.5 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs">
-                        <MapPin className="w-3.5 h-3.5 text-amber-300" />
-                      </div>
-                      <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
-                        Distribusi {detectedRegionsSummary.length} Kabupaten/Kota Terdeteksi:
-                      </span>
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs">
+                      <MapPin className="w-3.5 h-3.5 text-amber-300" />
                     </div>
-                    <span className="text-xs font-bold text-emerald-800">
-                      Total: <strong>{mappedRecords.length} Data</strong>
+                    <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                      {forceTargetRegion
+                        ? `Wilayah Tujuan Terkunci (${forceTargetRegion}):`
+                        : `Distribusi ${detectedRegionsSummary.length} Kabupaten/Kota Terdeteksi:`}
                     </span>
                   </div>
-
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pt-1 overscroll-contain">
-                    {detectedRegionsSummary.map(([regionName, count]) => (
-                      <span
-                        key={regionName}
-                        className="bg-white border border-emerald-300 text-emerald-900 text-xs font-bold px-3 py-1 rounded-xl shadow-2xs flex items-center gap-1.5"
-                      >
-                        <span>📍 {regionName}:</span>
-                        <strong className="text-emerald-950 font-black">{count} Data</strong>
-                      </span>
-                    ))}
-                  </div>
+                  <span className="text-xs font-bold text-emerald-800">
+                    Total: <strong>{mappedRecords.length} Data</strong>
+                  </span>
                 </div>
-              )}
+
+                {forceTargetRegion ? (
+                  <div className="p-3 bg-white rounded-xl border border-emerald-300 text-xs text-emerald-950 font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Wilayah Dikunci: Seluruh <strong>{mappedRecords.length} data</strong> di bawah ini 100% dipastikan tersimpan untuk wilayah: <strong className="text-emerald-900 bg-amber-200 px-2 py-0.5 rounded border border-amber-400">📍 {forceTargetRegion}</strong>.
+                    </span>
+                  </div>
+                ) : (
+                  detectedRegionsSummary.length > 0 && (
+                    <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pt-1 overscroll-contain">
+                      {detectedRegionsSummary.map(([regionName, count]) => (
+                        <span
+                          key={regionName}
+                          className="bg-white border border-emerald-300 text-emerald-900 text-xs font-bold px-3 py-1 rounded-xl shadow-2xs flex items-center gap-1.5"
+                        >
+                          <span>📍 {regionName}:</span>
+                          <strong className="text-emerald-950 font-black">{count} Data</strong>
+                        </span>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
 
               {/* Tabel Pratinjau dengan Kolom Persis Seperti PilarTable (Paginasi 50 Baris Cepat & Ringan) */}
               {(() => {
@@ -2545,7 +2615,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                       className="px-6 py-2.5 bg-gradient-to-r from-[#043e2e] to-[#065e44] hover:from-[#032f23] hover:to-[#043e2e] text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-600/40 flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-4 h-4 text-amber-300" />
-                      <span>Mulai Simpan {mappedRecords.length} Data ke Database</span>
+                      <span>Mulai Simpan {mappedRecords.length} Data {forceTargetRegion ? `ke ${forceTargetRegion}` : ''} ke Database</span>
                     </button>
                   )}
                 </>
