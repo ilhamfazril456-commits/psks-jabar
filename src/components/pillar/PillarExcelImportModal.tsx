@@ -18,7 +18,9 @@ import {
   Check,
   HelpCircle,
   Eye,
-  MapPin
+  MapPin,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { PillarId, PSKSDataRecord, UserSession } from '../../types';
 import { JABAR_REGIONS } from '../../data/initialData';
