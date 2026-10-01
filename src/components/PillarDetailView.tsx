@@ -5,7 +5,7 @@ import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, Al
 import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
 import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
-import { getRegionSortIndex, sortRecordsByJabarRegion } from '../utils/regionSort';
+import { getRegionSortIndex, sortRecordsByJabarRegion, matchJabarRegion } from '../utils/regionSort';
 import { BackToHomeButton } from './BackToHomeButton';
 
 interface AnimatedCounterProps {
@@ -315,9 +315,11 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     ) {
       return dataRecords;
     }
-    return dataRecords.filter(
-      (item) => item.wilayah.toLowerCase().trim() === session.wilayah.toLowerCase().trim()
-    );
+    return dataRecords.filter((item) => {
+      const itemWil = matchJabarRegion(item.wilayah) || item.wilayah.toLowerCase().trim();
+      const sessWil = matchJabarRegion(session.wilayah) || session.wilayah.toLowerCase().trim();
+      return itemWil.toLowerCase() === sessWil.toLowerCase();
+    });
   }, [dataRecords, session.role, session.isDeveloper, session.wilayah]);
 
   // Filter by search term and sort by Jabar region hierarchy for superadmin/developer
@@ -396,7 +398,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     const safeRecords = Array.isArray(dataRecords) ? dataRecords : [];
     safeRecords.forEach((r) => {
       if (!r || typeof r !== 'object') return;
-      const wil = r.wilayah || 'Kota Bandung';
+      const matchedWil = matchJabarRegion(r.wilayah);
+      const wil = matchedWil || r.wilayah || 'Kota Bandung';
       if (!counts[wil]) {
         counts[wil] = { total: 0, gov: 0, swasta: 0 };
       }

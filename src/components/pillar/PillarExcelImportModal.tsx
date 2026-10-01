@@ -283,7 +283,14 @@ export const PILLAR_FIELD_DEFINITIONS: Record<PillarId, TargetFieldDef[]> = {
       label: 'Nama LKS',
       required: true,
       hint: 'Nama Yayasan / Lembaga Kesejahteraan Sosial',
-      synonyms: ['nama lks', 'nama yayasan', 'nama lembaga', 'nama organisasi', 'nama'],
+      synonyms: [
+        'nama lks', 'nama yayasan', 'nama lembaga', 'nama organisasi', 'nama',
+        'nama panti', 'nama panti asuhan', 'panti', 'yayasan', 'lembaga',
+        'organisasi', 'nama lksa', 'lksa', 'lks', 'nama orsos', 'orsos',
+        'nama satuan', 'satuan sosial', 'nama yayasan/panti', 'nama panti/yayasan',
+        'nama lembaga kesejahteraan sosial', 'lembaga kesejahteraan sosial',
+        'nama organisasi sosial', 'nama yayasan sosial', 'nama lembaga sosial'
+      ],
     },
     {
       key: 'bidangPelayanan',
@@ -304,7 +311,10 @@ export const PILLAR_FIELD_DEFINITIONS: Record<PillarId, TargetFieldDef[]> = {
       label: 'Alamat',
       required: false,
       hint: 'Alamat lengkap sekretariat LKS',
-      synonyms: ['alamat', 'alamat sekretariat', 'alamat kantor', 'domisili', 'lokasi yayasan'],
+      synonyms: [
+        'alamat', 'alamat sekretariat', 'alamat kantor', 'domisili', 'lokasi yayasan',
+        'lokasi', 'tempat kedudukan', 'alamat panti', 'alamat lembaga'
+      ],
     },
     {
       key: 'nomorTandaDaftar',
@@ -931,12 +941,12 @@ function normalizeJabarRegion(val: any, defaultWilayah: string = '', contextShee
     if (contextSheets && contextSheets.length > 0) {
       const hasKab = contextSheets.some((s) => s.toLowerCase().includes('kab'));
       const hasKota = contextSheets.some((s) => s.toLowerCase().includes('kota'));
-      if (hasKab && !hasKota) return 'Kota Bekasi';
-      if (hasKota && !hasKab) return 'Kab. Bekasi';
+      if (hasKab && !hasKota) return 'Kab. Bekasi';
+      if (hasKota && !hasKab) return 'Kota Bekasi';
     }
     // Jika defaultWilayah adalah salah satu varian Bekasi, ikuti defaultWilayah
     if (defaultWilayah === 'Kota Bekasi' || defaultWilayah === 'Kab. Bekasi') return defaultWilayah;
-    return 'Kota Bekasi';
+    return 'Kab. Bekasi';
   }
 
   if (clean === 'bandung' || clean === 'bdg') {
@@ -945,19 +955,31 @@ function normalizeJabarRegion(val: any, defaultWilayah: string = '', contextShee
   }
   if (clean === 'bogor' || clean === 'bgr') {
     if (defaultWilayah.includes('Bogor')) return defaultWilayah;
-    return 'Kota Bogor';
+    return 'Kab. Bogor';
   }
   if (clean === 'cirebon' || clean === 'crb') {
     if (defaultWilayah.includes('Cirebon')) return defaultWilayah;
-    return 'Kota Cirebon';
+    return 'Kab. Cirebon';
   }
   if (clean === 'sukabumi' || clean === 'smi') {
+    if (contextSheets && contextSheets.length > 0) {
+      const hasKab = contextSheets.some((s) => s.toLowerCase().includes('kab'));
+      const hasKota = contextSheets.some((s) => s.toLowerCase().includes('kota'));
+      if (hasKab && !hasKota) return 'Kab. Sukabumi';
+      if (hasKota && !hasKab) return 'Kota Sukabumi';
+    }
     if (defaultWilayah.includes('Sukabumi')) return defaultWilayah;
     return 'Kota Sukabumi';
   }
   if (clean === 'tasikmalaya' || clean === 'tasik' || clean === 'tsm') {
+    if (contextSheets && contextSheets.length > 0) {
+      const hasKab = contextSheets.some((s) => s.toLowerCase().includes('kab'));
+      const hasKota = contextSheets.some((s) => s.toLowerCase().includes('kota'));
+      if (hasKab && !hasKota) return 'Kab. Tasikmalaya';
+      if (hasKota && !hasKab) return 'Kota Tasikmalaya';
+    }
     if (defaultWilayah.includes('Tasik')) return defaultWilayah;
-    return 'Kota Tasikmalaya';
+    return 'Kab. Tasikmalaya';
   }
 
   for (const reg of JABAR_REGIONS) {
