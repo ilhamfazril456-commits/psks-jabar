@@ -309,7 +309,15 @@ export const PILLAR_FIELD_DEFINITIONS: Record<PillarId, TargetFieldDef[]> = {
       label: 'Nomor Tanda Daftar',
       required: false,
       hint: 'Nomor Tanda Daftar Dinas Sosial / Kemenkumham',
-      synonyms: ['nomor tanda daftar', 'no tanda daftar', 'tanda daftar', 'nomor registrasi', 'no izin operasional', 'ahu'],
+      synonyms: [
+        'nomor tanda daftar', 'no tanda daftar', 'no. tanda daftar', 'tanda daftar',
+        'nomor registrasi', 'no registrasi', 'no. registrasi',
+        'nomor izin operasional', 'no izin operasional', 'no. izin operasional', 'izin operasional',
+        'no izin', 'nomor izin', 'no. izin', 'izin',
+        'nomor sk', 'no sk', 'no. sk', 'sk dinas', 'surat keputusan',
+        'ahu', 'kemenkumham', 'nomor badan hukum', 'badan hukum',
+        'nomor td', 'no td', 'no. td', 'td lks', 'td-lks', 'stdb', 'tanda daftar lks'
+      ],
     },
     {
       key: 'masaBerlaku',
@@ -773,6 +781,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
     excelHeaders.forEach((header, colIdx) => {
       const items: string[] = [];
+      const colKey = `col_${colIdx}`;
       // Telusuri baris untuk mengumpulkan hingga 6 nilai unik (sangat berguna untuk melihat variasi kota/wilayah)
       for (let r = 0; r < dataRows.length; r++) {
         const val = dataRows[r]?.[colIdx];
@@ -789,6 +798,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         }
       }
       samples[header] = items;
+      samples[colKey] = items;
     });
 
     return samples;
@@ -930,47 +940,53 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     targetFields.forEach((target) => {
       if (target.key === 'wilayah' || target.key === 'wilayahKerja') {
         if (detectedWilayahCol) {
-          initialMapping[target.key] = detectedWilayahCol;
+          const wIdx = headers.indexOf(detectedWilayahCol);
+          initialMapping[target.key] = wIdx >= 0 ? `col_${wIdx}` : detectedWilayahCol;
         } else if (hasMultipleSheets || (activeSheet && normalizeJabarRegion(activeSheet, '') !== '')) {
           initialMapping[target.key] = '__SHEET_NAME__';
         } else {
-          initialMapping[target.key] = headers[2] || '';
+          initialMapping[target.key] = headers.length > 2 ? 'col_2' : (headers.length > 0 ? 'col_0' : '');
         }
         return;
       }
 
       // Cocokkan judul header Excel dengan sinonim atau label field
-      let bestMatch = '';
-      for (const h of headers) {
+      let bestIdx = -1;
+      for (let c = 0; c < headers.length; c++) {
+        const h = headers[c];
         const hLow = h.toLowerCase().trim();
         // Exact synonym match
         if (target.synonyms.some((s) => s.toLowerCase() === hLow)) {
-          bestMatch = h;
+          bestIdx = c;
           break;
         }
         // Substring synonym match
         if (target.synonyms.some((s) => hLow.includes(s.toLowerCase()))) {
-          bestMatch = h;
+          bestIdx = c;
           break;
         }
       }
 
       // Fallback berdasarkan urutan posisi umum jika tidak ada kecocokan teks
-      if (!bestMatch) {
+      if (bestIdx < 0) {
         if (target.key === 'nama' || target.key === 'namaLks' || target.key === 'namaKarangTaruna' || target.key === 'namaLk3' || target.key === 'namaBadanUsaha' || target.key === 'namaSlrt') {
-          bestMatch = headers[1] || headers[0] || '';
+          bestIdx = headers.length > 1 ? 1 : (headers.length > 0 ? 0 : -1);
         } else if (target.key === 'alamat' || target.key === 'alamatLks' || target.key === 'alamatSekretariat') {
-          bestMatch = headers[3] || headers[2] || '';
+          bestIdx = headers.length > 3 ? 3 : (headers.length > 2 ? 2 : -1);
         } else if (target.key === 'nik' || target.key === 'nomorInduk') {
-          bestMatch = headers[0] || '';
+          bestIdx = headers.length > 0 ? 0 : -1;
         } else if (target.key === 'hp' || target.key === 'nomorKontak' || target.key === 'kontak') {
-          bestMatch = headers[4] || '';
+          bestIdx = headers.length > 4 ? 4 : -1;
         } else if (target.key === 'nomorTandaDaftar' || target.key === 'sertifikasi') {
-          bestMatch = headers[5] || '';
+          bestIdx = headers.length > 5 ? 5 : -1;
         }
       }
 
-      initialMapping[target.key] = bestMatch;
+      if (bestIdx >= 0 && bestIdx < headers.length) {
+        initialMapping[target.key] = `col_${bestIdx}`;
+      } else {
+        initialMapping[target.key] = '';
+      }
     });
 
     setColumnMapping(initialMapping);
@@ -1132,10 +1148,29 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
     return dataRows.map((row, index) => {
       const getVal = (targetKey: string): any => {
-        const headerName = columnMapping[targetKey];
-        if (!headerName) return '';
-        const match = headerName.match(/\d+/);
-        const colIdx = match ? parseInt(match[0], 10) - 1 : excelHeaders.indexOf(headerName);
+        const mappingChoice = columnMapping[targetKey];
+        if (!mappingChoice) return '';
+        if (mappingChoice === '__SHEET_NAME__') return '';
+
+        let colIdx = -1;
+        if (typeof mappingChoice === 'string' && mappingChoice.startsWith('col_')) {
+          colIdx = parseInt(mappingChoice.replace('col_', ''), 10);
+        } else if (typeof mappingChoice === 'number') {
+          colIdx = mappingChoice;
+        } else if (typeof mappingChoice === 'string') {
+          const strictKolomMatch = mappingChoice.match(/^kolom\s+(\d+)$/i);
+          if (strictKolomMatch) {
+            colIdx = parseInt(strictKolomMatch[1], 10) - 1;
+          } else {
+            colIdx = excelHeaders.indexOf(mappingChoice);
+            if (colIdx < 0) {
+              colIdx = excelHeaders.findIndex(
+                (h) => h.toLowerCase().trim() === mappingChoice.toLowerCase().trim()
+              );
+            }
+          }
+        }
+
         if (colIdx < 0 || colIdx >= row.length) return '';
         return row[colIdx] ?? '';
       };
@@ -1181,21 +1216,28 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
           record[field.key] = sanitizePhone(rawVal) || '-';
         } else if (field.key === 'jenisKelamin') {
           record[field.key] = sanitizeGender(rawVal) || 'Laki-laki';
-        } else if (field.key === 'nomorTandaDaftar' || field.key === 'sertifikasi') {
+        } else if (field.key === 'nomorTandaDaftar') {
           const str = String(rawVal || '').trim();
-          record[field.key] = str === 'CERT-2026' ? '' : str;
+          record.nomorTandaDaftar = str === 'CERT-2026' ? '' : str;
+          record.sertifikasi = record.nomorTandaDaftar;
+        } else if (field.key === 'sertifikasi') {
+          const str = String(rawVal || '').trim();
+          record.sertifikasi = str === 'CERT-2026' ? '' : str;
         } else {
           record[field.key] = String(rawVal || '').trim();
         }
       });
 
-      // Jika pilar LKS dan nomor tanda daftar kosong, jangan isi CERT-2026 (biarkan kosong murni)
+      // Jika pilar LKS: sinkronisasi nomor tanda daftar ke sertifikasi & nik agar konsisten di semua tampilan
       if (pillarId === 'lks') {
         if (!record.nomorTandaDaftar || record.nomorTandaDaftar === 'CERT-2026') {
-          record.nomorTandaDaftar = '';
+          record.nomorTandaDaftar = record.sertifikasi && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '';
         }
-        if (record.sertifikasi === 'CERT-2026') {
-          record.sertifikasi = '';
+        if (record.nomorTandaDaftar) {
+          record.sertifikasi = record.nomorTandaDaftar;
+          if (!record.nik) {
+            record.nik = record.nomorTandaDaftar;
+          }
         }
       }
 
@@ -1578,9 +1620,24 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
                 <div className="divide-y divide-slate-100 p-2 sm:p-4 space-y-3">
                   {targetFields.map((field, idx) => {
-                    const selectedHeader = columnMapping[field.key] || '';
-                    const isMatched = !!selectedHeader;
-                    const samples = selectedHeader ? columnSampleValues[selectedHeader] || [] : [];
+                    const rawSelected = columnMapping[field.key] || '';
+                    let selectedColKey = rawSelected;
+                    if (rawSelected && rawSelected !== '__SHEET_NAME__' && !rawSelected.startsWith('col_')) {
+                      const foundIdx = excelHeaders.indexOf(rawSelected);
+                      if (foundIdx >= 0) {
+                        selectedColKey = `col_${foundIdx}`;
+                      } else {
+                        const strictMatch = rawSelected.match(/^kolom\s+(\d+)$/i);
+                        if (strictMatch) {
+                          selectedColKey = `col_${parseInt(strictMatch[1], 10) - 1}`;
+                        }
+                      }
+                    }
+
+                    const isMatched = !!selectedColKey;
+                    const samples = selectedColKey
+                      ? columnSampleValues[selectedColKey] || columnSampleValues[rawSelected] || []
+                      : [];
 
                     return (
                       <div
@@ -1620,7 +1677,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                               <span>Pilih Posisi Kolom di Excel:</span>
                             </div>
                             <select
-                              value={selectedHeader}
+                              value={selectedColKey}
                               onChange={(e) => handleMappingChange(field.key, e.target.value)}
                               className={`w-full text-xs font-bold p-2.5 rounded-xl border transition-all focus:outline-none ${
                                 isMatched
@@ -1637,9 +1694,10 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                                 </option>
                               )}
                               {excelHeaders.map((header, hIdx) => {
-                                const sample = columnSampleValues[header]?.[0] || '';
+                                const colKey = `col_${hIdx}`;
+                                const sample = columnSampleValues[colKey]?.[0] || columnSampleValues[header]?.[0] || '';
                                 return (
-                                  <option key={`${header}-${hIdx}`} value={header}>
+                                  <option key={colKey} value={colKey}>
                                     📋 Kolom {hIdx + 1}: "{header}" {sample ? `(Contoh: "${sample.slice(0, 30)}")` : ''}
                                   </option>
                                 );
@@ -1651,7 +1709,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                         {/* FITUR PENJELAS: Contoh Data Asli dari Excel Anda */}
                         {isMatched && (
                           <div className="mt-2 pt-2 border-t border-emerald-200/60 ml-0 sm:ml-7 flex flex-wrap items-center gap-2 text-[11px]">
-                            {selectedHeader === '__SHEET_NAME__' ? (
+                            {selectedColKey === '__SHEET_NAME__' ? (
                               <div className="flex items-center gap-1.5 text-emerald-900 font-bold bg-emerald-100/80 px-2.5 py-1 rounded-lg border border-emerald-300">
                                 <Check className="w-3.5 h-3.5 text-emerald-700" />
                                 <span>Wilayah diambil otomatis dari nama tab sheet (Cianjur, Tasikmalaya, Kab. Bandung Barat, dll).</span>
@@ -1795,6 +1853,10 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                                 </span>
                               ) : f.key === 'nik' || f.key === 'nomorInduk' ? (
                                 <span className="font-mono text-slate-700">
+                                  {rec[f.key] || '-'}
+                                </span>
+                              ) : f.key === 'nomorTandaDaftar' || f.key === 'sertifikat' || f.key === 'noSk' ? (
+                                <span className="font-mono text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                                   {rec[f.key] || '-'}
                                 </span>
                               ) : (
