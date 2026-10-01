@@ -812,82 +812,173 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
     onClose();
   };
 
-  // Muat baris-baris data dan bentuk kolom sederhana berurutan: Kolom 1, Kolom 2, Kolom 3, Kolom 4...
-  const loadSheetDataAndColumns = (sheetData: any[][], currentSheetName?: string) => {
-    // Saring baris kosong dan baris judul (jika ada baris yang bertuliskan 'NAMA YAYASAN', 'KABUPATEN', atau KOP dinas)
-    const validRows = sheetData.filter((row) => {
-      if (!row || !Array.isArray(row)) return false;
-      const nonEmpty = row.filter((c) => c !== null && String(c).trim() !== '');
-      if (nonEmpty.length === 0) return false;
-      // Jika baris adalah teks header bertuliskan 'NO' dan 'NAMA', lewati baris ini
-      const text = row.map((c) => String(c || '').toLowerCase().trim()).join(' ');
-      if (
-        (text.includes('nama') || text.includes('lembaga') || text.includes('yayasan')) &&
-        (text.includes('kabupaten') || text.includes('kota') || text.includes('alamat') || text.includes('wilayah'))
-      ) {
-        return false;
-      }
-      if (
-        text.includes('pemerintah daerah') ||
-        text.includes('dinas sosial') ||
-        text.includes('provinsi jawa barat') ||
-        text.includes('rekapitulasi') ||
-        text.includes('master data')
-      ) {
-        return false;
-      }
-      return true;
-    });
+  // Deteksi cerdas baris mana yang merupakan baris judul (header) tabel di Excel
+  const detectHeaderRowIndex = (rows: any[][]): number => {
+    if (!rows || rows.length === 0) return 0;
+    const maxSearch = Math.min(10, rows.length);
+    let bestIdx = 0;
+    let bestScore = -1;
 
-    const maxCols = Math.max(4, ...validRows.map((r) => r.length));
-    const headers = Array.from({ length: maxCols }, (_, idx) => `Kolom ${idx + 1}`);
+    const headerKeywords = [
+      'no', 'nama', 'alamat', 'kabupaten', 'kota', 'lembaga', 'yayasan',
+      'nik', 'ketua', 'tanda daftar', 'izin', 'telepon', 'hp', 'status',
+      'desa', 'kelurahan', 'kecamatan', 'jabatan', 'pendidikan', 'keahlian',
+      'sektor', 'bidang', 'operator', 'puskesos', 'slrt'
+    ];
+
+    for (let i = 0; i < maxSearch; i++) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row)) continue;
+      const nonEmptyCells = row.filter((c) => c !== null && String(c).trim() !== '');
+      if (nonEmptyCells.length < 2) continue; // Baris judul tunggal/KOP
+
+      let score = 0;
+      const rowTexts = nonEmptyCells.map((c) => String(c).toLowerCase().trim());
+      rowTexts.forEach((text) => {
+        if (headerKeywords.some((k) => text === k || text.startsWith(k + ' ') || text.includes(k))) {
+          score += 3;
+        }
+      });
+
+      // Jika baris berisi angka banyak atau nomor telepon/NIK panjang, kurangi skor (bukan header)
+      const longDigits = nonEmptyCells.filter((c) => /^\d{5,}$/.test(String(c).trim())).length;
+      if (longDigits > 0) score -= 6;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+
+    return bestScore >= 3 ? bestIdx : 0;
+  };
+
+  // Terapkan pilihan baris header dan muat seluruh data di bawahnya secara utuh 100%
+  const applyHeaderRowIndex = (hIdx: number, allRows: any[][], currentSheetName?: string) => {
+    setHeaderRowIndex(hIdx);
+
+    if (hIdx === -1) {
+      // Mode tanpa baris judul (Baris 1 langsung berisi data anggota)
+      const validRows = allRows.filter((r) => r && Array.isArray(r) && r.some((c) => c !== null && String(c).trim() !== ''));
+      const maxCols = Math.max(4, ...validRows.map((r) => r.length));
+      const headers = Array.from({ length: maxCols }, (_, idx) => `Kolom ${idx + 1}`);
+
+      setExcelHeaders(headers);
+      setDataRows(validRows);
+      autoMapColumns(headers, validRows, currentSheetName);
+      return;
+    }
+
+    const headerRow = allRows[hIdx] || [];
+    const sampleRows = allRows.slice(hIdx + 1, hIdx + 15);
+    const maxCols = Math.max(headerRow.length, ...sampleRows.map((r) => r?.length || 0), 4);
+    const headers: string[] = [];
+
+    for (let c = 0; c < maxCols; c++) {
+      const rawTitle = String(headerRow[c] || '').trim();
+      if (rawTitle) {
+        headers.push(rawTitle);
+      } else {
+        headers.push(`Kolom ${c + 1}`);
+      }
+    }
 
     setExcelHeaders(headers);
-    setDataRows(validRows);
 
-    // Cek apakah ada kolom yang secara konsisten berisi nama kabupaten/kota di Jawa Barat
+    // Seluruh baris DI BAWAH baris header adalah data utuh!
+    // HANYA abaikan jika baris 100% kosong (semua sel kosong/null)
+    const dataRowsAfterHeader = allRows.slice(hIdx + 1).filter((r) => {
+      if (!r || !Array.isArray(r)) return false;
+      return r.some((cell) => cell !== null && cell !== undefined && String(cell).trim() !== '');
+    });
+
+    setDataRows(dataRowsAfterHeader);
+    autoMapColumns(headers, dataRowsAfterHeader, currentSheetName);
+  };
+
+  // Pencocokan otomatis kolom Excel ke field tabel pilar
+  const autoMapColumns = (headers: string[], rows: any[][], currentSheetName?: string) => {
+    const activeSheet = currentSheetName || selectedSheet;
+    const hasMultipleSheets = sheetNames.length > 1;
+    const initialMapping: Record<string, string> = {};
+
+    // 1. Deteksi apakah ada kolom yang memuat nama kota/kabupaten di Jawa Barat
     let detectedWilayahCol = '';
     headers.forEach((h, colIdx) => {
-      const matchCityCount = validRows.slice(0, 20).filter((r) => {
-        const val = String(r[colIdx] || '').toLowerCase().trim();
-        return JABAR_REGIONS.some((reg) => {
-          const simple = reg.toLowerCase().replace('kab. ', '').replace('kota ', '').trim();
-          return val.includes(simple);
-        });
-      }).length;
-      if (matchCityCount >= 2 && !detectedWilayahCol) {
+      const lower = h.toLowerCase();
+      if (lower.includes('kabupaten') || lower.includes('kota') || lower.includes('kab/kota') || lower.includes('wilayah')) {
         detectedWilayahCol = h;
       }
     });
 
-    // Default mapping yang super jelas dan intuitif (Kolom 1, Kolom 2, Kolom 3, Kolom 4...)
-    const initialMapping: Record<string, string> = {};
-    const activeSheet = currentSheetName || selectedSheet;
-    const hasMultipleSheets = sheetNames.length > 1;
+    if (!detectedWilayahCol) {
+      headers.forEach((h, colIdx) => {
+        const matchCityCount = rows.slice(0, 15).filter((r) => {
+          const val = String(r[colIdx] || '').toLowerCase().trim();
+          return JABAR_REGIONS.some((reg) => {
+            const simple = reg.toLowerCase().replace('kab. ', '').replace('kota ', '').trim();
+            return val.includes(simple);
+          });
+        }).length;
+        if (matchCityCount >= 2 && !detectedWilayahCol) {
+          detectedWilayahCol = h;
+        }
+      });
+    }
 
+    // 2. Pemetaan pintar setiap target field
     targetFields.forEach((target) => {
-      if (target.key === 'nama' || target.key === 'namaLks' || target.key === 'namaKarangTaruna' || target.key === 'namaLk3' || target.key === 'namaBadanUsaha' || target.key === 'namaSlrt') {
-        initialMapping[target.key] = headers[1] || headers[0] || ''; // Kolom 2
-      } else if (target.key === 'wilayah' || target.key === 'wilayahKerja') {
+      if (target.key === 'wilayah' || target.key === 'wilayahKerja') {
         if (detectedWilayahCol) {
           initialMapping[target.key] = detectedWilayahCol;
         } else if (hasMultipleSheets || (activeSheet && normalizeJabarRegion(activeSheet, '') !== '')) {
           initialMapping[target.key] = '__SHEET_NAME__';
         } else {
-          initialMapping[target.key] = headers[2] || ''; // Kolom 3
+          initialMapping[target.key] = headers[2] || '';
         }
-      } else if (target.key === 'alamat' || target.key === 'alamatLks' || target.key === 'alamatSekretariat') {
-        initialMapping[target.key] = headers[3] || headers[2] || ''; // Kolom 4
-      } else if (target.key === 'nik' || target.key === 'nomorInduk') {
-        initialMapping[target.key] = headers[0] || ''; // Kolom 1
-      } else if (target.key === 'hp' || target.key === 'nomorKontak' || target.key === 'kontak') {
-        initialMapping[target.key] = headers[4] || ''; // Kolom 5 jika ada
-      } else if (target.key === 'nomorTandaDaftar' || target.key === 'sertifikasi') {
-        initialMapping[target.key] = headers[5] || ''; // Kolom 6 jika ada
+        return;
       }
+
+      // Cocokkan judul header Excel dengan sinonim atau label field
+      let bestMatch = '';
+      for (const h of headers) {
+        const hLow = h.toLowerCase().trim();
+        // Exact synonym match
+        if (target.synonyms.some((s) => s.toLowerCase() === hLow)) {
+          bestMatch = h;
+          break;
+        }
+        // Substring synonym match
+        if (target.synonyms.some((s) => hLow.includes(s.toLowerCase()))) {
+          bestMatch = h;
+          break;
+        }
+      }
+
+      // Fallback berdasarkan urutan posisi umum jika tidak ada kecocokan teks
+      if (!bestMatch) {
+        if (target.key === 'nama' || target.key === 'namaLks' || target.key === 'namaKarangTaruna' || target.key === 'namaLk3' || target.key === 'namaBadanUsaha' || target.key === 'namaSlrt') {
+          bestMatch = headers[1] || headers[0] || '';
+        } else if (target.key === 'alamat' || target.key === 'alamatLks' || target.key === 'alamatSekretariat') {
+          bestMatch = headers[3] || headers[2] || '';
+        } else if (target.key === 'nik' || target.key === 'nomorInduk') {
+          bestMatch = headers[0] || '';
+        } else if (target.key === 'hp' || target.key === 'nomorKontak' || target.key === 'kontak') {
+          bestMatch = headers[4] || '';
+        } else if (target.key === 'nomorTandaDaftar' || target.key === 'sertifikasi') {
+          bestMatch = headers[5] || '';
+        }
+      }
+
+      initialMapping[target.key] = bestMatch;
     });
 
     setColumnMapping(initialMapping);
+  };
+
+  // Handler pergantian baris header secara manual oleh pengguna
+  const handleHeaderRowChange = (newIdx: number) => {
+    applyHeaderRowIndex(newIdx, rawSheetRows);
   };
 
   // Baca file Excel
@@ -922,7 +1013,8 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       });
 
       setRawSheetRows(jsonData);
-      loadSheetDataAndColumns(jsonData, firstSheet);
+      const detectedIdx = detectHeaderRowIndex(jsonData);
+      applyHeaderRowIndex(detectedIdx, jsonData, firstSheet);
       setStep(2);
     } catch (err: any) {
       console.error('Error parsing Excel:', err);
@@ -956,7 +1048,8 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         });
 
         setRawSheetRows(combinedRows);
-        loadSheetDataAndColumns(combinedRows, '__ALL_SHEETS__');
+        const detectedIdx = detectHeaderRowIndex(combinedRows);
+        applyHeaderRowIndex(detectedIdx, combinedRows, '__ALL_SHEETS__');
         return;
       }
 
@@ -978,7 +1071,8 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
         }
       });
       setRawSheetRows(jsonData);
-      loadSheetDataAndColumns(jsonData, sheetName);
+      const detectedIdx = detectHeaderRowIndex(jsonData);
+      applyHeaderRowIndex(detectedIdx, jsonData, sheetName);
     } catch (err: any) {
       console.error('Error switching sheet:', err);
       setParseError(err?.message || 'Gagal memuat lembar kerja yang dipilih.');
@@ -1128,18 +1222,15 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       // Filter KOP surat dinas atau baris total rekapitulasi agar tidak pernah masuk
       const lower = n.toLowerCase();
       if (
-        lower.includes('pemerintah daerah') ||
-        lower.includes('dinas sosial') ||
-        lower.includes('provinsi jawa barat') ||
-        lower.includes('master data') ||
-        lower.includes('jumlah lks') ||
-        lower.includes('jumlah') ||
-        lower.includes('total') ||
-        lower.includes('rekapitulasi') ||
-        lower.includes('bidang pelayanan') ||
-        lower.includes('nama lks') ||
-        lower.includes('nama lembaga') ||
-        lower.startsWith('anggota terimport')
+        lower === 'pemerintah daerah provinsi jawa barat' ||
+        lower === 'dinas sosial' ||
+        lower === 'provinsi jawa barat' ||
+        lower.startsWith('pemerintah daerah') ||
+        lower.startsWith('rekapitulasi data') ||
+        lower === 'jumlah' ||
+        lower === 'total' ||
+        lower.startsWith('total ') ||
+        lower.startsWith('jumlah ')
       ) {
         return false;
       }
@@ -1379,34 +1470,50 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                 </div>
               )}
 
-              {/* Info File & Pengaturan Baris Header jika ada KOP */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-500 font-medium block">File Terpilih:</span>
-                    <span className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                      <FileCheck className="w-4 h-4 text-emerald-600" />
-                      {file?.name}
+              {/* Pengaturan Baris Header Cerdas (Smart Header Row Selector) */}
+              <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/50 to-slate-50 border-2 border-emerald-500 rounded-2xl p-4 space-y-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="font-black text-emerald-950 text-xs sm:text-sm flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                      Pilih Baris Judul Kolom (Header) di File Excel Anda:
                     </span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Sistem membaca nama judul kolom dari baris yang Anda pilih di bawah ini agar sinkron persis dengan tabel:
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span className="text-slate-500 font-medium block">Total Baris Terdeteksi:</span>
-                      <span className="font-mono font-black text-emerald-800 text-sm">
-                        {dataRows.length} Baris Data
-                      </span>
-                    </div>
+                  <div className="w-full sm:w-96 shrink-0">
+                    <select
+                      value={headerRowIndex}
+                      onChange={(e) => handleHeaderRowChange(Number(e.target.value))}
+                      className="w-full bg-white border-2 border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-emerald-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer"
+                    >
+                      <option value={-1} className="font-bold text-amber-900 bg-amber-50">
+                        🚀 [File Langsung Berisi Data (Baris 1 Sudah Data Anggota)]
+                      </option>
+                      {rawSheetRows.slice(0, Math.min(10, rawSheetRows.length)).map((row, rIdx) => {
+                        const preview = row
+                          .filter((c) => c !== null && String(c).trim() !== '')
+                          .slice(0, 4)
+                          .map((c) => String(c).trim())
+                          .join(' | ');
+                        return (
+                          <option key={rIdx} value={rIdx}>
+                            📑 Baris ke-{rIdx + 1}: {preview ? `[ ${preview.slice(0, 45)}... ]` : '(Baris Kosong)'}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </div>
 
-                {/* Penjelasan Pencocokan Kolom */}
-                <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 text-slate-700 font-bold">
-                    <Info className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span>Pencocokan Kolom Berurutan (Kolom 1, Kolom 2, Kolom 3, Kolom 4...)</span>
+                    <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>File: <strong>{file?.name}</strong></span>
                   </div>
-                  <span className="text-[11px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-lg">
-                    ✨ Seluruh baris data otomatis siap di-import
+                  <span className="text-[11px] font-black text-emerald-950 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs">
+                    ✨ Terdeteksi: <strong>{dataRows.length} Baris Data</strong> (100% Utuh di Bawah Baris Judul)
                   </span>
                 </div>
               </div>
@@ -1529,11 +1636,11 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                                   🏷️ [Otomatis dari Nama Sheet/Kota (Cianjur, Tasik, KBB, dll)]
                                 </option>
                               )}
-                              {excelHeaders.map((header) => {
+                              {excelHeaders.map((header, hIdx) => {
                                 const sample = columnSampleValues[header]?.[0] || '';
                                 return (
-                                  <option key={header} value={header}>
-                                    📋 {header} {sample ? `(Contoh: "${sample.slice(0, 30)}")` : ''}
+                                  <option key={`${header}-${hIdx}`} value={header}>
+                                    📋 Kolom {hIdx + 1}: "{header}" {sample ? `(Contoh: "${sample.slice(0, 30)}")` : ''}
                                   </option>
                                 );
                               })}
@@ -1640,21 +1747,21 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
               {/* Tabel Pratinjau dengan Kolom Persis Seperti PilarTable */}
               <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                <div className="bg-[#0f2b5c] px-4 py-2.5 text-white flex items-center justify-between">
+                <div className="bg-[#0f2b5c] px-4 py-3 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Table className="w-4 h-4 text-amber-400" />
-                    <h4 className="text-xs font-black text-white uppercase tracking-wider">
-                      Pratinjau Tampilan Tabel {pillar.shortName} (5 Baris Pertama)
+                    <Table className="w-4 h-4 text-amber-400 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                      Pratinjau Seluruh Data Tabel {pillar.shortName}
                     </h4>
                   </div>
-                  <span className="text-[11px] text-amber-300 font-bold">
-                    Menampilkan 5 dari {mappedRecords.length} Data
+                  <span className="text-[11px] text-amber-300 font-black bg-blue-950/60 border border-blue-700/60 px-2.5 py-1 rounded-lg shadow-2xs">
+                    Menampilkan Seluruh {mappedRecords.length} dari {mappedRecords.length} Data (Bisa di-scroll ke bawah)
                   </span>
                 </div>
 
-                <div className="overflow-x-auto max-h-[350px]">
+                <div className="overflow-x-auto overflow-y-auto max-h-[460px]">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-[#143b7d] text-white sticky top-0 z-10">
+                    <thead className="bg-[#143b7d] text-white sticky top-0 z-10 shadow-xs">
                       <tr>
                         <th className="py-2.5 px-3 font-bold text-center border-r border-blue-900/60 w-10">No</th>
                         {targetFields.map((f) => (
@@ -1668,7 +1775,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
-                      {mappedRecords.slice(0, 5).map((rec: any, idx) => (
+                      {mappedRecords.map((rec: any, idx) => (
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
                           <td className="py-2.5 px-3 font-mono font-bold text-center text-slate-500 border-r border-slate-100">
                             {idx + 1}
