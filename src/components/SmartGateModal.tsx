@@ -878,16 +878,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (INTRO BIRU SELAMAT DATANG & BUTTON MULAI) */}
             {/* ========================================================================= */}
             {showMobileIntro && view === 'main' && (
-              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center pt-0.5 pb-2.5 px-1 animate-fadeIn text-white">
+              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center pt-1 pb-1 px-1 animate-fadeIn text-white">
                 {/* Bagian Atas: Logo Resmi & Badge Provinsi Jawa Barat */}
                 <div className="flex flex-col items-center pt-0.5">
-                  <div className="p-2 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-1.5">
-                    <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-13 h-13 sm:w-16 sm:h-16" />
+                  <div className="p-1.5 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-1">
+                    <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-12 h-12 sm:w-16 sm:h-16" />
                   </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-3 py-0.5 rounded-full border border-white/20">
+                  <span className="text-[8.5px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
                     PEMERINTAH PROVINSI JAWA BARAT
                   </span>
-                  <span className="text-[8px] font-bold text-blue-200 uppercase tracking-wider mt-0.5">
+                  <span className="text-[7.5px] font-bold text-blue-200 uppercase tracking-wider mt-0.5">
                     Dinas Sosial Provinsi Jawa Barat
                   </span>
                 </div>
@@ -897,32 +897,32 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
                     Selamat Datang
                   </h2>
-                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 leading-snug mt-0.5 max-w-xs px-2">
+                  <p className="text-[10.5px] sm:text-xs font-bold text-blue-100 leading-snug mt-0.5 max-w-xs px-2">
                     Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial (PSKS)
                   </p>
-                  <div className="inline-flex items-center justify-center px-3.5 py-1 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[9.5px] sm:text-[10px] font-bold mt-2 shadow-2xs max-w-xs text-center leading-relaxed">
+                  <div className="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[9px] sm:text-[10px] font-bold mt-1.5 shadow-2xs max-w-xs text-center leading-relaxed">
                     <span>Layanan integrasi satu data, registrasi mandiri, dan verifikasi pilar sosial se-Jawa Barat.</span>
                   </div>
                 </div>
 
                 {/* Bagian Bawah: Button MULAI & Copyright Lapisan 1 (Satu-Satunya) */}
-                <div className="w-full space-y-1.5 pt-0.5 pb-1">
+                <div className="w-full space-y-1.5 pt-0.5 pb-0.5">
                   <button
                     type="button"
                     id="btn-mobile-intro-mulai"
                     onClick={() => setShowMobileIntro(false)}
-                    className="w-full min-h-[46px] py-2.5 px-6 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3d978] to-[#d4af37] hover:brightness-105 active:scale-95 text-[#043e2e] font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/25 border-2 border-amber-300 transition-all cursor-pointer select-none"
+                    className="w-full min-h-[44px] py-2 px-6 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3d978] to-[#d4af37] hover:brightness-105 active:scale-95 text-[#043e2e] font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/25 border-2 border-amber-300 transition-all cursor-pointer select-none"
                   >
                     <span>MULAI</span>
                     <ArrowRight className="w-5 h-5 text-[#043e2e] stroke-[2.5]" />
                   </button>
-                  <div className="flex items-center justify-center gap-1.5 text-[9px] text-blue-200/80 font-semibold">
+                  <div className="flex items-center justify-center gap-1.5 text-[8.5px] text-blue-200/80 font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span>Portal Resmi Terverifikasi • 27 Kab/Kota</span>
                   </div>
                   {/* Copyright Resmi Lapisan 1 (Satu-Satunya) - Terangkat dan Tidak Terpotong */}
-                  <div className="pt-2 pb-2.5 border-t border-blue-400/25 w-full">
-                    <p className="text-[8px] sm:text-[8.5px] text-blue-100 font-semibold tracking-tight text-center leading-snug break-words px-1">
+                  <div className="pt-1 pb-0.5 border-t border-blue-400/25 w-full">
+                    <p className="text-[7.5px] sm:text-[8.5px] text-blue-100 font-semibold tracking-tight text-center leading-snug break-words px-1">
                       © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
                     </p>
                   </div>
@@ -933,14 +933,27 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             {/* Header Greeting inside White Area */}
             <div className={`relative z-10 text-center mb-1 sm:mb-1.5 shrink-0 ${showMobileIntro && view === 'main' ? 'hidden md:block' : 'block'}`}>
               {/* Mobile Branding Header (Shown only on mobile since desktop has left column) */}
-              <div className="md:hidden flex items-center justify-center gap-2 mb-1.5 pt-0.5">
-                <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-8 h-8" />
-                <div className="text-left">
-                  <h4 className="text-xs font-black text-[#0f2b5c] uppercase tracking-wider leading-none">PSKS JABAR</h4>
-                  <p className="text-[9px] text-slate-500 font-bold leading-tight mt-0.5">Pilar Sosial Jawa Barat</p>
+              <div className="md:hidden flex items-center justify-between gap-2 mb-1 pt-0.5 px-0.5">
+                <div className="flex items-center gap-1.5">
+                  <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-7 h-7" />
+                  <div className="text-left">
+                    <h4 className="text-[11px] font-black text-[#0f2b5c] uppercase tracking-wider leading-none">PSKS JABAR</h4>
+                    <p className="text-[8px] text-slate-500 font-bold leading-tight mt-0.5">Pilar Sosial Jawa Barat</p>
+                  </div>
                 </div>
+                {view === 'main' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileIntro(true)}
+                    className="inline-flex items-center gap-1 text-[8.5px] font-bold text-slate-500 hover:text-[#0f2b5c] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer active:scale-95"
+                    title="Kembali ke Sambutan"
+                  >
+                    <ArrowLeft className="w-2.5 h-2.5" />
+                    <span>Sambutan</span>
+                  </button>
+                )}
               </div>
-              <h3 className="text-base sm:text-xl font-black text-[#0f2b5c] tracking-tight">
+              <h3 className="text-sm sm:text-xl font-black text-[#0f2b5c] tracking-tight">
                 {view === 'main' && 'Selamat Datang'}
                 {view === 'register' && 'Daftar Akun Baru'}
                 {view === 'login_choice' && 'Pilih Metode Masuk'}
@@ -948,7 +961,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 {view === 'login_smart_card' && 'Smart Card Login'}
                 {view === 'guest' && 'Akses Tamu Publik'}
               </h3>
-              <p className="text-[10.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
+              <p className="text-[9.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
                 {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
                 {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
                 {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
@@ -967,7 +980,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 {view === 'main' && (
                   <div
                     key="view-main"
-                    className="space-y-2 my-auto animate-scaleUp"
+                    className="space-y-1.5 sm:space-y-2 my-auto animate-scaleUp"
                   >
 
                     {/* JALUR 1: TOMBOL DAFTAR AKUN BARU (DENGAN LOGIKA 4 KONDISI CERDAS PER-IP) */}
@@ -975,9 +988,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       type="button"
                       id="btn-jalur-daftar-akun-baru"
                       onClick={handleDaftarAkunBaruClick}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full group text-left p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
                         <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1006,7 +1019,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                               : 'Menunggu Verval (1/1)'}
                           </span>
                         </div>
-                        <p className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
+                        <p className="text-[9.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
                           {!clientRegisteredAccount
                             ? 'Registrasi mandiri 1 akun per perangkat untuk warga & personil potensi sosial Jabar.'
                             : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
@@ -1025,9 +1038,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('login_choice');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full group text-left p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1035,11 +1048,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white">
                             Masuk ke Akun
                           </span>
-                          <span className="text-[8.5px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase">
+                          <span className="text-[8px] sm:text-[8.5px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase">
                             Login
                           </span>
                         </div>
-                        <p className="text-[10.5px] sm:text-[11px] text-blue-100 font-medium leading-tight mt-0.5">
+                        <p className="text-[9.5px] sm:text-[11px] text-blue-100 font-medium leading-tight mt-0.5">
                           Login/Masuk ke akun yang sudah terdaftar
                         </p>
                       </div>
@@ -1048,7 +1061,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
                     <div className="relative flex items-center justify-center py-0.5 sm:py-1">
                       <div className="flex-grow border-t border-slate-300"></div>
-                      <div className="flex-shrink mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[9.5px] sm:text-[10px] uppercase tracking-widest px-3 py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                      <div className="flex-shrink mx-2 sm:mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[8.5px] sm:text-[10px] uppercase tracking-widest px-2.5 py-0.2 sm:px-3 sm:py-0.5 rounded-full border border-slate-300 shadow-2xs">
                         <span>ATAU</span>
                       </div>
                       <div className="flex-grow border-t border-slate-300"></div>
@@ -1061,9 +1074,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('guest');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full group text-left p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
                         <Globe2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1071,27 +1084,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           <span className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c]">
                             Lanjutkan Sebagai Tamu
                           </span>
-                          <span className="text-[8.5px] font-black bg-amber-200/90 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase border border-amber-300">
+                          <span className="text-[8px] sm:text-[8.5px] font-black bg-amber-200/90 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase border border-amber-300">
                             Tanpa Login
                           </span>
                         </div>
-                        <p className="text-[10.5px] sm:text-[11px] text-slate-700 font-medium leading-tight mt-0.5">
+                        <p className="text-[9.5px] sm:text-[11px] text-slate-700 font-medium leading-tight mt-0.5">
                           Akses publik instan untuk membaca grafik & data PSKS tanpa password.
                         </p>
                       </div>
                     </button>
-
-                    {/* KHUSUS MOBILE: OPSI KEMBALI KE LAYAR SAMBUTAN INTRO */}
-                    <div className="md:hidden flex justify-center pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowMobileIntro(true)}
-                        className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-[#0f2b5c] px-3.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer active:scale-95"
-                      >
-                        <ArrowLeft className="w-3 h-3" />
-                        <span>Kembali ke Sambutan</span>
-                      </button>
-                    </div>
 
                   </div>
                 )}
@@ -2176,7 +2177,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Form Footer Links */}
-            <div className={`relative z-10 pt-1.5 border-t border-slate-200 flex flex-col gap-1 text-[9.5px] text-slate-600 font-semibold shrink-0 ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`relative z-10 pt-1 sm:pt-1.5 border-t border-slate-200 flex flex-col gap-0.5 sm:gap-1 text-[8.5px] sm:text-[9.5px] text-slate-600 font-semibold shrink-0 ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <button
@@ -2209,7 +2210,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               </div>
 
               {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) - Terangkat dan Tidak Terpotong */}
-              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-semibold text-center leading-snug break-words px-1 pt-0.5 pb-1">
+              <div className="md:hidden text-[7.5px] sm:text-[8.5px] text-slate-500 font-semibold text-center leading-snug break-words px-1 pt-0.5 pb-0.5">
                 © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
