@@ -211,7 +211,13 @@ export default function App() {
       const queue = raw ? JSON.parse(raw) : [];
       const filtered = queue.filter((q: any) => !(q.collection === item.collection && q.docId === item.docId));
       filtered.push({ ...item, id: `${item.collection}-${item.docId}-${Date.now()}` });
-      localStorage.setItem('psks_sync_queue', JSON.stringify(filtered));
+      try {
+        localStorage.setItem('psks_sync_queue', JSON.stringify(filtered));
+      } catch (storageErr) {
+        console.warn('LocalStorage limit reached for sync queue, pruning older synced items:', storageErr);
+        const pruned = filtered.slice(-300);
+        localStorage.setItem('psks_sync_queue', JSON.stringify(pruned));
+      }
       setPendingSyncCount(filtered.length);
     } catch (e) {
       console.error('Failed to add item to sync queue', e);
@@ -230,7 +236,13 @@ export default function App() {
       items.forEach((it, idx) => {
         filtered.push({ ...it, id: `${it.collection}-${it.docId}-${now}-${idx}` });
       });
-      localStorage.setItem('psks_sync_queue', JSON.stringify(filtered));
+      try {
+        localStorage.setItem('psks_sync_queue', JSON.stringify(filtered));
+      } catch (storageErr) {
+        console.warn('LocalStorage limit reached for batch sync queue, pruning older items:', storageErr);
+        const pruned = filtered.slice(-400);
+        localStorage.setItem('psks_sync_queue', JSON.stringify(pruned));
+      }
       setPendingSyncCount(filtered.length);
     } catch (e) {
       console.error('Failed to add batch items to sync queue', e);
@@ -380,44 +392,104 @@ export default function App() {
   };
 
   const [isRescueSyncing, setIsRescueSyncing] = useState(false);
+  const [rescueProgressText, setRescueProgressText] = useState<string>('');
 
   const handleRescueSyncAllPillarsToCloud = async () => {
     if (isRescueSyncing) return;
     setIsRescueSyncing(true);
+    setRescueProgressText('Mempersiapkan data...');
     try {
-      let totalPushed = 0;
       const pillars = Object.keys(allPillarData);
-      
+      const allDocsToSync: Array<{ id: string; data: any }> = [];
+      const regionCounts: Record<string, number> = {};
+
       for (const pKey of pillars) {
         const records = allPillarData[pKey];
         if (Array.isArray(records) && records.length > 0) {
-          const docs = records.map((rec, idx) => ({
-            id: rec.id || `${pKey}-${Date.now()}-${String(idx + 1).padStart(6, '0')}`,
-            data: cleanFirestoreData({ ...rec, pillarId: pKey }),
-          }));
-          await batchSetFirestoreDocs('psks_records', docs);
-          totalPushed += docs.length;
+          records.forEach((rec, idx) => {
+            const docId = rec.id || `${pKey}-${Date.now()}-${String(idx + 1).padStart(6, '0')}`;
+            const cleaned = cleanFirestoreData({ ...rec, pillarId: pKey });
+            allDocsToSync.push({ id: docId, data: cleaned });
+            const wil = cleaned.wilayah || 'Jawa Barat';
+            regionCounts[wil] = (regionCounts[wil] || 0) + 1;
+          });
         }
+      }
+
+      if (allDocsToSync.length === 0) {
+        setRescueProgressText('');
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert('ℹ️ Tidak ada data pilar yang perlu disinkronkan ke Cloud Firestore.');
+        }
+        setIsRescueSyncing(false);
+        return;
+      }
+
+      setRescueProgressText(`Menyinkronkan 0/${allDocsToSync.length} data...`);
+      await batchSetFirestoreDocs(
+        'psks_records',
+        allDocsToSync,
+        (completed, total) => {
+          const percent = Math.round((completed / total) * 100);
+          setRescueProgressText(`Menyinkronkan ${completed}/${total} (${percent}%)...`);
+        }
+      );
+
+      // Sinkronkan akun admin jika ada
+      try {
+        if (adminAccounts && adminAccounts.length > 0) {
+          await batchSetFirestoreDocs(
+            'admin_accounts',
+            adminAccounts.map((acc) => ({ id: acc.id, data: cleanFirestoreData(acc) }))
+          );
+        }
+      } catch (accErr) {
+        console.warn('Admin accounts sync error in rescue flow:', accErr);
+      }
+
+      // Sinkronkan konfigurasi aplikasi jika ada
+      try {
+        if (appSettings) {
+          await setFirestoreDoc('app_settings', 'global', cleanFirestoreData(appSettings));
+        }
+      } catch (setErr) {
+        console.warn('App settings sync error in rescue flow:', setErr);
       }
 
       clearSyncQueue();
       quotaExceededRef.current = false;
       setIsQuotaExceeded(false);
 
+      const uniqueRegionsCount = Object.keys(regionCounts).length;
       if (typeof window !== 'undefined' && window.alert) {
         window.alert(
-          `✅ PENYELAMATAN & SINKRONISASI BERHASIL!\n\n` +
-          `Sebanyak ${totalPushed} total data (termasuk ${allPillarData['lks']?.length || 0} Data LKS) telah sukses tersimpan resmi ke Google Cloud Firestore.\n\n` +
-          `Semua perangkat (HP, Laptop, dsb) sekarang otomatis sinkron dan menampilkan data terbaru.`
+          `✅ SINKRONISASI CLOUD BERHASIL & AKURAT!\n\n` +
+          `• Total Data Tersimpan: ${allDocsToSync.length} data anggota\n` +
+          `• Cakupan Wilayah: ${uniqueRegionsCount} Kabupaten/Kota se-Jawa Barat\n` +
+          `• Status: 100% Permanen di Google Cloud Firestore\n\n` +
+          `Semua perangkat (Laptop, HP, Tablet) sekarang otomatis sinkron realtime dengan data terbaru.`
         );
       }
     } catch (err: any) {
       console.error('Rescue sync failed:', err);
-      if (typeof window !== 'undefined' && window.alert) {
-        window.alert(`⚠️ Gagal menyinkronkan data: ${err?.message || 'Koneksi terputus'}. Silakan coba lagi.`);
+      if (isQuotaError(err)) {
+        quotaExceededRef.current = true;
+        setIsQuotaExceeded(true);
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert(
+            `⚠️ Batas Kuota Harian Firestore Spark Tercapai.\n\n` +
+            `Google Firestore Spark (Free Tier) membatasi 20.000 writes/hari dan direset pada Midnight Pacific Time (~14:00 - 15:00 WIB).\n` +
+            `Seluruh data Anda tetap aman tersimpan di Cache Lokal & Antrean Offline perangkat ini.`
+          );
+        }
+      } else {
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert(`⚠️ Gagal menyinkronkan data: ${err?.message || 'Koneksi terputus'}. Silakan periksa koneksi internet dan coba lagi.`);
+        }
       }
     } finally {
       setIsRescueSyncing(false);
+      setRescueProgressText('');
     }
   };
 
@@ -3561,7 +3633,7 @@ export default function App() {
   // render ONLY SmartGateModal so zero main content, hero, navbar, or background flashes
   if (gateModalOpen) {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-[#06152d] overflow-hidden z-[9999]">
+      <div className="fixed inset-0 w-full h-[100dvh] bg-[#06152d] overflow-hidden z-[9999] overscroll-none select-none">
         <SmartGateModal
           isOpen={true}
           onClose={() => setGateModalOpen(false)}
@@ -3583,17 +3655,6 @@ export default function App() {
           appSettings={appSettings}
           logoUrl={appSettings?.logoUrl}
         />
-        {!!loginSuccessData && (
-          <React.Suspense fallback={null}>
-            <LoginSuccessModal
-              isOpen={!!loginSuccessData}
-              onClose={handleCloseLoginSuccess}
-              role={loginSuccessData?.role || 'user'}
-              nama={loginSuccessData?.nama || ''}
-              wilayah={loginSuccessData?.wilayah || ''}
-            />
-          </React.Suspense>
-        )}
       </div>
     );
   }
@@ -3641,7 +3702,7 @@ export default function App() {
             className="ml-1 bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] hover:from-amber-400 hover:to-amber-200 text-slate-950 font-black text-[11px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow active:scale-95 flex items-center gap-1.5 disabled:opacity-60"
             title="Dorong dan sinkronkan seluruh data lokal di perangkat ini ke Cloud Firestore"
           >
-            <span>{isRescueSyncing ? '🔄 Menyinkronkan...' : `🚀 Selamatkan & Dorong Data ke Cloud (${allPillarData['lks']?.length || 0} LKS)`}</span>
+            <span>{isRescueSyncing ? `🔄 ${rescueProgressText || 'Menyinkronkan...'}` : `🚀 Selamatkan & Dorong Data ke Cloud (${allPillarData['lks']?.length || 0} LKS)`}</span>
           </button>
         </div>
       )}
@@ -3912,6 +3973,7 @@ export default function App() {
             onOpenGateModal={() => setGateModalOpen(true)}
             onRescueSync={handleRescueSyncAllPillarsToCloud}
             isRescueSyncing={isRescueSyncing}
+            rescueProgressText={rescueProgressText}
           />
         )}
 

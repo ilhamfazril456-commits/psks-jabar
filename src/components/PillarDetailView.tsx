@@ -49,6 +49,7 @@ interface PillarDetailViewProps {
   onOpenGateModal?: () => void;
   onRescueSync?: () => Promise<void> | void;
   isRescueSyncing?: boolean;
+  rescueProgressText?: string;
 }
 
 export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
@@ -65,6 +66,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   onOpenGateModal,
   onRescueSync,
   isRescueSyncing,
+  rescueProgressText,
 }) => {
   const pillar = PILLARS_CONFIG[pillarId] || PILLARS_CONFIG.peksos;
   const [searchTerm, setSearchTerm] = useState('');
@@ -1433,7 +1435,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                         title="Penyelamatan Data: Dorong dan sinkronkan seluruh data lokal di perangkat ini langsung ke Google Cloud Firestore"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200 ${isRescueSyncing ? 'animate-spin' : ''}`} />
-                        <span>{isRescueSyncing ? 'Menyinkronkan...' : `Sinkronkan Ke Cloud (${dataRecords.length})`}</span>
+                        <span>{isRescueSyncing ? (rescueProgressText || 'Menyinkronkan...') : `Sinkronkan Ke Cloud (${dataRecords.length})`}</span>
                       </button>
                     )}
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   CheckCircle2,
   MapPin,
@@ -25,9 +25,17 @@ interface LoginSuccessModalProps {
 }
 
 // Sound synthesis utility for smooth pleasant login success chime
-// High-grade acoustic dual-tone bell chime (warm E5 -> crystal B5/E6 harmonic resolution)
+// High-grade acoustic dual-tone bell chime (warm E5 -> crystal B5 harmonic resolution)
+let lastLoginChimeTime = 0;
 const playLoginSuccessChime = () => {
   try {
+    const nowMs = Date.now();
+    // Strictly prevent double/overlapping chime calls within 2.5 seconds
+    if (nowMs - lastLoginChimeTime < 2500) {
+      return;
+    }
+    lastLoginChimeTime = nowMs;
+
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
@@ -36,20 +44,19 @@ const playLoginSuccessChime = () => {
     // Master filter to smooth out high frequencies and eliminate speaker crackling
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2600, now);
+    filter.frequency.setValueAtTime(2400, now);
     filter.connect(ctx.destination);
 
     // Master gain node
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.14, now);
+    masterGain.gain.setValueAtTime(0.12, now);
     masterGain.connect(filter);
 
     // Harmonic bell pair: Warm E5 (659.25 Hz) followed by uplifting B5 (987.77 Hz)
     const tones = [
-      { freq: 659.25, time: now, duration: 0.55, gainLevel: 0.16 },
-      { freq: 987.77, time: now + 0.11, duration: 0.85, gainLevel: 0.22 },
-      // Subtle overtone for air and warmth (E6 harmonic)
-      { freq: 1318.51, time: now + 0.11, duration: 0.70, gainLevel: 0.06 },
+      { freq: 659.25, time: now, duration: 0.50, gainLevel: 0.15 },
+      { freq: 987.77, time: now + 0.10, duration: 0.80, gainLevel: 0.20 },
+      { freq: 1318.51, time: now + 0.10, duration: 0.65, gainLevel: 0.05 },
     ];
 
     tones.forEach((tone) => {
@@ -120,15 +127,20 @@ export const LoginSuccessModal: React.FC<LoginSuccessModalProps> = ({
   wilayah,
 }) => {
   const [isExiting, setIsExiting] = useState(false);
+  const hasPlayedChimeRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
       setIsExiting(false);
+      hasPlayedChimeRef.current = false;
       return;
     }
 
     setIsExiting(false);
-    playLoginSuccessChime();
+    if (!hasPlayedChimeRef.current) {
+      hasPlayedChimeRef.current = true;
+      playLoginSuccessChime();
+    }
 
     // Auto-dismiss after exactly 1.5 seconds (1500ms) with 200ms graceful exit
     const timer = setTimeout(() => {

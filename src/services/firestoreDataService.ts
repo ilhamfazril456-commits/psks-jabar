@@ -19,10 +19,16 @@ export function getFirestoreModule() {
 }
 
 export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj
+      .filter((item) => item !== undefined)
+      .map((item) => (typeof item === 'object' && item !== null ? cleanFirestoreData(item) : item));
+  }
   const cleaned: Record<string, any> = {};
   Object.keys(obj).forEach((key) => {
     const val = obj[key];
-    if (val !== undefined) {
+    if (val !== undefined && typeof val !== 'function') {
       if (typeof val === 'string') {
         const trimmed = val.trim();
         if (key === 'nama' && trimmed.length > 900) {
@@ -32,6 +38,12 @@ export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Recor
         } else {
           cleaned[key] = trimmed;
         }
+      } else if (Array.isArray(val)) {
+        cleaned[key] = val
+          .filter((item) => item !== undefined)
+          .map((item) => (typeof item === 'object' && item !== null ? cleanFirestoreData(item) : item));
+      } else if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
+        cleaned[key] = cleanFirestoreData(val);
       } else {
         cleaned[key] = val;
       }
@@ -276,22 +288,53 @@ export async function setFirestoreDoc(
 }
 
 /**
- * Persist multiple documents to Firestore using writeBatch in chunks
+ * Persist multiple documents to Firestore using writeBatch in chunks with auto-retry and progress tracking
  */
 export async function batchSetFirestoreDocs(
   collectionName: string,
-  docs: Array<{ id: string; data: Record<string, any> }>
+  docs: Array<{ id: string; data: Record<string, any> }>,
+  onProgress?: (completed: number, total: number) => void
 ): Promise<void> {
+  if (!docs || docs.length === 0) return;
   const { firestore, db } = await getFirestoreModule();
-  const CHUNK_SIZE = 450;
+  const CHUNK_SIZE = 400;
+  let completedCount = 0;
+
   for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
     const chunk = docs.slice(i, i + CHUNK_SIZE);
-    const batch = firestore.writeBatch(db);
-    for (const item of chunk) {
-      const docRef = firestore.doc(db, collectionName, item.id);
-      batch.set(docRef, cleanFirestoreData(item.data), { merge: true });
+    let attempts = 0;
+    let success = false;
+    let lastError: any = null;
+
+    while (attempts < 3 && !success) {
+      attempts++;
+      try {
+        const batch = firestore.writeBatch(db);
+        for (const item of chunk) {
+          const docRef = firestore.doc(db, collectionName, item.id);
+          batch.set(docRef, cleanFirestoreData(item.data), { merge: true });
+        }
+        await batch.commit();
+        success = true;
+      } catch (err: any) {
+        lastError = err;
+        if (isQuotaError(err)) {
+          throw err;
+        }
+        if (attempts < 3) {
+          await new Promise((res) => setTimeout(res, attempts * 400));
+        }
+      }
     }
-    await batch.commit();
+
+    if (!success) {
+      throw lastError;
+    }
+
+    completedCount += chunk.length;
+    if (onProgress) {
+      onProgress(completedCount, docs.length);
+    }
   }
 }
 
@@ -308,22 +351,53 @@ export async function deleteFirestoreDoc(
 }
 
 /**
- * Delete multiple documents from Firestore using writeBatch in chunks
+ * Delete multiple documents from Firestore using writeBatch in chunks with auto-retry and progress tracking
  */
 export async function batchDeleteFirestoreDocs(
   collectionName: string,
-  docIds: string[]
+  docIds: string[],
+  onProgress?: (completed: number, total: number) => void
 ): Promise<void> {
+  if (!docIds || docIds.length === 0) return;
   const { firestore, db } = await getFirestoreModule();
-  const CHUNK_SIZE = 450;
+  const CHUNK_SIZE = 400;
+  let completedCount = 0;
+
   for (let i = 0; i < docIds.length; i += CHUNK_SIZE) {
     const chunk = docIds.slice(i, i + CHUNK_SIZE);
-    const batch = firestore.writeBatch(db);
-    for (const id of chunk) {
-      const docRef = firestore.doc(db, collectionName, id);
-      batch.delete(docRef);
+    let attempts = 0;
+    let success = false;
+    let lastError: any = null;
+
+    while (attempts < 3 && !success) {
+      attempts++;
+      try {
+        const batch = firestore.writeBatch(db);
+        for (const id of chunk) {
+          const docRef = firestore.doc(db, collectionName, id);
+          batch.delete(docRef);
+        }
+        await batch.commit();
+        success = true;
+      } catch (err: any) {
+        lastError = err;
+        if (isQuotaError(err)) {
+          throw err;
+        }
+        if (attempts < 3) {
+          await new Promise((res) => setTimeout(res, attempts * 400));
+        }
+      }
     }
-    await batch.commit();
+
+    if (!success) {
+      throw lastError;
+    }
+
+    completedCount += chunk.length;
+    if (onProgress) {
+      onProgress(completedCount, docIds.length);
+    }
   }
 }
 
