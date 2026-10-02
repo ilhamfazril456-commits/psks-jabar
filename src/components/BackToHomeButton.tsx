@@ -43,7 +43,7 @@ export const BackToHomeButton: React.FC<BackToHomeButtonProps> = ({
       type="button"
       onClick={onClick}
       className={`${baseClasses} ${colorClasses} ${className}`}
-      title="Kembali ke Beranda Utama PSKS JABAR"
+      title={label || "Kembali ke Beranda Utama PSKS JABAR"}
     >
       <ArrowLeft className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-1 text-inherit" />
       <span className="whitespace-nowrap">{label}</span>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PillarId, PSKSDataRecord, UserSession, PillarRegistrationSubmission } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY, JABAR_REGIONS } from '../data/initialData';
-import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText, UploadCloud, ChevronDown, CheckSquare, MapPin, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Search, Download, Plus, Trash2, Lock, X, UserPlus, LogIn, AlertCircle, FileText, UploadCloud, ChevronDown, CheckSquare, MapPin, RefreshCw, ChevronRight, Building2, Layers, Table } from 'lucide-react';
 import { PillarTable } from './pillar/PillarTable';
 import { PillarModal } from './pillar/PillarModal';
 import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
@@ -129,6 +129,17 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const [showDeleteByRegionModal, setShowDeleteByRegionModal] = useState(false);
   const [regionToDelete, setRegionToDelete] = useState('');
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+
+  // Khusus Pilar SLRT / Puskesos: State Pemilihan Wilayah (Level 1: 27 Tombol, Level 2: Tabel Wilayah)
+  const [selectedSlrtRegion, setSelectedSlrtRegion] = useState<string | null>(null);
+  const isSuperAdminOrDev = session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
+  const isSlrtLevel1 = pillarId === 'slrt_puskesos' && isSuperAdminOrDev && !selectedSlrtRegion;
+  const isSlrtLevel2 = pillarId === 'slrt_puskesos' && (selectedSlrtRegion !== null || !isSuperAdminOrDev);
+  const activeSlrtRegion = isSuperAdminOrDev ? (selectedSlrtRegion || 'Jawa Barat') : (session.wilayah || 'Jawa Barat');
+
+  useEffect(() => {
+    setSelectedSlrtRegion(null);
+  }, [pillarId]);
 
   // Daftar wilayah yang ada di pilar ini beserta jumlah anggotanya
   const availableRegionsWithCount = useMemo(() => {
@@ -1190,6 +1201,307 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       });
     }
   };
+
+  // =========================================================================
+  // KHUSUS PILAR SLRT / PUSKESOS - LEVEL 1 (SUPERADMIN & DEVELOPER: 27 TOMBOL WILAYAH)
+  // =========================================================================
+  if (isSlrtLevel1) {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-16">
+        {/* Header Banner */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] py-4 sm:py-6 px-3.5 sm:px-8 border-b-2 border-[#d4af37] text-white shadow-md">
+          <div className="absolute top-0 right-0 w-96 h-full bg-radial from-blue-500/10 to-transparent pointer-events-none" />
+          <div className="absolute -bottom-6 left-1/4 w-64 h-24 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-7xl mx-auto">
+            {/* Top Navigation: Tombol Kembali ke Beranda (Pojok Kiri Atas) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3 sm:mb-4 pb-2.5 sm:pb-3 border-b border-blue-700/40">
+              <BackToHomeButton onClick={onBackToDashboard} variant="gold" id="btn-back-top-slrt-lvl1" />
+              <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-blue-200/90 bg-blue-950/40 border border-blue-600/30 px-3 py-1 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>Portal Data Pilar Sosial Terpadu</span>
+              </div>
+            </div>
+
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
+              SLRT / PUSKESOS
+            </h1>
+            <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+              Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Provinsi Jawa Barat
+            </p>
+            <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
+              <span>Dinas Sosial Provinsi Jawa Barat</span>
+              <span className="text-blue-400/80">•</span>
+              <span>Pilih Wilayah Kerja (27 Kabupaten / Kota)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content: 27 Tombol Memanjang */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
+          {/* Summary Banner Card */}
+          <div className="bg-gradient-to-r from-[#0f2b5c] to-[#143b7d] border-2 border-[#d4af37] rounded-2xl p-4 sm:p-6 text-white shadow-lg mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-widest text-[#f1c40f] bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+                <Building2 className="w-3.5 h-3.5 text-[#f1c40f]" />
+                <span>Direktori Wilayah SLRT / Puskesos</span>
+              </span>
+              <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                Daftar Wilayah Kerja 27 Kabupaten / Kota
+              </h3>
+              <p className="text-xs sm:text-sm text-blue-100 font-medium max-w-2xl leading-relaxed">
+                Silakan pilih salah satu Kabupaten atau Kota di bawah ini untuk membuka data Sistem Layanan & Rujukan Terpadu (SLRT / Puskesos) pada wilayah tersebut.
+              </p>
+            </div>
+            <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-center shrink-0 self-stretch sm:self-auto">
+              <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider block">Total Wilayah</span>
+              <span className="text-2xl sm:text-3xl font-black text-white">27</span>
+              <span className="text-[10px] text-blue-200 block">Kab / Kota</span>
+            </div>
+          </div>
+
+          {/* 27 Tombol Memanjang (Kab. Bogor s.d. Kota Banjar) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
+            {KAB_KOTA_ONLY.map((regionName, idx) => (
+              <button
+                key={regionName}
+                type="button"
+                id={`btn-slrt-region-${idx + 1}`}
+                onClick={() => {
+                  setSelectedSlrtRegion(regionName);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="group w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50/70 border-2 border-slate-200 hover:border-[#0f2b5c] shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer text-left active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0f2b5c] group-hover:bg-blue-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-xs transition-colors">
+                    {idx + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate">
+                      {regionName}
+                    </h4>
+                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>Provinsi Jawa Barat</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-[#d4af37] text-slate-500 group-hover:text-[#0f2b5c] flex items-center justify-center shrink-0 transition-colors">
+                  <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KIRI BAWAH) */}
+          <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <BackToHomeButton onClick={onBackToDashboard} id="btn-back-bottom-slrt-lvl1" />
+            <div className="text-xs text-slate-500 font-semibold">
+              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT / Puskesos</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Custom Alert Modal */}
+        {alertInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center border border-slate-200">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                alertInfo.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                {alertInfo.type === 'error' ? <Lock className="w-6 h-6" /> : <X className="w-6 h-6 rotate-45" />}
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{alertInfo.title}</h3>
+              <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">{alertInfo.message}</p>
+              <button
+                type="button"
+                onClick={() => setAlertInfo(null)}
+                className="w-full py-2.5 bg-[#043e2e] hover:bg-[#065e44] text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer"
+              >
+                Tutup / Mengerti
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // KHUSUS PILAR SLRT / PUSKESOS - LEVEL 2 (TABEL WILAYAH TERPILIH / KHUSUS ADMIN WILAYAH/USER/TAMU)
+  // =========================================================================
+  if (isSlrtLevel2) {
+    const activeRegion = activeSlrtRegion;
+    const handleBackFromLevel2 = () => {
+      if (isSuperAdminOrDev) {
+        setSelectedSlrtRegion(null);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        onBackToDashboard();
+      }
+    };
+    const backBtnLabel = isSuperAdminOrDev ? 'Kembali ke Pilihan Wilayah' : 'Kembali ke Beranda';
+
+    return (
+      <div className="min-h-screen bg-slate-50 pb-16">
+        {/* 1. Header Banner */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] py-4 sm:py-6 px-3.5 sm:px-8 border-b-2 border-[#d4af37] text-white shadow-md">
+          <div className="absolute top-0 right-0 w-96 h-full bg-radial from-blue-500/10 to-transparent pointer-events-none" />
+          <div className="absolute -bottom-6 left-1/4 w-64 h-24 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-7xl mx-auto">
+            {/* Top Row for Navigation: Tombol Kembali (Pojok Kiri Atas) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3 sm:mb-4 pb-2.5 sm:pb-3 border-b border-blue-700/40">
+              <BackToHomeButton
+                onClick={handleBackFromLevel2}
+                label={backBtnLabel}
+                variant="gold"
+                id="btn-back-top-slrt-lvl2"
+              />
+              <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-blue-200/90 bg-blue-950/40 border border-blue-600/30 px-3 py-1 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>Portal Data Pilar Sosial Terpadu</span>
+              </div>
+            </div>
+
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
+              SLRT / PUSKESOS - {activeRegion.toUpperCase()}
+            </h1>
+            <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+              Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Wilayah {activeRegion}
+            </p>
+            <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
+              <span>Dinas Sosial Provinsi Jawa Barat</span>
+              <span className="text-blue-400/80">•</span>
+              <span>Wilayah: {activeRegion}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Container */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
+          {/* Summary Widget Card */}
+          <div className="flex flex-col items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="bg-[#0f2b5c] border-2 border-[#d4af37] rounded-xl p-3.5 sm:p-6 text-center text-white w-full max-w-lg shadow-lg">
+              <h3 className="text-[10px] sm:text-xs uppercase tracking-widest text-[#f1c40f] font-bold mb-1 sm:mb-2">
+                TOTAL SLRT / PUSKESOS TERDATA
+              </h3>
+              <div className="text-3xl sm:text-5xl font-black">
+                0 <span className="text-sm sm:text-lg font-medium opacity-80">Lembaga</span>
+              </div>
+              <div className="text-xs text-blue-200 font-semibold mt-1">
+                Wilayah Kerja: {activeRegion}
+              </div>
+            </div>
+          </div>
+
+          {/* Format Tabel Sementara Kosong (Placeholder Bersih Siap Pakai Sesuai Arahan) */}
+          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden mb-8">
+            {/* Table Header Bar */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-[#0f2b5c] flex items-center gap-2">
+                  <Table className="w-4 h-4 text-[#d4af37]" />
+                  <span>Tabel Data SLRT / Puskesos ({activeRegion})</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Rekapitulasi resmi kelembagaan Sistem Layanan & Rujukan Terpadu tingkat Kecamatan & Desa/Kelurahan
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="self-start sm:self-auto text-[10.5px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-300 shrink-0">
+                  {isSuperAdminOrDev
+                    ? 'Superadmin / Developer'
+                    : session.role === 'admin'
+                    ? `Admin Wilayah (${activeRegion})`
+                    : `Tamu Publik (${activeRegion})`}
+                </span>
+                <span className="self-start sm:self-auto text-[10.5px] font-black uppercase tracking-wider bg-blue-100 text-[#0f2b5c] px-3 py-1 rounded-full border border-blue-200 shrink-0">
+                  Format Dalam Penataan
+                </span>
+              </div>
+            </div>
+
+            {/* Empty Table Frame Structure */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-[#0f2b5c] text-white text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                    <th className="py-3 px-4 text-center w-12">No</th>
+                    <th className="py-3 px-4">Nama SLRT / Puskesos</th>
+                    <th className="py-3 px-4">Desa / Kelurahan</th>
+                    <th className="py-3 px-4">Kecamatan</th>
+                    <th className="py-3 px-4">Kabupaten / Kota</th>
+                    <th className="py-3 px-4">Operator / Kontak</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Empty State Row */}
+                  <tr>
+                    <td colSpan={7} className="py-16 px-4 text-center">
+                      <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-3">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 border-2 border-blue-200 text-[#0f2b5c] flex items-center justify-center shadow-xs">
+                          <Layers className="w-7 h-7 text-[#0f2b5c]" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm sm:text-base font-black text-slate-800">
+                            Format Tabel Sementara Dikosongkan
+                          </h4>
+                          <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                            Format kolom dan struktur data tabel SLRT / Puskesos untuk wilayah <strong className="text-[#0f2b5c]">{activeRegion}</strong> saat ini sedang dalam penataan sistem sesuai regulasi dinas.
+                          </p>
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">
+                          <span>Wilayah Terpilih:</span>
+                          <strong className="text-[#0f2b5c]">{activeRegion}</strong>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI (POJOK KIRI BAWAH) */}
+          <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <BackToHomeButton
+              onClick={handleBackFromLevel2}
+              label={backBtnLabel}
+              id="btn-back-bottom-slrt-lvl2"
+            />
+            <div className="text-xs text-slate-500 font-semibold">
+              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT / Puskesos ({activeRegion})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Custom Alert Modal */}
+        {alertInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center border border-slate-200">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                alertInfo.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                {alertInfo.type === 'error' ? <Lock className="w-6 h-6" /> : <X className="w-6 h-6 rotate-45" />}
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 mb-1">{alertInfo.title}</h3>
+              <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">{alertInfo.message}</p>
+              <button
+                type="button"
+                onClick={() => setAlertInfo(null)}
+                className="w-full py-2.5 bg-[#043e2e] hover:bg-[#065e44] text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer"
+              >
+                Tutup / Mengerti
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
