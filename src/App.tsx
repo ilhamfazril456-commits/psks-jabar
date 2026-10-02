@@ -447,13 +447,22 @@ export default function App() {
         console.warn('Admin accounts sync error in rescue flow:', accErr);
       }
 
-      // Sinkronkan konfigurasi aplikasi jika ada
+      // Sinkronkan daftar ID terhapus ke metadata Firestore agar seluruh perangkat sinkron
       try {
-        if (appSettings) {
-          await setFirestoreDoc('app_settings', 'global', cleanFirestoreData(appSettings));
+        if (deletedIds && deletedIds.length > 0) {
+          await setFirestoreDoc(
+            'psks_records_meta',
+            'deletions',
+            {
+              deletedIds,
+              updatedAt: Date.now(),
+              lastAction: 'RESCUE_SYNC',
+            },
+            { merge: true }
+          );
         }
-      } catch (setErr) {
-        console.warn('App settings sync error in rescue flow:', setErr);
+      } catch (delErr) {
+        console.warn('Deletions meta sync error in rescue flow:', delErr);
       }
 
       clearSyncQueue();
@@ -928,9 +937,56 @@ export default function App() {
     return initial;
   });
 
+  // Real-time Global Deletions Listener: Synchronizes deleted records across all devices immediately
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = subscribeToDoc('psks_records_meta', 'deletions', (data, exists) => {
+        if (exists && data && Array.isArray(data.deletedIds)) {
+          const serverDeletedIds: string[] = data.deletedIds;
+          if (serverDeletedIds.length > 0) {
+            setDeletedIds((prev) => {
+              const merged = Array.from(new Set([...prev, ...serverDeletedIds]));
+              try {
+                localStorage.setItem('psks_deleted_ids', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+
+            // Immediately purge deleted records from allPillarData state on this device
+            setAllPillarData((prev) => {
+              let hasChanges = false;
+              const updated: Record<string, PSKSDataRecord[]> = {};
+              for (const [k, records] of Object.entries(prev)) {
+                const filtered = records.filter((r) => !serverDeletedIds.includes(r.id));
+                if (filtered.length !== records.length) {
+                  hasChanges = true;
+                }
+                updated[k] = filtered;
+              }
+              if (hasChanges) {
+                try {
+                  localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              }
+              return prev;
+            });
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('Error subscribing to deletions meta:', err);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     // SMART CACHE & SUMMARY PATTERN FOR WEST JAVA PUBLIC TRAFFIC
-    // Public visitors use cached/aggregated data (valid 30 mins) to prevent burning reads.
+    // Public visitors use cached/aggregated data to prevent burning reads when idle.
     const isPublicGuest = session.statusActive !== 'SAH_TERDAFTAR';
     if (isPublicGuest && gateModalOpen) {
       return;
@@ -939,7 +995,8 @@ export default function App() {
     const lastFetch = Number(localStorage.getItem('psks_cache_timestamp') || '0');
     const hasCachedData = !!localStorage.getItem('psks_all_pillar_data');
 
-    if (isPublicGuest && hasCachedData && Date.now() - lastFetch < CACHE_TTL_MS) {
+    // Only skip public background read if cache is fresh AND not actively viewing pillar detail
+    if (isPublicGuest && hasCachedData && Date.now() - lastFetch < CACHE_TTL_MS && currentTab !== 'pillar_detail') {
       return;
     }
 
@@ -1036,26 +1093,43 @@ export default function App() {
               console.warn('Error merging sync queue into realtime snapshot:', err);
             }
 
-            // Hybrid Smart Merge 2: Gabungkan data cache lokal yang baru diimport agar tidak tertimpa snapshot server
+            // Hybrid Smart Merge 2: Gabungkan data cache lokal HANYA jika data tersebut tercatat dalam antrean psks_sync_queue (pending upload)
+            // Kritis: Mencegah bangkitnya kembali (resurrection) data yang sudah sah dihapus dari server Firestore
             try {
-              const cachedRaw = localStorage.getItem('psks_all_pillar_data');
-              if (cachedRaw) {
-                const cachedData = JSON.parse(cachedRaw);
-                if (cachedData && typeof cachedData === 'object') {
-                  Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
-                    const localList = cachedData[k];
-                    if (Array.isArray(localList)) {
-                      localList.forEach((localRec: any) => {
-                        if (!localRec || !localRec.id) return;
-                        if (deletedIds.includes(localRec.id)) return;
-                        if (!loaded[k]) loaded[k] = [];
-                        const exists = loaded[k].some((r) => r.id === localRec.id);
-                        if (!exists) {
-                          loaded[k].push(localRec);
-                        }
-                      });
+              const rawQueue = localStorage.getItem('psks_sync_queue');
+              const pendingOfflineIds = new Set<string>();
+              if (rawQueue) {
+                const qItems = JSON.parse(rawQueue);
+                if (Array.isArray(qItems)) {
+                  qItems.forEach((q: any) => {
+                    if (q.collection === 'psks_records' && q.type === 'SET' && q.docId) {
+                      pendingOfflineIds.add(q.docId);
                     }
                   });
+                }
+              }
+
+              if (pendingOfflineIds.size > 0) {
+                const cachedRaw = localStorage.getItem('psks_all_pillar_data');
+                if (cachedRaw) {
+                  const cachedData = JSON.parse(cachedRaw);
+                  if (cachedData && typeof cachedData === 'object') {
+                    Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+                      const localList = cachedData[k];
+                      if (Array.isArray(localList)) {
+                        localList.forEach((localRec: any) => {
+                          if (!localRec || !localRec.id) return;
+                          if (deletedIds.includes(localRec.id)) return;
+                          if (!pendingOfflineIds.has(localRec.id)) return; // Kunci: Hanya data yang benar-benar pending upload
+                          if (!loaded[k]) loaded[k] = [];
+                          const exists = loaded[k].some((r) => r.id === localRec.id);
+                          if (!exists) {
+                            loaded[k].push(localRec);
+                          }
+                        });
+                      }
+                    });
+                  }
                 }
               }
             } catch (err) {
@@ -1096,8 +1170,8 @@ export default function App() {
             } catch {}
           }
 
-          // For public guests, disconnect listener after 1 initial fetch so we don't hold open streams
-          if (isPublicGuest && unsubscribe) {
+          // For public guests, disconnect listener after initial fetch only if NOT actively viewing pillar detail
+          if (isPublicGuest && currentTab !== 'pillar_detail' && unsubscribe) {
             unsubscribe();
           }
         },
@@ -3283,7 +3357,22 @@ export default function App() {
       details: `${actorLabel} telah MENGHAPUS anggota Pilar ${pilarName} atas nama [${memberName}] (Wilayah: ${memberWilayah})`,
     });
 
-    // 3. Remove from Firestore psks_records
+    // 3. Sync deleted IDs to Firestore metadata so all devices receive the deletion in real-time
+    try {
+      setFirestoreDoc(
+        'psks_records_meta',
+        'deletions',
+        {
+          deletedIds: nextDeleted,
+          updatedAt: Date.now(),
+          lastAction: 'DELETE_SINGLE',
+          lastTarget: recordId,
+        },
+        { merge: true }
+      ).catch(() => {});
+    } catch {}
+
+    // 4. Remove from Firestore psks_records
     if (quotaExceededRef.current || isQuotaExceeded) {
       addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'DELETE' });
       return;
@@ -3344,7 +3433,22 @@ export default function App() {
       details: `${actorLabel} telah MENGHAPUS MASSAL ${recordIds.length} anggota Pilar ${pilarName}`,
     });
 
-    // 3. Remove from Firestore psks_records
+    // 3. Sync deleted IDs to Firestore metadata so all devices receive the batch deletion in real-time
+    try {
+      setFirestoreDoc(
+        'psks_records_meta',
+        'deletions',
+        {
+          deletedIds: nextDeleted,
+          updatedAt: Date.now(),
+          lastAction: 'DELETE_BATCH',
+          lastBatchCount: recordIds.length,
+        },
+        { merge: true }
+      ).catch(() => {});
+    } catch {}
+
+    // 4. Remove from Firestore psks_records
     if (quotaExceededRef.current || isQuotaExceeded) {
       recordIds.forEach((id) => {
         addToSyncQueue({ collection: 'psks_records', docId: id, type: 'DELETE' });
