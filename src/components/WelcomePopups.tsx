@@ -25,6 +25,7 @@ interface LoginSuccessModalProps {
 }
 
 // Sound synthesis utility for smooth pleasant login success chime
+// High-grade acoustic dual-tone bell chime (warm E5 -> crystal B5/E6 harmonic resolution)
 const playLoginSuccessChime = () => {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -32,25 +33,50 @@ const playLoginSuccessChime = () => {
     const ctx = new AudioCtx();
     const now = ctx.currentTime;
 
-    // Harmonic multi-tone chime (F#5, A#5, C#6)
-    const freqs = [739.99, 932.33, 1108.73];
-    freqs.forEach((freq, idx) => {
+    // Master filter to smooth out high frequencies and eliminate speaker crackling
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2600, now);
+    filter.connect(ctx.destination);
+
+    // Master gain node
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.14, now);
+    masterGain.connect(filter);
+
+    // Harmonic bell pair: Warm E5 (659.25 Hz) followed by uplifting B5 (987.77 Hz)
+    const tones = [
+      { freq: 659.25, time: now, duration: 0.55, gainLevel: 0.16 },
+      { freq: 987.77, time: now + 0.11, duration: 0.85, gainLevel: 0.22 },
+      // Subtle overtone for air and warmth (E6 harmonic)
+      { freq: 1318.51, time: now + 0.11, duration: 0.70, gainLevel: 0.06 },
+    ];
+
+    tones.forEach((tone) => {
       const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const noteGain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      osc.frequency.setValueAtTime(tone.freq, tone.time);
 
-      gain.gain.setValueAtTime(0, now + idx * 0.08);
-      gain.gain.linearRampToValueAtTime(0.18 / (idx + 1), now + idx * 0.08 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.65);
+      // Smooth envelope: soft attack (18ms) to prevent harsh click, natural exponential decay
+      noteGain.gain.setValueAtTime(0.0001, tone.time);
+      noteGain.gain.linearRampToValueAtTime(tone.gainLevel, tone.time + 0.018);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, tone.time + tone.duration);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.connect(noteGain);
+      noteGain.connect(masterGain);
 
-      osc.start(now + idx * 0.08);
-      osc.stop(now + idx * 0.08 + 0.7);
+      osc.start(tone.time);
+      osc.stop(tone.time + tone.duration + 0.05);
     });
+
+    // Clean up audio context after playback completes
+    setTimeout(() => {
+      try {
+        ctx.close();
+      } catch {}
+    }, 1200);
   } catch {}
 };
 
