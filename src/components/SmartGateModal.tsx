@@ -981,11 +981,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950">
+                        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                          <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 whitespace-nowrap">
                             Daftar Akun Baru
                           </span>
-                          <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase ${
+                          <span className={`text-[7.5px] sm:text-[8.5px] font-black px-1.5 sm:px-2 py-0.5 rounded-full uppercase whitespace-nowrap shrink-0 tracking-tight sm:tracking-normal ${
                             !clientRegisteredAccount
                               ? 'bg-blue-200 text-blue-900'
                               : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
@@ -994,9 +994,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                               ? 'bg-rose-200 text-rose-950'
                               : 'bg-amber-200 text-amber-950'
                           }`}>
-                            {!clientRegisteredAccount
-                              ? '1 Akun / Perangkat (Tersedia)'
-                              : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
+                            {!clientRegisteredAccount ? (
+                              <>
+                                <span className="hidden sm:inline">1 Akun / Perangkat (Tersedia)</span>
+                                <span className="sm:hidden">1 Akun / Perangkat</span>
+                              </>
+                            ) : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
                               ? 'Terverifikasi (1/1)'
                               : clientRegisteredAccount.statusVerval === 'DITOLAK'
                               ? 'Ditolak (Daftar Ulang)'
