@@ -798,10 +798,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       </div>
 
       {/* Center Split-Screen Container (Full Screen Responsive, Strictly No-Scroll) */}
-      <main className="relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 my-auto py-1 sm:py-2 flex items-center justify-center">
+      <main className="relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 h-full md:my-auto p-0 sm:py-2 flex items-center justify-center">
         
-        {/* Split-Screen Card */}
-        <div className="relative w-full h-full max-h-[90dvh] sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
+        {/* Split-Screen Card (Full Screen Balanced on Mobile, Fixed Split-Screen on Desktop) */}
+        <div className="relative w-full h-full max-md:h-full max-md:max-h-full sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
           
           {/* ================= LEFT COLUMN: DISTINCT ROYAL BLUE BRANDING (DESKTOP / LAPTOP) ================= */}
           <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#1d63d2] via-[#1a53b5] to-[#113a84] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/30 shadow-lg">
@@ -868,7 +868,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           </div>
 
           {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
-          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-4 pt-3 pb-3.5 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 transition-colors duration-300`}>
+          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-3 pt-2 pb-2 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full transition-colors duration-300`}>
             
             {/* Top Right Curved Blue Accent Wave */}
             <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-blue-400/15 bg-blue-600/10' : 'bg-blue-600/10'} pointer-events-none`} />
@@ -2209,7 +2209,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               </div>
 
               {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) - Terangkat dan Tidak Terpotong */}
-              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-semibold text-center leading-snug break-words px-1 pt-1 pb-2">
+              <div className="md:hidden text-[8px] sm:text-[8.5px] text-slate-500 font-semibold text-center leading-snug break-words px-1 pt-0.5 pb-1">
                 © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
