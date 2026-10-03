@@ -53,7 +53,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 7. **Penyuluh Sosial Masyarakat (PENSOS)**: Tokoh penyuluh komunikasi perubahan perilaku dan advokasi kebijakan sosial (Permensos No. 10/2014).
 8. **Tenaga Kesejahteraan Sosial Kecamatan (TKSK)**: Personil fungsional 1 orang per kecamatan koordinator DTKS, verival bansos, & rujukan (Permensos No. 28/2018).
 9. **KUBE & Badan Usaha Sosial**: Wadah ekonomi gotong royong 5-10 KK miskin penerima stimulan modal usaha produktif mandiri.
-10. **SLRT / Puskesos**: Pusat Layanan & Rujukan Terpadu satu pintu (*one-stop social service*) di kabupaten/kota dan desa/kelurahan.`,
+10. **SLRT_PUSKESOS**: Pusat Layanan & Rujukan Terpadu satu pintu (*one-stop social service*) di kabupaten/kota dan desa/kelurahan.`,
 
   'u-10': `**Tugas, Peran & Fungsi Pekerja Sosial Masyarakat (PSM)**:
 - **Definisi**: Warga masyarakat yang atas dasar rasa kesadaran dan tanggung jawab sosial berinisiatif mengabdi secara sukarela di bidang kesejahteraan sosial di tingkat desa/kelurahan.
@@ -109,7 +109,7 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   * Berbasis di setiap **desa/kelurahan** dengan jumlah lebih banyak dan bersifat sukarela.
   * Berperan langsung menjangkau warga, mendampingi PPKS di tingkat akar rumput (RT/RW), dan menjadi mitra kerja TKSK di lapangan.`,
 
-  'u-16': `**Fungsi SLRT / Puskesos (Layanan Rujukan Terpadu Satu Pintu)**:
+  'u-16': `**Fungsi SLRT_PUSKESOS (Layanan Rujukan Terpadu Satu Pintu)**:
 - **Definisi**: Sistem Layanan dan Rujukan Terpadu (SLRT di tingkat kabupaten/kota) dan Pusat Kesejahteraan Sosial (Puskesos di tingkat desa/kelurahan).
 - **Landasan Hukum**: Permensos RI No. 15 Tahun 2018.
 - **Peran One-Stop Social Service**:

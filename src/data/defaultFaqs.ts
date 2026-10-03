@@ -13,7 +13,7 @@ export const DEFAULT_PORTAL_FAQS: PortalFaqItem[] = [
   {
     id: 'faq-1',
     question: 'Apa itu PSKS JABAR dan apa saja 10 Pilar Kesejahteraan Sosial?',
-    answer: 'PSKS (Potensi dan Sumber Kesejahteraan Sosial) adalah perorangan, kelompok, atau lembaga yang berperan aktif dalam penyelenggaraan kesejahteraan sosial di Jawa Barat sesuai UU No. 11 Tahun 2009. Di portal ini terintegrasi 10 Pilar resmi binaan Dinas Sosial Provinsi Jawa Barat, yaitu:\n1. **PSM** (Pekerja Sosial Masyarakat)\n2. **TAGANA** (Taruna Siaga Bencana)\n3. **Karang Taruna**\n4. **TKSK** (Tenaga Kesejahteraan Sosial Kecamatan)\n5. **Peksos / PKSP** (Pekerja Sosial Profesional)\n6. **LKS** (Lembaga Kesejahteraan Sosial)\n7. **LK3** (Lembaga Konsultasi Kesejahteraan Keluarga)\n8. **Pensos** (Penyuluh Sosial)\n9. **KUBE / Badan Usaha** (Kelompok Usaha Bersama)\n10. **SLRT / Puskesos** (Sistem Layanan dan Rujukan Terpadu).',
+    answer: 'PSKS (Potensi dan Sumber Kesejahteraan Sosial) adalah perorangan, kelompok, atau lembaga yang berperan aktif dalam penyelenggaraan kesejahteraan sosial di Jawa Barat sesuai UU No. 11 Tahun 2009. Di portal ini terintegrasi 10 Pilar resmi binaan Dinas Sosial Provinsi Jawa Barat, yaitu:\n1. **PSM** (Pekerja Sosial Masyarakat)\n2. **TAGANA** (Taruna Siaga Bencana)\n3. **Karang Taruna**\n4. **TKSK** (Tenaga Kesejahteraan Sosial Kecamatan)\n5. **Peksos / PKSP** (Pekerja Sosial Profesional)\n6. **LKS** (Lembaga Kesejahteraan Sosial)\n7. **LK3** (Lembaga Konsultasi Kesejahteraan Keluarga)\n8. **Pensos** (Penyuluh Sosial)\n9. **KUBE / Badan Usaha** (Kelompok Usaha Bersama)\n10. **SLRT_PUSKESOS** (Sistem Layanan dan Rujukan Terpadu).',
     category: 'pilar_psks',
     order: 1,
     isActive: true,

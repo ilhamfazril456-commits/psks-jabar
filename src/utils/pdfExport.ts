@@ -314,7 +314,7 @@ export const exportPillarToPDF = ({
     head = [[
       'No',
       'Kabupaten/Kota',
-      'Nama SLRT / Puskesos',
+      'Nama SLRT_PUSKESOS',
       'Desa/Kelurahan',
       'Kecamatan',
       'Tahun Berdiri',

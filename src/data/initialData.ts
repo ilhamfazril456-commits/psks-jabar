@@ -171,7 +171,7 @@ export const PILLARS_CONFIG: Record<string, PillarInfo> = {
   },
   slrt_puskesos: {
     id: 'slrt_puskesos',
-    title: 'SLRT / PUSKESOS',
+    title: 'SLRT_PUSKESOS',
     shortName: 'Sistem Layanan & Rujukan Terpadu',
     subtitle: 'Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Jabar',
     icon: '🛡️',

@@ -1437,7 +1437,7 @@ export const PillarModal: React.FC<PillarModalProps> = ({
               {/* 1. Nama SLRT */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama SLRT / Puskesos <span className="text-red-500">*</span> :
+                  Nama SLRT_PUSKESOS <span className="text-red-500">*</span> :
                 </label>
                 <input
                   type="text"

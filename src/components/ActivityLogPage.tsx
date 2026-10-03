@@ -64,7 +64,7 @@ const OFFICIAL_PILLARS = [
   { id: 'pensos', title: 'PENSOS', shortName: 'Penyuluh Sosial Masyarakat' },
   { id: 'tksk', title: 'TKSK', shortName: 'Tenaga Kesejahteraan Sosial Kecamatan' },
   { id: 'badanusaha', title: 'BADAN USAHA', shortName: 'KUBE & Badan Usaha Sosial' },
-  { id: 'slrt_puskesos', title: 'SLRT / PUSKESOS', shortName: 'Sistem Layanan & Rujukan Terpadu' },
+  { id: 'slrt_puskesos', title: 'SLRT_PUSKESOS', shortName: 'Sistem Layanan & Rujukan Terpadu' },
 ];
 
 export const ActivityLogPage: React.FC<ActivityLogPageProps> = ({
