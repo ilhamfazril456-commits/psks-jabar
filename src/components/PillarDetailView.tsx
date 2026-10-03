@@ -50,6 +50,8 @@ interface PillarDetailViewProps {
   onRescueSync?: () => Promise<void> | void;
   isRescueSyncing?: boolean;
   rescueProgressText?: string;
+  summaryCount?: number;
+  isLoadingRecords?: boolean;
 }
 
 export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
@@ -67,6 +69,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   onRescueSync,
   isRescueSyncing,
   rescueProgressText,
+  summaryCount,
+  isLoadingRecords,
 }) => {
   const pillar = PILLARS_CONFIG[pillarId] || PILLARS_CONFIG.peksos;
   const [searchTerm, setSearchTerm] = useState('');
@@ -478,8 +482,19 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     return KAB_KOTA_ONLY;
   }, [pillarId, session.role, session.isDeveloper, session.wilayah]);
 
-  // Summary counts
-  const totalCount = filteredByRoleRecords.length;
+  // Summary counts: prioritize real-time server summary count when viewing full scope, fallback to filtered records
+  const isViewingFullScope =
+    session.role === 'superadmin' ||
+    session.role === 'developer' ||
+    session.isDeveloper ||
+    !session.wilayah ||
+    session.wilayah === 'Semua Wilayah' ||
+    session.wilayah === 'Prov. Jabar';
+
+  const totalCount =
+    isViewingFullScope && summaryCount !== undefined && summaryCount > filteredByRoleRecords.length
+      ? summaryCount
+      : filteredByRoleRecords.length;
   const govCount = filteredByRoleRecords.filter((r) => isPeksosGov(r)).length;
   const swastaCount = filteredByRoleRecords.filter((r) => !isPeksosGov(r)).length;
 
@@ -1912,37 +1927,51 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           </div>
         )}
 
-        {/* 6. Data Table */}
-        <PillarTable
-          pillarId={pillarId}
-          pillar={pillar}
-          session={session}
-          displayRecords={displayRecords}
-          searchTerm={searchTerm}
-          isPeksosGov={isPeksosGov}
-          onEditClick={handleEditClick}
-          onDeleteClick={(record) => {
-            if (
-              session.role === 'admin' &&
-              session.wilayah &&
-              session.wilayah !== 'Prov. Jabar' &&
-              session.wilayah !== 'Semua Wilayah' &&
-              record.wilayah.toLowerCase().trim() !== session.wilayah.toLowerCase().trim()
-            ) {
-              setAlertInfo({
-                title: 'Otoritas Ditolak',
-                message: `Admin Wilayah (${session.wilayah}) hanya berhak menghapus data anggota di wilayahnya sendiri.`,
-                type: 'error',
-              });
-              return;
-            }
-            setRecordToDelete(record);
-          }}
-          showCheckbox={isSelectionModeActive}
-          selectedRecordIds={selectedRecordIds}
-          onToggleSelectRecord={handleToggleSelectRecord}
-          onToggleSelectAll={handleToggleSelectAll}
-        />
+        {/* 6. Data Table or Initial Loading Shimmer */}
+        {isLoadingRecords && displayRecords.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-10 sm:p-14 text-center shadow-xs mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-[#0f2b5c] mb-4 shadow-xs">
+              <RefreshCw className="w-7 h-7 animate-spin text-[#0f2b5c]" />
+            </div>
+            <h4 className="text-base font-black text-slate-800 mb-1">
+              Menghubungkan & Memuat Data Resmi {pillar.title}...
+            </h4>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Sedang mengambil seluruh basis data anggota se-Jawa Barat dari Google Cloud Firestore secara realtime.
+            </p>
+          </div>
+        ) : (
+          <PillarTable
+            pillarId={pillarId}
+            pillar={pillar}
+            session={session}
+            displayRecords={displayRecords}
+            searchTerm={searchTerm}
+            isPeksosGov={isPeksosGov}
+            onEditClick={handleEditClick}
+            onDeleteClick={(record) => {
+              if (
+                session.role === 'admin' &&
+                session.wilayah &&
+                session.wilayah !== 'Prov. Jabar' &&
+                session.wilayah !== 'Semua Wilayah' &&
+                record.wilayah.toLowerCase().trim() !== session.wilayah.toLowerCase().trim()
+              ) {
+                setAlertInfo({
+                  title: 'Otoritas Ditolak',
+                  message: `Admin Wilayah (${session.wilayah}) hanya berhak menghapus data anggota di wilayahnya sendiri.`,
+                  type: 'error',
+                });
+                return;
+              }
+              setRecordToDelete(record);
+            }}
+            showCheckbox={isSelectionModeActive}
+            selectedRecordIds={selectedRecordIds}
+            onToggleSelectRecord={handleToggleSelectRecord}
+            onToggleSelectAll={handleToggleSelectAll}
+          />
+        )}
 
         {/* Floating Action Bar jika ada data dicentang */}
         {selectedRecordIds.length > 0 && (

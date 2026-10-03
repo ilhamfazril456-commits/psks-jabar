@@ -34,6 +34,7 @@ import {
 interface HomePSKSAnalyticsProps {
   allPillarData: Record<string, any[]>;
   session: UserSession;
+  summaryCounts?: Record<string, number>;
   onSelectPillar?: (pillarId: string) => void;
   onScrollToGrid?: () => void;
 }
@@ -115,6 +116,7 @@ const normalizeRegion = (raw: string): string => {
 export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   allPillarData,
   session,
+  summaryCounts,
   onSelectPillar,
   onScrollToGrid,
 }) => {
@@ -175,12 +177,13 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
 
     const list = Object.entries(PILLARS_CONFIG).map(([key, config]) => {
       const records = allPillarData && Array.isArray(allPillarData[key]) ? allPillarData[key] : [];
+      const accurateCount = summaryCounts?.[key] !== undefined ? summaryCounts[key] : records.length;
       return {
         id: key,
         name: config.title || key,
         shortName: config.shortName || config.title || key,
         icon: config.icon || '📌',
-        count: records.length,
+        count: accurateCount,
         color: PILLAR_COLORS[key]?.hex || '#059669',
         unit: config.unitLabel || 'Data',
       };
@@ -193,7 +196,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       ...item,
       percent: total > 0 ? Math.round((item.count / safeTotal) * 100) : 0,
     }));
-  }, [allPillarData]);
+  }, [allPillarData, summaryCounts]);
 
   const totalAllPillars = useMemo(() => {
     return pillarDistributionData.reduce((acc, curr) => acc + (Number.isFinite(curr.count) ? curr.count : 0), 0);

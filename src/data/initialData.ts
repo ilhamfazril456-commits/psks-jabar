@@ -303,52 +303,7 @@ export const DEFAULT_PILLAR_DATA: Record<string, PSKSDataRecord[]> = {
       "wilayah": "Kab. Garut"
     }
   ],
-  "lks": [
-    {
-      "id": "lks-1",
-      "nama": "Yayasan Rumah Kasih Jabar",
-      "wilayah": "Kota Cimahi",
-      "kec": "Cimahi Tengah",
-      "sertifikasi": "062/0112/PPSKS/2025",
-      "status": "Terdaftar",
-      "nik": "AHU-0004561.AH.01.04",
-      "pillarId": "lks",
-      "hp": "H. Hendra Wijaya, M.Si"
-    },
-    {
-      "id": "lks-2",
-      "nama": "LKS Anak Harapan Bangsa",
-      "kec": "Sukasari",
-      "status": "Terdaftar",
-      "wilayah": "Kota Bandung",
-      "pillarId": "lks",
-      "nik": "AHU-0009823.AH.01.04",
-      "sertifikasi": "062/0843/PPSKS/2024",
-      "hp": "Hj. Siti Aminah, S.Pd"
-    },
-    {
-      "id": "lks-3",
-      "nik": "AHU-0003124.AH.01.04",
-      "pillarId": "lks",
-      "hp": "Drs. Ahmad Ruhiat",
-      "wilayah": "Kab. Garut",
-      "status": "Terdaftar",
-      "kec": "Samarang",
-      "sertifikasi": "062/0321/PPSKS/2025",
-      "nama": "Panti Asuhan Amanah Garut"
-    },
-    {
-      "id": "lks-4",
-      "hp": "K.H. Mansur Ali",
-      "status": "Terdaftar",
-      "nik": "AHU-0008812.AH.01.04",
-      "pillarId": "lks",
-      "nama": "Yayasan Al-Hidayah Cirebon",
-      "sertifikasi": "062/0512/PPSKS/2026",
-      "kec": "Sumber",
-      "wilayah": "Kab. Cirebon"
-    }
-  ],
+  "lks": [],
   "peksos": [
     {
       "id": "peksos-0a",

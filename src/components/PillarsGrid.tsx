@@ -20,6 +20,7 @@ import {
 interface PillarsGridProps {
   onSelectPillar: (pillarId: PillarId) => void;
   allPillarData?: Record<string, PSKSDataRecord[]>;
+  summaryCounts?: Record<string, number>;
 }
 
 const PILLAR_ICON_MAP: Record<
@@ -104,7 +105,7 @@ const PILLAR_ICON_MAP: Record<
   },
 };
 
-export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPillarData }) => {
+export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPillarData, summaryCounts }) => {
   const pillarKeys: PillarId[] = [
     'peksos',
     'psm',
@@ -132,8 +133,8 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
             tag: 'PSKS',
           };
 
-          // Hitung jumlah data terdaftar secara realtime
-          const count = allPillarData?.[key]?.length ?? 0;
+          // Hitung jumlah data terdaftar secara realtime (prioritaskan summary count realtime dari cloud)
+          const count = summaryCounts?.[key] !== undefined ? summaryCounts[key] : (allPillarData?.[key]?.length ?? 0);
           const unit = pillar?.unitLabel || (key === 'lks' || key === 'slrt_puskesos' ? 'Lembaga' : key === 'badanusaha' ? 'Kelompok' : 'Orang');
 
           return (
