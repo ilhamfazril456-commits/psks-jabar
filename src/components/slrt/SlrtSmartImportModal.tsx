@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -9,11 +9,11 @@ import {
   Loader2,
   Table,
   Building2,
-  MapPin,
   Check,
-  Layers,
   Sparkles,
-  Info
+  Layers,
+  ChevronRight,
+  Filter
 } from 'lucide-react';
 import { parseSlrtExcelFile, SlrtParsedResult } from './slrtExcelParser';
 import { PSKSDataRecord } from '../../types';
@@ -35,6 +35,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
   const [isParsing, setIsParsing] = useState<boolean>(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<SlrtParsedResult | null>(null);
+  const [selectedRegionKey, setSelectedRegionKey] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadSuccessCount, setUploadSuccessCount] = useState<number | null>(null);
 
@@ -49,20 +50,24 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
     setIsParsing(false);
     setParseError(null);
     setParseResult(null);
+    setSelectedRegionKey('');
     setIsUploading(false);
     setUploadSuccessCount(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleFileChange = async (selectedFile: File) => {
+  const processFile = async (selectedFile: File, sheetName?: string) => {
     setFile(selectedFile);
     setIsParsing(true);
     setParseError(null);
-    setParseResult(null);
 
     try {
-      const result = await parseSlrtExcelFile(selectedFile, targetRegion);
+      const result = await parseSlrtExcelFile(selectedFile, targetRegion, sheetName);
       setParseResult(result);
+      const regKeys = Object.keys(result.regions);
+      if (regKeys.length > 0) {
+        setSelectedRegionKey(regKeys[0]);
+      }
     } catch (err: any) {
       console.error('Error parsing SLRT Excel:', err);
       setParseError(err.message || 'Gagal memproses file Excel.');
@@ -74,7 +79,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -94,21 +99,31 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
     }
   };
 
+  // Active region data for full preview
+  const activeRegionData = useMemo(() => {
+    if (!parseResult) return null;
+    const key = selectedRegionKey || Object.keys(parseResult.regions)[0];
+    return key ? parseResult.regions[key] : null;
+  }, [parseResult, selectedRegionKey]);
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex items-center justify-between border-b-2 border-[#d4af37]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start sm:items-center justify-center min-h-screen animate-fadeIn">
+      {/* Container with top and bottom spacing to prevent header cutoff */}
+      <div className="my-auto w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Modal Header (Never cut off) */}
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 text-[#d4af37]">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 text-[#d4af37] shrink-0">
               <UploadCloud className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">
+                <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">
                   {isSingleRegionMode ? 'Skenario B: Khusus Wilayah' : 'Skenario A: Masal 27 Kab/Kota'}
                 </span>
-                <span className="text-[10px] text-blue-200 font-semibold">Smart Parser Auto-Forwarding</span>
+                <span className="text-[10px] text-blue-200 font-semibold hidden sm:inline">
+                  Smart Paired-Column Scanner (Format Resmi Dinas)
+                </span>
               </div>
               <h3 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
                 {isSingleRegionMode
@@ -120,7 +135,8 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Tutup Modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -133,12 +149,12 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
             <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <strong className="font-bold text-blue-950 block mb-1">
-                Sistem Deteksi Otomatis Format Resmi Puskesos Dinas Sosial Jabar:
+                Deteksi Otomatis Format Resmi Rekapitulasi Puskesos:
               </strong>
               <p>
                 {isSingleRegionMode
                   ? `Sistem akan otomatis mengekstrak seluruh Desa dan Kelurahan yang telah membentuk Puskesos khusus untuk wilayah ${targetRegion}.`
-                  : 'Unggah 1 file Excel utuh (seperti format laporan WPS dinas). Sistem cerdas akan otomatis membagi, menyortir, dan mendistribusikan ribuan data desa/kelurahan ke masing-masing 27 Kabupaten/Kota se-Jawa Barat tanpa perlu memotong file!'}
+                  : 'Unggah 1 file Excel utuh (seperti format laporan WPS dinas). Sistem cerdas akan otomatis membagi, menyortir, dan mendistribusikan ribuan data desa/kelurahan ke masing-masing 27 Kabupaten/Kota se-Jawa Barat tanpa perlu memotong baris!'}
               </p>
             </div>
           </div>
@@ -180,7 +196,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
-                        handleFileChange(e.target.files[0]);
+                        processFile(e.target.files[0]);
                       }
                     }}
                   />
@@ -199,7 +215,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     </div>
                     <h5 className="text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] mb-1">
                       {isParsing
-                        ? 'Sedang Membaca & Memetakan Struktur Excel...'
+                        ? 'Sedang Membaca & Memetakan Struktur Kolom WPS...'
                         : 'Klik untuk Memilih File atau Drag & Drop File Excel Disini'}
                     </h5>
                     <p className="text-xs text-slate-500 font-medium">
@@ -227,7 +243,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                 </div>
               )}
 
-              {/* Parsing Result Preview */}
+              {/* Parsing Result: Full Preview Section */}
               {parseResult && (
                 <div className="space-y-4">
                   {/* File Info Bar */}
@@ -235,10 +251,14 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     <div className="flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-[#0f2b5c]" />
                       <span className="font-bold text-slate-800">{parseResult.fileName}</span>
+                      <span className="text-[11px] text-slate-500">
+                        (Sheet: <strong className="text-blue-900">{parseResult.sheetName}</strong>)
+                      </span>
                     </div>
+
                     <div className="flex items-center gap-3">
                       <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-                        {parseResult.totalRecords} Desa/Kelurahan Terdeteksi
+                        Total {parseResult.totalRecords} Desa & Kelurahan Terdeteksi
                       </span>
                       <button
                         type="button"
@@ -250,76 +270,199 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Summary per Region Breakdown */}
-                  <div>
-                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4 text-[#0f2b5c]" />
-                      <span>Distribusi Wilayah Kabupaten / Kota ({Object.keys(parseResult.regionsSummary).length} Wilayah)</span>
-                    </h5>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                      {Object.entries(parseResult.regionsSummary).map(([regName, info]) => (
-                        <div
-                          key={regName}
-                          className="p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#0f2b5c] transition-all shadow-2xs flex flex-col justify-between"
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-black text-xs text-[#0f2b5c] truncate">{regName}</span>
-                            <span className="text-[10px] font-black bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full">
-                              {info.recordCount} Data
-                            </span>
-                          </div>
-                          <div className="text-[10.5px] text-slate-500 font-medium flex items-center justify-between mt-1">
-                            <span>{info.kecamatanList.length} Kecamatan</span>
-                            <span>{info.kelurahanCount} Kel / {info.desaCount} Desa</span>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Switch Sheet selector if file has multiple sheets */}
+                  {parseResult.availableSheets.length > 1 && (
+                    <div className="flex items-center gap-2 text-xs bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                      <Layers className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span className="font-bold text-amber-900">Pilih Lembar Kerja (Sheet):</span>
+                      <select
+                        value={parseResult.sheetName}
+                        onChange={(e) => {
+                          if (file) {
+                            processFile(file, e.target.value);
+                          }
+                        }}
+                        className="bg-white border border-amber-300 rounded-lg px-2.5 py-1 font-semibold text-slate-800 focus:outline-none"
+                      >
+                        {parseResult.availableSheets.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                  )}
+
+                  {/* Region Selector Tabs (Full Preview per Region) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-[#0f2b5c]" />
+                        <span>
+                          {isSingleRegionMode
+                            ? `Wilayah Target: ${targetRegion}`
+                            : `Pilih Wilayah untuk Melihat Preview Lengkap (${Object.keys(parseResult.regions).length} Wilayah)`}
+                        </span>
+                      </h5>
+                    </div>
+
+                    {!isSingleRegionMode && (
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
+                        {Object.entries(parseResult.regions).map(([rName, rData]) => (
+                          <button
+                            key={rName}
+                            type="button"
+                            onClick={() => setSelectedRegionKey(rName)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shrink-0 border ${
+                              (selectedRegionKey || Object.keys(parseResult.regions)[0]) === rName
+                                ? 'bg-[#0f2b5c] text-white border-[#0f2b5c] shadow-xs'
+                                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                            }`}
+                          >
+                            <span>{rName}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                (selectedRegionKey || Object.keys(parseResult.regions)[0]) === rName
+                                  ? 'bg-amber-400 text-slate-950 font-black'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {rData.totalTerbentuk}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* First 10 Records Preview Table */}
-                  <div>
-                    <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-                      <Table className="w-4 h-4 text-[#0f2b5c]" />
-                      <span>Cuplikan Data yang Akan Disimpan (10 Baris Pertama)</span>
-                    </h5>
-                    <div className="overflow-x-auto border border-slate-200 rounded-xl max-h-56">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-[#0f2b5c] text-white text-[11px] font-bold uppercase sticky top-0">
-                          <tr>
-                            <th className="py-2 px-3 text-center w-10">No</th>
-                            <th className="py-2 px-3">Kabupaten / Kota</th>
-                            <th className="py-2 px-3">Kecamatan</th>
-                            <th className="py-2 px-3">Jenis</th>
-                            <th className="py-2 px-3">Desa / Kelurahan</th>
-                            <th className="py-2 px-3">Nama Puskesos</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {parseResult.records.slice(0, 10).map((r, i) => (
-                            <tr key={i} className="hover:bg-slate-50">
-                              <td className="py-2 px-3 text-center text-slate-500 font-semibold">{i + 1}</td>
-                              <td className="py-2 px-3 font-bold text-slate-800">{r.wilayah}</td>
-                              <td className="py-2 px-3 text-slate-700">{r.kec}</td>
-                              <td className="py-2 px-3">
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    r.jenisWilayah === 'Kelurahan'
-                                      ? 'bg-purple-100 text-purple-800'
-                                      : 'bg-emerald-100 text-emerald-800'
-                                  }`}
-                                >
-                                  {r.jenisWilayah || 'Desa'}
-                                </span>
-                              </td>
-                              <td className="py-2 px-3 font-semibold text-[#0f2b5c]">{r.kelDesa}</td>
-                              <td className="py-2 px-3 text-slate-600">{r.namaSlrt}</td>
+                  {/* FULL PREVIEW TABLE (Exact Government Layout) */}
+                  {activeRegionData && (
+                    <div className="space-y-2">
+                      {/* Sub-header metric bar */}
+                      <div className="flex flex-wrap items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-blue-950 text-sm">{activeRegionData.regionName}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="font-semibold text-slate-600">
+                            {activeRegionData.totalKecamatan} Kecamatan
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 font-semibold text-slate-700">
+                          <span className="text-purple-800 font-bold">{activeRegionData.totalKelurahan} Kelurahan</span>
+                          <span>+</span>
+                          <span className="text-emerald-800 font-bold">{activeRegionData.totalDesa} Desa</span>
+                          <span>=</span>
+                          <span className="bg-[#0f2b5c] text-white font-black px-2.5 py-0.5 rounded-full text-xs">
+                            {activeRegionData.totalTerbentuk} Total Terbentuk (Otomatis)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Full Table */}
+                      <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[380px] shadow-2xs">
+                        <table className="w-full text-left text-xs border-collapse">
+                          {/* Table Header matching Government WPS layout */}
+                          <thead className="bg-[#0f2b5c] text-white text-[11px] font-black uppercase sticky top-0 z-10">
+                            <tr>
+                              <th className="py-2.5 px-3 text-center border-r border-blue-800 w-12">NO</th>
+                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[140px]">KECAMATAN</th>
+                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[170px]">
+                                KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                              </th>
+                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[170px]">
+                                DESA YANG TELAH MEMBENTUK PUSKESOS
+                              </th>
+                              <th className="py-2.5 px-3 text-center min-w-[130px] bg-[#143b7d]">
+                                JUMLAH DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                              </th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                            <tr className="bg-[#1e3a8a] text-blue-200 text-[10px] font-bold text-center border-t border-blue-700">
+                              <th className="py-1 px-1 border-r border-blue-800/60">1</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">7</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">8</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">9</th>
+                              <th className="py-1 px-1 bg-[#18458b]">10 (Otomatis)</th>
+                            </tr>
+                          </thead>
+
+                          {/* Table Body: Full Rows */}
+                          <tbody className="divide-y divide-slate-200 bg-white">
+                            {(() => {
+                              let rowNumber = 0;
+                              let kelNumber = 0;
+                              let desaNumber = 0;
+
+                              return activeRegionData.kecamatanList.map((kecItem, kecIdx) => {
+                                const maxSubRows = Math.max(kecItem.kelurahans.length, kecItem.desas.length, 1);
+
+                                return Array.from({ length: maxSubRows }).map((_, rIdx) => {
+                                  rowNumber += 1;
+                                  const isFirstRowOfKec = rIdx === 0;
+                                  const kelName = kecItem.kelurahans[rIdx];
+                                  const desaName = kecItem.desas[rIdx];
+
+                                  if (kelName) kelNumber += 1;
+                                  if (desaName) desaNumber += 1;
+
+                                  return (
+                                    <tr
+                                      key={`${kecIdx}-${rIdx}`}
+                                      className={`hover:bg-blue-50/40 transition-colors ${
+                                        isFirstRowOfKec ? 'border-t-2 border-slate-300' : ''
+                                      }`}
+                                    >
+                                      {/* No */}
+                                      <td className="py-2 px-3 text-center text-slate-500 font-bold border-r border-slate-200">
+                                        {rowNumber}
+                                      </td>
+
+                                      {/* Kecamatan */}
+                                      <td className="py-2 px-3 font-extrabold text-slate-900 border-r border-slate-200 bg-slate-50/40">
+                                        {isFirstRowOfKec ? `${kecIdx + 1} ${kecItem.kecamatan.toUpperCase()}` : ''}
+                                      </td>
+
+                                      {/* Kelurahan yang telah membentuk puskesos */}
+                                      <td className="py-2 px-3 border-r border-slate-200">
+                                        {kelName ? (
+                                          <span className="font-semibold text-purple-950">
+                                            {kelNumber} {kelName}
+                                          </span>
+                                        ) : (
+                                          ''
+                                        )}
+                                      </td>
+
+                                      {/* Desa yang telah membentuk puskesos */}
+                                      <td className="py-2 px-3 border-r border-slate-200">
+                                        {desaName ? (
+                                          <span className="font-semibold text-emerald-950">
+                                            {desaNumber} {desaName}
+                                          </span>
+                                        ) : (
+                                          ''
+                                        )}
+                                      </td>
+
+                                      {/* Jumlah desa/kelurahan (Otomatis per kecamatan pada baris pertama) */}
+                                      <td className="py-2 px-3 text-center font-black text-[#0f2b5c] bg-slate-50/40">
+                                        {isFirstRowOfKec ? (
+                                          <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold">
+                                            {kecItem.totalTerbentuk}
+                                          </span>
+                                        ) : (
+                                          ''
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              });
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </>
@@ -328,7 +471,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
 
         {/* Modal Footer */}
         {uploadSuccessCount === null && (
-          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}

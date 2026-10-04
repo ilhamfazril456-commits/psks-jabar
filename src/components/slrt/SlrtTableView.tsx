@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   Search,
@@ -7,12 +7,10 @@ import {
   FileText,
   Download,
   Trash2,
-  Edit2,
   Building2,
-  Layers,
-  MapPin,
-  CheckCircle2,
-  AlertCircle
+  ChevronLeft,
+  ChevronRight,
+  Layers
 } from 'lucide-react';
 import { PSKSDataRecord, UserSession } from '../../types';
 import { isSameWilayah } from '../../utils/submissionStatus';
@@ -29,6 +27,18 @@ interface SlrtTableViewProps {
   onDeleteRecord?: (id: string) => Promise<any> | void;
 }
 
+interface SlrtDisplayRow {
+  globalRowIndex: number;
+  isFirstRowOfRegion: boolean;
+  isFirstRowOfKec: boolean;
+  kecamatanName: string;
+  kecIdx: number;
+  kelRec?: PSKSDataRecord;
+  kelNumber?: number;
+  desaRec?: PSKSDataRecord;
+  desaNumber?: number;
+}
+
 export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
   activeRegion,
   records,
@@ -39,13 +49,21 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedJenisFilter, setSelectedJenisFilter] = useState<'all' | 'Desa' | 'Kelurahan'>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const ROWS_PER_PAGE = 100;
 
   const canEdit =
     session.role === 'superadmin' ||
     session.role === 'developer' ||
     session.isDeveloper ||
     (session.role === 'admin' && isSameWilayah(session.wilayah, activeRegion));
+
+  // Reset page when filter or region changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedJenisFilter, activeRegion]);
 
   // 1. Filter records specifically for activeRegion
   const regionRecords = useMemo(() => {
@@ -135,6 +153,47 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     }));
   }, [filteredRecords]);
 
+  // 5. Flatten to discrete table rows for strict 100-row pagination
+  const allDisplayRows: SlrtDisplayRow[] = useMemo(() => {
+    const rowsList: SlrtDisplayRow[] = [];
+    let globalIndex = 0;
+    let runningKel = 0;
+    let runningDesa = 0;
+
+    hierarchicalData.forEach((group, kecIdx) => {
+      for (let rIdx = 0; rIdx < group.rowCount; rIdx++) {
+        globalIndex += 1;
+        const kelRec = group.kelurahans[rIdx];
+        const desaRec = group.desas[rIdx];
+
+        if (kelRec) runningKel += 1;
+        if (desaRec) runningDesa += 1;
+
+        rowsList.push({
+          globalRowIndex: globalIndex,
+          isFirstRowOfRegion: globalIndex === 1,
+          isFirstRowOfKec: rIdx === 0,
+          kecamatanName: group.kecamatan,
+          kecIdx,
+          kelRec,
+          kelNumber: kelRec ? runningKel : undefined,
+          desaRec,
+          desaNumber: desaRec ? runningDesa : undefined,
+        });
+      }
+    });
+
+    return rowsList;
+  }, [hierarchicalData]);
+
+  // 6. Pagination Slice (100 Rows per page)
+  const totalRows = allDisplayRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+  const paginatedRows = useMemo(() => {
+    return allDisplayRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
+  }, [allDisplayRows, startIndex, ROWS_PER_PAGE]);
+
   // Handle Export
   const handleExportExcel = () => {
     exportPillarToExcel({
@@ -165,10 +224,6 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       }
     }
   };
-
-  // Running counters for Kelurahan & Desa numbers in table
-  let runningKelIdx = 0;
-  let runningDesaIdx = 0;
 
   return (
     <div className="space-y-6">
@@ -339,7 +394,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               Dinas Sosial Provinsi Jawa Barat
             </span>
             <span className="text-[10px] text-amber-300 font-bold block">
-              Wilayah Administratif Terverifikasi
+              {totalRows > 0 ? `Total ${totalRows} Baris Terdata` : 'Belum Ada Data'}
             </span>
           </div>
         </div>
@@ -398,13 +453,13 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                 <th className="py-1 px-1 border-r border-blue-800/60">7</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">8</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">9</th>
-                <th className="py-1 px-1">10</th>
+                <th className="py-1 px-1">10 (Otomatis)</th>
               </tr>
             </thead>
 
             {/* Table Body */}
             <tbody className="divide-y divide-slate-200 bg-white">
-              {regionRecords.length === 0 ? (
+              {totalRows === 0 ? (
                 /* Empty State */
                 <tr>
                   <td className="py-4 px-3 text-center font-bold text-slate-700 border-r border-slate-200">1</td>
@@ -430,129 +485,185 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                /* Render Hierarchical Rows */
-                (() => {
-                  let isFirstRowOfRegion = true;
-                  runningKelIdx = 0;
-                  runningDesaIdx = 0;
+                /* Render Paginated Rows (100 Rows per page) */
+                paginatedRows.map((rowItem) => (
+                  <tr
+                    key={rowItem.globalRowIndex}
+                    className={`hover:bg-blue-50/30 transition-colors ${
+                      rowItem.isFirstRowOfKec ? 'border-t-2 border-slate-300' : ''
+                    }`}
+                  >
+                    {/* Col 1: NO */}
+                    <td className="py-2.5 px-3 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? '1' : ''}
+                    </td>
 
-                  return hierarchicalData.map((group, kecIdx) => {
-                    const rowCount = group.rowCount;
+                    {/* Col 2: KABUPATEN/ KOTA */}
+                    <td className="py-2.5 px-3 font-extrabold text-[#0f2b5c] border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? activeRegion.toUpperCase() : ''}
+                    </td>
 
-                    return Array.from({ length: rowCount }).map((_, rIdx) => {
-                      const isFirstRowOfKec = rIdx === 0;
-                      const kelRec = group.kelurahans[rIdx];
-                      const desaRec = group.desas[rIdx];
+                    {/* Col 3: JUMLAH KECAMATAN */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlKecamatan : ''}
+                    </td>
 
-                      if (kelRec) runningKelIdx += 1;
-                      if (desaRec) runningDesaIdx += 1;
+                    {/* Col 4: JUMLAH KELURAHAN */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlKelurahan : ''}
+                    </td>
 
-                      const isFirstGlobalRow = isFirstRowOfRegion;
-                      if (isFirstRowOfRegion) isFirstRowOfRegion = false;
+                    {/* Col 5: JUMLAH DESA */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlDesa : ''}
+                    </td>
 
-                      return (
-                        <tr
-                          key={`${kecIdx}-${rIdx}`}
-                          className={`hover:bg-blue-50/30 transition-colors ${
-                            isFirstRowOfKec ? 'border-t-2 border-slate-300' : ''
-                          }`}
-                        >
-                          {/* Col 1: NO (Sticky or on first row) */}
-                          <td className="py-2.5 px-3 text-center font-bold text-slate-700 border-r border-slate-200">
-                            {isFirstGlobalRow ? '1' : ''}
-                          </td>
+                    {/* Col 6: JUMLAH KELURAHAN DAN DESA */}
+                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-slate-50/50">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlTotal : ''}
+                    </td>
 
-                          {/* Col 2: KABUPATEN/ KOTA */}
-                          <td className="py-2.5 px-3 font-extrabold text-[#0f2b5c] border-r border-slate-200">
-                            {isFirstGlobalRow ? activeRegion.toUpperCase() : ''}
-                          </td>
+                    {/* Col 7: KECAMATAN */}
+                    <td className="py-2.5 px-3 font-bold text-slate-900 border-r border-slate-200 bg-slate-50/30">
+                      {rowItem.isFirstRowOfKec
+                        ? `${rowItem.kecIdx + 1} ${rowItem.kecamatanName.toUpperCase()}`
+                        : ''}
+                    </td>
 
-                          {/* Col 3: JUMLAH KECAMATAN */}
-                          <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
-                            {isFirstGlobalRow ? adminSummary.jmlKecamatan : ''}
-                          </td>
+                    {/* Col 8: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
+                    <td className="py-2.5 px-3 border-r border-slate-200 group">
+                      {rowItem.kelRec ? (
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-purple-950">
+                            {rowItem.kelNumber} {rowItem.kelRec.kelDesa || rowItem.kelRec.nama}
+                          </span>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(rowItem.kelRec!.id, rowItem.kelRec!.kelDesa || rowItem.kelRec!.nama)
+                              }
+                              disabled={deletingId === rowItem.kelRec.id}
+                              className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
+                              title="Hapus Puskesos Kelurahan Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        ''
+                      )}
+                    </td>
 
-                          {/* Col 4: JUMLAH KELURAHAN */}
-                          <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
-                            {isFirstGlobalRow ? adminSummary.jmlKelurahan : ''}
-                          </td>
+                    {/* Col 9: DESA YANG TELAH MEMBENTUK PUSKESOS */}
+                    <td className="py-2.5 px-3 border-r border-slate-200 group">
+                      {rowItem.desaRec ? (
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-emerald-950">
+                            {rowItem.desaNumber} {rowItem.desaRec.kelDesa || rowItem.desaRec.nama}
+                          </span>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDelete(rowItem.desaRec!.id, rowItem.desaRec!.kelDesa || rowItem.desaRec!.nama)
+                              }
+                              disabled={deletingId === rowItem.desaRec.id}
+                              className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
+                              title="Hapus Puskesos Desa Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        ''
+                      )}
+                    </td>
 
-                          {/* Col 5: JUMLAH DESA */}
-                          <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
-                            {isFirstGlobalRow ? adminSummary.jmlDesa : ''}
-                          </td>
-
-                          {/* Col 6: JUMLAH KELURAHAN DAN DESA */}
-                          <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-slate-50/50">
-                            {isFirstGlobalRow ? adminSummary.jmlTotal : ''}
-                          </td>
-
-                          {/* Col 7: KECAMATAN (Numbered like '1 CILEUNYI', '2 CIMENYAN') */}
-                          <td className="py-2.5 px-3 font-bold text-slate-900 border-r border-slate-200 bg-slate-50/30">
-                            {isFirstRowOfKec ? `${kecIdx + 1} ${group.kecamatan.toUpperCase()}` : ''}
-                          </td>
-
-                          {/* Col 8: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
-                          <td className="py-2.5 px-3 border-r border-slate-200 group">
-                            {kelRec ? (
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-semibold text-purple-950">
-                                  {runningKelIdx} {kelRec.kelDesa || kelRec.nama}
-                                </span>
-                                {canEdit && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDelete(kelRec.id, kelRec.kelDesa || kelRec.nama)}
-                                    disabled={deletingId === kelRec.id}
-                                    className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
-                                    title="Hapus Puskesos Kelurahan Ini"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                          </td>
-
-                          {/* Col 9: DESA YANG TELAH MEMBENTUK PUSKESOS */}
-                          <td className="py-2.5 px-3 border-r border-slate-200 group">
-                            {desaRec ? (
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-semibold text-emerald-950">
-                                  {runningDesaIdx} {desaRec.kelDesa || desaRec.nama}
-                                </span>
-                                {canEdit && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDelete(desaRec.id, desaRec.kelDesa || desaRec.nama)}
-                                    disabled={deletingId === desaRec.id}
-                                    className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
-                                    title="Hapus Puskesos Desa Ini"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                          </td>
-
-                          {/* Col 10: JUMLAH DESA/ KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
-                          <td className="py-2.5 px-2.5 text-center font-black text-slate-800 bg-slate-50/50">
-                            {isFirstGlobalRow ? adminSummary.jmlTerbentuk : ''}
-                          </td>
-                        </tr>
-                      );
-                    });
-                  });
-                })()
+                    {/* Col 10: JUMLAH DESA/ KELURAHAN (Otomatis) */}
+                    <td className="py-2.5 px-2.5 text-center font-black text-slate-800 bg-slate-50/50">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlTerbentuk : ''}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
+
+        {/* 4. Pagination Controls (Per 100 Baris Halaman Baru) */}
+        {totalRows > 0 && (
+          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="text-slate-600 font-medium">
+              Menampilkan baris <strong className="text-[#0f2b5c] font-bold">{startIndex + 1}</strong> s.d.{' '}
+              <strong className="text-[#0f2b5c] font-bold">
+                {Math.min(startIndex + ROWS_PER_PAGE, totalRows)}
+              </strong>{' '}
+              dari total <strong className="text-[#0f2b5c] font-bold">{totalRows}</strong> baris data Puskesos
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Sebelumnya</span>
+                </button>
+
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const pageNum = i + 1;
+                    // Show first, last, and pages around current
+                    if (
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                            currentPage === pageNum
+                              ? 'bg-[#0f2b5c] text-white shadow-xs'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    if (pageNum === currentPage - 3 || pageNum === currentPage + 3) {
+                      return (
+                        <span key={pageNum} className="text-slate-400 px-0.5">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Selanjutnya</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
