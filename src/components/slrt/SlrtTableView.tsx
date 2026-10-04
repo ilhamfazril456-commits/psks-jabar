@@ -103,11 +103,9 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
   // 3. Search and filter
   const filteredRecords = useMemo(() => {
     return regionRecords.filter((r) => {
-      // Type filter
       if (selectedJenisFilter === 'Desa' && r.jenisWilayah === 'Kelurahan') return false;
       if (selectedJenisFilter === 'Kelurahan' && r.jenisWilayah !== 'Kelurahan') return false;
 
-      // Keyword search
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const matchKec = (r.kec || '').toLowerCase().includes(q);
@@ -227,7 +225,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. Metric Badges Card (5 Indikator Administratif Terhitung Otomatis di Atas Tabel) */}
+      {/* 1. Metric Badges Card (5 Indikator Otomatis di Bagian Atas) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-2xs">
           <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
@@ -377,7 +375,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
         </div>
       </div>
 
-      {/* 3. The Official 5-Column Table Format for Puskesos */}
+      {/* 3. The Main Government Table Format (Matching WPS Office Screenshot with 2 Groups) */}
       <div className="bg-white rounded-2xl border-2 border-slate-300 shadow-md overflow-hidden">
         {/* Title Bar inside table */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-[#d4af37]">
@@ -402,28 +400,58 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
         {/* Responsive Table Scroll Container */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
-            {/* Table Headers: Exactly 5 Columns per User Specification */}
+            {/* Table Headers (2 Groups: Wilayah Administratif & Desa/Kelurahan Yang Telah Membentuk Puskesos) */}
             <thead>
-              <tr className="bg-[#0f2b5c] text-white text-[11px] sm:text-xs font-black uppercase tracking-tight">
-                <th className="py-3 px-3 text-center border-r border-blue-800 w-14">NO.</th>
-                <th className="py-3 px-3 border-r border-blue-800 min-w-[150px]">KECAMATAN</th>
-                <th className="py-3 px-3 border-r border-blue-800 min-w-[200px]">
-                  KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+              {/* Row 1: Group Headers */}
+              <tr>
+                <th
+                  colSpan={6}
+                  className="bg-[#fef9c3] text-[#713f12] border-r-2 border-b-2 border-amber-300 font-black text-center py-2.5 px-3 uppercase tracking-wider text-xs sm:text-sm"
+                >
+                  WILAYAH ADMINISTRATIF
                 </th>
-                <th className="py-3 px-3 border-r border-blue-800 min-w-[200px]">
-                  DESA YANG TELAH MEMBENTUK PUSKESOS
-                </th>
-                <th className="py-3 px-3 text-center min-w-[140px] bg-[#143b7d]">
-                  JUMLAH DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                <th
+                  colSpan={4}
+                  className="bg-[#fed7aa] text-[#7c2d12] border-b-2 border-orange-300 font-black text-center py-2.5 px-3 uppercase tracking-wider text-xs sm:text-sm"
+                >
+                  DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
                 </th>
               </tr>
 
+              {/* Row 2: Detailed Column Titles */}
+              <tr className="bg-[#0f2b5c] text-white text-[11px] sm:text-xs font-black uppercase tracking-tight">
+                <th className="py-3 px-3 text-center border-r border-blue-800 w-12">NO.</th>
+                <th className="py-3 px-3 border-r border-blue-800 min-w-[140px]">KABUPATEN/ KOTA</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH KECAMATAN</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH KELURAHAN</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH DESA</th>
+                <th className="py-3 px-2.5 text-center border-r-2 border-blue-700 min-w-[110px]">
+                  JUMLAH KELURAHAN DAN DESA
+                </th>
+                <th className="py-3 px-3 border-r border-blue-800 min-w-[130px]">KECAMATAN</th>
+                <th className="py-3 px-3 border-r border-blue-800 min-w-[170px]">
+                  KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                </th>
+                <th className="py-3 px-3 border-r border-blue-800 min-w-[170px]">
+                  DESA YANG TELAH MEMBENTUK PUSKESOS
+                </th>
+                <th className="py-3 px-2.5 text-center min-w-[120px]">
+                  JUMLAH DESA/ KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                </th>
+              </tr>
+
+              {/* Row 3: Standard Sub-number row (1 to 10) */}
               <tr className="bg-[#1e3a8a] text-blue-200 text-[10px] font-bold text-center border-b-2 border-slate-300">
                 <th className="py-1 px-1 border-r border-blue-800/60">1</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">2</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">3</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">4</th>
-                <th className="py-1 px-1 bg-[#18458b]">5 (Dihitung Otomatis)</th>
+                <th className="py-1 px-1 border-r border-blue-800/60">5</th>
+                <th className="py-1 px-1 border-r-2 border-blue-700">6</th>
+                <th className="py-1 px-1 border-r border-blue-800/60">7</th>
+                <th className="py-1 px-1 border-r border-blue-800/60">8</th>
+                <th className="py-1 px-1 border-r border-blue-800/60">9</th>
+                <th className="py-1 px-1">10 (Otomatis)</th>
               </tr>
             </thead>
 
@@ -432,12 +460,20 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               {totalRows === 0 ? (
                 /* Empty State */
                 <tr>
-                  <td colSpan={5} className="py-16 px-4 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-2.5">
-                      <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0f2b5c] flex items-center justify-center shadow-xs">
-                        <Building2 className="w-7 h-7" />
+                  <td className="py-4 px-3 text-center font-bold text-slate-700 border-r border-slate-200">1</td>
+                  <td className="py-4 px-3 font-bold text-[#0f2b5c] border-r border-slate-200">
+                    {activeRegion.toUpperCase()}
+                  </td>
+                  <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
+                  <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
+                  <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
+                  <td className="py-4 px-3 text-center text-slate-500 border-r-2 border-slate-300">0</td>
+                  <td colSpan={4} className="py-12 px-4 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#0f2b5c] flex items-center justify-center">
+                        <Building2 className="w-6 h-6" />
                       </div>
-                      <p className="text-sm font-extrabold text-slate-800">
+                      <p className="text-xs sm:text-sm font-bold text-slate-700">
                         Belum ada data Puskesos Desa/Kelurahan untuk wilayah {activeRegion}.
                       </p>
                       <p className="text-xs text-slate-500 max-w-md">
@@ -456,18 +492,43 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                     }`}
                   >
                     {/* Col 1: NO */}
-                    <td className="py-2.5 px-3 text-center font-bold text-slate-700 border-r border-slate-200 w-14">
-                      {rowItem.globalRowIndex}
+                    <td className="py-2.5 px-3 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? '1' : ''}
                     </td>
 
-                    {/* Col 2: KECAMATAN */}
-                    <td className="py-2.5 px-3 font-extrabold text-slate-900 border-r border-slate-200 bg-slate-50/30">
+                    {/* Col 2: KABUPATEN/ KOTA */}
+                    <td className="py-2.5 px-3 font-extrabold text-[#0f2b5c] border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? activeRegion.toUpperCase() : ''}
+                    </td>
+
+                    {/* Col 3: JUMLAH KECAMATAN */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlKecamatan : ''}
+                    </td>
+
+                    {/* Col 4: JUMLAH KELURAHAN */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlKelurahan : ''}
+                    </td>
+
+                    {/* Col 5: JUMLAH DESA */}
+                    <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 border-r border-slate-200">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlDesa : ''}
+                    </td>
+
+                    {/* Col 6: JUMLAH KELURAHAN DAN DESA */}
+                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-slate-50/50">
+                      {rowItem.isFirstRowOfRegion ? adminSummary.jmlTotal : ''}
+                    </td>
+
+                    {/* Col 7: KECAMATAN */}
+                    <td className="py-2.5 px-3 font-bold text-slate-900 border-r border-slate-200 bg-slate-50/30">
                       {rowItem.isFirstRowOfKec
                         ? `${rowItem.kecIdx + 1} ${rowItem.kecamatanName.toUpperCase()}`
                         : ''}
                     </td>
 
-                    {/* Col 3: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
+                    {/* Col 8: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
                     <td className="py-2.5 px-3 border-r border-slate-200 group">
                       {rowItem.kelRec ? (
                         <div className="flex items-center justify-between gap-1">
@@ -493,7 +554,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                       )}
                     </td>
 
-                    {/* Col 4: DESA YANG TELAH MEMBENTUK PUSKESOS */}
+                    {/* Col 9: DESA YANG TELAH MEMBENTUK PUSKESOS */}
                     <td className="py-2.5 px-3 border-r border-slate-200 group">
                       {rowItem.desaRec ? (
                         <div className="flex items-center justify-between gap-1">
@@ -519,8 +580,8 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                       )}
                     </td>
 
-                    {/* Col 5: JUMLAH DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS (Dihitung Otomatis) */}
-                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] bg-slate-50/50">
+                    {/* Col 10: JUMLAH DESA/ KELURAHAN (Otomatis per Kecamatan pada baris pertama) */}
+                    <td className="py-2.5 px-2.5 text-center font-black text-slate-800 bg-slate-50/50">
                       {rowItem.isFirstRowOfKec ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold inline-block">
                           {rowItem.kecTotalTerbentuk}

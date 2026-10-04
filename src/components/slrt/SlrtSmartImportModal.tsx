@@ -104,9 +104,9 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-6 sm:pt-10 pb-12 animate-fadeIn">
-      {/* Modal Dialog Card (Never cut off at top, has safe top margin & auto internal scroll) */}
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[86vh] relative">
+    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-20 sm:pt-24 pb-12 animate-fadeIn">
+      {/* Modal Dialog Card (High z-index, above navbar, never cut off) */}
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] relative">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
           <div className="flex items-center gap-3">
@@ -151,7 +151,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
               <p>
                 {isSingleRegionMode
                   ? `Mengunggah file Excel khusus untuk wilayah ${targetRegion}. Kolom jumlah desa/kelurahan yang telah membentuk puskesos akan dihitung otomatis oleh sistem.`
-                  : 'Unggah 1 file Excel utuh se-Jawa Barat. Sistem akan otomatis memetakan, menyortir, dan mendistribusikan data ke masing-masing 27 Kabupaten/Kota dengan perhitungan otomatis.'}
+                  : 'Unggah 1 file Excel utuh se-Jawa Barat. Sistem cerdas otomatis memetakan, menyortir, dan mendistribusikan data ke masing-masing 27 Kabupaten/Kota dengan perhitungan otomatis.'}
               </p>
             </div>
           </div>
@@ -332,7 +332,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     )}
                   </div>
 
-                  {/* FULL PREVIEW TABLE: Strict 5-Column Format matching User Specification */}
+                  {/* FULL PREVIEW TABLE: Exact Government 2-Group Layout (Matching User Specification) */}
                   {activeRegionData && (
                     <div className="space-y-2">
                       {/* Metric bar */}
@@ -355,29 +355,52 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Full Table (Clean 5 Columns: NO, KECAMATAN, KELURAHAN, DESA, JUMLAH OTOMATIS) */}
+                      {/* Full Table (2 Groups: Wilayah Administratif & Desa/Kelurahan Yang Telah Membentuk Puskesos) */}
                       <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[360px] shadow-2xs">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-[#0f2b5c] text-white text-[11px] font-black uppercase sticky top-0 z-10">
+                            {/* Row 1: Group Headers */}
                             <tr>
-                              <th className="py-2.5 px-3 text-center border-r border-blue-800 w-12">NO</th>
-                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[140px]">KECAMATAN</th>
-                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[170px]">
-                                KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                              <th
+                                colSpan={6}
+                                className="bg-[#fef9c3] text-[#713f12] border-r-2 border-b-2 border-amber-300 font-black text-center py-2 px-3 uppercase tracking-wider text-xs"
+                              >
+                                WILAYAH ADMINISTRATIF
                               </th>
-                              <th className="py-2.5 px-3 border-r border-blue-800 min-w-[170px]">
-                                DESA YANG TELAH MEMBENTUK PUSKESOS
-                              </th>
-                              <th className="py-2.5 px-3 text-center min-w-[130px] bg-[#143b7d]">
-                                JUMLAH DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
+                              <th
+                                colSpan={4}
+                                className="bg-[#fed7aa] text-[#7c2d12] border-b-2 border-orange-300 font-black text-center py-2 px-3 uppercase tracking-wider text-xs"
+                              >
+                                DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
                               </th>
                             </tr>
-                            <tr className="bg-[#1e3a8a] text-blue-200 text-[10px] font-bold text-center border-t border-blue-700">
-                              <th className="py-1 px-1 border-r border-blue-800/60">1</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">2</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">3</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">4</th>
-                              <th className="py-1 px-1 bg-[#18458b]">5 (Dihitung Otomatis)</th>
+
+                            {/* Row 2: Columns */}
+                            <tr className="bg-[#0f2b5c] text-white text-[10.5px] font-black uppercase">
+                              <th className="py-2 px-2.5 text-center border-r border-blue-800 w-10">NO.</th>
+                              <th className="py-2 px-2.5 border-r border-blue-800 min-w-[130px]">KABUPATEN/ KOTA</th>
+                              <th className="py-2 px-2 text-center border-r border-blue-800 min-w-[80px]">JML KEC</th>
+                              <th className="py-2 px-2 text-center border-r border-blue-800 min-w-[80px]">JML KEL</th>
+                              <th className="py-2 px-2 text-center border-r border-blue-800 min-w-[80px]">JML DESA</th>
+                              <th className="py-2 px-2 text-center border-r-2 border-blue-700 min-w-[100px]">TOTAL KEL & DESA</th>
+                              <th className="py-2 px-2.5 border-r border-blue-800 min-w-[120px]">KECAMATAN</th>
+                              <th className="py-2 px-2.5 border-r border-blue-800 min-w-[150px]">KELURAHAN MEMBENTUK PUSKESOS</th>
+                              <th className="py-2 px-2.5 border-r border-blue-800 min-w-[150px]">DESA MEMBENTUK PUSKESOS</th>
+                              <th className="py-2 px-2.5 text-center min-w-[110px] bg-[#143b7d]">JUMLAH TERBENTUK</th>
+                            </tr>
+
+                            {/* Row 3: Sub-numbers 1 to 10 */}
+                            <tr className="bg-[#1e3a8a] text-blue-200 text-[9.5px] font-bold text-center border-t border-blue-700">
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">1</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">2</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">3</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">4</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">5</th>
+                              <th className="py-0.5 px-1 border-r-2 border-blue-700">6</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">7</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">8</th>
+                              <th className="py-0.5 px-1 border-r border-blue-800/60">9</th>
+                              <th className="py-0.5 px-1 bg-[#18458b]">10 (Otomatis)</th>
                             </tr>
                           </thead>
 
@@ -393,6 +416,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                                 return Array.from({ length: maxSubRows }).map((_, rIdx) => {
                                   rowNumber += 1;
                                   const isFirstRowOfKec = rIdx === 0;
+                                  const isFirstRowOfRegion = rowNumber === 1;
                                   const kelName = kecItem.kelurahans[rIdx];
                                   const desaName = kecItem.desas[rIdx];
 
@@ -406,18 +430,43 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                                         isFirstRowOfKec ? 'border-t-2 border-slate-300' : ''
                                       }`}
                                     >
-                                      {/* No */}
-                                      <td className="py-2 px-3 text-center text-slate-500 font-bold border-r border-slate-200">
-                                        {rowNumber}
+                                      {/* Col 1: No */}
+                                      <td className="py-1.5 px-2 text-center text-slate-700 font-bold border-r border-slate-200">
+                                        {isFirstRowOfRegion ? '1' : ''}
                                       </td>
 
-                                      {/* Kecamatan */}
-                                      <td className="py-2 px-3 font-extrabold text-slate-900 border-r border-slate-200 bg-slate-50/40">
+                                      {/* Col 2: Kab/Kota */}
+                                      <td className="py-1.5 px-2 font-extrabold text-[#0f2b5c] border-r border-slate-200">
+                                        {isFirstRowOfRegion ? activeRegionData.regionName.toUpperCase() : ''}
+                                      </td>
+
+                                      {/* Col 3: Jml Kec */}
+                                      <td className="py-1.5 px-2 text-center font-bold text-slate-700 border-r border-slate-200">
+                                        {isFirstRowOfRegion ? activeRegionData.totalKecamatan : ''}
+                                      </td>
+
+                                      {/* Col 4: Jml Kel */}
+                                      <td className="py-1.5 px-2 text-center font-bold text-slate-700 border-r border-slate-200">
+                                        {isFirstRowOfRegion ? activeRegionData.totalKelurahan : ''}
+                                      </td>
+
+                                      {/* Col 5: Jml Desa */}
+                                      <td className="py-1.5 px-2 text-center font-bold text-slate-700 border-r border-slate-200">
+                                        {isFirstRowOfRegion ? activeRegionData.totalDesa : ''}
+                                      </td>
+
+                                      {/* Col 6: Total Kel & Desa */}
+                                      <td className="py-1.5 px-2 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-slate-50/50">
+                                        {isFirstRowOfRegion ? activeRegionData.totalTerbentuk : ''}
+                                      </td>
+
+                                      {/* Col 7: Kecamatan */}
+                                      <td className="py-1.5 px-2 font-extrabold text-slate-900 border-r border-slate-200 bg-slate-50/30">
                                         {isFirstRowOfKec ? `${kecIdx + 1} ${kecItem.kecamatan.toUpperCase()}` : ''}
                                       </td>
 
-                                      {/* Kelurahan yang telah membentuk puskesos */}
-                                      <td className="py-2 px-3 border-r border-slate-200">
+                                      {/* Col 8: Kelurahan */}
+                                      <td className="py-1.5 px-2 border-r border-slate-200">
                                         {kelName ? (
                                           <span className="font-semibold text-purple-950">
                                             {kelNumber} {kelName}
@@ -427,8 +476,8 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                                         )}
                                       </td>
 
-                                      {/* Desa yang telah membentuk puskesos */}
-                                      <td className="py-2 px-3 border-r border-slate-200">
+                                      {/* Col 9: Desa */}
+                                      <td className="py-1.5 px-2 border-r border-slate-200">
                                         {desaName ? (
                                           <span className="font-semibold text-emerald-950">
                                             {desaNumber} {desaName}
@@ -438,10 +487,10 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                                         )}
                                       </td>
 
-                                      {/* Jumlah desa/kelurahan yang telah membentuk puskesos (Dihitung Otomatis) */}
-                                      <td className="py-2 px-3 text-center font-black text-[#0f2b5c] bg-slate-50/40">
+                                      {/* Col 10: Jumlah Terbentuk Otomatis */}
+                                      <td className="py-1.5 px-2 text-center font-black text-[#0f2b5c] bg-slate-50/50">
                                         {isFirstRowOfKec ? (
-                                          <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold">
+                                          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold inline-block">
                                             {kecItem.totalTerbentuk}
                                           </span>
                                         ) : (
