@@ -119,6 +119,7 @@ export interface PSKSDataRecord {
   
   // Specific & Shared Pillar Fields
   kelDesa?: string; // Desa / Kelurahan
+  jenisWilayah?: 'Desa' | 'Kelurahan' | string; // Khusus SLRT: Desa atau Kelurahan
   alamat?: string; // Alamat Lengkap
   jenisKelamin?: 'Laki-laki' | 'Perempuan' | string;
   predikatTerakhir?: string;

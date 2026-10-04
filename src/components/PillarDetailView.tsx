@@ -7,6 +7,10 @@ import { PillarModal } from './pillar/PillarModal';
 import { PillarExcelImportModal } from './pillar/PillarExcelImportModal';
 import { getRegionSortIndex, sortRecordsByJabarRegion, matchJabarRegion } from '../utils/regionSort';
 import { BackToHomeButton } from './BackToHomeButton';
+import { SlrtSmartImportModal } from './slrt/SlrtSmartImportModal';
+import { SlrtAddRecordModal } from './slrt/SlrtAddRecordModal';
+import { SlrtTableView } from './slrt/SlrtTableView';
+import { isSameWilayah } from '../utils/submissionStatus';
 
 interface AnimatedCounterProps {
   end: number;
@@ -136,6 +140,9 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
   // Khusus Pilar SLRT / Puskesos: State Pemilihan Wilayah (Level 1: 27 Tombol, Level 2: Tabel Wilayah)
   const [selectedSlrtRegion, setSelectedSlrtRegion] = useState<string | null>(null);
+  const [showSlrtBulkImportModal, setShowSlrtBulkImportModal] = useState<boolean>(false);
+  const [showSlrtRegionImportModal, setShowSlrtRegionImportModal] = useState<boolean>(false);
+  const [showSlrtAddModal, setShowSlrtAddModal] = useState<boolean>(false);
   const isSuperAdminOrDev = session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
   const isSlrtLevel1 = pillarId === 'slrt_puskesos' && isSuperAdminOrDev && !selectedSlrtRegion;
   const isSlrtLevel2 = pillarId === 'slrt_puskesos' && (selectedSlrtRegion !== null || !isSuperAdminOrDev);
@@ -1275,38 +1282,70 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             </div>
           </div>
 
+          {/* Skenario A: Tombol Import Excel Masal 27 Wilayah */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div>
+              <h4 className="text-sm sm:text-base font-black text-[#0f2b5c] flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#d4af37]" />
+                <span>Import Excel Masal Se-Jawa Barat (Skenario A)</span>
+              </h4>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Unggah 1 file Excel utuh, sistem cerdas akan otomatis membagi dan mendistribusikan data ke masing-masing 27 Kab/Kota.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="btn-slrt-bulk-import-all"
+              onClick={() => setShowSlrtBulkImportModal(true)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 shrink-0"
+              title="Skenario A: Upload 1 file Excel utuh, otomatis disortir ke 27 wilayah"
+            >
+              <UploadCloud className="w-4 h-4 text-emerald-200" />
+              <span>Import Excel Masal 27 Kab/Kota Se-Jawa Barat</span>
+            </button>
+          </div>
+
           {/* 27 Tombol Memanjang (Kab. Bogor s.d. Kota Banjar) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
-            {KAB_KOTA_ONLY.map((regionName, idx) => (
-              <button
-                key={regionName}
-                type="button"
-                id={`btn-slrt-region-${idx + 1}`}
-                onClick={() => {
-                  setSelectedSlrtRegion(regionName);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="group w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50/70 border-2 border-slate-200 hover:border-[#0f2b5c] shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer text-left active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0f2b5c] group-hover:bg-blue-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-xs transition-colors">
-                    {idx + 1}
+            {KAB_KOTA_ONLY.map((regionName, idx) => {
+              const regCount = dataRecords.filter((r) => isSameWilayah(r.wilayah, regionName)).length;
+              return (
+                <button
+                  key={regionName}
+                  type="button"
+                  id={`btn-slrt-region-${idx + 1}`}
+                  onClick={() => {
+                    setSelectedSlrtRegion(regionName);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="group w-full flex items-center justify-between p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50/70 border-2 border-slate-200 hover:border-[#0f2b5c] shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer text-left active:scale-[0.99]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0f2b5c] group-hover:bg-blue-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-xs transition-colors">
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate">
+                        SLRT {regionName}
+                      </h4>
+                      <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1.5 mt-0.5">
+                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">
+                          {regCount > 0 ? (
+                            <strong className="text-emerald-700 font-bold">{regCount} Lembaga Terdata</strong>
+                          ) : (
+                            'Belum Ada Data'
+                          )}
+                        </span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate">
-                      SLRT {regionName}
-                    </h4>
-                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span>Provinsi Jawa Barat</span>
-                    </span>
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-[#d4af37] text-slate-500 group-hover:text-[#0f2b5c] flex items-center justify-center shrink-0 transition-colors">
+                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </div>
-                </div>
-                <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-[#d4af37] text-slate-500 group-hover:text-[#0f2b5c] flex items-center justify-center shrink-0 transition-colors">
-                  <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KIRI BAWAH) */}
@@ -1317,6 +1356,21 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Modal Skenario A: Import Masal 27 Wilayah */}
+        {showSlrtBulkImportModal && (
+          <SlrtSmartImportModal
+            isOpen={showSlrtBulkImportModal}
+            onClose={() => setShowSlrtBulkImportModal(false)}
+            targetRegion={null}
+            onImportSuccess={async (records) => {
+              if (onBatchAddRecords) {
+                return await onBatchAddRecords(records);
+              }
+              return records.length;
+            }}
+          />
+        )}
 
         {/* Custom Alert Modal */}
         {alertInfo && (
@@ -1396,77 +1450,45 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
         {/* Main Container */}
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
-          {/* Summary Widget Card */}
-          <div className="flex flex-col items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <div className="bg-[#0f2b5c] border-2 border-[#d4af37] rounded-xl p-3.5 sm:p-6 text-center text-white w-full max-w-lg shadow-lg">
-              <h3 className="text-[10px] sm:text-xs uppercase tracking-widest text-[#f1c40f] font-bold mb-1 sm:mb-2">
-                TOTAL SLRT_PUSKESOS TERDATA
-              </h3>
-              <div className="text-3xl sm:text-5xl font-black">
-                0 <span className="text-sm sm:text-lg font-medium opacity-80">Lembaga</span>
-              </div>
-              <div className="text-xs text-blue-200 font-semibold mt-1">
-                Wilayah Kerja: {activeRegion}
-              </div>
-            </div>
-          </div>
+          {/* Format Tabel Resmi Rekapitulasi Puskesos (Sesuai Format Dinas WPS) */}
+          <SlrtTableView
+            activeRegion={activeRegion}
+            records={dataRecords}
+            session={session}
+            onOpenAddModal={() => setShowSlrtAddModal(true)}
+            onOpenImportModal={() => setShowSlrtRegionImportModal(true)}
+            onDeleteRecord={onDeleteRecord}
+          />
 
-          {/* Format Tabel Sementara Kosong (Placeholder Bersih Siap Pakai Sesuai Arahan) */}
-          <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-hidden mb-8">
-            {/* Table Header Bar */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-50 to-blue-50/50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm sm:text-base font-black text-[#0f2b5c] flex items-center gap-2">
-                  <Table className="w-4 h-4 text-[#d4af37]" />
-                  <span>Tabel Data SLRT_PUSKESOS ({activeRegion})</span>
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Rekapitulasi resmi kelembagaan Sistem Layanan & Rujukan Terpadu tingkat Kecamatan & Desa/Kelurahan
-                </p>
-              </div>
-            </div>
+          {/* Modal Skenario B: Import Khusus Wilayah Ini */}
+          {showSlrtRegionImportModal && (
+            <SlrtSmartImportModal
+              isOpen={showSlrtRegionImportModal}
+              onClose={() => setShowSlrtRegionImportModal(false)}
+              targetRegion={activeRegion}
+              onImportSuccess={async (records) => {
+                if (onBatchAddRecords) {
+                  return await onBatchAddRecords(records);
+                }
+                return records.length;
+              }}
+            />
+          )}
 
-            {/* Empty Table Frame Structure */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-[#0f2b5c] text-white text-[11px] sm:text-xs font-black uppercase tracking-wider">
-                    <th className="py-3 px-4 text-center w-12">No</th>
-                    <th className="py-3 px-4">Nama SLRT_PUSKESOS</th>
-                    <th className="py-3 px-4">Desa / Kelurahan</th>
-                    <th className="py-3 px-4">Kecamatan</th>
-                    <th className="py-3 px-4">Kabupaten / Kota</th>
-                    <th className="py-3 px-4">Operator / Kontak</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Empty State Row */}
-                  <tr>
-                    <td colSpan={7} className="py-16 px-4 text-center">
-                      <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-3">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-50 border-2 border-blue-200 text-[#0f2b5c] flex items-center justify-center shadow-xs">
-                          <Layers className="w-7 h-7 text-[#0f2b5c]" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-sm sm:text-base font-black text-slate-800">
-                            Format Tabel Sementara Dikosongkan
-                          </h4>
-                          <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                            Format kolom dan struktur data tabel SLRT_PUSKESOS untuk wilayah <strong className="text-[#0f2b5c]">{activeRegion}</strong> saat ini sedang dalam penataan sistem sesuai regulasi dinas.
-                          </p>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold">
-                          <span>Wilayah Terpilih:</span>
-                          <strong className="text-[#0f2b5c]">{activeRegion}</strong>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Modal Tambah Data Puskesos Mandiri / Admin */}
+          {showSlrtAddModal && (
+            <SlrtAddRecordModal
+              isOpen={showSlrtAddModal}
+              onClose={() => setShowSlrtAddModal(false)}
+              targetRegion={activeRegion}
+              session={session}
+              onAddRecord={async (record) => {
+                if (onAddRecord) {
+                  await onAddRecord(record);
+                }
+              }}
+            />
+          )}
 
           {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI (POJOK KIRI BAWAH) */}
           <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
