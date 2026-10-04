@@ -1365,7 +1365,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             targetRegion={null}
             onImportSuccess={async (records) => {
               if (onBatchAddRecords) {
-                return await onBatchAddRecords(records);
+                return await onBatchAddRecords(records, 'slrt_puskesos');
               }
               return records.length;
             }}
@@ -1468,7 +1468,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               targetRegion={activeRegion}
               onImportSuccess={async (records) => {
                 if (onBatchAddRecords) {
-                  return await onBatchAddRecords(records);
+                  return await onBatchAddRecords(records, 'slrt_puskesos');
                 }
                 return records.length;
               }}

@@ -7,13 +7,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  Table,
   Building2,
   Check,
   Sparkles,
   Layers,
-  ChevronRight,
-  Filter
 } from 'lucide-react';
 import { parseSlrtExcelFile, SlrtParsedResult } from './slrtExcelParser';
 import { PSKSDataRecord } from '../../types';
@@ -40,8 +37,6 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
   const [uploadSuccessCount, setUploadSuccessCount] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  if (!isOpen) return null;
 
   const isSingleRegionMode = Boolean(targetRegion);
 
@@ -106,11 +101,13 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
     return key ? parseResult.regions[key] : null;
   }, [parseResult, selectedRegionKey]);
 
+  if (!isOpen) return null;
+
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start sm:items-center justify-center min-h-screen animate-fadeIn">
-      {/* Container with top and bottom spacing to prevent header cutoff */}
-      <div className="my-auto w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Modal Header (Never cut off) */}
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-6 sm:pt-10 pb-12 animate-fadeIn">
+      {/* Modal Dialog Card (Never cut off at top, has safe top margin & auto internal scroll) */}
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[86vh] relative">
+        {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 text-[#d4af37] shrink-0">
@@ -122,7 +119,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                   {isSingleRegionMode ? 'Skenario B: Khusus Wilayah' : 'Skenario A: Masal 27 Kab/Kota'}
                 </span>
                 <span className="text-[10px] text-blue-200 font-semibold hidden sm:inline">
-                  Smart Paired-Column Scanner (Format Resmi Dinas)
+                  Smart Auto-Forwarding Parser (Format Resmi Rekapitulasi)
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
@@ -149,12 +146,12 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
             <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <strong className="font-bold text-blue-950 block mb-1">
-                Deteksi Otomatis Format Resmi Rekapitulasi Puskesos:
+                Deteksi Otomatis & Perhitungan Cerdas Puskesos:
               </strong>
               <p>
                 {isSingleRegionMode
-                  ? `Sistem akan otomatis mengekstrak seluruh Desa dan Kelurahan yang telah membentuk Puskesos khusus untuk wilayah ${targetRegion}.`
-                  : 'Unggah 1 file Excel utuh (seperti format laporan WPS dinas). Sistem cerdas akan otomatis membagi, menyortir, dan mendistribusikan ribuan data desa/kelurahan ke masing-masing 27 Kabupaten/Kota se-Jawa Barat tanpa perlu memotong baris!'}
+                  ? `Mengunggah file Excel khusus untuk wilayah ${targetRegion}. Kolom jumlah desa/kelurahan yang telah membentuk puskesos akan dihitung otomatis oleh sistem.`
+                  : 'Unggah 1 file Excel utuh se-Jawa Barat. Sistem akan otomatis memetakan, menyortir, dan mendistribusikan data ke masing-masing 27 Kabupaten/Kota dengan perhitungan otomatis.'}
               </p>
             </div>
           </div>
@@ -215,7 +212,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     </div>
                     <h5 className="text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] mb-1">
                       {isParsing
-                        ? 'Sedang Membaca & Memetakan Struktur Kolom WPS...'
+                        ? 'Sedang Membaca & Memetakan Struktur Kolom Excel...'
                         : 'Klik untuk Memilih File atau Drag & Drop File Excel Disini'}
                     </h5>
                     <p className="text-xs text-slate-500 font-medium">
@@ -293,7 +290,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     </div>
                   )}
 
-                  {/* Region Selector Tabs (Full Preview per Region) */}
+                  {/* Region Selector Tabs (Full Preview per Region for Skenario A) */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -335,10 +332,10 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                     )}
                   </div>
 
-                  {/* FULL PREVIEW TABLE (Exact Government Layout) */}
+                  {/* FULL PREVIEW TABLE: Strict 5-Column Format matching User Specification */}
                   {activeRegionData && (
                     <div className="space-y-2">
-                      {/* Sub-header metric bar */}
+                      {/* Metric bar */}
                       <div className="flex flex-wrap items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-extrabold text-blue-950 text-sm">{activeRegionData.regionName}</span>
@@ -358,10 +355,9 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Full Table */}
-                      <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[380px] shadow-2xs">
+                      {/* Full Table (Clean 5 Columns: NO, KECAMATAN, KELURAHAN, DESA, JUMLAH OTOMATIS) */}
+                      <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[360px] shadow-2xs">
                         <table className="w-full text-left text-xs border-collapse">
-                          {/* Table Header matching Government WPS layout */}
                           <thead className="bg-[#0f2b5c] text-white text-[11px] font-black uppercase sticky top-0 z-10">
                             <tr>
                               <th className="py-2.5 px-3 text-center border-r border-blue-800 w-12">NO</th>
@@ -378,14 +374,13 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                             </tr>
                             <tr className="bg-[#1e3a8a] text-blue-200 text-[10px] font-bold text-center border-t border-blue-700">
                               <th className="py-1 px-1 border-r border-blue-800/60">1</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">7</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">8</th>
-                              <th className="py-1 px-1 border-r border-blue-800/60">9</th>
-                              <th className="py-1 px-1 bg-[#18458b]">10 (Otomatis)</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">2</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">3</th>
+                              <th className="py-1 px-1 border-r border-blue-800/60">4</th>
+                              <th className="py-1 px-1 bg-[#18458b]">5 (Dihitung Otomatis)</th>
                             </tr>
                           </thead>
 
-                          {/* Table Body: Full Rows */}
                           <tbody className="divide-y divide-slate-200 bg-white">
                             {(() => {
                               let rowNumber = 0;
@@ -443,7 +438,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                                         )}
                                       </td>
 
-                                      {/* Jumlah desa/kelurahan (Otomatis per kecamatan pada baris pertama) */}
+                                      {/* Jumlah desa/kelurahan yang telah membentuk puskesos (Dihitung Otomatis) */}
                                       <td className="py-2 px-3 text-center font-black text-[#0f2b5c] bg-slate-50/40">
                                         {isFirstRowOfKec ? (
                                           <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold">
