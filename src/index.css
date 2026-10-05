@@ -35,20 +35,18 @@
   animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Ultra Smooth Popping Spring Announcement Animation */
+/* Ultra Smooth Popping Spring Announcement Animation (GPU Optimized, 60-120 FPS) */
 @keyframes popSmoothSpring {
   0% {
     opacity: 0;
-    transform: scale(0.72) translateY(30px);
-    filter: blur(6px);
+    transform: scale(0.82) translateY(24px);
   }
-  60% {
+  65% {
     opacity: 1;
-    transform: scale(1.025) translateY(-3px);
-    filter: blur(0px);
+    transform: scale(1.018) translateY(-2px);
   }
-  82% {
-    transform: scale(0.992) translateY(1px);
+  85% {
+    transform: scale(0.995) translateY(1px);
   }
   100% {
     opacity: 1;
@@ -57,26 +55,54 @@
 }
 
 .animate-pop-spring {
-  animation: popSmoothSpring 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity, filter;
+  animation: popSmoothSpring 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes popSmoothExit {
   0% {
     opacity: 1;
     transform: scale(1) translateY(0);
-    filter: blur(0px);
   }
   100% {
     opacity: 0;
-    transform: scale(0.9) translateY(20px);
-    filter: blur(6px);
+    transform: scale(0.92) translateY(16px);
   }
 }
 
 .animate-pop-exit {
-  animation: popSmoothExit 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  will-change: transform, opacity, filter;
+  animation: popSmoothExit 0.24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Hardware Accelerated Continuous Countdown Animations */
+@keyframes announcementProgressBarAnim {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-announcement-bar {
+  transform-origin: left center;
+  animation: announcementProgressBarAnim var(--announcement-duration, 15s) linear forwards;
+  will-change: transform;
+}
+
+@keyframes announcementSvgRingAnim {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 88;
+  }
+}
+
+.animate-announcement-ring {
+  animation: announcementSvgRingAnim var(--announcement-duration, 15s) linear forwards;
+  will-change: stroke-dashoffset;
 }
 
 @keyframes overlayFadeIn {

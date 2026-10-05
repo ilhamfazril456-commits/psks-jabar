@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AnnouncementConfig } from '../types';
-import { X, Clock, Sparkles } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface FloatingAnnouncementModalProps {
   isOpen: boolean;
@@ -20,19 +20,18 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
     [10, 15, 20, 25, 30].includes(announcement.displayDurationSeconds)
       ? announcement.displayDurationSeconds
       : 15;
-  const totalDurationMs = durationSeconds * 1000;
 
-  const [remainingMs, setRemainingMs] = useState<number>(totalDurationMs);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(durationSeconds);
   const [isClosing, setIsClosing] = useState<boolean>(false);
 
   const isClosingRef = useRef<boolean>(false);
-  const startTimeRef = useRef<number>(0);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const targetEndTimeRef = useRef<number>(0);
 
   isClosingRef.current = isClosing;
 
-  // Initiate graceful exit animation before unmounting
+  // Graceful exit animation before unmounting
   const handleInitiateClose = () => {
     if (isClosingRef.current) return;
     setIsClosing(true);
@@ -47,10 +46,11 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
       onClose();
       setIsClosing(false);
       isClosingRef.current = false;
-    }, 250);
+    }, 240);
   };
 
-  // 100% Robust, Wall-Clock Continuous Timer
+  // 100% Robust, 1-Second Interval tied to system wall-clock
+  // Mengurangi frekuensi render React dari 20x/detik menjadi 1x/detik (Optimasi 95% CPU/Main-Thread)
   useEffect(() => {
     if (!isOpen || !announcement || !announcement.active) {
       setIsClosing(false);
@@ -68,32 +68,30 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
 
     setIsClosing(false);
     isClosingRef.current = false;
-    setRemainingMs(totalDurationMs);
-    startTimeRef.current = Date.now();
-
-    const targetEndTime = startTimeRef.current + totalDurationMs;
+    setRemainingSeconds(durationSeconds);
+    targetEndTimeRef.current = Date.now() + durationSeconds * 1000;
 
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
 
-    // 50ms interval tied to absolute system clock
+    // Interval 1000ms (1 detik) hemat memori & CPU
     timerIntervalRef.current = setInterval(() => {
       if (isClosingRef.current) return;
 
       const now = Date.now();
-      const timeLeft = Math.max(0, targetEndTime - now);
+      const secondsLeft = Math.max(0, Math.ceil((targetEndTimeRef.current - now) / 1000));
 
-      setRemainingMs(timeLeft);
+      setRemainingSeconds(secondsLeft);
 
-      if (timeLeft <= 0) {
+      if (secondsLeft <= 0) {
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
         }
         handleInitiateClose();
       }
-    }, 50);
+    }, 1000);
 
     return () => {
       if (timerIntervalRef.current) {
@@ -105,7 +103,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
         closeTimeoutRef.current = null;
       }
     };
-  }, [isOpen, totalDurationMs, announcement?.active]);
+  }, [isOpen, durationSeconds, announcement?.active]);
 
   if (!isOpen || !announcement || !announcement.active) {
     return null;
@@ -125,13 +123,10 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
     }
   };
 
-  const displaySeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-  const progressRatio = Math.max(0, Math.min(1, remainingMs / totalDurationMs));
-
   return (
     <div
       id="floating-announcement-overlay"
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md transition-all duration-300 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xs transition-all duration-300 ${
         isClosing ? 'animate-overlay-exit' : 'animate-overlay-fade'
       }`}
       onClick={handleInitiateClose}
@@ -142,17 +137,15 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
       {/* Perfectly Proportioned 1:1 Square (Kotak) Frameless Card Container */}
       <div
         id="floating-announcement-card"
+        style={{ '--announcement-duration': `${durationSeconds}s` } as React.CSSProperties}
         className={`relative w-[88vw] max-w-[460px] aspect-square max-h-[85vh] rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col transition-all bg-slate-950 select-none ${
           isClosing ? 'animate-pop-exit' : 'animate-pop-spring'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modern White Top Progress Bar */}
+        {/* Hardware-Accelerated Pure CSS Continuous Top Progress Bar (60-120 FPS di GPU Compositor) */}
         <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-white/20 overflow-hidden">
-          <div
-            className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] transition-[width] duration-75 ease-linear"
-            style={{ width: `${progressRatio * 100}%` }}
-          />
+          <div className="h-full w-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] animate-announcement-bar" />
         </div>
 
         {/* Floating Top Controls Overlay */}
@@ -160,10 +153,10 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
           {/* Modern White Countdown Ring & Pill Timer */}
           <div
             id="floating-announcement-timer"
-            className="pointer-events-auto inline-flex items-center gap-2 bg-black/40 hover:bg-black/55 backdrop-blur-md text-white border border-white/30 px-3 py-1.5 rounded-full shadow-lg transition-all duration-200"
+            className="pointer-events-auto inline-flex items-center gap-2 bg-black/60 hover:bg-black/75 text-white border border-white/25 px-3 py-1.5 rounded-full shadow-lg transition-all duration-200"
             title="Waktu tayang otomatis tersisa"
           >
-            {/* Smooth SVG Countdown Ring in White */}
+            {/* Smooth GPU-Accelerated SVG Countdown Ring */}
             <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
               <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
                 <circle
@@ -179,10 +172,9 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
                   cx="18"
                   cy="18"
                   r="14"
-                  className="text-white transition-[stroke-dashoffset] duration-75 ease-linear drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                  className="text-white animate-announcement-ring drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
                   strokeWidth="3.5"
                   strokeDasharray={88}
-                  strokeDashoffset={88 - 88 * progressRatio}
                   strokeLinecap="round"
                   stroke="currentColor"
                   fill="none"
@@ -190,7 +182,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
               </svg>
             </div>
             <span className="text-xs font-black font-mono tracking-wider text-white drop-shadow-sm">
-              {displaySeconds}s
+              {remainingSeconds}s
             </span>
           </div>
 
@@ -199,7 +191,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
             id="btn-close-floating-announcement"
             type="button"
             onClick={handleInitiateClose}
-            className="pointer-events-auto w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/60 active:scale-90 text-white backdrop-blur-md flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg border border-white/30 hover:border-white/60 group"
+            className="pointer-events-auto w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/80 active:scale-90 text-white flex items-center justify-center transition-all duration-200 cursor-pointer shadow-lg border border-white/25 hover:border-white/60 group"
             aria-label="Tutup Pengumuman"
             title="Tutup Pengumuman"
           >
@@ -216,7 +208,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
         >
           {announcement.photoUrl ? (
             <>
-              {/* Subtle ambient blurred background from poster */}
+              {/* Subtle ambient background poster */}
               <img
                 src={announcement.photoUrl}
                 alt=""
@@ -226,7 +218,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
                 loading="lazy"
                 decoding="async"
                 referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-35 scale-110 pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover blur-sm opacity-25 scale-105 pointer-events-none"
               />
               {/* Crisp Foreground Poster fitted seamlessly into 1:1 square card */}
               <img
@@ -270,7 +262,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
             id="btn-action-floating-announcement-info"
             type="button"
             onClick={handleActionClick}
-            className="pointer-events-auto bg-white/95 hover:bg-white active:scale-95 text-slate-950 font-black text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all duration-200 cursor-pointer uppercase tracking-wider border border-white/70 hover:scale-105"
+            className="pointer-events-auto bg-white/95 hover:bg-white active:scale-95 text-slate-950 font-black text-xs sm:text-sm px-6 py-2.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.5)] transition-all duration-200 cursor-pointer uppercase tracking-wider border border-white/70 hover:scale-105"
             title="Klik untuk membaca informasi lengkap"
           >
             {announcement.actionType === 'url' ? 'Buka Tautan' : 'Info Lengkap'}
