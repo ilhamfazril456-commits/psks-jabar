@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Plus,
@@ -11,6 +12,11 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  CheckSquare,
+  Square,
+  AlertTriangle,
+  X,
+  Check,
 } from 'lucide-react';
 import { PSKSDataRecord, UserSession } from '../../types';
 import { isSameWilayah } from '../../utils/submissionStatus';
@@ -26,6 +32,7 @@ interface SlrtTableViewProps {
   onOpenAddModal: () => void;
   onOpenImportModal: () => void;
   onDeleteRecord?: (id: string) => Promise<any> | void;
+  onBatchDeleteRecords?: (recordIds: string[], targetPillarId?: any) => Promise<any> | void;
 }
 
 interface SlrtDisplayRow {
@@ -47,11 +54,26 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
   onOpenAddModal,
   onOpenImportModal,
   onDeleteRecord,
+  onBatchDeleteRecords,
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedJenisFilter, setSelectedJenisFilter] = useState<'all' | 'Desa' | 'Kelurahan'>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // States untuk Fitur Hapus Spesifik & Hapus Masal
+  const [recordToDelete, setRecordToDelete] = useState<{
+    id: string;
+    name: string;
+    type: 'Desa' | 'Kelurahan';
+    kec: string;
+  } | null>(null);
+  const [isSelectionModeActive, setIsSelectionModeActive] = useState<boolean>(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState<boolean>(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState<boolean>(false);
+  const [showClearRegionModal, setShowClearRegionModal] = useState<boolean>(false);
+  const [isClearingRegion, setIsClearingRegion] = useState<boolean>(false);
 
   const ROWS_PER_PAGE = 100;
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -62,9 +84,13 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     session.isDeveloper ||
     (session.role === 'admin' && isSameWilayah(session.wilayah, activeRegion));
 
+  const isSuperAdminOrDev =
+    session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
+
   // Reset page when filter or region changes
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedRecordIds([]);
   }, [searchQuery, selectedJenisFilter, activeRegion]);
 
   // 1. Filter records specifically for activeRegion
@@ -164,26 +190,27 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     let runningKel = 0;
     let runningDesa = 0;
 
-    hierarchicalData.forEach((group, kecIdx) => {
-      for (let rIdx = 0; rIdx < group.rowCount; rIdx++) {
-        globalIndex += 1;
-        const kelRec = group.kelurahans[rIdx];
-        const desaRec = group.desas[rIdx];
+    hierarchicalData.forEach((item, kecIdx) => {
+      for (let i = 0; i < item.rowCount; i++) {
+        const kelRec = item.kelurahans[i];
+        const desaRec = item.desas[i];
 
-        if (kelRec) runningKel += 1;
-        if (desaRec) runningDesa += 1;
+        if (kelRec) runningKel++;
+        if (desaRec) runningDesa++;
 
         rowsList.push({
           globalRowIndex: globalIndex,
-          isFirstRowOfRegion: globalIndex === 1,
-          isFirstRowOfKec: rIdx === 0,
-          kecamatanName: group.kecamatan,
+          isFirstRowOfRegion: globalIndex === 0,
+          isFirstRowOfKec: i === 0,
+          kecamatanName: item.kecamatan,
           kecIdx,
           kelRec,
           kelNumber: kelRec ? runningKel : undefined,
           desaRec,
           desaNumber: desaRec ? runningDesa : undefined,
         });
+
+        globalIndex++;
       }
     });
 
@@ -195,41 +222,38 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
   const totalPages = Math.max(1, Math.ceil(totalRows / ROWS_PER_PAGE));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
-  // Jika total halaman berkurang di bawah halaman aktif, sesuaikan secara halus
+  // Jika total halaman berkurang di bawah halaman aktif, sesuaikan
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(Math.max(1, totalPages));
+      setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
 
   const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
   const paginatedRows = useMemo(() => {
     return allDisplayRows.slice(startIndex, startIndex + ROWS_PER_PAGE);
-  }, [allDisplayRows, startIndex, ROWS_PER_PAGE]);
+  }, [allDisplayRows, startIndex]);
 
+  // Fungsi pengalihan otomatis ke baris paling atas tabel
   const scrollToTableTop = () => {
     if (tableContainerRef.current) {
-      try {
-        tableContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } catch {
-        // fallback jika browser tidak mendukung block option
-      }
-      const rect = tableContainerRef.current.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-      const targetY = rect.top + scrollTop - 75;
-      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+      tableContainerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    } else {
+      window.scrollTo({ top: 180, behavior: 'smooth' });
     }
   };
 
   const handlePageChange = (newPage: number) => {
-    const validPage = Math.min(Math.max(1, newPage), totalPages);
-    setCurrentPage(validPage);
+    const clampedPage = Math.min(Math.max(1, newPage), totalPages);
+    setCurrentPage(clampedPage);
     setTimeout(() => {
       scrollToTableTop();
     }, 50);
   };
 
-  // Handle Export
   const handleExportExcel = () => {
     exportPillarToExcel({
       pillarId: 'slrt_puskesos',
@@ -250,15 +274,86 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     });
   };
 
-  const handleDelete = async (recordId: string, name: string) => {
-    if (!onDeleteRecord) return;
-    if (confirm(`Apakah Anda yakin ingin menghapus data Puskesos "${name}"?`)) {
-      setDeletingId(recordId);
-      try {
-        await onDeleteRecord(recordId);
-      } finally {
-        setDeletingId(null);
+  // =========================================================================
+  // HANDLERS FITUR HAPUS: SINGLE, BATCH (CENTANG), DAN KOSONGKAN WILAYAH
+  // =========================================================================
+  const handleConfirmSingleDelete = async () => {
+    if (!recordToDelete) return;
+    setDeletingId(recordToDelete.id);
+    try {
+      if (onBatchDeleteRecords) {
+        await onBatchDeleteRecords([recordToDelete.id], 'slrt_puskesos');
+      } else if (onDeleteRecord) {
+        await onDeleteRecord(recordToDelete.id);
       }
+    } catch (err) {
+      console.error('Error deleting Puskesos record:', err);
+    } finally {
+      setDeletingId(null);
+      setRecordToDelete(null);
+    }
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    if (!selectedRecordIds.length) return;
+    setIsDeletingBatch(true);
+    try {
+      if (onBatchDeleteRecords) {
+        await onBatchDeleteRecords(selectedRecordIds, 'slrt_puskesos');
+      } else if (onDeleteRecord) {
+        for (const id of selectedRecordIds) {
+          await onDeleteRecord(id);
+        }
+      }
+      setSelectedRecordIds([]);
+      setIsSelectionModeActive(false);
+    } catch (err) {
+      console.error('Error batch deleting Puskesos records:', err);
+    } finally {
+      setIsDeletingBatch(false);
+      setShowBatchDeleteModal(false);
+    }
+  };
+
+  const handleConfirmClearRegion = async () => {
+    if (!regionRecords.length) return;
+    setIsClearingRegion(true);
+    try {
+      const allIds = regionRecords.map((r) => r.id);
+      if (onBatchDeleteRecords) {
+        await onBatchDeleteRecords(allIds, 'slrt_puskesos');
+      } else if (onDeleteRecord) {
+        for (const id of allIds) {
+          await onDeleteRecord(id);
+        }
+      }
+      setSelectedRecordIds([]);
+      setIsSelectionModeActive(false);
+    } catch (err) {
+      console.error('Error clearing region Puskesos records:', err);
+    } finally {
+      setIsClearingRegion(false);
+      setShowClearRegionModal(false);
+    }
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllCurrentPage = () => {
+    const pageIds: string[] = [];
+    paginatedRows.forEach((r) => {
+      if (r.kelRec) pageIds.push(r.kelRec.id);
+      if (r.desaRec) pageIds.push(r.desaRec.id);
+    });
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedRecordIds.includes(id));
+    if (allSelected) {
+      setSelectedRecordIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedRecordIds((prev) => Array.from(new Set([...prev, ...pageIds])));
     }
   };
 
@@ -357,7 +452,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Desa ({adminSummary.jmlDesa})
+              Desa ({adminSummary.puskesosDesa})
             </button>
             <button
               type="button"
@@ -368,19 +463,19 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Kelurahan ({adminSummary.jmlKelurahan})
+              Kelurahan ({adminSummary.puskesosKelurahan})
             </button>
           </div>
         </div>
 
-        {/* Buttons: Add, Import, Export */}
+        {/* Buttons: Add, Import, Delete/Manage, Export */}
         <div className="flex flex-wrap items-center gap-2">
           {canEdit && (
             <>
               <button
                 type="button"
                 onClick={onOpenAddModal}
-                className="inline-flex items-center gap-1.5 bg-[#0f2b5c] hover:bg-blue-900 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-1.5 bg-[#0f2b5c] hover:bg-blue-900 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 text-amber-300" />
                 <span>Tambah Puskesos</span>
@@ -389,19 +484,50 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenImportModal}
-                className="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
                 title="Import khusus untuk wilayah ini"
               >
                 <UploadCloud className="w-4 h-4 text-emerald-200" />
                 <span>Import Excel Khusus Wilayah Ini</span>
               </button>
+
+              {/* Tombol Mode Centang / Hapus Masal */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSelectionModeActive(!isSelectionModeActive);
+                  setSelectedRecordIds([]);
+                }}
+                className={`inline-flex items-center gap-1.5 font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap ${
+                  isSelectionModeActive
+                    ? 'bg-rose-700 text-white ring-2 ring-rose-400'
+                    : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-300'
+                }`}
+                title="Aktifkan mode centang untuk menghapus beberapa data Puskesos sekaligus"
+              >
+                <CheckSquare className="w-4 h-4" />
+                <span>{isSelectionModeActive ? 'Tutup Pilihan' : 'Hapus Terpilih'}</span>
+              </button>
+
+              {/* Tombol Kosongkan Seluruh Data Wilayah (Khusus Superadmin/Developer) */}
+              {isSuperAdminOrDev && regionRecords.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowClearRegionModal(true)}
+                  className="inline-flex items-center gap-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                  title={`Kosongkan seluruh ${regionRecords.length} data Puskesos di wilayah ${activeRegion}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">Kosongkan Wilayah</span>
+                </button>
+              )}
             </>
           )}
 
           <button
             type="button"
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-1.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
           >
             <FileText className="w-3.5 h-3.5" />
             <span>PDF</span>
@@ -410,13 +536,59 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm px-3 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Excel</span>
           </button>
         </div>
       </div>
+
+      {/* Banner Bilah Aksi Mode Centang Hapus Masal */}
+      {isSelectionModeActive && (
+        <div className="bg-rose-50 border border-rose-300 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+            <span className="font-bold text-rose-950">
+              Mode Centang Hapus Aktif:
+            </span>
+            <span className="bg-rose-200 text-rose-900 font-black px-2 py-0.5 rounded-full text-[11px]">
+              {selectedRecordIds.length} Terpilih
+            </span>
+            <span className="text-slate-600 hidden sm:inline">
+              (Centang kotak di samping nama Desa atau Kelurahan untuk menghapus beberapa data sekaligus)
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSelectAllCurrentPage}
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-300 transition-colors cursor-pointer"
+            >
+              Centang Halaman Ini
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectionModeActive(false);
+                setSelectedRecordIds([]);
+              }}
+              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBatchDeleteModal(true)}
+              disabled={selectedRecordIds.length === 0}
+              className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white font-bold rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Hapus ({selectedRecordIds.length}) Terpilih</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2.5 Quick Navigation Bar at Top (Muncul jika data lebih dari 100 baris / totalPages > 1) */}
       {totalPages > 1 && (
@@ -450,19 +622,16 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               title="Ke Baris Sebelumnya"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Sebelumnya</span>
+              <span>Sebelumnya</span>
             </button>
-            <span className="px-2.5 py-1 rounded-lg bg-[#0f2b5c] text-white font-extrabold text-xs shadow-2xs">
-              {safeCurrentPage} / {totalPages}
-            </span>
             <button
               type="button"
               onClick={() => handlePageChange(Math.min(totalPages, safeCurrentPage + 1))}
               disabled={safeCurrentPage >= totalPages}
               className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs text-xs"
-              title={`Ke Baris ${safeCurrentPage * ROWS_PER_PAGE + 1} / Selanjutnya`}
+              title="Ke Baris Berikutnya"
             >
-              <span className="hidden md:inline">Selanjutnya</span>
+              <span>Berikutnya</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <button
@@ -478,24 +647,24 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
         </div>
       )}
 
-      {/* 3. The Official 10-Column Government Table Format (With JUMLAH TERBENTUK moved into Wilayah Administratif after No. 6) */}
-      <div ref={tableContainerRef} className="bg-white rounded-2xl border-2 border-slate-300 shadow-md overflow-hidden">
-        {/* Title Bar inside table */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-[#d4af37]">
+      {/* 3. Main Data Table */}
+      <div
+        ref={tableContainerRef}
+        className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+      >
+        {/* Table Title Bar */}
+        <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#f1c40f]">
-              Format Resmi Rekapitulasi Pembentukan Puskesos
-            </span>
-            <h4 className="text-sm sm:text-base font-black tracking-tight">
-              DATA PUSAT KESEJAHTERAAN SOSIAL DESA/KELURAHAN WILAYAH {activeRegion.toUpperCase()}
+            <h4 className="font-extrabold text-slate-900 text-sm sm:text-base">
+              Rekapitulasi Puskesos: {activeRegion.toUpperCase()}
             </h4>
-          </div>
-          <div className="text-right">
-            <span className="text-[11px] font-semibold text-blue-200 block">
-              Dinas Sosial Provinsi Jawa Barat
+            <span className="text-xs text-slate-500 font-medium">
+              Sesuai Format Baku Rekapitulasi Pemprov Jabar (10 Kolom) • Otomatis menghitung rasio terbentuk
             </span>
-            <span className="text-[10px] text-amber-300 font-bold block">
-              {totalRows > 0 ? `Total ${totalRows} Baris Terdata` : 'Belum Ada Data'}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-blue-100 text-[#0f2b5c] font-black text-xs">
+              {regionRecords.length} Data Terdaftar
             </span>
           </div>
         </div>
@@ -644,23 +813,38 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                     </td>
 
                     {/* Col 9: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
-                    <td className="py-2.5 px-3 border-r border-slate-200 group">
+                    <td className="py-2.5 px-3 border-r border-slate-200">
                       {rowItem.kelRec ? (
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold text-purple-950">
-                            {rowItem.kelNumber} {rowItem.kelRec.kelDesa || rowItem.kelRec.nama}
-                          </span>
-                          {canEdit && (
+                        <div className="flex items-center justify-between gap-1.5 group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isSelectionModeActive && (
+                              <input
+                                type="checkbox"
+                                checked={selectedRecordIds.includes(rowItem.kelRec.id)}
+                                onChange={() => toggleSelectRecord(rowItem.kelRec!.id)}
+                                className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer shrink-0"
+                              />
+                            )}
+                            <span className="font-semibold text-purple-950 truncate">
+                              {rowItem.kelNumber} {rowItem.kelRec.kelDesa || rowItem.kelRec.nama}
+                            </span>
+                          </div>
+                          {canEdit && !isSelectionModeActive && (
                             <button
                               type="button"
                               onClick={() =>
-                                handleDelete(rowItem.kelRec!.id, rowItem.kelRec!.kelDesa || rowItem.kelRec!.nama)
+                                setRecordToDelete({
+                                  id: rowItem.kelRec!.id,
+                                  name: rowItem.kelRec!.kelDesa || rowItem.kelRec!.nama,
+                                  type: 'Kelurahan',
+                                  kec: rowItem.kecamatanName,
+                                })
                               }
                               disabled={deletingId === rowItem.kelRec.id}
-                              className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
-                              title="Hapus Puskesos Kelurahan Ini"
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 transition-colors cursor-pointer shrink-0"
+                              title={`Hapus Puskesos Kelurahan ${rowItem.kelRec.kelDesa || rowItem.kelRec.nama}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           )}
                         </div>
@@ -670,23 +854,38 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                     </td>
 
                     {/* Col 10: DESA YANG TELAH MEMBENTUK PUSKESOS */}
-                    <td className="py-2.5 px-3 group">
+                    <td className="py-2.5 px-3">
                       {rowItem.desaRec ? (
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold text-emerald-950">
-                            {rowItem.desaNumber} {rowItem.desaRec.kelDesa || rowItem.desaRec.nama}
-                          </span>
-                          {canEdit && (
+                        <div className="flex items-center justify-between gap-1.5 group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isSelectionModeActive && (
+                              <input
+                                type="checkbox"
+                                checked={selectedRecordIds.includes(rowItem.desaRec.id)}
+                                onChange={() => toggleSelectRecord(rowItem.desaRec!.id)}
+                                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer shrink-0"
+                              />
+                            )}
+                            <span className="font-semibold text-emerald-950 truncate">
+                              {rowItem.desaNumber} {rowItem.desaRec.kelDesa || rowItem.desaRec.nama}
+                            </span>
+                          </div>
+                          {canEdit && !isSelectionModeActive && (
                             <button
                               type="button"
                               onClick={() =>
-                                handleDelete(rowItem.desaRec!.id, rowItem.desaRec!.kelDesa || rowItem.desaRec!.nama)
+                                setRecordToDelete({
+                                  id: rowItem.desaRec!.id,
+                                  name: rowItem.desaRec!.kelDesa || rowItem.desaRec!.nama,
+                                  type: 'Desa',
+                                  kec: rowItem.kecamatanName,
+                                })
                               }
                               disabled={deletingId === rowItem.desaRec.id}
-                              className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 cursor-pointer transition-opacity"
-                              title="Hapus Puskesos Desa Ini"
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 transition-colors cursor-pointer shrink-0"
+                              title={`Hapus Puskesos Desa ${rowItem.desaRec.kelDesa || rowItem.desaRec.nama}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           )}
                         </div>
@@ -709,7 +908,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               <strong className="text-[#0f2b5c] font-bold">
                 {Math.min(startIndex + ROWS_PER_PAGE, totalRows)}
               </strong>{' '}
-              dari total <strong className="text-[#0f2b5c] font-bold">{totalRows}</strong> baris data Puskesos
+              dari total <strong className="text-[#0f2b5c] font-bold">{totalRows}</strong> baris data Puskesos {activeRegion}
             </div>
 
             {totalPages > 1 && (
@@ -719,7 +918,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   onClick={() => handlePageChange(1)}
                   disabled={safeCurrentPage <= 1}
                   className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors cursor-pointer"
-                  title="Halaman Pertama (Baris 1 - 100)"
+                  title="Halaman Pertama (1)"
                 >
                   <ChevronsLeft className="w-3.5 h-3.5" />
                 </button>
@@ -734,13 +933,12 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   <span className="hidden sm:inline">Sebelumnya</span>
                 </button>
 
-                <div className="flex items-center gap-1 px-1">
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const pageNum = i + 1;
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
                     if (
                       pageNum === 1 ||
                       pageNum === totalPages ||
-                      (pageNum >= safeCurrentPage - 2 && pageNum <= safeCurrentPage + 2)
+                      Math.abs(pageNum - safeCurrentPage) <= 2
                     ) {
                       return (
                         <button
@@ -793,6 +991,143 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* ========================================================================= */}
+      {/* 5. MODAL KONFIRMASI HAPUS SINGLE (PER DESA / KELURAHAN)                   */}
+      {/* ========================================================================= */}
+      {recordToDelete &&
+        createPortal(
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border-2 border-rose-500 p-6 text-center animate-in zoom-in-95 duration-150">
+              <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-200">
+                <Trash2 className="w-7 h-7 stroke-[2.5]" />
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-slate-900 mb-1.5">
+                Hapus Data Puskesos {recordToDelete.type}?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Apakah Anda yakin ingin menghapus data Puskesos{' '}
+                <strong className="text-slate-900 font-bold">
+                  {recordToDelete.name}
+                </strong>{' '}
+                (Kecamatan {recordToDelete.kec}) di wilayah{' '}
+                <strong className="text-[#0f2b5c] font-bold">{activeRegion}</strong>?
+              </p>
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] mb-5 text-left flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Tindakan ini akan mengurangi rekapitulasi data Puskesos terbentuk untuk {activeRegion}. Data yang dihapus tidak dapat dipulihkan.
+                </span>
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRecordToDelete(null)}
+                  disabled={deletingId !== null}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl cursor-pointer transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSingleDelete}
+                  disabled={deletingId !== null}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-xs sm:text-sm rounded-xl shadow cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{deletingId ? 'Menghapus...' : 'Ya, Hapus Puskesos Ini'}</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ========================================================================= */}
+      {/* 6. MODAL KONFIRMASI HAPUS MASAL (BATCH CENTANG)                          */}
+      {/* ========================================================================= */}
+      {showBatchDeleteModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border-2 border-rose-500 p-6 text-center animate-in zoom-in-95 duration-150">
+              <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-200">
+                <Trash2 className="w-7 h-7 stroke-[2.5]" />
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-slate-900 mb-1.5">
+                Hapus {selectedRecordIds.length} Data Puskesos Terpilih?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Sebanyak <strong className="text-rose-700 font-black">{selectedRecordIds.length} data</strong> Puskesos yang Anda centang pada wilayah{' '}
+                <strong className="text-[#0f2b5c] font-bold">{activeRegion}</strong> akan dihapus secara permanen dari sistem.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBatchDeleteModal(false)}
+                  disabled={isDeletingBatch}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl cursor-pointer transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBatchDelete}
+                  disabled={isDeletingBatch}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-xs sm:text-sm rounded-xl shadow cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeletingBatch ? 'Menghapus...' : `Ya, Hapus (${selectedRecordIds.length}) Data`}</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ========================================================================= */}
+      {/* 7. MODAL KONFIRMASI KOSONGKAN SELURUH DATA WILAYAH (SUPERADMIN/DEV)      */}
+      {/* ========================================================================= */}
+      {showClearRegionModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-fadeIn">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border-2 border-red-600 p-6 text-center animate-in zoom-in-95 duration-150">
+              <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 border border-red-200">
+                <AlertTriangle className="w-7 h-7 stroke-[2.5]" />
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-slate-900 mb-1.5">
+                Kosongkan Seluruh Data {activeRegion}?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+                Tindakan ini akan menghapus bersih seluruh{' '}
+                <strong className="text-red-600 font-black">{regionRecords.length} data Puskesos</strong> yang telah terdaftar pada wilayah{' '}
+                <strong className="text-[#0f2b5c] font-bold">{activeRegion}</strong>.
+              </p>
+              <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-900 text-[11px] mb-5 text-left">
+                Gunakan fitur ini jika terjadi kesalahan massal saat import berkas dan Anda ingin mengatur ulang (*reset*) data wilayah ini dari awal.
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowClearRegionModal(false)}
+                  disabled={isClearingRegion}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl cursor-pointer transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmClearRegion}
+                  disabled={isClearingRegion}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-black text-xs sm:text-sm rounded-xl shadow cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isClearingRegion ? 'Mengosongkan...' : 'Ya, Kosongkan Wilayah Ini'}</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

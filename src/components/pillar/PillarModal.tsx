@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   X,
   Lock,
+  Check,
   CheckCircle2,
   UploadCloud,
   FileImage,
@@ -79,6 +80,7 @@ interface FormDataState {
   bidangBantuan: string;
   namaSlrt: string;
   operator: string;
+  jenisWilayah?: 'Desa' | 'Kelurahan';
 }
 
 interface PillarModalProps {
@@ -1431,112 +1433,94 @@ export const PillarModal: React.FC<PillarModalProps> = ({
             </div>
           )}
 
-          {/* 10. SLRT PUSKESOS */}
+          {/* 10. SLRT PUSKESOS (Opsi A: Ringkas & Sesuai Tabel Rekapitulasi) */}
           {pillarId === 'slrt_puskesos' && (
             <div className="flex flex-col gap-4">
-              {/* 1. Nama SLRT */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama SLRT_PUSKESOS <span className="text-red-500">*</span> :
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.namaSlrt}
-                  onChange={(e) => setFormData({ ...formData, namaSlrt: e.target.value })}
-                  placeholder="Contoh: SLRT Puskesos Berkah Mukti"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
-                />
-              </div>
+              {/* 1. Kabupaten/Kota */}
+              {renderWilayahSelect({ label: 'Kabupaten/Kota' })}
 
-              {/* 2. Desa/Kelurahan */}
+              {/* 2. Kecamatan */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Desa/Kelurahan <span className="text-red-500">*</span> :
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.kelDesa}
-                  onChange={(e) => setFormData({ ...formData, kelDesa: e.target.value })}
-                  placeholder="Contoh: Sukajaya"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
-                />
-              </div>
-
-              {/* 3. Kecamatan */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Kecamatan <span className="text-red-500">*</span> :
+                  Nama Kecamatan <span className="text-red-500">*</span> :
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.kec}
                   onChange={(e) => setFormData({ ...formData, kec: e.target.value })}
-                  placeholder="Contoh: Lembang"
+                  placeholder="Contoh: Cileunyi"
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
                 />
               </div>
 
-              {/* 4. Kabupaten/Kota */}
-              {renderWilayahSelect({ label: 'Kabupaten/Kota' })}
-
-              {/* 5. Tahun Berdiri */}
+              {/* 3. Status Wilayah: Desa / Kelurahan */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tahun Berdiri <span className="text-red-500">*</span> :
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Status Wilayah Pemerintahan <span className="text-red-500">*</span> :
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.tahunBerdiri}
-                  onChange={(e) => setFormData({ ...formData, tahunBerdiri: e.target.value })}
-                  placeholder="Contoh: 2019"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
-                />
-              </div>
-
-              {/* 6. Operator Puskesos */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Operator Puskesos <span className="text-red-500">*</span> :
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.operator}
-                  onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                  placeholder="Contoh: Neng Lilis Suryani, S.AP"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
-                />
-              </div>
-
-              {/* 7. Status Aktif (Terkunci Aktif Saja) */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Status Aktif <span className="text-red-500">*</span> :
-                  </label>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                    <Lock className="w-2.5 h-2.5" /> Terkunci (Aktif Saja)
-                  </span>
-                </div>
-                <div className="relative">
-                  <select
-                    disabled
-                    value="Aktif"
-                    className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm font-bold text-emerald-900 focus:outline-none cursor-not-allowed appearance-none"
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        jenisWilayah: 'Desa',
+                        nama: formData.kelDesa ? `Desa ${formData.kelDesa}` : formData.nama,
+                      });
+                    }}
+                    className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      (formData as any).jenisWilayah !== 'Kelurahan'
+                        ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                    }`}
                   >
-                    <option value="Aktif">Aktif</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
+                    <span>Desa</span>
+                    {(formData as any).jenisWilayah !== 'Kelurahan' && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        jenisWilayah: 'Kelurahan',
+                        nama: formData.kelDesa ? `Kel. ${formData.kelDesa}` : formData.nama,
+                      });
+                    }}
+                    className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      (formData as any).jenisWilayah === 'Kelurahan'
+                        ? 'bg-purple-700 text-white border-purple-800 shadow-xs'
+                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>Kelurahan</span>
+                    {(formData as any).jenisWilayah === 'Kelurahan' && <Check className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1 font-medium">
-                  * Pendaftaran baru ditetapkan berstatus "Aktif" secara otomatis oleh sistem.
-                </p>
+              </div>
+
+              {/* 4. Nama Desa / Kelurahan */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nama {(formData as any).jenisWilayah === 'Kelurahan' ? 'Kelurahan' : 'Desa'} Yang Telah Membentuk Puskesos <span className="text-red-500">*</span> :
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.kelDesa}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const isKel = (formData as any).jenisWilayah === 'Kelurahan';
+                    setFormData({
+                      ...formData,
+                      kelDesa: val,
+                      nama: val ? (isKel ? `Kel. ${val}` : `Desa ${val}`) : '',
+                      namaSlrt: val ? `Puskesos ${isKel ? 'Kel.' : 'Desa'} ${val}` : '',
+                    });
+                  }}
+                  placeholder={`Contoh: ${(formData as any).jenisWilayah === 'Kelurahan' ? 'Cibeunying' : 'Cileunyi Kulon'}`}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:border-[#043e2e]"
+                />
               </div>
             </div>
           )}

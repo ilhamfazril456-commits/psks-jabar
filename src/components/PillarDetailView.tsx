@@ -1544,6 +1544,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             onOpenAddModal={() => setShowSlrtAddModal(true)}
             onOpenImportModal={() => setShowSlrtRegionImportModal(true)}
             onDeleteRecord={onDeleteRecord}
+            onBatchDeleteRecords={onBatchDeleteRecords}
           />
 
           {/* Modal Skenario B: Import Khusus Wilayah Ini */}
