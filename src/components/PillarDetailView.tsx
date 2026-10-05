@@ -694,10 +694,25 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     }
 
     const saveRecordOrSubmission = (recordPayload: Omit<PSKSDataRecord, 'id'>) => {
-      if (session.role === 'user') {
+      const isSuperadminOrDev =
+        session.role === 'superadmin' ||
+        session.role === 'developer' ||
+        session.isDeveloper;
+
+      if (!editingRecord && !isSuperadminOrDev) {
+        // Alur Ajukan Pendaftaran: Berlaku untuk Role 'user' (User Terdaftar) dan 'admin' (Admin Wilayah)
+        const isRoleAdmin = session.role === 'admin';
         const subWilayah = recordPayload.wilayah || session.wilayah || 'Kota Cimahi';
         const isProvJabar = subWilayah === 'Prov. Jabar' || subWilayah.toLowerCase().includes('provinsi');
-        const initialStatus = isProvJabar ? 'MENUNGGU_PENGESAHAN_PROVINSI' : 'MENUNGGU_VERIFIKASI_WILAYAH';
+
+        // Admin Wilayah atau pendaftar Prov Jabar langsung diteruskan ke Superadmin & Developer untuk persetujuan
+        const initialStatus = isRoleAdmin || isProvJabar
+          ? 'MENUNGGU_PENGESAHAN_PROVINSI'
+          : 'MENUNGGU_VERIFIKASI_WILAYAH';
+
+        const submitterDisplayName = isRoleAdmin
+          ? (session.nama || session.username || `Admin Wilayah ${subWilayah}`)
+          : (session.nama || session.username || 'User Terdaftar');
 
         if (onAddSubmission) {
           onAddSubmission({
@@ -708,22 +723,40 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             nik: recordPayload.nik || '-',
             hp: recordPayload.hp || '-',
             submittedByUserId: session.userId,
-            submittedByName: session.nama || session.username || 'User Terdaftar',
+            submittedByName: submitterDisplayName,
             submittedByUsername: session.username,
-            submittedByRole: 'user',
+            submittedByRole: isRoleAdmin ? 'admin' : 'user',
             status: initialStatus,
             recordData: recordPayload,
             berkasFotoUrl: formData.berkasFotoUrl,
             berkasFotoNama: formData.berkasFotoNama,
             berkasFotoSizeKb: formData.berkasFotoSizeKb,
             berkasFotoOriginalSizeKb: formData.berkasFotoOriginalSizeKb,
+            // Jika diajukan oleh Admin Wilayah, otomatis terverifikasi di tingkat wilayah & diteruskan ke Superadmin
+            ...(isRoleAdmin ? {
+              regionalApprovedBy: submitterDisplayName,
+              regionalApprovedAt: new Date().toISOString(),
+              regionalNotes: `Diajukan langsung oleh Admin Wilayah ${subWilayah}, diteruskan ke Superadmin & Developer untuk persetujuan / pengesahan.`,
+              verifiedWilayahBy: submitterDisplayName,
+              verifiedWilayahAt: new Date().toISOString(),
+              verifiedWilayahAtFormatted: new Date().toLocaleString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              catatanWilayah: `Diajukan langsung oleh Admin Wilayah ${subWilayah}.`,
+            } : {})
           });
         }
         setAlertInfo({
           title: 'Pendaftaran Berhasil Diajukan',
-          message: isProvJabar
-            ? `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan langsung ke antrean Superadmin Provinsi Jawa Barat untuk Pengesahan & Penerimaan Anggota.`
-            : `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan dan dikirim ke Admin Wilayah (${subWilayah}) untuk Verifikasi Berkas Wilayah. Setelah disetujui wilayah, otomatis diteruskan ke Superadmin Jabar untuk Pengesahan & Penerimaan Anggota.`,
+          message: isRoleAdmin
+            ? `Pendaftaran anggota ${pillar.shortName} atas nama "${recordPayload.nama}" (${subWilayah}) berhasil diajukan dan diteruskan ke Superadmin & Developer untuk meminta persetujuan & pengesahan resmi.`
+            : (isProvJabar
+              ? `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan langsung ke antrean Superadmin Provinsi Jawa Barat untuk Pengesahan & Penerimaan Anggota.`
+              : `Pendaftaran ${pillar.shortName} atas nama "${recordPayload.nama}" berhasil diajukan dan dikirim ke Admin Wilayah (${subWilayah}) untuk Verifikasi Berkas Wilayah. Setelah disetujui wilayah, otomatis diteruskan ke Superadmin Jabar untuk Pengesahan & Penerimaan Anggota.`),
           type: 'success',
         });
       } else if (editingRecord && onUpdateRecord) {
@@ -734,6 +767,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           type: 'success',
         });
       } else {
+        // Direct save hanya untuk Superadmin & Developer
         onAddRecord(recordPayload);
         setAlertInfo({
           title: 'Data Tersimpan ke Database!',
@@ -1585,6 +1619,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 }
                 return 0;
               }}
+              onAddSubmission={onAddSubmission}
             />
           )}
 
@@ -2206,7 +2241,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               </>
             )}
 
-            {session.role !== 'user' ? (
+            {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) ? (
               <button
                 id={`btn-new-reg-${pillarId}`}
                 type="button"

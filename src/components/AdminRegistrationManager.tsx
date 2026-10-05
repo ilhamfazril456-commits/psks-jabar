@@ -49,7 +49,7 @@ export const normalizeRegionalStatus = (
 ): 'PENDING' | 'DISETUJUI_WILAYAH' | 'SAH_TERDAFTAR' | 'REJECTED' => {
   if (!status) return 'PENDING';
   const s = status.toUpperCase().trim();
-  if (s === 'DISETUJUI_WILAYAH') return 'DISETUJUI_WILAYAH';
+  if (s === 'DISETUJUI_WILAYAH' || s.includes('MENUNGGU_PENGESAHAN')) return 'DISETUJUI_WILAYAH';
   if (s === 'SAH_TERDAFTAR' || s === 'APPROVED' || s === 'SELESAI_SAH') return 'SAH_TERDAFTAR';
   if (s.includes('REJ') || s.includes('TOLAK') || s.includes('BATAL')) return 'REJECTED';
   return 'PENDING';
@@ -676,7 +676,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                           {isApprovedWilayah && (
                             <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0">
                               <Send className="w-2.5 h-2.5 text-blue-700" />
-                              <span>Disetujui Wilayah</span>
+                              <span>{sub.submittedByRole === 'admin' ? 'Diajukan Wilayah' : 'Disetujui Wilayah'}</span>
                             </span>
                           )}
                           {isSah && (
@@ -933,7 +933,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                               {isApprovedWilayah && (
                                 <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-full text-xs font-black">
                                   <Send className="w-3 h-3 text-blue-700" />
-                                  <span>Disetujui Wilayah</span>
+                                  <span>{sub.submittedByRole === 'admin' ? 'Diajukan Wilayah' : 'Disetujui Wilayah'}</span>
                                 </span>
                               )}
                               {isSah && (
@@ -991,7 +991,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
 
                                 {isApprovedWilayah && (
                                   <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md border border-blue-200">
-                                    Diteruskan &rarr;
+                                    {sub.submittedByRole === 'admin' ? 'Menunggu Superadmin' : 'Diteruskan →'}
                                   </span>
                                 )}
 

@@ -1328,6 +1328,11 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                               <td className="p-3">
                                 <div className="font-black text-slate-900 text-xs sm:text-sm">{sub.nama || sub.recordData?.nama || 'Pemohon PSKS'}</div>
                                 <div className="text-[11px] text-slate-500 font-mono">NIK: {sub.nik || sub.recordData?.nik || '-'}</div>
+                                {sub.submittedByRole === 'admin' && (
+                                  <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-black text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                                    <span>Diajukan Admin Wilayah</span>
+                                  </div>
+                                )}
                               </td>
 
                               <td className="p-3">
@@ -1352,9 +1357,11 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                                   <div className="space-y-1">
                                     <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
                                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                      <span>Rekomendasi Wilayah (Siap Sahkan)</span>
+                                      <span>{sub.submittedByRole === 'admin' ? 'Diajukan Admin Wilayah (Siap Sahkan)' : 'Rekomendasi Wilayah (Siap Sahkan)'}</span>
                                     </span>
-                                    <div className="text-[9px] text-emerald-700 font-bold">Tier 1 Selesai • Menunggu Tier 2</div>
+                                    <div className="text-[9px] text-emerald-700 font-bold">
+                                      {sub.submittedByRole === 'admin' ? 'Pengajuan Admin Wilayah • Menunggu Superadmin' : 'Tier 1 Selesai • Menunggu Tier 2'}
+                                    </div>
                                   </div>
                                 )}
 
@@ -1564,12 +1571,16 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                     </div>
                     <div className="flex-1">
                       <div className="font-black text-slate-900">
-                        Tier 1: Verifikasi Berkas Wilayah ({selectedDetailSub.wilayah})
+                        {selectedDetailSub.submittedByRole === 'admin'
+                          ? `Pengajuan Resmi Admin Wilayah (${selectedDetailSub.wilayah})`
+                          : `Tier 1: Verifikasi Berkas Wilayah (${selectedDetailSub.wilayah})`}
                       </div>
                       <div className="text-slate-600 text-[11px] mt-0.5">
-                        {selectedDetailSub.verifiedWilayahAt
-                          ? `Disetujui oleh: ${selectedDetailSub.verifiedWilayahBy || 'Admin Wilayah'} (${selectedDetailSub.verifiedWilayahAtFormatted || selectedDetailSub.verifiedWilayahAt})`
-                          : 'Belum diverifikasi oleh Admin Wilayah setempat.'}
+                        {selectedDetailSub.submittedByRole === 'admin'
+                          ? `Diajukan langsung oleh Admin Wilayah: ${selectedDetailSub.submittedByName || 'Admin Wilayah'} (${selectedDetailSub.submittedAtFormatted || selectedDetailSub.submittedAt || '-'}), diteruskan ke Superadmin & Developer untuk persetujuan.`
+                          : (selectedDetailSub.verifiedWilayahAt
+                            ? `Disetujui oleh: ${selectedDetailSub.verifiedWilayahBy || 'Admin Wilayah'} (${selectedDetailSub.verifiedWilayahAtFormatted || selectedDetailSub.verifiedWilayahAt})`
+                            : 'Belum diverifikasi oleh Admin Wilayah setempat.')}
                       </div>
                       {selectedDetailSub.catatanWilayah && (
                         <div className="text-[11px] text-slate-700 bg-amber-50 p-2 rounded-lg mt-1 border border-amber-200">

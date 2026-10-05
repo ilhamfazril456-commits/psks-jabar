@@ -294,12 +294,16 @@ export const PillarModal: React.FC<PillarModalProps> = ({
                   </span>
                 </>
               ) : (
-                <span>Formulir {session.role === 'user' ? 'Ajukan Pendaftaran' : 'Registrasi'} {pillar.shortName} Baru</span>
+                <span>Formulir {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) ? 'Registrasi' : 'Ajukan Pendaftaran'} {pillar.shortName} Baru</span>
               )}
             </h4>
             <p className="text-[11px] text-emerald-200 mt-0.5 font-medium">
               {isEditMode
                 ? 'Perubahan data akan disimpan langsung secara realtime ke server Database Firestore.'
+                : session.role === 'admin'
+                ? 'Pendaftaran anggota baru oleh Admin Wilayah akan diteruskan ke Superadmin & Developer untuk persetujuan & pengesahan.'
+                : session.role === 'user'
+                ? 'Pengajuan pendaftaran akan dikirim ke verifikator wilayah untuk diverifikasi berkasnya.'
                 : 'Semua kolom formulir bertanda bintang (*) wajib diisi lengkap & tersinkronisasi.'}
             </p>
           </div>
@@ -1697,7 +1701,7 @@ export const PillarModal: React.FC<PillarModalProps> = ({
             form="form-pilar-pendaftaran"
             className="px-6 py-2.5 bg-gradient-to-r from-[#043e2e] to-[#064e3b] hover:from-[#032f23] hover:to-[#043e2e] text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-600/40"
           >
-            {isEditMode ? 'Simpan Perubahan Data' : (session.role === 'user' ? 'Ajukan Pendaftaran' : 'Simpan Data')}
+            {isEditMode ? 'Simpan Perubahan Data' : ((session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) ? 'Simpan Data' : 'Ajukan Pendaftaran')}
           </button>
         </div>
 

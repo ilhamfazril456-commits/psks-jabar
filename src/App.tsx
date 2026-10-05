@@ -3110,8 +3110,9 @@ export default function App() {
     const isProvJabar =
       newSubmission.wilayah === 'Prov. Jabar' ||
       (newSubmission.wilayah || '').toLowerCase().includes('provinsi');
+    const isAdminSubmission = newSubmission.submittedByRole === 'admin';
     const initialStatus =
-      newSubmission.status || (isProvJabar ? 'MENUNGGU_PENGESAHAN_PROVINSI' : 'MENUNGGU_VERIFIKASI_WILAYAH');
+      newSubmission.status || (isProvJabar || isAdminSubmission ? 'MENUNGGU_PENGESAHAN_PROVINSI' : 'MENUNGGU_VERIFIKASI_WILAYAH');
 
     const submissionData: PillarRegistrationSubmission = {
       ...newSubmission,
@@ -3130,6 +3131,23 @@ export default function App() {
     setSubmissions((prev) => {
       return [submissionData, ...prev];
     });
+
+    if (isAdminSubmission) {
+      const memberName = newSubmission.nama || newSubmission.recordData?.nama || 'Anggota Baru';
+      const pilarTitle = (PILLARS_CONFIG[newSubmission.pillarId]?.title || newSubmission.pillarId).toUpperCase();
+      const wilLabel = newSubmission.wilayah || session.wilayah || 'Jawa Barat';
+      recordSystemActivity({
+        session,
+        category: 'PSKS',
+        actionType: 'CREATE',
+        targetCollection: 'registration_submissions',
+        targetId: newId,
+        targetName: memberName,
+        targetPillar: pilarTitle,
+        targetWilayah: wilLabel,
+        details: `Admin Wilayah [${submissionData.submittedByName}] MENGAJUKAN pendaftaran anggota baru "${memberName}" (Wilayah: ${wilLabel}) ke Superadmin & Developer untuk persetujuan.`,
+      });
+    }
 
     try {
       await setFirestoreDoc('registration_submissions', newId, cleanFirestoreData(submissionData));

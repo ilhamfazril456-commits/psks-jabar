@@ -11,6 +11,7 @@ interface SlrtAddRecordModalProps {
   session: UserSession;
   onAddRecord: (record: Omit<PSKSDataRecord, 'id'>) => Promise<any>;
   onBatchAddRecords?: (records: Omit<PSKSDataRecord, 'id'>[]) => Promise<any>;
+  onAddSubmission?: (submission: any) => void;
 }
 
 export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
@@ -20,6 +21,7 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
   session,
   onAddRecord,
   onBatchAddRecords,
+  onAddSubmission,
 }) => {
   const [wilayah, setWilayah] = useState<string>(
     targetRegion || (session.wilayah && session.wilayah !== 'Prov. Jabar' ? session.wilayah : 'Kab. Bandung')
@@ -178,6 +180,35 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
     });
 
     try {
+      const isSuperadminOrDev = session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
+      if (!isSuperadminOrDev && session.role === 'admin' && onAddSubmission) {
+        const adminName = session.nama || session.username || `Admin Wilayah ${wilayah}`;
+        for (const rec of recordsToCreate) {
+          onAddSubmission({
+            pillarId: 'slrt_puskesos',
+            wilayah,
+            kec: rec.kec || kecamatanClean,
+            nama: rec.nama || `Puskesos ${rec.kelDesa}`,
+            nik: rec.nik || `REG-SLRT-${Date.now().toString(36).toUpperCase()}`,
+            hp: rec.hp || '-',
+            submittedByUserId: session.userId,
+            submittedByName: adminName,
+            submittedByUsername: session.username,
+            submittedByRole: 'admin',
+            status: 'MENUNGGU_PENGESAHAN_PROVINSI',
+            recordData: rec,
+            regionalApprovedBy: adminName,
+            regionalApprovedAt: new Date().toISOString(),
+            regionalNotes: `Diajukan langsung oleh Admin Wilayah ${wilayah}, diteruskan ke Superadmin & Developer untuk persetujuan.`,
+            verifiedWilayahBy: adminName,
+            verifiedWilayahAt: new Date().toISOString(),
+          });
+        }
+        alert(`Berhasil mengajukan ${recordsToCreate.length} data Puskesos (${kecamatanClean}) ke antrean Superadmin & Developer untuk persetujuan.`);
+        onClose();
+        return;
+      }
+
       if (onBatchAddRecords) {
         await onBatchAddRecords(recordsToCreate);
       } else {
@@ -194,6 +225,7 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
     }
   };
 
+  const isSuperadminOrDev = session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper;
   const totalEntries = kelurahanList.length + desaList.length;
 
   return createPortal(
@@ -210,7 +242,7 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
                 Puskesos Desa / Kelurahan
               </span>
               <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
-                Tambah Data Puskesos Per Kecamatan
+                {!isSuperadminOrDev && session.role === 'admin' ? 'Ajukan Pendaftaran Puskesos Per Kecamatan' : 'Tambah Data Puskesos Per Kecamatan'}
               </h3>
             </div>
           </div>
@@ -435,10 +467,14 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
               <Plus className="w-4 h-4 text-amber-300" />
               <span>
                 {isSubmitting
-                  ? 'Menyimpan...'
+                  ? (!isSuperadminOrDev && session.role === 'admin' ? 'Mengajukan...' : 'Menyimpan...')
                   : totalEntries > 0
-                  ? `Simpan Data Kecamatan (${totalEntries} Puskesos)`
-                  : 'Simpan Data Kecamatan'}
+                  ? (!isSuperadminOrDev && session.role === 'admin'
+                    ? `Ajukan Data Kecamatan (${totalEntries} Puskesos)`
+                    : `Simpan Data Kecamatan (${totalEntries} Puskesos)`)
+                  : (!isSuperadminOrDev && session.role === 'admin'
+                    ? 'Ajukan Data Kecamatan'
+                    : 'Simpan Data Kecamatan')}
               </span>
             </button>
           </div>

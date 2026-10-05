@@ -580,7 +580,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                 className="inline-flex items-center gap-1.5 bg-[#0f2b5c] hover:bg-blue-900 text-white font-bold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4 text-amber-300" />
-                <span>Tambah Puskesos</span>
+                <span>{session.role === 'admin' ? 'Ajukan Puskesos' : 'Tambah Puskesos'}</span>
               </button>
 
               <button
