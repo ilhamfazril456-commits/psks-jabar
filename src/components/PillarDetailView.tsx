@@ -41,7 +41,7 @@ interface PillarDetailViewProps {
   session: UserSession;
   dataRecords: PSKSDataRecord[];
   onBackToDashboard: () => void;
-  onAddRecord: (newRecord: Omit<PSKSDataRecord, 'id'>) => void;
+  onAddRecord: (newRecord: Omit<PSKSDataRecord, 'id'>, targetPillarId?: PillarId) => void;
   onUpdateRecord?: (recordId: string, updatedRecord: Partial<PSKSDataRecord>, targetPillarId?: PillarId) => void;
   onBatchAddRecords?: (records: Omit<PSKSDataRecord, 'id'>[], targetPillarId?: PillarId) => Promise<number>;
   onDeleteRecord: (recordId: string) => void;
@@ -1619,7 +1619,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               session={session}
               onAddRecord={async (record) => {
                 if (onAddRecord) {
-                  await onAddRecord(record);
+                  await onAddRecord(record, 'slrt_puskesos');
                 }
               }}
               onBatchAddRecords={async (records) => {
@@ -1627,7 +1627,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                   return await onBatchAddRecords(records, 'slrt_puskesos');
                 } else if (onAddRecord) {
                   for (const r of records) {
-                    await onAddRecord(r);
+                    await onAddRecord(r, 'slrt_puskesos');
                   }
                   return records.length;
                 }

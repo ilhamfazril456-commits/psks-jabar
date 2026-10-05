@@ -138,7 +138,8 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
     const recordsToCreate: Omit<PSKSDataRecord, 'id'>[] = [];
 
     // 1. Buat record untuk masing-masing Kelurahan
-    finalKelList.forEach((kelName) => {
+    const baseNow = Date.now();
+    finalKelList.forEach((kelName, idx) => {
       const title = `Kel. ${kelName}`;
       recordsToCreate.push({
         pillarId: 'slrt_puskesos',
@@ -148,19 +149,20 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
         jenisWilayah: 'Kelurahan',
         nama: title,
         namaSlrt: `Puskesos ${title}`,
-        nik: `REG-SLRT-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        nik: `REG-SLRT-${(baseNow + idx).toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
         status: 'Aktif',
         statusAktif: 'Aktif',
         sertifikasi: 'SK Pembentukan Puskesos',
         hp: '-',
         tahunBerdiri: new Date().getFullYear().toString(),
-        createdAt: Date.now(),
+        createdAt: baseNow + idx,
       });
     });
 
     // 2. Buat record untuk masing-masing Desa
-    finalDesaList.forEach((desaName) => {
+    finalDesaList.forEach((desaName, idx) => {
       const title = `Desa ${desaName}`;
+      const desaTimestamp = baseNow + finalKelList.length + idx;
       recordsToCreate.push({
         pillarId: 'slrt_puskesos',
         wilayah,
@@ -169,13 +171,13 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
         jenisWilayah: 'Desa',
         nama: title,
         namaSlrt: `Puskesos ${title}`,
-        nik: `REG-SLRT-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        nik: `REG-SLRT-${desaTimestamp.toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
         status: 'Aktif',
         statusAktif: 'Aktif',
         sertifikasi: 'SK Pembentukan Puskesos',
         hp: '-',
         tahunBerdiri: new Date().getFullYear().toString(),
-        createdAt: Date.now(),
+        createdAt: desaTimestamp,
       });
     });
 

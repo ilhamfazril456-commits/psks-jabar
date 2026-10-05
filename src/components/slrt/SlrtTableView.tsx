@@ -24,6 +24,7 @@ import { exportPillarToExcel } from '../../utils/excelExport';
 import { exportPillarToPDF } from '../../utils/pdfExport';
 import { PILLARS_CONFIG } from '../../data/initialData';
 import { JABAR_ADMIN_WILAYAH_MASTER } from './slrtExcelParser';
+import { compareRecordsChronological } from '../../utils/regionSort';
 
 interface SlrtTableViewProps {
   activeRegion: string;
@@ -126,20 +127,8 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
   // 1. Filter records specifically for activeRegion
   const regionRecords = useMemo(() => {
     const matched = records.filter((r) => isSameWilayah(r.wilayah, activeRegion));
-    // Urutkan secara ketat dan konsisten: data lama di atas, registrasi baru di paling bawah
-    return [...matched].sort((a, b) => {
-      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
-      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
-      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) {
-        return ordA - ordB;
-      }
-      if (ordA !== undefined && ordB === undefined) return 1;
-      if (ordA === undefined && ordB !== undefined) return -1;
-      const timeA = (a as any).createdAt || 0;
-      const timeB = (b as any).createdAt || 0;
-      if (timeA && timeB && timeA !== timeB) return timeA - timeB;
-      return 0;
-    });
+    // Urutkan secara ketat dan konsisten: data lama di atas, registrasi baru SELALU di baris paling bawah
+    return [...matched].sort(compareRecordsChronological);
   }, [records, activeRegion]);
 
   // 2. Compute administrative indicator values and total puskesos terbentuk
@@ -220,22 +209,10 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     });
 
     // Urutkan kelurahans dan desas di dalam masing-masing kecamatan:
-    // data lama di atas, dan registrasi baru di baris paling bawah dari kecamatan tersebut
-    const sortInside = (a: PSKSDataRecord, b: PSKSDataRecord) => {
-      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
-      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
-      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) return ordA - ordB;
-      if (ordA !== undefined && ordB === undefined) return 1;
-      if (ordA === undefined && ordB !== undefined) return -1;
-      const timeA = (a as any).createdAt || 0;
-      const timeB = (b as any).createdAt || 0;
-      if (timeA && timeB && timeA !== timeB) return timeA - timeB;
-      return 0;
-    };
-
+    // data lama di atas, dan registrasi baru SELALU di baris paling bawah dari kecamatan tersebut
     Object.values(kecMap).forEach((entry) => {
-      entry.kelurahans.sort(sortInside);
-      entry.desas.sort(sortInside);
+      entry.kelurahans.sort(compareRecordsChronological);
+      entry.desas.sort(compareRecordsChronological);
     });
 
     return Object.entries(kecMap).map(([kecName, data]) => ({
@@ -324,6 +301,9 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       if (newTotalPages > 1) {
         setCurrentPage(newTotalPages);
       }
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 150);
     }
     prevRecordCountRef.current = regionRecords.length;
   }, [regionRecords.length, allDisplayRows.length]);

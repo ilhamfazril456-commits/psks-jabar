@@ -31,6 +31,7 @@ import { Footer } from './components/Footer';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { compareRecordsChronological } from './utils/regionSort';
 
 const FloatingAnnouncementModal = React.lazy(() => import('./components/FloatingAnnouncementModal').then(m => ({ default: m.FloatingAnnouncementModal })));
 const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
@@ -1153,27 +1154,9 @@ export default function App() {
               });
             });
 
-            // Urutkan data per pilar agar urutan file Excel / orderIndex selalu terjaga
+            // Urutkan data per pilar agar urutan data lama di atas, data baru SELALU di paling bawah
             Object.keys(loaded).forEach((k) => {
-              loaded[k].sort((a, b) => {
-                const ordA = (a as any).orderIndex;
-                const ordB = (b as any).orderIndex;
-                if (typeof ordA === 'number' && typeof ordB === 'number') {
-                  return ordA - ordB;
-                }
-                if (typeof ordA === 'number' && typeof ordB !== 'number') {
-                  return 1;
-                }
-                if (typeof ordA !== 'number' && typeof ordB === 'number') {
-                  return -1;
-                }
-                const timeA = (a as any).createdAt || 0;
-                const timeB = (b as any).createdAt || 0;
-                if (timeA && timeB && timeA !== timeB) {
-                  return timeA - timeB;
-                }
-                return a.id.localeCompare(b.id);
-              });
+              loaded[k].sort(compareRecordsChronological);
             });
 
             // Hybrid Smart Merge 1: Gabungkan data dari antrean offline (psks_sync_queue) yang belum tersimpan di server
@@ -1245,27 +1228,9 @@ export default function App() {
               console.warn('Error merging local cache into realtime snapshot:', err);
             }
 
-            // Urutkan kembali seluruh data setelah penggabungan cerdas
+            // Urutkan kembali seluruh data setelah penggabungan cerdas: data lama di atas, data baru SELALU di paling bawah
             Object.keys(loaded).forEach((k) => {
-              loaded[k].sort((a, b) => {
-                const ordA = (a as any).orderIndex;
-                const ordB = (b as any).orderIndex;
-                if (typeof ordA === 'number' && typeof ordB === 'number') {
-                  return ordA - ordB;
-                }
-                if (typeof ordA === 'number' && typeof ordB !== 'number') {
-                  return 1;
-                }
-                if (typeof ordA !== 'number' && typeof ordB === 'number') {
-                  return -1;
-                }
-                const timeA = (a as any).createdAt || 0;
-                const timeB = (b as any).createdAt || 0;
-                if (timeA && timeB && timeA !== timeB) {
-                  return timeA - timeB;
-                }
-                return a.id.localeCompare(b.id);
-              });
+              loaded[k].sort(compareRecordsChronological);
             });
 
             // Fallback merge for features that have no docs in Firestore yet

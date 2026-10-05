@@ -104,8 +104,64 @@ export const matchJabarRegion = (rawStr: any): string | null => {
 };
 
 /**
+ * Helper to reliably extract the chronological order / timestamp of a record.
+ * Returns 0 for original default/seed data without timestamps, and the numeric timestamp for new records.
+ */
+export const getRecordSortOrder = (rec: any): number => {
+  if (!rec) return 0;
+  if (typeof rec.orderIndex === 'number' && !isNaN(rec.orderIndex)) {
+    return rec.orderIndex;
+  }
+  if (typeof rec.createdAt === 'number' && !isNaN(rec.createdAt) && rec.createdAt > 0) {
+    return rec.createdAt;
+  }
+  if (typeof rec.createdAt === 'string') {
+    const num = Number(rec.createdAt);
+    if (!isNaN(num) && num > 0) return num;
+    const parsed = new Date(rec.createdAt).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  if (typeof rec.id === 'string') {
+    const match = rec.id.match(/\b(17\d{10,12})\b/);
+    if (match) {
+      const parsedIdTime = Number(match[1]);
+      if (!isNaN(parsedIdTime) && parsedIdTime > 0) return parsedIdTime;
+    }
+  }
+  return 0;
+};
+
+/**
+ * Compares two records chronologically:
+ * Old records (order 0) always appear at the TOP.
+ * New records (order > 0) always appear at the BOTTOM.
+ * Newer records appear after older records.
+ */
+export const compareRecordsChronological = (a: any, b: any): number => {
+  const ordA = typeof a?.orderIndex === 'number' && !isNaN(a.orderIndex) ? a.orderIndex : undefined;
+  const ordB = typeof b?.orderIndex === 'number' && !isNaN(b.orderIndex) ? b.orderIndex : undefined;
+
+  // 1. Both have valid orderIndex: sort strictly by orderIndex ascending
+  if (ordA !== undefined && ordB !== undefined && ordA !== ordB) {
+    return ordA - ordB;
+  }
+
+  // 2. Compare chronological sort score (orderIndex, createdAt timestamp, parsed date string, ID timestamp)
+  // Older records (score 0 or lower) always appear at TOP, newer records (higher score) always appear at BOTTOM
+  const timeA = getRecordSortOrder(a);
+  const timeB = getRecordSortOrder(b);
+  if (timeA !== timeB) {
+    return timeA - timeB;
+  }
+
+  // 3. Stable fallback by ID if timestamps are identical
+  return String(a?.id || '').localeCompare(String(b?.id || ''));
+};
+
+/**
  * Sorts data records hierarchically by West Java regions (Prov. Jabar -> Kab. Bogor -> ... -> Kota Banjar).
- * Within the same region, insertion/chronological order (orderIndex) is preserved.
+ * Within the same region, insertion/chronological order is strictly preserved:
+ * older records at the top, newly added records ALWAYS at the bottom!
  */
 export const sortRecordsByJabarRegion = (records?: PSKSDataRecord[] | null): PSKSDataRecord[] => {
   if (!records || !Array.isArray(records)) return [];
@@ -120,27 +176,7 @@ export const sortRecordsByJabarRegion = (records?: PSKSDataRecord[] | null): PSK
         return indexA - indexB;
       }
 
-      // 2. Di dalam wilayah yang sama, pertahankan urutan: data lama di atas, registrasi baru di paling bawah
-      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
-      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
-      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) {
-        return ordA - ordB;
-      }
-      if (ordA !== undefined && ordB === undefined) {
-        // a memiliki orderIndex (misal registrasi baru), b tidak (data lama asli): a ditaruh di bawah b
-        return 1;
-      }
-      if (ordA === undefined && ordB !== undefined) {
-        // a tidak memiliki orderIndex (data lama), b memiliki (baru): a ditaruh di atas b
-        return -1;
-      }
-
-      const timeA = (a as any).createdAt || 0;
-      const timeB = (b as any).createdAt || 0;
-      if (timeA && timeB && timeA !== timeB) {
-        return timeA - timeB;
-      }
-
-      return a.id.localeCompare(b.id);
+      // 2. Di dalam wilayah yang sama: data lama di atas, data baru SELALU di paling bawah!
+      return compareRecordsChronological(a, b);
     });
 };
