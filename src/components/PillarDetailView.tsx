@@ -11,6 +11,8 @@ import { SlrtSmartImportModal } from './slrt/SlrtSmartImportModal';
 import { SlrtAddRecordModal } from './slrt/SlrtAddRecordModal';
 import { SlrtTableView } from './slrt/SlrtTableView';
 import { isSameWilayah } from '../utils/submissionStatus';
+import { SlrtRegionalAnalyticsChart } from './slrt/SlrtRegionalAnalyticsChart';
+import { RegionalSummaryMap } from '../services/regionalDistributionService';
 
 interface AnimatedCounterProps {
   end: number;
@@ -56,12 +58,14 @@ interface PillarDetailViewProps {
   rescueProgressText?: string;
   summaryCount?: number;
   isLoadingRecords?: boolean;
+  regionalSummary?: RegionalSummaryMap;
 }
 
 export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   pillarId,
   session,
   dataRecords,
+  regionalSummary,
   onBackToDashboard,
   onAddRecord,
   onUpdateRecord,
@@ -1424,6 +1428,16 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               <span>Import Excel Masal 27 Kab/Kota Se-Jawa Barat</span>
             </button>
           </div>
+
+          {/* Grafik Batang Eksekutif Realtime Khusus Superadmin & Developer (Kab. Bogor s.d. Kota Banjar) */}
+          <SlrtRegionalAnalyticsChart
+            dataRecords={dataRecords}
+            regionalSummary={regionalSummary}
+            onSelectRegion={(regionName) => {
+              setSelectedSlrtRegion(regionName);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
 
           {/* 27 Tombol Memanjang (Kab. Bogor s.d. Kota Banjar) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">

@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PSKSDataRecord } from '../types';
 import { KAB_KOTA_ONLY, PILLARS_CONFIG } from '../data/initialData';
+import { isRealDataLoaded } from '../services/regionalDistributionService';
 import {
   MapPin,
   Search,
@@ -25,6 +26,8 @@ import {
 
 interface JabarRegionalMapProps {
   allPillarData: Record<string, PSKSDataRecord[]>;
+  regionalSummary?: Record<string, { total: number; byPillar?: Record<string, number> }>;
+  pillarSummaryCounts?: Record<string, number>;
   onSelectRegion?: (regionName: string) => void;
 }
 
@@ -335,6 +338,8 @@ const getChoroplethColor = (count: number): string => {
 
 export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
   allPillarData,
+  regionalSummary,
+  pillarSummaryCounts,
   onSelectRegion,
 }) => {
   const [selectedKabKota, setSelectedKabKota] = useState<string>('Semua Kabupaten/Kota');
@@ -416,6 +421,24 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       stats[region] = { total: 0, byPillar: {} };
     });
 
+    const hasRealRecords = isRealDataLoaded(allPillarData);
+
+    // If allPillarData hasn't loaded real records from Firestore yet, use the instantly available regionalSummary
+    if (!hasRealRecords && regionalSummary && Object.keys(regionalSummary).length > 0) {
+      KAB_KOTA_ONLY.forEach((region) => {
+        const item = regionalSummary[region];
+        if (item) {
+          const byP = item.byPillar || {};
+          const totalVal = pillarFilter === 'ALL' ? item.total : (byP[pillarFilter] || 0);
+          stats[region] = {
+            total: totalVal,
+            byPillar: byP,
+          };
+        }
+      });
+      return stats;
+    }
+
     if (!allPillarData || typeof allPillarData !== 'object') {
       return stats;
     }
@@ -443,7 +466,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
     });
 
     return stats;
-  }, [allPillarData, pillarFilter]);
+  }, [allPillarData, pillarFilter, regionalSummary]);
 
   // Overall Statistics
   const grandTotalCount = useMemo(() => {

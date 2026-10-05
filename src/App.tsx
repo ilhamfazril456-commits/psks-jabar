@@ -112,6 +112,15 @@ import {
 } from './services/firestoreDataService';
 import { validateQRCardPayload } from './utils/qrAuth';
 import { removeAccountFromQuota, getStableDeviceId } from './services/ipRegistrationService';
+import {
+  getInitialRegionalSummary,
+  saveRegionalSummary,
+  computeRegionalSummaryFromPillars,
+  isRealDataLoaded,
+  normalizeRegionName,
+  type RegionalSummaryMap,
+} from './services/regionalDistributionService';
+import { setCachedPillarData, getCachedPillarData } from './services/dbCacheService';
 
 const recordSystemActivity = (params: any) => {
   import('./lib/activityLogger').then(({ recordSystemActivity: fn }) => {
@@ -465,7 +474,7 @@ export default function App() {
         console.warn('Deletions meta sync error in rescue flow:', delErr);
       }
 
-      // Sinkronkan dokumen summary meta ke Cloud Firestore
+      // Sinkronkan dokumen summary meta dan peta sebaran ke Cloud Firestore
       try {
         const exactSummary: Record<string, number> = {};
         pillars.forEach((pKey) => {
@@ -473,8 +482,14 @@ export default function App() {
         });
         setPillarSummaryCounts(exactSummary);
         try { localStorage.setItem('psks_summary_counts', JSON.stringify(exactSummary)); } catch {}
+
+        const exactRegions = computeRegionalSummaryFromPillars(allPillarData);
+        setRegionalSummary(exactRegions);
+        saveRegionalSummary(exactRegions);
+
         await setFirestoreDoc('psks_records_meta', 'summary', {
           counts: exactSummary,
+          regions: exactRegions,
           updatedAt: Date.now(),
         }, { merge: true });
       } catch (sumErr) {
@@ -931,6 +946,11 @@ export default function App() {
       lks: 2700, // Baseline for LKS so newly opened devices never show 0 or 4
     };
   });
+
+  const [regionalSummary, setRegionalSummary] = useState<RegionalSummaryMap>(() => {
+    return getInitialRegionalSummary();
+  });
+
   const [isPillarRecordsLoaded, setIsPillarRecordsLoaded] = useState<boolean>(() => {
     return !!localStorage.getItem('psks_all_pillar_data');
   });
@@ -1014,20 +1034,48 @@ export default function App() {
     };
   }, []);
 
-  // Real-time Global Summary Counter Listener: Synchronizes accurate counts across all devices in < 100ms
+  // IndexedDB Cache Hydration: Restores thousands of records reliably without 5MB localStorage limits
+  useEffect(() => {
+    getCachedPillarData().then((cached) => {
+      if (cached && typeof cached === 'object' && Object.keys(cached).length > 0) {
+        setAllPillarData((prev) => {
+          if (!isRealDataLoaded(prev)) {
+            const computedReg = computeRegionalSummaryFromPillars(cached);
+            setRegionalSummary(computedReg);
+            saveRegionalSummary(computedReg);
+            setIsPillarRecordsLoaded(true);
+            return cached;
+          }
+          return prev;
+        });
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Real-time Global Summary Counter & Regional Distribution Listener: Synchronizes accurate counts and map data across all devices in < 100ms
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     try {
       unsubscribe = subscribeToDoc('psks_records_meta', 'summary', (data, exists) => {
-        if (exists && data && data.counts && typeof data.counts === 'object') {
-          const sCounts = data.counts as Record<string, number>;
-          setPillarSummaryCounts((prev) => {
-            const merged = { ...prev, ...sCounts };
-            try {
-              localStorage.setItem('psks_summary_counts', JSON.stringify(merged));
-            } catch {}
-            return merged;
-          });
+        if (exists && data) {
+          if (data.counts && typeof data.counts === 'object') {
+            const sCounts = data.counts as Record<string, number>;
+            setPillarSummaryCounts((prev) => {
+              const merged = { ...prev, ...sCounts };
+              try {
+                localStorage.setItem('psks_summary_counts', JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+          if (data.regions && typeof data.regions === 'object') {
+            const sRegions = data.regions as RegionalSummaryMap;
+            setRegionalSummary((prev) => {
+              const merged = { ...prev, ...sRegions };
+              saveRegionalSummary(merged);
+              return merged;
+            });
+          }
         }
       });
     } catch (err) {
@@ -1048,9 +1096,9 @@ export default function App() {
     }
     const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
     const lastFetch = Number(localStorage.getItem('psks_cache_timestamp') || '0');
-    const hasCachedData = !!localStorage.getItem('psks_all_pillar_data');
+    const hasCachedData = isRealDataLoaded(allPillarData);
 
-    // Only skip public background read if cache is fresh AND not actively viewing pillar detail
+    // Only skip public background read if real cached data is fresh AND not actively viewing pillar detail
     if (isPublicGuest && hasCachedData && Date.now() - lastFetch < CACHE_TTL_MS && currentTab !== 'pillar_detail') {
       return;
     }
@@ -1236,6 +1284,12 @@ export default function App() {
               localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
               localStorage.setItem('psks_cache_timestamp', String(Date.now()));
             } catch {}
+            setCachedPillarData(loaded);
+
+            // Compute and store exact regional distribution from loaded records
+            const exactRegions = computeRegionalSummaryFromPillars(loaded);
+            setRegionalSummary(exactRegions);
+            saveRegionalSummary(exactRegions);
 
             // Auto-update summary counts from actual loaded records
             const realCounts: Record<string, number> = {};
@@ -1249,6 +1303,15 @@ export default function App() {
               } catch {}
               return updated;
             });
+
+            // Automatically sync updated summary counts and 27-region distribution to Cloud Firestore meta
+            if (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) {
+              setFirestoreDoc('psks_records_meta', 'summary', {
+                counts: realCounts,
+                regions: exactRegions,
+                updatedAt: Date.now(),
+              }, { merge: true }).catch(() => {});
+            }
           }
 
           // For public guests, disconnect listener after initial fetch only if NOT actively viewing pillar detail
@@ -2906,14 +2969,40 @@ export default function App() {
       try {
         localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
       } catch {}
+      setCachedPillarData(updated);
       return updated;
+    });
+
+    // Realtime regional distribution update
+    const regName = normalizeRegionName(newRecord.wilayah || session.wilayah || 'Kota Bandung');
+    let nextRegionsMap: RegionalSummaryMap = regionalSummary;
+    setRegionalSummary((prev) => {
+      const cur = prev[regName] || { total: 0, byPillar: {} };
+      const nextRegions: RegionalSummaryMap = {
+        ...prev,
+        [regName]: {
+          total: cur.total + 1,
+          byPillar: {
+            ...cur.byPillar,
+            [pillarKey]: (cur.byPillar?.[pillarKey] || 0) + 1,
+          },
+        },
+      };
+      nextRegionsMap = nextRegions;
+      saveRegionalSummary(nextRegions);
+      return nextRegions;
     });
 
     // Realtime summary count increment & sync to Firestore meta
     setPillarSummaryCounts((prev) => {
       const next = { ...prev, [pillarKey]: (prev[pillarKey] || allPillarData[pillarKey]?.length || 0) + 1 };
       try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', { counts: next, updatedAt: Date.now(), lastPillarUpdated: pillarKey }, { merge: true }).catch(() => {});
+      setFirestoreDoc('psks_records_meta', 'summary', {
+        counts: next,
+        regions: nextRegionsMap,
+        updatedAt: Date.now(),
+        lastPillarUpdated: pillarKey
+      }, { merge: true }).catch(() => {});
       return next;
     });
 
@@ -3052,14 +3141,29 @@ export default function App() {
       try {
         localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
       } catch {}
+      setCachedPillarData(updated);
       return updated;
     });
+
+    // Realtime regional distribution update
+    const updatedWithBatch = {
+      ...allPillarData,
+      [pillarKey]: [...(allPillarData[pillarKey] || []), ...newRecordsWithId],
+    };
+    const nextRegionsWithBatch = computeRegionalSummaryFromPillars(updatedWithBatch);
+    setRegionalSummary(nextRegionsWithBatch);
+    saveRegionalSummary(nextRegionsWithBatch);
 
     // Realtime summary count increment & sync to Firestore meta
     setPillarSummaryCounts((prev) => {
       const next = { ...prev, [pillarKey]: (prev[pillarKey] || allPillarData[pillarKey]?.length || 0) + newRecordsWithId.length };
       try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', { counts: next, updatedAt: Date.now(), lastPillarUpdated: pillarKey }, { merge: true }).catch(() => {});
+      setFirestoreDoc('psks_records_meta', 'summary', {
+        counts: next,
+        regions: nextRegionsWithBatch,
+        updatedAt: Date.now(),
+        lastPillarUpdated: pillarKey
+      }, { merge: true }).catch(() => {});
       return next;
     });
 
@@ -3488,16 +3592,20 @@ export default function App() {
     }
 
     // 2. Remove immediately from allPillarData state
-    setAllPillarData((prev) => {
-      const updated: Record<string, PSKSDataRecord[]> = {};
-      for (const [k, records] of Object.entries(prev)) {
-        updated[k] = records.filter((r) => r.id !== recordId);
-      }
-      try {
-        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    const updatedAfterDel: Record<string, PSKSDataRecord[]> = {};
+    for (const [k, records] of Object.entries(allPillarData)) {
+      updatedAfterDel[k] = records.filter((r) => r.id !== recordId);
+    }
+    setAllPillarData(updatedAfterDel);
+    try {
+      localStorage.setItem('psks_all_pillar_data', JSON.stringify(updatedAfterDel));
+    } catch {}
+    setCachedPillarData(updatedAfterDel);
+
+    // Realtime regional distribution update
+    const nextRegionsAfterDel = computeRegionalSummaryFromPillars(updatedAfterDel);
+    setRegionalSummary(nextRegionsAfterDel);
+    saveRegionalSummary(nextRegionsAfterDel);
 
     // Record audit activity log (bypassed for developer)
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
@@ -3534,7 +3642,12 @@ export default function App() {
       const current = prev[targetPillarKey] || allPillarData[targetPillarKey]?.length || 0;
       const next = { ...prev, [targetPillarKey]: Math.max(0, current - 1) };
       try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', { counts: next, updatedAt: Date.now(), lastPillarUpdated: targetPillarKey }, { merge: true }).catch(() => {});
+      setFirestoreDoc('psks_records_meta', 'summary', {
+        counts: next,
+        regions: nextRegionsAfterDel,
+        updatedAt: Date.now(),
+        lastPillarUpdated: targetPillarKey
+      }, { merge: true }).catch(() => {});
       return next;
     });
 
@@ -3572,16 +3685,20 @@ export default function App() {
     }
 
     // 2. Remove immediately from allPillarData state
-    setAllPillarData((prev) => {
-      const updated: Record<string, PSKSDataRecord[]> = {};
-      for (const [k, records] of Object.entries(prev)) {
-        updated[k] = records.filter((r) => !recordIds.includes(r.id));
-      }
-      try {
-        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    const updatedAfterBatchDel: Record<string, PSKSDataRecord[]> = {};
+    for (const [k, records] of Object.entries(allPillarData)) {
+      updatedAfterBatchDel[k] = records.filter((r) => !recordIds.includes(r.id));
+    }
+    setAllPillarData(updatedAfterBatchDel);
+    try {
+      localStorage.setItem('psks_all_pillar_data', JSON.stringify(updatedAfterBatchDel));
+    } catch {}
+    setCachedPillarData(updatedAfterBatchDel);
+
+    // Realtime regional distribution update
+    const nextRegionsAfterBatchDel = computeRegionalSummaryFromPillars(updatedAfterBatchDel);
+    setRegionalSummary(nextRegionsAfterBatchDel);
+    saveRegionalSummary(nextRegionsAfterBatchDel);
 
     const pilarName = (pillarKey || 'PSKS').toUpperCase();
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
@@ -3619,7 +3736,12 @@ export default function App() {
       const current = prev[pillarKey] || allPillarData[pillarKey]?.length || 0;
       const next = { ...prev, [pillarKey]: Math.max(0, current - recordIds.length) };
       try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', { counts: next, updatedAt: Date.now(), lastPillarUpdated: pillarKey }, { merge: true }).catch(() => {});
+      setFirestoreDoc('psks_records_meta', 'summary', {
+        counts: next,
+        regions: nextRegionsAfterBatchDel,
+        updatedAt: Date.now(),
+        lastPillarUpdated: pillarKey
+      }, { merge: true }).catch(() => {});
       return next;
     });
 
@@ -4023,12 +4145,13 @@ export default function App() {
           <BannerBadge session={session} />
           <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} summaryCounts={pillarSummaryCounts} />
 
-          <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData]}>
+          <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData, regionalSummary]}>
             <React.Suspense fallback={null}>
               <HomePSKSAnalytics
                 allPillarData={allPillarData}
                 session={session}
                 summaryCounts={pillarSummaryCounts}
+                regionalSummary={regionalSummary}
                 onSelectPillar={handleSelectPillar}
                 onScrollToGrid={handleScrollToGrid}
               />
@@ -4132,9 +4255,13 @@ export default function App() {
               </section>
             )}
 
-            <ErrorBoundary fallbackMode="silent" fallbackTitle="Peta Sebaran Wilayah PSKS" resetKeys={[allPillarData]}>
+            <ErrorBoundary fallbackMode="silent" fallbackTitle="Peta Sebaran Wilayah PSKS" resetKeys={[allPillarData, regionalSummary]}>
               <React.Suspense fallback={null}>
-                <JabarRegionalMap allPillarData={allPillarData} />
+                <JabarRegionalMap
+                  allPillarData={allPillarData}
+                  regionalSummary={regionalSummary}
+                  pillarSummaryCounts={pillarSummaryCounts}
+                />
               </React.Suspense>
             </ErrorBoundary>
 
@@ -4256,6 +4383,7 @@ export default function App() {
             rescueProgressText={rescueProgressText}
             summaryCount={pillarSummaryCounts[activePillar]}
             isLoadingRecords={!isPillarRecordsLoaded}
+            regionalSummary={regionalSummary}
           />
         )}
 

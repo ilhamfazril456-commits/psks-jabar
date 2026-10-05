@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserSession } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY } from '../data/initialData';
+import { isRealDataLoaded } from '../services/regionalDistributionService';
 import {
   ResponsiveContainer,
   BarChart,
@@ -35,6 +36,7 @@ interface HomePSKSAnalyticsProps {
   allPillarData: Record<string, any[]>;
   session: UserSession;
   summaryCounts?: Record<string, number>;
+  regionalSummary?: Record<string, { total: number; byPillar?: Record<string, number> }>;
   onSelectPillar?: (pillarId: string) => void;
   onScrollToGrid?: () => void;
 }
@@ -117,6 +119,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   allPillarData,
   session,
   summaryCounts,
+  regionalSummary,
   onSelectPillar,
   onScrollToGrid,
 }) => {
@@ -236,8 +239,21 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       countsMap[wil] = 0;
     });
 
-    // Populate data safely
-    if (allPillarData && typeof allPillarData === 'object') {
+    const hasRealRecords = isRealDataLoaded(allPillarData as any);
+
+    // If real records from Firestore haven't loaded yet, immediately use accurate regionalSummary
+    if (!hasRealRecords && regionalSummary && Object.keys(regionalSummary).length > 0) {
+      KAB_KOTA_ONLY.forEach((wil) => {
+        const item = regionalSummary[wil];
+        if (item) {
+          if (selectedPillarFilter === 'ALL') {
+            countsMap[wil] = item.total || 0;
+          } else {
+            countsMap[wil] = item.byPillar?.[selectedPillarFilter] || 0;
+          }
+        }
+      });
+    } else if (allPillarData && typeof allPillarData === 'object') {
       if (selectedPillarFilter === 'ALL') {
         Object.entries(allPillarData).forEach(([_, records]) => {
           if (!Array.isArray(records)) return;
@@ -285,7 +301,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
     }
 
     return result;
-  }, [allPillarData, selectedPillarFilter, sortBy, session.wilayah, mapOrderIndex]);
+  }, [allPillarData, selectedPillarFilter, sortBy, session.wilayah, mapOrderIndex, regionalSummary]);
 
   // Top region and average calculation
   const statsOverview = useMemo(() => {
