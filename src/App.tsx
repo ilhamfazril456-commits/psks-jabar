@@ -2536,6 +2536,20 @@ export default function App() {
       setFirestoreDoc('admin_accounts', resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
     }
 
+    // Bersihkan ID/username akun ini dari deletedAdminIds di state & localStorage agar tidak ada cache penendangan palsu
+    const cleanUname = (resolvedUsername || '').toLowerCase().trim();
+    const cleanUid = (resolvedUserId || '').toLowerCase().trim();
+    setDeletedAdminIds((prev) => {
+      const next = prev.filter((item) => {
+        const itemLower = (item || '').toLowerCase().trim();
+        return itemLower !== cleanUname && itemLower !== cleanUid;
+      });
+      try {
+        localStorage.setItem('psks_deleted_admin_ids', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
     // Show animated checkmark "Login Berhasil" modal for authenticated sessions
     setLoginSuccessData({ role, nama, wilayah });
   };
@@ -2638,15 +2652,22 @@ export default function App() {
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
-    const userUname = (session.username || session.nama || '').toLowerCase().trim();
-    const sessionNama = (session.nama || '').toLowerCase().trim();
+    const userUname = (session.username || '').toLowerCase().trim();
     const sessionUserId = (session.userId || '').toLowerCase().trim();
 
-    // 1. Check deletion in deletedAdminIds list (Req 3)
-    const isDeletedByIds =
-      (sessionUserId && deletedAdminIds.includes(sessionUserId)) ||
-      (userUname && deletedAdminIds.includes(userUname)) ||
-      (sessionNama && deletedAdminIds.includes(sessionNama));
+    // Pastikan akun saat ini diperiksa di memori lokal jika sudah termuat
+    const isAccountCurrentlyActive = adminAccounts.some((a) => {
+      const aId = (a.id || '').toLowerCase().trim();
+      const aUname = (a.username || '').toLowerCase().trim();
+      return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname);
+    });
+
+    // 1. Check deletion in deletedAdminIds list: HANYA jika akun tidak aktif di daftar akun, dan HANYA berdasarkan ID unik / username (tidak pernah nama)
+    const isDeletedByIds = Boolean(
+      !isAccountCurrentlyActive &&
+      ((sessionUserId && deletedAdminIds.includes(sessionUserId)) ||
+       (userUname && deletedAdminIds.includes(userUname)))
+    );
 
     if (isDeletedByIds) {
       if (!showAccountDeletedModal) {
@@ -2668,24 +2689,18 @@ export default function App() {
         // STRICT IDENTIFIER MATCHING: Only match exact username or exact account ID
         if (sessionUserId && aId === sessionUserId) return true;
         if (userUname && aUname === userUname) return true;
-        if (sessionNama && aUname === sessionNama) return true;
         return false;
       });
 
-      // 2. Check deletion if not matched in adminAccounts (Req 3)
-      const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-      const now = Date.now();
-      const isWithinGracePeriod = loginTime > 0 && (now - loginTime < 8000);
-
-      if (!matched && !showAccountDeletedModal) {
-        // Jangan langsung menendang akun yang baru saja berhasil login (tunggu masa tenggang 8 detik)
-        if (session.role !== 'developer' && session.role !== 'superadmin' && !isWithinGracePeriod) {
-          setShowAccountDeletedModal(true);
+      if (matched) {
+        // 2. Check if account is explicitly marked as deleted in database
+        if ((matched as any).statusAkun === 'DIHAPUS' || (matched as any).isDeleted) {
+          if (!showAccountDeletedModal) {
+            setShowAccountDeletedModal(true);
+          }
           return;
         }
-      }
 
-      if (matched) {
         // 3. Check Account Frozen (Remote Freeze Trigger)
         if (matched.isFrozen || matched.statusAkun === 'DIBEKUKAN') {
           if (!showAccountFrozenModal) {
@@ -2695,6 +2710,7 @@ export default function App() {
         }
 
         // 4. Check Account Edited (Req 4) - only when edited by admin while user is actively logged in
+        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
         if (
           session.role !== 'developer' &&
           session.role !== 'superadmin' &&
@@ -2712,6 +2728,8 @@ export default function App() {
         // Pastikan akun terdeteksi diloginkan HANYA jika akun BENAR-BENAR diloginkan di perangkat lain!
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
         const currentDeviceId = sessionStorage.getItem('session_device_id') || getStableDeviceId();
+        const now = Date.now();
+        const isWithinGracePeriod = loginTime > 0 && (now - loginTime < 8000);
 
         if (
           session.role !== 'developer' &&
@@ -2835,10 +2853,11 @@ export default function App() {
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
 
-        // STRICT TARGET MATCH: Must match this exact account's username or ID
-        const isMatch =
-          (targetUname && (targetUname === userUname || targetUname === userNama)) ||
-          (targetId && (targetId === sessionUserId || targetId === userUname));
+        // STRICT TARGET MATCH: Must match this exact account's unique userId or exact username (NEVER loose display name)
+        const isMatch = Boolean(
+          (targetId && sessionUserId && targetId === sessionUserId) ||
+          (targetUname && userUname && targetUname === userUname)
+        );
 
         if (isMatch) {
           if (data.action === 'FREEZE') {

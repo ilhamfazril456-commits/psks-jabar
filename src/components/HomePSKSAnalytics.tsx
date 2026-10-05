@@ -121,7 +121,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   onScrollToGrid,
 }) => {
   const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>('ALL');
-  const [sortBy, setSortBy] = useState<'COUNT' | 'MAP'>('COUNT');
+  const [sortBy, setSortBy] = useState<'COUNT' | 'MAP'>('MAP');
   const [mobileTab, setMobileTab] = useState<'DONUT' | 'BAR'>('DONUT');
   const [activeDonutIndex, setActiveDonutIndex] = useState<number | null>(null);
   const donutContainerRef = useRef<HTMLDivElement>(null);
@@ -765,20 +765,8 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                     </select>
                   </div>
 
-                  {/* Sorter Buttons: Terbanyak vs Sesuai Peta */}
+                  {/* Sorter Buttons: Sesuai Peta vs Terbanyak */}
                   <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setSortBy('COUNT')}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                        sortBy === 'COUNT'
-                          ? 'bg-[#0f2b5c] text-[#d4af37] shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                      title="Urutkan dari terbanyak ke terkecil"
-                    >
-                      Terbanyak
-                    </button>
                     <button
                       type="button"
                       onClick={() => setSortBy('MAP')}
@@ -790,6 +778,18 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       title="Urutkan sesuai peta dari Kab. Bogor sampai Kota Banjar"
                     >
                       Sesuai Peta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSortBy('COUNT')}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        sortBy === 'COUNT'
+                          ? 'bg-[#0f2b5c] text-[#d4af37] shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title="Urutkan dari terbanyak ke terkecil"
+                    >
+                      Terbanyak
                     </button>
                   </div>
                 </div>
