@@ -236,6 +236,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       pillar: PILLARS_CONFIG['slrt_puskesos'],
       records: regionRecords,
       session,
+      filterWilayah: activeRegion,
     });
   };
 
@@ -245,6 +246,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       pillar: PILLARS_CONFIG['slrt_puskesos'],
       records: regionRecords,
       session,
+      filterWilayah: activeRegion,
     });
   };
 

@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PSKSDataRecord, UserSession, PillarInfo } from '../types';
+import { JABAR_ADMIN_WILAYAH_MASTER } from '../components/slrt/slrtExcelParser';
 
 export interface ExportPillarPDFParams {
   pillarId: string;
@@ -9,6 +10,23 @@ export interface ExportPillarPDFParams {
   session: UserSession;
   filterWilayah?: string;
 }
+
+const formatMasaBerlaku = (raw?: string | null): string => {
+  if (!raw) return '-';
+  const str = String(raw).trim();
+  if (!str || str === '-') return '-';
+  if (str.includes('GMT') || str.includes('00:00:00') || !isNaN(Date.parse(str))) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+  }
+  return str;
+};
 
 export const exportPillarToPDF = ({
   pillarId,
@@ -34,7 +52,7 @@ export const exportPillarToPDF = ({
 
   const pillarDisplayName = pillar.title || pillar.shortName;
 
-  // 1. Header & Kop Surat
+  // 1. Header & Kop Surat (Tunggal di Halaman 1)
   doc.setFillColor(4, 62, 46); // #043e2e Deep Emerald
   doc.rect(0, 0, pageWidth, 28, 'F');
 
@@ -60,23 +78,36 @@ export const exportPillarToPDF = ({
 
   // 2. Document Title & Metadata
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(4, 62, 46);
-  doc.text(
-    `LAPORAN RESMI DATA PILAR: ${pillarDisplayName.toUpperCase()} (${pillar.shortName.toUpperCase()})`,
-    14,
-    37
-  );
+  
+  if (pillarId === 'slrt_puskesos') {
+    doc.text(
+      `DATA REKAPITULASI PEMBENTUKAN PUSAT KESEJAHTERAAN SOSIAL (PUSKESOS) DESA/KELURAHAN`,
+      14,
+      37
+    );
+  } else {
+    doc.text(
+      `LAPORAN RESMI DATA PILAR: ${pillarDisplayName.toUpperCase()} (${pillar.shortName.toUpperCase()})`,
+      14,
+      37
+    );
+  }
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
 
-  const scopeInfo = filterWilayah && filterWilayah !== 'Semua'
-    ? `Wilayah / Cakupan: ${filterWilayah}`
-    : session.role === 'admin'
-      ? `Wilayah Tugas: ${session.wilayah}`
-      : 'Cakupan: Seluruh Kabupaten/Kota se-Jawa Barat (27 Wilayah)';
+  const targetRegionScope = filterWilayah && filterWilayah !== 'Semua' && filterWilayah !== 'Semua Wilayah'
+    ? filterWilayah
+    : (session.role === 'admin' && session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah')
+      ? session.wilayah
+      : null;
+
+  const scopeInfo = targetRegionScope
+    ? `Wilayah / Cakupan: ${targetRegionScope.toUpperCase()}`
+    : 'Cakupan: Seluruh Kabupaten/Kota se-Jawa Barat (27 Wilayah)';
 
   doc.text(scopeInfo, 14, 42);
   doc.text(`Dicetak Oleh: ${session.nama || session.username || 'Administrator'} (${session.role.toUpperCase()})`, 14, 47);
@@ -202,7 +233,7 @@ export const exportPillarToPDF = ({
       item.ketua || '-',
       item.alamat || item.kec || '-',
       item.nomorTandaDaftar || item.sertifikasi || '-',
-      item.masaBerlaku || '-',
+      formatMasaBerlaku(item.masaBerlaku),
     ]);
   } else if (pillarId === 'karangtaruna') {
     head = [[
@@ -311,27 +342,124 @@ export const exportPillarToPDF = ({
       item.kontak || item.hp || '-',
     ]);
   } else if (pillarId === 'slrt_puskesos') {
-    head = [[
-      'No',
-      'Kabupaten/Kota',
-      'Nama SLRT_PUSKESOS',
-      'Desa/Kelurahan',
-      'Kecamatan',
-      'Tahun Berdiri',
-      'Nama Operator Puskesos',
-      'Status Keaktifan',
-    ]];
+    // 10-Column Multi-Level Header (Format Resmi Rekapitulasi Pembentukan Puskesos Jabar)
+    head = [
+      [
+        {
+          content: 'WILAYAH ADMINISTRATIF',
+          colSpan: 7,
+          styles: { halign: 'center', fillColor: [254, 249, 195], textColor: [113, 63, 18], fontStyle: 'bold' },
+        },
+        {
+          content: 'DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS',
+          colSpan: 3,
+          styles: { halign: 'center', fillColor: [254, 215, 170], textColor: [124, 45, 18], fontStyle: 'bold' },
+        },
+      ],
+      [
+        { content: 'NO.', styles: { halign: 'center', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'KABUPATEN/ KOTA', styles: { halign: 'left', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'JUMLAH KECAMATAN', styles: { halign: 'center', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'JUMLAH KELURAHAN', styles: { halign: 'center', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'JUMLAH DESA', styles: { halign: 'center', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'JUMLAH KELURAHAN DAN DESA', styles: { halign: 'center', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'JUMLAH TERBENTUK', styles: { halign: 'center', fillColor: [20, 59, 125], textColor: [255, 255, 255] } },
+        { content: 'KECAMATAN', styles: { halign: 'left', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'KELURAHAN YANG TELAH MEMBENTUK PUSKESOS', styles: { halign: 'left', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+        { content: 'DESA YANG TELAH MEMBENTUK PUSKESOS', styles: { halign: 'left', fillColor: [15, 43, 92], textColor: [255, 255, 255] } },
+      ],
+      [
+        { content: '1', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '2', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '3', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '4', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '5', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '6', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '7 (Otomatis)', styles: { halign: 'center', fillColor: [24, 69, 139], textColor: [254, 240, 138], fontSize: 6.5 } },
+        { content: '8', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '9', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+        { content: '10', styles: { halign: 'center', fillColor: [30, 58, 138], textColor: [191, 219, 254], fontSize: 6.5 } },
+      ],
+    ] as any;
 
-    body = records.map((item, idx) => [
-      idx + 1,
-      item.wilayah || '-',
-      item.namaSlrt || item.nama || '-',
-      item.kelDesa || '-',
-      item.kec || '-',
-      item.tahunBerdiri || '-',
-      item.operator || item.sertifikasi || '-',
-      item.statusAktif || item.status || 'Aktif',
-    ]);
+    // Group records by region
+    const regionMap: Record<string, PSKSDataRecord[]> = {};
+    records.forEach((r) => {
+      const reg = r.wilayah?.trim() || filterWilayah || 'Jawa Barat';
+      if (!regionMap[reg]) regionMap[reg] = [];
+      regionMap[reg].push(r);
+    });
+
+    const regionsList = Object.keys(regionMap);
+    body = [];
+
+    regionsList.forEach((regName, regIdx) => {
+      const regRecords = regionMap[regName];
+      const master = JABAR_ADMIN_WILAYAH_MASTER[regName];
+
+      const uniqueKec = new Set<string>();
+      let kelCount = 0;
+      let desaCount = 0;
+
+      regRecords.forEach((r) => {
+        if (r.kec && r.kec.trim()) uniqueKec.add(r.kec.trim());
+        const isKel =
+          r.jenisWilayah === 'Kelurahan' ||
+          (r.nama && r.nama.toLowerCase().includes('kel.')) ||
+          (r.kelDesa && r.kelDesa.toLowerCase().includes('kelurahan'));
+        if (isKel) kelCount++;
+        else desaCount++;
+      });
+
+      const jmlKec = master?.jmlKecamatan || (uniqueKec.size > 0 ? uniqueKec.size : 0);
+      const jmlKel = master?.jmlKelurahan ?? kelCount;
+      const jmlDesa = master?.jmlDesa ?? desaCount;
+      const jmlTotal = master?.jmlTotal ?? (jmlKel + jmlDesa);
+      const jmlTerbentuk = kelCount + desaCount;
+
+      // Group by Kecamatan
+      const kecMap: Record<string, { kelurahans: PSKSDataRecord[]; desas: PSKSDataRecord[] }> = {};
+      regRecords.forEach((r) => {
+        const kecName = r.kec?.trim() || 'Pusat Wilayah';
+        if (!kecMap[kecName]) kecMap[kecName] = { kelurahans: [], desas: [] };
+        const isKel =
+          r.jenisWilayah === 'Kelurahan' ||
+          (r.nama && r.nama.toLowerCase().includes('kel.')) ||
+          (r.kelDesa && r.kelDesa.toLowerCase().includes('kelurahan'));
+        if (isKel) kecMap[kecName].kelurahans.push(r);
+        else kecMap[kecName].desas.push(r);
+      });
+
+      const kecEntries = Object.entries(kecMap);
+      let runningKel = 0;
+      let runningDesa = 0;
+      let isFirstRowOfRegion = true;
+
+      kecEntries.forEach(([kecName, group], kecIdx) => {
+        const rowCount = Math.max(group.kelurahans.length, group.desas.length, 1);
+        for (let rIdx = 0; rIdx < rowCount; rIdx++) {
+          const kelRec = group.kelurahans[rIdx];
+          const desaRec = group.desas[rIdx];
+
+          if (kelRec) runningKel++;
+          if (desaRec) runningDesa++;
+
+          const col1 = isFirstRowOfRegion ? String(regIdx + 1) : '';
+          const col2 = isFirstRowOfRegion ? regName.toUpperCase() : '';
+          const col3 = isFirstRowOfRegion ? String(jmlKec) : '';
+          const col4 = isFirstRowOfRegion ? String(jmlKel) : '';
+          const col5 = isFirstRowOfRegion ? String(jmlDesa) : '';
+          const col6 = isFirstRowOfRegion ? String(jmlTotal) : '';
+          const col7 = isFirstRowOfRegion ? String(jmlTerbentuk) : '';
+          const col8 = rIdx === 0 ? `${kecIdx + 1} ${kecName.toUpperCase()}` : '';
+          const col9 = kelRec ? `${runningKel} ${kelRec.kelDesa || kelRec.nama}` : '';
+          const col10 = desaRec ? `${runningDesa} ${desaRec.kelDesa || desaRec.nama}` : '';
+
+          body.push([col1, col2, col3, col4, col5, col6, col7, col8, col9, col10]);
+          isFirstRowOfRegion = false;
+        }
+      });
+    });
   } else {
     head = [[
       'No',
@@ -361,10 +489,11 @@ export const exportPillarToPDF = ({
     startY: 51,
     head: head,
     body: body,
+    showHead: 'firstPage', // Judul kolom tabel tunggal (hanya muncul 1 kali di halaman pertama saja)
     theme: 'grid',
     styles: {
       font: 'helvetica',
-      fontSize: 7.5,
+      fontSize: 7.2,
       cellPadding: 2,
       textColor: [30, 41, 59],
       lineColor: [226, 232, 240],
@@ -375,17 +504,28 @@ export const exportPillarToPDF = ({
       fillColor: [4, 62, 46], // #043e2e Emerald
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 7.8,
+      fontSize: 7.5,
       halign: 'center',
       valign: 'middle',
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
-    columnStyles: {
+    columnStyles: pillarId === 'slrt_puskesos' ? {
+      0: { halign: 'center', cellWidth: 8 },
+      1: { halign: 'left', cellWidth: 32, fontStyle: 'bold' },
+      2: { halign: 'center', cellWidth: 16 },
+      3: { halign: 'center', cellWidth: 16 },
+      4: { halign: 'center', cellWidth: 16 },
+      5: { halign: 'center', cellWidth: 18, fontStyle: 'bold' },
+      6: { halign: 'center', cellWidth: 18, fontStyle: 'bold' },
+      7: { halign: 'left', cellWidth: 36, fontStyle: 'bold' },
+      8: { halign: 'left', cellWidth: 56 },
+      9: { halign: 'left', cellWidth: 57 },
+    } : {
       0: { halign: 'center', cellWidth: 8 },
     },
-    margin: { top: 32, bottom: 20, left: 12, right: 12 },
+    margin: { top: 16, bottom: 20, left: 12, right: 12 },
     didDrawPage: (data) => {
       // Footer on every page
       const totalPagesExp = '{total_pages_count_string}';
