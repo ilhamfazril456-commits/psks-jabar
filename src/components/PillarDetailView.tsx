@@ -1562,7 +1562,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             />
           )}
 
-          {/* Modal Tambah Data Puskesos Mandiri / Admin */}
+          {/* Modal Tambah Data Puskesos Mandiri / Admin (Multi-Desa/Kelurahan Per Kecamatan) */}
           {showSlrtAddModal && (
             <SlrtAddRecordModal
               isOpen={showSlrtAddModal}
@@ -1573,6 +1573,17 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 if (onAddRecord) {
                   await onAddRecord(record);
                 }
+              }}
+              onBatchAddRecords={async (records) => {
+                if (onBatchAddRecords) {
+                  return await onBatchAddRecords(records, 'slrt_puskesos');
+                } else if (onAddRecord) {
+                  for (const r of records) {
+                    await onAddRecord(r);
+                  }
+                  return records.length;
+                }
+                return 0;
               }}
             />
           )}
