@@ -152,6 +152,7 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
         sertifikasi: 'SK Pembentukan Puskesos',
         hp: '-',
         tahunBerdiri: new Date().getFullYear().toString(),
+        createdAt: Date.now(),
       });
     });
 
@@ -172,6 +173,7 @@ export const SlrtAddRecordModal: React.FC<SlrtAddRecordModalProps> = ({
         sertifikasi: 'SK Pembentukan Puskesos',
         hp: '-',
         tahunBerdiri: new Date().getFullYear().toString(),
+        createdAt: Date.now(),
       });
     });
 

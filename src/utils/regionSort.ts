@@ -120,11 +120,19 @@ export const sortRecordsByJabarRegion = (records?: PSKSDataRecord[] | null): PSK
         return indexA - indexB;
       }
 
-      // 2. Di dalam wilayah yang sama, pertahankan urutan baris asli (orderIndex / createdAt)
-      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : 999999;
-      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : 999999;
-      if (ordA !== ordB) {
+      // 2. Di dalam wilayah yang sama, pertahankan urutan: data lama di atas, registrasi baru di paling bawah
+      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
+      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
+      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) {
         return ordA - ordB;
+      }
+      if (ordA !== undefined && ordB === undefined) {
+        // a memiliki orderIndex (misal registrasi baru), b tidak (data lama asli): a ditaruh di bawah b
+        return 1;
+      }
+      if (ordA === undefined && ordB !== undefined) {
+        // a tidak memiliki orderIndex (data lama), b memiliki (baru): a ditaruh di atas b
+        return -1;
       }
 
       const timeA = (a as any).createdAt || 0;

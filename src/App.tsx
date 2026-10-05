@@ -1113,6 +1113,12 @@ export default function App() {
                 if (typeof ordA === 'number' && typeof ordB === 'number') {
                   return ordA - ordB;
                 }
+                if (typeof ordA === 'number' && typeof ordB !== 'number') {
+                  return 1;
+                }
+                if (typeof ordA !== 'number' && typeof ordB === 'number') {
+                  return -1;
+                }
                 const timeA = (a as any).createdAt || 0;
                 const timeB = (b as any).createdAt || 0;
                 if (timeA && timeB && timeA !== timeB) {
@@ -1198,6 +1204,12 @@ export default function App() {
                 const ordB = (b as any).orderIndex;
                 if (typeof ordA === 'number' && typeof ordB === 'number') {
                   return ordA - ordB;
+                }
+                if (typeof ordA === 'number' && typeof ordB !== 'number') {
+                  return 1;
+                }
+                if (typeof ordA !== 'number' && typeof ordB === 'number') {
+                  return -1;
                 }
                 const timeA = (a as any).createdAt || 0;
                 const timeB = (b as any).createdAt || 0;
@@ -2853,7 +2865,19 @@ export default function App() {
     const pillarKey = targetPillarId || activePillar;
     if (!pillarKey) return;
     const recordId = `${pillarKey}-${Date.now()}`;
-    const fullRecord: PSKSDataRecord = { ...newRecord, id: recordId, pillarId: pillarKey };
+    const existingList = allPillarData[pillarKey] || [];
+    const maxOrder = existingList.reduce((max, r: any, i) => {
+      const ord = typeof r.orderIndex === 'number' ? r.orderIndex : i + 1;
+      return Math.max(max, ord);
+    }, 0);
+    const newTimestamp = Date.now();
+    const fullRecord: PSKSDataRecord = {
+      ...newRecord,
+      id: recordId,
+      pillarId: pillarKey,
+      orderIndex: maxOrder + 1,
+      createdAt: (newRecord as any).createdAt || newTimestamp,
+    };
 
     setAllPillarData((prev) => {
       const updated = {
@@ -2980,9 +3004,18 @@ export default function App() {
     const pillarKey = targetPillarId || activePillar;
     if (!pillarKey || !records.length) return 0;
 
+    const existingList = allPillarData[pillarKey] || [];
+    const maxOrder = existingList.reduce((max, r: any, i) => {
+      const ord = typeof r.orderIndex === 'number' ? r.orderIndex : i + 1;
+      return Math.max(max, ord);
+    }, 0);
+
     const baseTimestamp = Date.now();
     const newRecordsWithId: PSKSDataRecord[] = records.map((rec, idx) => {
-      const orderIdx = typeof (rec as any).orderIndex === 'number' ? (rec as any).orderIndex : idx;
+      const orderIdx =
+        typeof (rec as any).orderIndex === 'number'
+          ? (rec as any).orderIndex
+          : maxOrder + idx + 1;
       return {
         ...rec,
         id: `${pillarKey}-${baseTimestamp}-${String(orderIdx + 1).padStart(6, '0')}`,

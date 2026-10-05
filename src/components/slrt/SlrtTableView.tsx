@@ -125,7 +125,21 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
 
   // 1. Filter records specifically for activeRegion
   const regionRecords = useMemo(() => {
-    return records.filter((r) => isSameWilayah(r.wilayah, activeRegion));
+    const matched = records.filter((r) => isSameWilayah(r.wilayah, activeRegion));
+    // Urutkan secara ketat dan konsisten: data lama di atas, registrasi baru di paling bawah
+    return [...matched].sort((a, b) => {
+      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
+      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
+      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) {
+        return ordA - ordB;
+      }
+      if (ordA !== undefined && ordB === undefined) return 1;
+      if (ordA === undefined && ordB !== undefined) return -1;
+      const timeA = (a as any).createdAt || 0;
+      const timeB = (b as any).createdAt || 0;
+      if (timeA && timeB && timeA !== timeB) return timeA - timeB;
+      return 0;
+    });
   }, [records, activeRegion]);
 
   // 2. Compute administrative indicator values and total puskesos terbentuk
@@ -205,6 +219,25 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       }
     });
 
+    // Urutkan kelurahans dan desas di dalam masing-masing kecamatan:
+    // data lama di atas, dan registrasi baru di baris paling bawah dari kecamatan tersebut
+    const sortInside = (a: PSKSDataRecord, b: PSKSDataRecord) => {
+      const ordA = typeof (a as any).orderIndex === 'number' ? (a as any).orderIndex : undefined;
+      const ordB = typeof (b as any).orderIndex === 'number' ? (b as any).orderIndex : undefined;
+      if (ordA !== undefined && ordB !== undefined && ordA !== ordB) return ordA - ordB;
+      if (ordA !== undefined && ordB === undefined) return 1;
+      if (ordA === undefined && ordB !== undefined) return -1;
+      const timeA = (a as any).createdAt || 0;
+      const timeB = (b as any).createdAt || 0;
+      if (timeA && timeB && timeA !== timeB) return timeA - timeB;
+      return 0;
+    };
+
+    Object.values(kecMap).forEach((entry) => {
+      entry.kelurahans.sort(sortInside);
+      entry.desas.sort(sortInside);
+    });
+
     return Object.entries(kecMap).map(([kecName, data]) => ({
       kecamatan: kecName,
       kelurahans: data.kelurahans,
@@ -282,6 +315,18 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
+
+  // Auto-navigasi ke halaman akhir jika ada penambahan registrasi baru (agar langsung terlihat di baris paling bawah)
+  const prevRecordCountRef = useRef<number>(regionRecords.length);
+  useEffect(() => {
+    if (regionRecords.length > prevRecordCountRef.current && prevRecordCountRef.current > 0) {
+      const newTotalPages = Math.max(1, Math.ceil(allDisplayRows.length / ROWS_PER_PAGE));
+      if (newTotalPages > 1) {
+        setCurrentPage(newTotalPages);
+      }
+    }
+    prevRecordCountRef.current = regionRecords.length;
+  }, [regionRecords.length, allDisplayRows.length]);
 
   const startIndex = (safeCurrentPage - 1) * ROWS_PER_PAGE;
   const paginatedRows = useMemo(() => {

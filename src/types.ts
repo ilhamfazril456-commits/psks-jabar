@@ -175,6 +175,10 @@ export interface PSKSDataRecord {
   berkasFotoSize?: number;
   berkasFotoSizeKb?: number;
   berkasFotoOriginalSizeKb?: number;
+
+  // Metadata urutan dan waktu
+  orderIndex?: number;
+  createdAt?: number;
 }
 
 export interface AdminAccount {
