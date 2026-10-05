@@ -551,6 +551,9 @@ export const exportPillarToPDF = ({
   });
 
   // 5. Trigger download of the PDF file
-  const fileName = `Laporan_Data_${pillar.shortName.replace(/[^a-zA-Z0-9]/g, '_')}_Jabar_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.pdf`;
+  const scopeSuffix = targetRegionScope
+    ? `_${targetRegionScope.replace(/[^a-zA-Z0-9]/g, '_')}`
+    : '_Se_Jawa_Barat';
+  const fileName = `Laporan_Data_${pillar.shortName.replace(/[^a-zA-Z0-9]/g, '_')}${scopeSuffix}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.pdf`;
   doc.save(fileName);
 };

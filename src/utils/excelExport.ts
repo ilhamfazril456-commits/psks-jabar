@@ -393,6 +393,11 @@ export const exportPillarToExcel = ({
 
   // Trigger instant native Excel file download
   const cleanShortName = pillar.shortName.replace(/[^a-zA-Z0-9]/g, '_');
-  const fileName = `Laporan_Data_${cleanShortName}_Jabar_${dateStr}.xlsx`;
+  const scopeSuffix = filterWilayah && filterWilayah !== 'Semua' && filterWilayah !== 'Semua Wilayah'
+    ? `_${filterWilayah.replace(/[^a-zA-Z0-9]/g, '_')}`
+    : (session.role === 'admin' && session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah')
+      ? `_${session.wilayah.replace(/[^a-zA-Z0-9]/g, '_')}`
+      : '_Se_Jawa_Barat';
+  const fileName = `Laporan_Data_${cleanShortName}${scopeSuffix}_${dateStr}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 };

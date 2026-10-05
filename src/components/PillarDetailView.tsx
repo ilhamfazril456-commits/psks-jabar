@@ -148,6 +148,74 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const isSlrtLevel2 = pillarId === 'slrt_puskesos' && (selectedSlrtRegion !== null || !isSuperAdminOrDev);
   const activeSlrtRegion = isSuperAdminOrDev ? (selectedSlrtRegion || 'Jawa Barat') : (session.wilayah || 'Jawa Barat');
 
+  // State khusus Popover Kotak Melayang Export LKS (Role Superadmin & Developer)
+  const [activeLksExportType, setActiveLksExportType] = useState<'excel' | 'pdf' | null>(null);
+  const [lksExportSubmenu, setLksExportSubmenu] = useState<'main' | 'region_picker'>('main');
+  const [lksExportRegionSearch, setLksExportRegionSearch] = useState<string>('');
+  const lksExportMenuRef = useRef<HTMLDivElement>(null);
+  const lksExportHoverTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const handleClickOutsideExport = (event: MouseEvent) => {
+      if (lksExportMenuRef.current && !lksExportMenuRef.current.contains(event.target as Node)) {
+        setActiveLksExportType(null);
+        setLksExportSubmenu('main');
+        setLksExportRegionSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutsideExport);
+    return () => document.removeEventListener('mousedown', handleClickOutsideExport);
+  }, []);
+
+  const handleExportMouseEnter = (type: 'excel' | 'pdf') => {
+    if (lksExportHoverTimeoutRef.current) {
+      clearTimeout(lksExportHoverTimeoutRef.current);
+    }
+    setActiveLksExportType(type);
+    setLksExportSubmenu('main');
+  };
+
+  const handleExportMouseLeave = () => {
+    lksExportHoverTimeoutRef.current = setTimeout(() => {
+      setActiveLksExportType(null);
+      setLksExportSubmenu('main');
+      setLksExportRegionSearch('');
+    }, 280);
+  };
+
+  const handleMenuMouseEnter = () => {
+    if (lksExportHoverTimeoutRef.current) {
+      clearTimeout(lksExportHoverTimeoutRef.current);
+    }
+  };
+
+  const handleExportButtonClick = (type: 'excel' | 'pdf') => {
+    if (activeLksExportType === type) {
+      setActiveLksExportType(null);
+      setLksExportSubmenu('main');
+      setLksExportRegionSearch('');
+    } else {
+      setActiveLksExportType(type);
+      setLksExportSubmenu('main');
+      setLksExportRegionSearch('');
+    }
+  };
+
+  // Hitung jumlah data LKS per Kabupaten/Kota untuk badge di popover export
+  const lksCountByRegion = useMemo(() => {
+    const map: Record<string, number> = {};
+    KAB_KOTA_ONLY.forEach((reg) => {
+      map[reg] = 0;
+    });
+    dataRecords.forEach((r) => {
+      const match = KAB_KOTA_ONLY.find((k) => isSameWilayah(r.wilayah, k));
+      if (match) {
+        map[match] = (map[match] || 0) + 1;
+      }
+    });
+    return map;
+  }, [dataRecords]);
+
   useEffect(() => {
     setSelectedSlrtRegion(null);
   }, [pillarId]);
@@ -1176,18 +1244,27 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     }
   };
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (targetRegion?: string | null) => {
     try {
       const { exportPillarToExcel } = await import('../utils/excelExport');
+      let recordsToExport = displayRecords;
+      if (targetRegion && targetRegion !== 'all') {
+        recordsToExport = dataRecords.filter((r) => isSameWilayah(r.wilayah, targetRegion));
+      } else if (targetRegion === 'all' || (isSuperAdminOrDev && pillarId === 'lks')) {
+        recordsToExport = dataRecords;
+      }
       exportPillarToExcel({
         pillarId,
         pillar,
-        records: displayRecords,
+        records: recordsToExport,
         session,
+        filterWilayah: targetRegion && targetRegion !== 'all' ? targetRegion : undefined,
       });
       setAlertInfo({
         title: 'Berhasil Ekspor Excel',
-        message: `Laporan data ${pillar.title || pillar.shortName} berhasil diekspor ke format Excel (.xlsx) dengan tabel rapi.`,
+        message: targetRegion && targetRegion !== 'all'
+          ? `Laporan data ${pillar.title || pillar.shortName} untuk wilayah ${targetRegion} (${recordsToExport.length} data) berhasil diekspor ke Excel.`
+          : `Laporan data ${pillar.title || pillar.shortName} Se-Jawa Barat (${recordsToExport.length} data) berhasil diekspor ke format Excel (.xlsx) dengan tabel rapi.`,
         type: 'success',
       });
     } catch (err) {
@@ -1200,18 +1277,27 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (targetRegion?: string | null) => {
     try {
       const { exportPillarToPDF } = await import('../utils/pdfExport');
+      let recordsToExport = displayRecords;
+      if (targetRegion && targetRegion !== 'all') {
+        recordsToExport = dataRecords.filter((r) => isSameWilayah(r.wilayah, targetRegion));
+      } else if (targetRegion === 'all' || (isSuperAdminOrDev && pillarId === 'lks')) {
+        recordsToExport = dataRecords;
+      }
       exportPillarToPDF({
         pillarId,
         pillar,
-        records: displayRecords,
+        records: recordsToExport,
         session,
+        filterWilayah: targetRegion && targetRegion !== 'all' ? targetRegion : undefined,
       });
       setAlertInfo({
         title: 'Berhasil Ekspor PDF',
-        message: `Laporan resmi ${pillar.title || pillar.shortName} format PDF berhasil digenerate dan diunduh.`,
+        message: targetRegion && targetRegion !== 'all'
+          ? `Laporan resmi ${pillar.title || pillar.shortName} wilayah ${targetRegion} (${recordsToExport.length} data) berhasil digenerate dan diunduh.`
+          : `Laporan resmi ${pillar.title || pillar.shortName} Se-Jawa Barat (${recordsToExport.length} data) berhasil digenerate dan diunduh.`,
         type: 'success',
       });
     } catch (err) {
@@ -1738,27 +1824,273 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 w-full md:w-auto">
             {session.role !== 'user' && (
               <>
-                <button
-                  id={`btn-export-excel-${pillarId}`}
-                  type="button"
-                  onClick={handleExportExcel}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#0f2b5c] font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
-                  title="Ekspor data pilar ke file spreadsheet CSV/Excel"
-                >
-                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span><span className="hidden sm:inline">Export Ke </span>Excel</span>
-                </button>
+                {/* Tombol Export Excel & PDF (Khusus Pilar LKS & Superadmin/Dev: Kotak Pilihan Melayang Halus) */}
+                {pillarId === 'lks' && isSuperAdminOrDev ? (
+                  <div className="relative inline-flex items-center gap-1.5 sm:gap-3 flex-1 sm:flex-none" ref={lksExportMenuRef}>
+                    {/* Tombol Export Excel LKS */}
+                    <button
+                      id={`btn-export-excel-${pillarId}`}
+                      type="button"
+                      onClick={() => handleExportButtonClick('excel')}
+                      onMouseEnter={() => handleExportMouseEnter('excel')}
+                      onMouseLeave={handleExportMouseLeave}
+                      className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#0f2b5c] font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap ${
+                        activeLksExportType === 'excel' ? 'ring-2 ring-amber-400 bg-[#d4af37]' : ''
+                      }`}
+                      title="Export data LKS ke Excel: Pilihan Se-Jawa Barat atau Per Kabupaten/Kota"
+                    >
+                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span><span className="hidden sm:inline">Export Ke </span>Excel</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeLksExportType === 'excel' ? 'rotate-180' : ''}`} />
+                    </button>
 
-                <button
-                  id={`btn-export-pdf-${pillarId}`}
-                  type="button"
-                  onClick={handleExportPDF}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
-                  title="Ekspor data pilar ke dokumen PDF resmi bertandatangan digital"
-                >
-                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span><span className="hidden sm:inline">Export Ke </span>PDF</span>
-                </button>
+                    {/* Tombol Export PDF LKS */}
+                    <button
+                      id={`btn-export-pdf-${pillarId}`}
+                      type="button"
+                      onClick={() => handleExportButtonClick('pdf')}
+                      onMouseEnter={() => handleExportMouseEnter('pdf')}
+                      onMouseLeave={handleExportMouseLeave}
+                      className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap ${
+                        activeLksExportType === 'pdf' ? 'ring-2 ring-rose-400 bg-rose-800' : ''
+                      }`}
+                      title="Export data LKS ke PDF: Pilihan Se-Jawa Barat atau Per Kabupaten/Kota"
+                    >
+                      <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span><span className="hidden sm:inline">Export Ke </span>PDF</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeLksExportType === 'pdf' ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Kotak Pilihan Melayang Halus (Responsive & Multi-Device) */}
+                    {activeLksExportType && (
+                      <>
+                        {/* Mobile Backdrop untuk Layar Sentuh / Smartphone */}
+                        <div
+                          className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs z-40 sm:hidden animate-fadeIn"
+                          onClick={() => {
+                            setActiveLksExportType(null);
+                            setLksExportSubmenu('main');
+                            setLksExportRegionSearch('');
+                          }}
+                        />
+
+                        {/* Dropdown Card */}
+                        <div
+                          onMouseEnter={handleMenuMouseEnter}
+                          onMouseLeave={handleExportMouseLeave}
+                          className={`fixed inset-x-3 bottom-6 max-h-[82vh] sm:max-h-none sm:bottom-auto sm:inset-x-auto sm:absolute ${
+                            activeLksExportType === 'excel' ? 'sm:left-0' : 'sm:right-0'
+                          } sm:top-full sm:mt-2 w-auto sm:w-80 md:w-96 bg-white rounded-2xl shadow-2xl border-2 border-slate-300 sm:border-slate-200 overflow-hidden z-50 text-left animate-in fade-in zoom-in-95 duration-150 flex flex-col`}
+                        >
+                          {/* Header Popover */}
+                          <div
+                            className={`px-4 py-3 flex items-center justify-between text-white shrink-0 ${
+                              activeLksExportType === 'excel'
+                                ? 'bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900'
+                                : 'bg-gradient-to-r from-rose-800 via-rose-900 to-red-950'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {activeLksExportType === 'excel' ? (
+                                <Download className="w-4 h-4 text-amber-200" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-rose-200" />
+                              )}
+                              <div>
+                                <h5 className="font-extrabold text-xs sm:text-sm tracking-tight text-white leading-tight">
+                                  Export LKS ke {activeLksExportType === 'excel' ? 'Excel (.xlsx)' : 'PDF Resmi'}
+                                </h5>
+                                <span className="text-[10px] text-white/80 font-medium block">
+                                  Pilih cakupan data yang ingin diekspor
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveLksExportType(null);
+                                setLksExportSubmenu('main');
+                                setLksExportRegionSearch('');
+                              }}
+                              className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+                              title="Tutup"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Body: Submenu Main */}
+                          {lksExportSubmenu === 'main' ? (
+                            <div className="p-3 space-y-2 overflow-y-auto">
+                              {/* Opsi 1: Export Data Se-Jawa Barat */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (activeLksExportType === 'excel') {
+                                    handleExportExcel(null);
+                                  } else {
+                                    handleExportPDF(null);
+                                  }
+                                  setActiveLksExportType(null);
+                                  setLksExportSubmenu('main');
+                                }}
+                                className="w-full p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/60 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#0f2b5c] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <Building2 className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#0f2b5c]">
+                                        Export Data Se-Jawa Barat
+                                      </span>
+                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                        Semua
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                      Seluruh 27 Kab/Kota ({dataRecords.length} data LKS lengkap)
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0f2b5c] group-hover:translate-x-0.5 transition-all shrink-0" />
+                              </button>
+
+                              {/* Opsi 2: Export Per Kab/Kota */}
+                              <button
+                                type="button"
+                                onClick={() => setLksExportSubmenu('region_picker')}
+                                className="w-full p-3 rounded-xl border border-slate-200 hover:border-amber-300 hover:bg-amber-50/60 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <MapPin className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-amber-950">
+                                        Export Per Kabupaten / Kota
+                                      </span>
+                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                        27 Wilayah
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                      Pilih salah satu Kab/Kota khusus untuk diekspor
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-800 group-hover:translate-x-0.5 transition-all shrink-0" />
+                              </button>
+                            </div>
+                          ) : (
+                            /* Submenu: Region Picker (27 Kab/Kota) */
+                            <div className="flex flex-col max-h-[70vh] sm:max-h-80">
+                              <div className="p-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setLksExportSubmenu('main');
+                                    setLksExportRegionSearch('');
+                                  }}
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-[#0f2b5c] hover:underline cursor-pointer"
+                                >
+                                  <ArrowLeft className="w-3.5 h-3.5" />
+                                  <span>Kembali</span>
+                                </button>
+                                <span className="text-[11px] font-bold text-slate-500">
+                                  Pilih 1 dari 27 Wilayah
+                                </span>
+                              </div>
+
+                              {/* Search Box */}
+                              <div className="p-2.5 border-b border-slate-100 shrink-0">
+                                <div className="relative">
+                                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                  <input
+                                    type="text"
+                                    value={lksExportRegionSearch}
+                                    onChange={(e) => setLksExportRegionSearch(e.target.value)}
+                                    placeholder="Cari Kab / Kota..."
+                                    className="w-full text-xs pl-8 pr-3 py-1.5 bg-slate-100 rounded-lg border border-slate-200 focus:outline-none focus:bg-white focus:border-[#0f2b5c]"
+                                    autoFocus
+                                  />
+                                </div>
+                              </div>
+
+                              {/* List of 27 Regions */}
+                              <div className="p-2 overflow-y-auto space-y-1 flex-1">
+                                {KAB_KOTA_ONLY
+                                  .filter((reg) =>
+                                    reg.toLowerCase().includes(lksExportRegionSearch.toLowerCase())
+                                  )
+                                  .map((regionName) => {
+                                    const count = lksCountByRegion[regionName] || 0;
+                                    return (
+                                      <button
+                                        key={regionName}
+                                        type="button"
+                                        onClick={() => {
+                                          if (activeLksExportType === 'excel') {
+                                            handleExportExcel(regionName);
+                                          } else {
+                                            handleExportPDF(regionName);
+                                          }
+                                          setActiveLksExportType(null);
+                                          setLksExportSubmenu('main');
+                                          setLksExportRegionSearch('');
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg hover:bg-blue-50 text-left flex items-center justify-between gap-2 transition-colors cursor-pointer group"
+                                      >
+                                        <span className="text-xs font-bold text-slate-800 group-hover:text-[#0f2b5c]">
+                                          {regionName}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                            count > 0
+                                              ? 'bg-blue-100 text-[#0f2b5c]'
+                                              : 'bg-slate-100 text-slate-400'
+                                          }`}
+                                        >
+                                          {count} data
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  /* Tampilan Normal untuk Pilar Selain LKS atau Role Non-Superadmin/Dev */
+                  <>
+                    <button
+                      id={`btn-export-excel-${pillarId}`}
+                      type="button"
+                      onClick={() => handleExportExcel(null)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-[#b8901c] hover:bg-[#d4af37] text-[#0f2b5c] font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                      title="Ekspor data pilar ke file spreadsheet CSV/Excel"
+                    >
+                      <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span><span className="hidden sm:inline">Export Ke </span>Excel</span>
+                    </button>
+
+                    <button
+                      id={`btn-export-pdf-${pillarId}`}
+                      type="button"
+                      onClick={() => handleExportPDF(null)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                      title="Ekspor data pilar ke dokumen PDF resmi bertandatangan digital"
+                    >
+                      <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span><span className="hidden sm:inline">Export Ke </span>PDF</span>
+                    </button>
+                  </>
+                )}
 
                 {(session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && (
                   <>
