@@ -61,7 +61,9 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
       setParseResult(result);
       const regKeys = Object.keys(result.regions);
       if (regKeys.length > 0) {
-        setSelectedRegionKey(regKeys[0]);
+        // In Skenario B, prefer targetRegion key, otherwise first key
+        const matchKey = targetRegion && result.regions[targetRegion] ? targetRegion : regKeys[0];
+        setSelectedRegionKey(matchKey);
       }
     } catch (err: any) {
       console.error('Error parsing SLRT Excel:', err);
@@ -97,16 +99,18 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
   // Active region data for full preview
   const activeRegionData = useMemo(() => {
     if (!parseResult) return null;
-    const key = selectedRegionKey || Object.keys(parseResult.regions)[0];
-    return key ? parseResult.regions[key] : null;
+    const regKeys = Object.keys(parseResult.regions);
+    if (regKeys.length === 0) return null;
+    const key = selectedRegionKey && parseResult.regions[selectedRegionKey] ? selectedRegionKey : regKeys[0];
+    return parseResult.regions[key] || null;
   }, [parseResult, selectedRegionKey]);
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center pt-20 sm:pt-24 pb-12 animate-fadeIn">
-      {/* Modal Dialog Card (High z-index, above navbar, never cut off) */}
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] relative">
+    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-900/80 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center animate-fadeIn">
+      {/* Modal Dialog Card (Perfect vertical centering, balanced & proportional, above navbar) */}
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] relative my-auto">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex items-center justify-between border-b-2 border-[#d4af37] shrink-0">
           <div className="flex items-center gap-3">
@@ -140,17 +144,17 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
           {/* Petunjuk Pintar */}
           <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
-              <strong className="font-bold text-blue-950 block mb-1">
+              <strong className="font-bold text-blue-950 block mb-0.5">
                 Deteksi Otomatis & Perhitungan Cerdas Puskesos:
               </strong>
               <p>
                 {isSingleRegionMode
-                  ? `Mengunggah file Excel khusus untuk wilayah ${targetRegion}. Kolom jumlah desa/kelurahan yang telah membentuk puskesos akan dihitung otomatis oleh sistem.`
+                  ? `Mengunggah file Excel khusus untuk wilayah ${targetRegion}. Sistem cerdas otomatis menyaring baris milik ${targetRegion} dan menghitung total desa/kelurahan secara otomatis.`
                   : 'Unggah 1 file Excel utuh se-Jawa Barat. Sistem cerdas otomatis memetakan, menyortir, dan mendistribusikan data ke masing-masing 27 Kabupaten/Kota dengan perhitungan otomatis.'}
               </p>
             </div>
@@ -298,12 +302,12 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                         <span>
                           {isSingleRegionMode
                             ? `Wilayah Target: ${targetRegion}`
-                            : `Pilih Wilayah untuk Melihat Preview Lengkap (${Object.keys(parseResult.regions).length} Wilayah)`}
+                            : `Pilih Wilayah untuk Melihat Preview Lengkap (${Object.keys(parseResult.regions).length} Wilayah Terdeteksi)`}
                         </span>
                       </h5>
                     </div>
 
-                    {!isSingleRegionMode && (
+                    {!isSingleRegionMode && Object.keys(parseResult.regions).length > 1 && (
                       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
                         {Object.entries(parseResult.regions).map(([rName, rData]) => (
                           <button
@@ -356,7 +360,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                       </div>
 
                       {/* Full Table (2 Groups: Wilayah Administratif & Desa/Kelurahan Yang Telah Membentuk Puskesos) */}
-                      <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[360px] shadow-2xs">
+                      <div className="overflow-x-auto border-2 border-slate-300 rounded-xl max-h-[350px] shadow-2xs">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-[#0f2b5c] text-white text-[11px] font-black uppercase sticky top-0 z-10">
                             {/* Row 1: Group Headers */}

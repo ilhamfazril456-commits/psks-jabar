@@ -58,7 +58,7 @@ export const normalizeSlrtRegion = (rawText?: any): string | null => {
   const str = String(rawText).trim();
   if (!str) return null;
 
-  // Skip header titles or totals
+  // Skip headers or summary words
   if (/^(no|jumlah|total|rekap|wilayah|provinsi|jawa barat|desa|kelurahan|kecamatan|update|data)/i.test(str)) {
     return null;
   }
@@ -128,7 +128,6 @@ export const parseSlrtExcelFile = async (
   // 1. Smart Sheet Detection
   let targetSheetName = selectedSheetName || '';
   if (!targetSheetName) {
-    // Look for sheets containing 'rincian', 'puskesos', 'desa', 'detail', 'data'
     const preferredSheet = workbook.SheetNames.find((s) =>
       /rincian|puskesos|desa|detail|data|slrt/i.test(s)
     );
@@ -136,7 +135,6 @@ export const parseSlrtExcelFile = async (
     if (preferredSheet) {
       targetSheetName = preferredSheet;
     } else {
-      // Find sheet with maximum row count
       let maxRows = -1;
       let bestSheet = workbook.SheetNames[0];
       for (const sName of workbook.SheetNames) {
@@ -165,7 +163,7 @@ export const parseSlrtExcelFile = async (
     throw new Error('Format file Excel terlalu pendek atau tidak memiliki baris data.');
   }
 
-  // 2. Identify Column Layout Dynamically (Ignoring any "JUMLAH" or "TOTAL" count columns)
+  // 2. Identify Column Layout Dynamically (Never match count columns containing "JUMLAH")
   let colKab = -1;
   let colKec = -1;
   let colKel = -1;
@@ -183,7 +181,6 @@ export const parseSlrtExcelFile = async (
         continue;
       }
 
-      // Skip summary / count columns (CRITICAL FIX: never match JUMLAH KELURAHAN / JUMLAH DESA / JUMLAH KECAMATAN)
       const isJumlahCol = cellVal.includes('jumlah') || cellVal.includes('total');
 
       // Kabupaten / Kota column
@@ -226,14 +223,15 @@ export const parseSlrtExcelFile = async (
   if (colDesa === -1) colDesa = maxRowLen > 6 ? 11 : (maxRowLen >= 4 ? 3 : 2);
 
   // Helper to extract non-numeric text from a column or its adjacent column (for paired number+name cells)
-  const getCellCandidates = (row: any[], primaryCol: number, maxOffset = 2): string => {
-    if (primaryCol < 0 || primaryCol >= row.length) return '';
-    for (let offset = 0; offset <= maxOffset; offset++) {
+  const getCellCandidates = (row: any[], primaryCol: number, minOffset = -1, maxOffset = 2): string => {
+    if (primaryCol < 0) return '';
+    for (let offset = minOffset; offset <= maxOffset; offset++) {
       const idx = primaryCol + offset;
-      if (idx < row.length) {
+      if (idx >= 0 && idx < row.length) {
         const val = String(row[idx] || '').trim();
         if (val && !isHeaderOrSummaryString(val)) {
           const clean = cleanPuskesosName(val);
+          // Must not be a pure number, and must have length >= 2
           if (clean && !/^\d+$/.test(clean) && clean.length >= 2) {
             return clean;
           }
@@ -246,18 +244,23 @@ export const parseSlrtExcelFile = async (
   // Determine starting data row
   let dataStartRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 1;
 
-  // Skip sub-number rows (1 | 2 | 3 | 4 | 5...) if present
-  for (let r = dataStartRow; r < Math.min(dataStartRow + 4, rows.length); r++) {
+  // Strict check for sub-number row (e.g. 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10).
+  // CRITICAL: NEVER skip a row if it contains ANY letters (like "KABUPATEN BANDUNG" or "CILEUNYI")!
+  for (let r = dataStartRow; r < Math.min(dataStartRow + 3, rows.length); r++) {
     const row = rows[r];
-    const hasNumbersSequence = row.some((cell, idx) => String(cell).trim() === String(idx + 1));
-    if (hasNumbersSequence) {
-      dataStartRow = r + 1;
-      break;
+    const nonEmp = row.map((c) => String(c).trim()).filter((c) => c !== '');
+    if (nonEmp.length >= 3) {
+      const hasLetters = nonEmp.some((c) => /[a-zA-Z]/.test(c));
+      const allNumbers = nonEmp.every((c) => /^\d+$/.test(c) && Number(c) <= 25);
+      if (!hasLetters && allNumbers) {
+        dataStartRow = r + 1;
+        break;
+      }
     }
   }
 
   // 3. Process Rows with Top-Down Streaming Memory
-  let currentKabKota: string | null = targetRegionFilter ? normalizeSlrtRegion(targetRegionFilter) : null;
+  let currentKabKota: string | null = null;
   let currentKecamatan: string | null = null;
 
   const allRecords: Omit<PSKSDataRecord, 'id'>[] = [];
@@ -270,38 +273,47 @@ export const parseSlrtExcelFile = async (
     // Check if entire row is empty or summary/footer
     const rowStr = row.map((cell) => String(cell).trim()).join(' ');
     if (!rowStr) continue;
-    if (/^(total|jumlah|rekapitulasi|catatan|keterangan)\b/i.test(rowStr)) continue;
+    if (/^(total|jumlah|subtotal|rekapitulasi|catatan|keterangan)\b/i.test(rowStr)) continue;
 
-    // A. Detect new Kabupaten / Kota
-    if (!targetRegionFilter) {
-      if (colKab !== -1 && colKab < row.length) {
-        const detected = normalizeSlrtRegion(row[colKab]);
-        if (detected) {
-          currentKabKota = detected;
-        }
+    // A. Detect new Kabupaten / Kota in this row
+    // 1. Check colKab first
+    if (colKab !== -1 && colKab < row.length) {
+      const detected = normalizeSlrtRegion(row[colKab]);
+      if (detected) {
+        currentKabKota = detected;
       }
-      // Also scan first 4 columns for any region name if not found yet or to switch region
-      for (let c = 0; c < Math.min(row.length, 4); c++) {
-        const detected = normalizeSlrtRegion(row[c]);
-        if (detected) {
-          currentKabKota = detected;
-          break;
-        }
+    }
+    // 2. Scan first 4 columns for any West Java region name
+    for (let c = 0; c < Math.min(row.length, 5); c++) {
+      const detected = normalizeSlrtRegion(row[c]);
+      if (detected) {
+        currentKabKota = detected;
+        break;
       }
     }
 
-    const effectiveRegion = targetRegionFilter
-      ? normalizeSlrtRegion(targetRegionFilter)
-      : currentKabKota;
+    // Determine the effective region of this row
+    const rowRegion = currentKabKota || (targetRegionFilter ? normalizeSlrtRegion(targetRegionFilter) : null);
+    if (!rowRegion) {
+      // Still no region detected, skip until region is identified
+      continue;
+    }
+
+    // CRITICAL FIX FOR SKENARIO B:
+    // If targetRegionFilter is active (e.g. user clicked "Import Khusus Wilayah Ini" in Kab. Bogor),
+    // we MUST verify that this row actually belongs to targetRegionFilter!
+    // If current row has a detected region (e.g. Kab. Bandung) that does NOT match targetRegionFilter, SKIP IT!
+    if (targetRegionFilter && !isSameWilayah(rowRegion, targetRegionFilter)) {
+      continue;
+    }
 
     // B. Detect new Kecamatan
     let candidateKec = '';
     if (colKec !== -1) {
-      candidateKec = getCellCandidates(row, colKec, 1);
+      candidateKec = getCellCandidates(row, colKec, 0, 1);
     }
-    // If not found at colKec, also check colKec - 1 (e.g. if column was at 6 instead of 7)
     if (!candidateKec && colKec > 0) {
-      candidateKec = getCellCandidates(row, colKec - 1, 0);
+      candidateKec = getCellCandidates(row, colKec - 1, 0, 0);
     }
 
     if (candidateKec) {
@@ -311,19 +323,19 @@ export const parseSlrtExcelFile = async (
     // C. Detect Kelurahan Name
     let candidateKel = '';
     if (colKel !== -1) {
-      candidateKel = getCellCandidates(row, colKel, 1);
+      candidateKel = getCellCandidates(row, colKel, 0, 1);
     }
     if (!candidateKel && colKel > 0) {
-      candidateKel = getCellCandidates(row, colKel - 1, 0);
+      candidateKel = getCellCandidates(row, colKel - 1, 0, 0);
     }
 
     // D. Detect Desa Name
     let candidateDesa = '';
     if (colDesa !== -1) {
-      candidateDesa = getCellCandidates(row, colDesa, 1);
+      candidateDesa = getCellCandidates(row, colDesa, 0, 1);
     }
     if (!candidateDesa && colDesa > 0) {
-      candidateDesa = getCellCandidates(row, colDesa - 1, 0);
+      candidateDesa = getCellCandidates(row, colDesa - 1, 0, 0);
     }
 
     // If candidateKel and candidateDesa are the same string (e.g. from overlapping search range), disambiguate
@@ -334,13 +346,6 @@ export const parseSlrtExcelFile = async (
     // If row has neither Kelurahan nor Desa, continue
     if (!candidateKel && !candidateDesa) continue;
 
-    const finalRegion = effectiveRegion || 'Jawa Barat';
-
-    // If Skenario B (single region filter), ignore rows from other regions
-    if (targetRegionFilter && !isSameWilayah(finalRegion, targetRegionFilter)) {
-      continue;
-    }
-
     // Helper to store record and update hierarchical region structure
     const recordPuskesos = (name: string, jenis: 'Desa' | 'Kelurahan') => {
       if (!name || isHeaderOrSummaryString(name)) return;
@@ -350,7 +355,7 @@ export const parseSlrtExcelFile = async (
 
       const rec: Omit<PSKSDataRecord, 'id'> = {
         pillarId: 'slrt_puskesos',
-        wilayah: finalRegion,
+        wilayah: rowRegion,
         kec: kecName,
         kelDesa: name,
         jenisWilayah: jenis,
@@ -366,9 +371,9 @@ export const parseSlrtExcelFile = async (
       allRecords.push(rec);
 
       // Initialize region entry
-      if (!regionsData[finalRegion]) {
-        regionsData[finalRegion] = {
-          regionName: finalRegion,
+      if (!regionsData[rowRegion]) {
+        regionsData[rowRegion] = {
+          regionName: rowRegion,
           kecamatanList: [],
           totalKecamatan: 0,
           totalKelurahan: 0,
@@ -378,7 +383,7 @@ export const parseSlrtExcelFile = async (
         };
       }
 
-      const regEntry = regionsData[finalRegion];
+      const regEntry = regionsData[rowRegion];
       regEntry.records.push(rec);
       if (jenis === 'Kelurahan') regEntry.totalKelurahan += 1;
       if (jenis === 'Desa') regEntry.totalDesa += 1;
@@ -418,8 +423,9 @@ export const parseSlrtExcelFile = async (
   }
 
   if (allRecords.length === 0) {
+    const errorPrefix = targetRegionFilter ? `untuk wilayah "${targetRegionFilter}" ` : '';
     throw new Error(
-      `Tidak ditemukan data Desa atau Kelurahan pada sheet "${targetSheetName}". Pastikan baris data memiliki nama Kecamatan serta nama Desa atau Kelurahan.`
+      `Tidak ditemukan data Desa atau Kelurahan ${errorPrefix}pada sheet "${targetSheetName}". Pastikan baris data memiliki nama Kecamatan serta nama Desa atau Kelurahan yang sesuai.`
     );
   }
 
