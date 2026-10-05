@@ -1282,12 +1282,12 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             </div>
           </div>
 
-          {/* Skenario A: Tombol Import Excel Masal 27 Wilayah */}
+          {/* Tombol Import Excel Masal 27 Wilayah */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
             <div>
               <h4 className="text-sm sm:text-base font-black text-[#0f2b5c] flex items-center gap-2">
                 <Layers className="w-4 h-4 text-[#d4af37]" />
-                <span>Import Excel Masal Se-Jawa Barat (Skenario A)</span>
+                <span>Import Excel Masal Se-Jawa Barat</span>
               </h4>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Unggah 1 file Excel utuh, sistem cerdas akan otomatis membagi dan mendistribusikan data ke masing-masing 27 Kab/Kota.
@@ -1298,7 +1298,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               id="btn-slrt-bulk-import-all"
               onClick={() => setShowSlrtBulkImportModal(true)}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 shrink-0"
-              title="Skenario A: Upload 1 file Excel utuh, otomatis disortir ke 27 wilayah"
+              title="Upload 1 file Excel utuh, otomatis disortir ke 27 wilayah"
             >
               <UploadCloud className="w-4 h-4 text-emerald-200" />
               <span>Import Excel Masal 27 Kab/Kota Se-Jawa Barat</span>

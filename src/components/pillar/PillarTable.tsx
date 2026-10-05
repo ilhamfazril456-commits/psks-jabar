@@ -80,6 +80,31 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
   const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
   const paginatedRecords = recordsToRender.slice(startIndex, startIndex + PAGE_SIZE);
 
+  // Ref container tabel untuk auto-scroll ke baris paling atas tabel saat ganti halaman
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToTableTop = () => {
+    if (tableContainerRef.current) {
+      try {
+        tableContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch {
+        // fallback jika browser tidak mendukung block option
+      }
+      const rect = tableContainerRef.current.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+      const targetY = rect.top + scrollTop - 75;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const validPage = Math.min(Math.max(1, newPage), totalPages);
+    setCurrentPage(validPage);
+    setTimeout(() => {
+      scrollToTableTop();
+    }, 50);
+  };
+
   const renderCheckboxTh = () => {
     if (!showCheckbox || !isStaffOrAdmin || !onToggleSelectAll) return null;
     const isAllSelected = recordsToRender.length > 0 && selectedRecordIds.length === recordsToRender.length;
@@ -147,8 +172,72 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="space-y-3">
+      {/* Bilah Navigasi Ringkas di Atas Tabel (Muncul otomatis jika data > 100 baris / totalPages > 1) */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-blue-50/90 border border-blue-200 rounded-2xl px-4 py-2.5 text-xs shadow-2xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-extrabold text-[#0f2b5c] bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 shadow-2xs">
+              Halaman {safeCurrentPage} dari {totalPages}
+            </span>
+            <span className="text-slate-400 hidden sm:inline">•</span>
+            <span className="text-slate-600 font-medium">
+              Menampilkan baris <strong className="text-[#0f2b5c] font-bold">{startIndex + 1}</strong> s.d.{' '}
+              <strong className="text-[#0f2b5c] font-bold">{Math.min(startIndex + PAGE_SIZE, totalRecords)}</strong> dari total{' '}
+              <strong className="text-[#0f2b5c] font-bold">{totalRecords}</strong> data {pillar?.title || pillarId.toUpperCase()}
+              {session.wilayah && session.wilayah !== 'Prov. Jabar' && session.wilayah !== 'Semua Wilayah' ? ` (${session.wilayah})` : ''}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => handlePageChange(1)}
+              disabled={safeCurrentPage === 1}
+              className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+              title="Ke Halaman Pertama (Baris 1 - 100)"
+            >
+              <ChevronsLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage === 1}
+              className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs text-xs"
+              title="Ke Halaman Sebelumnya"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Sebelumnya</span>
+            </button>
+            <span className="px-2.5 py-1 rounded-lg bg-[#0f2b5c] text-white font-extrabold text-xs shadow-2xs">
+              {safeCurrentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage === totalPages}
+              className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs text-xs"
+              title={`Ke Halaman Selanjutnya (Baris ${safeCurrentPage * PAGE_SIZE + 1}+)`}
+            >
+              <span className="hidden md:inline">Selanjutnya</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={safeCurrentPage === totalPages}
+              className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+              title={`Ke Halaman Terakhir (${totalPages})`}
+            >
+              <ChevronsRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Container Tabel Utama */}
+      <div ref={tableContainerRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-[#0f2b5c] text-white border-b-2 border-[#d4af37]">
             {pillarId === 'peksos' ? (
@@ -735,18 +824,18 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
             <div className="flex items-center gap-1.5 flex-wrap justify-center">
               <button
                 type="button"
-                onClick={() => setCurrentPage(1)}
+                onClick={() => handlePageChange(1)}
                 disabled={safeCurrentPage === 1}
-                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Halaman Pertama (1 - 100)"
               >
                 <ChevronsLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onClick={() => handlePageChange(safeCurrentPage - 1)}
                 disabled={safeCurrentPage === 1}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
                 title="Halaman Sebelumnya"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -775,7 +864,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                       <button
                         key={p}
                         type="button"
-                        onClick={() => setCurrentPage(p)}
+                        onClick={() => handlePageChange(p)}
                         className={`min-w-8 h-8 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
                           p === safeCurrentPage
                             ? 'bg-[#0f2b5c] text-white shadow-xs'
@@ -791,9 +880,9 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
 
               <button
                 type="button"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => handlePageChange(safeCurrentPage + 1)}
                 disabled={safeCurrentPage === totalPages}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
                 title="Halaman Berikutnya"
               >
                 <span className="hidden sm:inline">Selanjutnya</span>
@@ -801,9 +890,9 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentPage(totalPages)}
+                onClick={() => handlePageChange(totalPages)}
                 disabled={safeCurrentPage === totalPages}
-                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title={`Halaman Terakhir (${totalPages})`}
               >
                 <ChevronsRight className="w-4 h-4" />
@@ -812,6 +901,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 });

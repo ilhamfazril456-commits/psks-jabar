@@ -120,7 +120,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">
-                  {isSingleRegionMode ? 'Skenario B: Khusus Wilayah' : 'Skenario A: Masal 27 Kab/Kota'}
+                  {isSingleRegionMode ? 'Khusus Wilayah' : 'Masal 27 Kab/Kota'}
                 </span>
                 <span className="text-[10px] text-blue-200 font-semibold hidden sm:inline">
                   Smart Auto-Forwarding Parser (Format Resmi Rekapitulasi)
