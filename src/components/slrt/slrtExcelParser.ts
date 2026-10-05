@@ -194,8 +194,8 @@ export const cleanPuskesosName = (raw?: any): string => {
 
   if (!str || isHeaderOrSummaryString(str)) return '';
 
-  // Never allow a Kabupaten name to be treated as a Puskesos name
-  if (normalizeSlrtRegion(str) !== null) return '';
+  // If someone explicitly wrote "Kabupaten ..." or "Kab. ..." in the cell, ignore it
+  if (/^(kabupaten|kab\.)\s+/i.test(str)) return '';
 
   // Convert ALL CAPS to clean Title Case
   if (str === str.toUpperCase() && str.length > 2) {
@@ -348,7 +348,7 @@ export const parseSlrtExcelFile = async (
       const val = String(row[nameCol] || '').trim();
       if (val && !isHeaderOrSummaryString(val) && !/^\d+$/.test(val)) {
         const cleaned = cleanPuskesosName(val);
-        if (cleaned && normalizeSlrtRegion(cleaned) === null) {
+        if (cleaned) {
           return cleaned;
         }
       }
@@ -358,7 +358,7 @@ export const parseSlrtExcelFile = async (
       const val = String(row[numCol] || '').trim();
       if (val && !isHeaderOrSummaryString(val) && !/^\d+$/.test(val)) {
         const cleaned = cleanPuskesosName(val);
-        if (cleaned && normalizeSlrtRegion(cleaned) === null) {
+        if (cleaned) {
           return cleaned;
         }
       }
@@ -506,7 +506,7 @@ export const parseSlrtExcelFile = async (
     // Helper to store record and update hierarchical region structure
     const recordPuskesos = (name: string, jenis: 'Desa' | 'Kelurahan') => {
       if (!name || isHeaderOrSummaryString(name)) return;
-      if (normalizeSlrtRegion(name) !== null) return; // Strict rejection of Kabupaten names
+      if (/^(kabupaten|kab\.)\s+/i.test(name)) return;
 
       const kecName = currentKecamatan || 'Kecamatan Terpadu';
       const recordTitle = `Puskesos ${jenis === 'Kelurahan' ? 'Kel.' : 'Desa'} ${name}`;
