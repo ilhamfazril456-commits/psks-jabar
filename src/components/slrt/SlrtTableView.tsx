@@ -15,6 +15,7 @@ import { isSameWilayah } from '../../utils/submissionStatus';
 import { exportPillarToExcel } from '../../utils/excelExport';
 import { exportPillarToPDF } from '../../utils/pdfExport';
 import { PILLARS_CONFIG } from '../../data/initialData';
+import { JABAR_ADMIN_WILAYAH_MASTER } from './slrtExcelParser';
 
 interface SlrtTableViewProps {
   activeRegion: string;
@@ -31,7 +32,6 @@ interface SlrtDisplayRow {
   isFirstRowOfKec: boolean;
   kecamatanName: string;
   kecIdx: number;
-  kecTotalTerbentuk: number; // Otomatis = kelurahans.length + desas.length
   kelRec?: PSKSDataRecord;
   kelNumber?: number;
   desaRec?: PSKSDataRecord;
@@ -69,7 +69,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
     return records.filter((r) => isSameWilayah(r.wilayah, activeRegion));
   }, [records, activeRegion]);
 
-  // 2. Compute 5 administrative indicator values automatically from real data
+  // 2. Compute administrative indicator values and total puskesos terbentuk
   const adminSummary = useMemo(() => {
     const uniqueKec = new Set<string>();
     let kelCount = 0;
@@ -91,14 +91,18 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
       }
     });
 
+    const master = JABAR_ADMIN_WILAYAH_MASTER[activeRegion];
+
     return {
-      jmlKecamatan: uniqueKec.size,
-      jmlKelurahan: kelCount,
-      jmlDesa: desaCount,
-      jmlTotal: kelCount + desaCount,
-      jmlTerbentuk: kelCount + desaCount,
+      jmlKecamatan: master?.jmlKecamatan || (uniqueKec.size > 0 ? uniqueKec.size : 0),
+      jmlKelurahan: master?.jmlKelurahan ?? 0,
+      jmlDesa: master?.jmlDesa ?? 0,
+      jmlTotal: master?.jmlTotal ?? (master?.jmlKelurahan || 0) + (master?.jmlDesa || 0),
+      puskesosKelurahan: kelCount,
+      puskesosDesa: desaCount,
+      jmlTerbentuk: kelCount + desaCount, // 100% Otomatis Terhitung
     };
-  }, [regionRecords]);
+  }, [regionRecords, activeRegion]);
 
   // 3. Search and filter
   const filteredRecords = useMemo(() => {
@@ -172,7 +176,6 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           isFirstRowOfKec: rIdx === 0,
           kecamatanName: group.kecamatan,
           kecIdx,
-          kecTotalTerbentuk: group.kelurahans.length + group.desas.length,
           kelRec,
           kelNumber: kelRec ? runningKel : undefined,
           desaRec,
@@ -234,7 +237,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           <span className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 block">
             {adminSummary.jmlKecamatan}
           </span>
-          <span className="text-[10px] text-slate-500 font-medium">Terdata di Wilayah</span>
+          <span className="text-[10px] text-slate-500 font-medium">Wilayah Administratif</span>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-purple-200 shadow-2xs">
@@ -244,7 +247,9 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           <span className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 block">
             {adminSummary.jmlKelurahan}
           </span>
-          <span className="text-[10px] text-slate-500 font-medium">Membentuk Puskesos</span>
+          <span className="text-[10px] text-purple-700 font-bold">
+            {adminSummary.puskesosKelurahan} Membentuk Puskesos
+          </span>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-emerald-200 shadow-2xs">
@@ -254,7 +259,9 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           <span className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 block">
             {adminSummary.jmlDesa}
           </span>
-          <span className="text-[10px] text-slate-500 font-medium">Membentuk Puskesos</span>
+          <span className="text-[10px] text-emerald-700 font-bold">
+            {adminSummary.puskesosDesa} Membentuk Puskesos
+          </span>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-blue-200 shadow-2xs">
@@ -264,12 +271,12 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
           <span className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 block">
             {adminSummary.jmlTotal}
           </span>
-          <span className="text-[10px] text-slate-500 font-medium">Akumulasi Lembaga</span>
+          <span className="text-[10px] text-slate-500 font-medium">Wilayah Administratif</span>
         </div>
 
         <div className="col-span-2 sm:col-span-1 p-3.5 rounded-xl bg-gradient-to-br from-[#0f2b5c] to-blue-900 text-white shadow-xs">
           <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">
-            Total Terbentuk
+            Jumlah Terbentuk
           </span>
           <span className="text-xl sm:text-2xl font-black text-white mt-0.5 block">
             {adminSummary.jmlTerbentuk}
@@ -375,7 +382,7 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
         </div>
       </div>
 
-      {/* 3. The Main Government Table Format (Matching WPS Office Screenshot with 2 Groups) */}
+      {/* 3. The Official 10-Column Government Table Format (With JUMLAH TERBENTUK moved into Wilayah Administratif after No. 6) */}
       <div className="bg-white rounded-2xl border-2 border-slate-300 shadow-md overflow-hidden">
         {/* Title Bar inside table */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#091f42] via-[#0f2b5c] to-[#143b7d] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-[#d4af37]">
@@ -400,18 +407,18 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
         {/* Responsive Table Scroll Container */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
-            {/* Table Headers (2 Groups: Wilayah Administratif & Desa/Kelurahan Yang Telah Membentuk Puskesos) */}
+            {/* Table Headers: Group 1 (Wilayah Administratif: 7 Kolom) & Group 2 (Desa/Kelurahan: 3 Kolom) */}
             <thead>
               {/* Row 1: Group Headers */}
               <tr>
                 <th
-                  colSpan={6}
+                  colSpan={7}
                   className="bg-[#fef9c3] text-[#713f12] border-r-2 border-b-2 border-amber-300 font-black text-center py-2.5 px-3 uppercase tracking-wider text-xs sm:text-sm"
                 >
                   WILAYAH ADMINISTRATIF
                 </th>
                 <th
-                  colSpan={4}
+                  colSpan={3}
                   className="bg-[#fed7aa] text-[#7c2d12] border-b-2 border-orange-300 font-black text-center py-2.5 px-3 uppercase tracking-wider text-xs sm:text-sm"
                 >
                   DESA/KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
@@ -422,21 +429,21 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
               <tr className="bg-[#0f2b5c] text-white text-[11px] sm:text-xs font-black uppercase tracking-tight">
                 <th className="py-3 px-3 text-center border-r border-blue-800 w-12">NO.</th>
                 <th className="py-3 px-3 border-r border-blue-800 min-w-[140px]">KABUPATEN/ KOTA</th>
-                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH KECAMATAN</th>
-                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH KELURAHAN</th>
-                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[90px]">JUMLAH DESA</th>
-                <th className="py-3 px-2.5 text-center border-r-2 border-blue-700 min-w-[110px]">
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[85px]">JUMLAH KECAMATAN</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[85px]">JUMLAH KELURAHAN</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[85px]">JUMLAH DESA</th>
+                <th className="py-3 px-2.5 text-center border-r border-blue-800 min-w-[105px]">
                   JUMLAH KELURAHAN DAN DESA
+                </th>
+                <th className="py-3 px-2.5 text-center border-r-2 border-blue-700 min-w-[115px] bg-[#143b7d]">
+                  JUMLAH TERBENTUK
                 </th>
                 <th className="py-3 px-3 border-r border-blue-800 min-w-[130px]">KECAMATAN</th>
                 <th className="py-3 px-3 border-r border-blue-800 min-w-[170px]">
                   KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
                 </th>
-                <th className="py-3 px-3 border-r border-blue-800 min-w-[170px]">
+                <th className="py-3 px-3 min-w-[170px]">
                   DESA YANG TELAH MEMBENTUK PUSKESOS
-                </th>
-                <th className="py-3 px-2.5 text-center min-w-[120px]">
-                  JUMLAH DESA/ KELURAHAN YANG TELAH MEMBENTUK PUSKESOS
                 </th>
               </tr>
 
@@ -447,11 +454,11 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                 <th className="py-1 px-1 border-r border-blue-800/60">3</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">4</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">5</th>
-                <th className="py-1 px-1 border-r-2 border-blue-700">6</th>
-                <th className="py-1 px-1 border-r border-blue-800/60">7</th>
+                <th className="py-1 px-1 border-r border-blue-800/60">6</th>
+                <th className="py-1 px-1 border-r-2 border-blue-700 bg-[#18458b]">7 (Otomatis)</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">8</th>
                 <th className="py-1 px-1 border-r border-blue-800/60">9</th>
-                <th className="py-1 px-1">10 (Otomatis)</th>
+                <th className="py-1 px-1">10</th>
               </tr>
             </thead>
 
@@ -467,8 +474,9 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                   <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
                   <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
                   <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
+                  <td className="py-4 px-3 text-center text-slate-500 border-r border-slate-200">0</td>
                   <td className="py-4 px-3 text-center text-slate-500 border-r-2 border-slate-300">0</td>
-                  <td colSpan={4} className="py-12 px-4 text-center">
+                  <td colSpan={3} className="py-12 px-4 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#0f2b5c] flex items-center justify-center">
                         <Building2 className="w-6 h-6" />
@@ -517,18 +525,29 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                     </td>
 
                     {/* Col 6: JUMLAH KELURAHAN DAN DESA */}
-                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-slate-50/50">
+                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r border-slate-200 bg-slate-50/50">
                       {rowItem.isFirstRowOfRegion ? adminSummary.jmlTotal : ''}
                     </td>
 
-                    {/* Col 7: KECAMATAN */}
+                    {/* Col 7: JUMLAH TERBENTUK (Dihitung Otomatis Masuk di Wilayah Administratif) */}
+                    <td className="py-2.5 px-2.5 text-center font-black text-[#0f2b5c] border-r-2 border-slate-300 bg-amber-50/50">
+                      {rowItem.isFirstRowOfRegion ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold inline-block">
+                          {adminSummary.jmlTerbentuk}
+                        </span>
+                      ) : (
+                        ''
+                      )}
+                    </td>
+
+                    {/* Col 8: KECAMATAN */}
                     <td className="py-2.5 px-3 font-bold text-slate-900 border-r border-slate-200 bg-slate-50/30">
                       {rowItem.isFirstRowOfKec
                         ? `${rowItem.kecIdx + 1} ${rowItem.kecamatanName.toUpperCase()}`
                         : ''}
                     </td>
 
-                    {/* Col 8: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
+                    {/* Col 9: KELURAHAN YANG TELAH MEMBENTUK PUSKESOS */}
                     <td className="py-2.5 px-3 border-r border-slate-200 group">
                       {rowItem.kelRec ? (
                         <div className="flex items-center justify-between gap-1">
@@ -554,8 +573,8 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                       )}
                     </td>
 
-                    {/* Col 9: DESA YANG TELAH MEMBENTUK PUSKESOS */}
-                    <td className="py-2.5 px-3 border-r border-slate-200 group">
+                    {/* Col 10: DESA YANG TELAH MEMBENTUK PUSKESOS */}
+                    <td className="py-2.5 px-3 group">
                       {rowItem.desaRec ? (
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-semibold text-emerald-950">
@@ -575,17 +594,6 @@ export const SlrtTableView: React.FC<SlrtTableViewProps> = ({
                             </button>
                           )}
                         </div>
-                      ) : (
-                        ''
-                      )}
-                    </td>
-
-                    {/* Col 10: JUMLAH DESA/ KELURAHAN (Otomatis per Kecamatan pada baris pertama) */}
-                    <td className="py-2.5 px-2.5 text-center font-black text-slate-800 bg-slate-50/50">
-                      {rowItem.isFirstRowOfKec ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-950 font-bold inline-block">
-                          {rowItem.kecTotalTerbentuk}
-                        </span>
                       ) : (
                         ''
                       )}
