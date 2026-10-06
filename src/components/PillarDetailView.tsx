@@ -1774,8 +1774,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               const counts = regionalCounts[region] || { total: 0, gov: 0, swasta: 0 };
 
               if (pillarId === 'peksos') {
-                const percentGov = Math.max(6, (counts.gov / maxChartCount) * 100);
-                const percentSwasta = Math.max(6, (counts.swasta / maxChartCount) * 100);
+                const percentGov = counts.gov > 0 ? Math.max(3, (counts.gov / maxChartCount) * 100) : 0;
+                const percentSwasta = counts.swasta > 0 ? Math.max(3, (counts.swasta / maxChartCount) * 100) : 0;
 
                 return (
                   <div key={region} className="py-1.5 border-b border-slate-100 last:border-none">
@@ -1792,15 +1792,19 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                         <span className="w-24 text-[10px] font-bold text-blue-900 shrink-0 truncate">
                           Pemerintah
                         </span>
-                        <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden">
-                          <div
-                            style={{ width: chartVisible ? `${counts.gov > 0 ? percentGov : 0}%` : '0%' }}
-                            className="h-4 bg-[#0f2b5c] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
-                          >
-                            <span className="text-[10px] font-black text-white">
-                              <AnimatedCounter end={counts.gov} duration={1400} trigger={chartVisible} />
-                            </span>
-                          </div>
+                        <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden flex items-center">
+                          {counts.gov > 0 ? (
+                            <div
+                              style={{ width: chartVisible ? `${percentGov}%` : '0%' }}
+                              className="h-4 bg-[#0f2b5c] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[22px]"
+                            >
+                              <span className="text-[10px] font-black text-white">
+                                <AnimatedCounter end={counts.gov} duration={1400} trigger={chartVisible} />
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">0</span>
+                          )}
                         </div>
                       </div>
 
@@ -1809,15 +1813,19 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                         <span className="w-24 text-[10px] font-bold text-amber-900 shrink-0 truncate">
                           Masyarakat
                         </span>
-                        <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden">
-                          <div
-                            style={{ width: chartVisible ? `${counts.swasta > 0 ? percentSwasta : 0}%` : '0%' }}
-                            className="h-4 bg-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
-                          >
-                            <span className="text-[10px] font-black text-[#0f2b5c]">
-                              <AnimatedCounter end={counts.swasta} duration={1400} trigger={chartVisible} />
-                            </span>
-                          </div>
+                        <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden flex items-center">
+                          {counts.swasta > 0 ? (
+                            <div
+                              style={{ width: chartVisible ? `${percentSwasta}%` : '0%' }}
+                              className="h-4 bg-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[22px]"
+                            >
+                              <span className="text-[10px] font-black text-[#0f2b5c]">
+                                <AnimatedCounter end={counts.swasta} duration={1400} trigger={chartVisible} />
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">0</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1825,22 +1833,28 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
                 );
               }
 
-              // Single bar for other pillars
-              const percent = Math.max(8, (counts.total / maxChartCount) * 100);
+              // Single bar for other pillars (LKS, PSM, TAGANA, KARANG TARUNA, LK3, PENSOS, TKSK, BADAN USAHA, SLRT PUSKESOS)
+              const percent = counts.total > 0 ? Math.max(3, (counts.total / maxChartCount) * 100) : 0;
               return (
                 <div key={region} className="flex items-center gap-3 py-1 text-xs">
                   <div className="w-36 text-right font-bold text-slate-700 truncate shrink-0">
                     {region}
                   </div>
-                  <div className="flex-1 bg-slate-100 p-1 rounded-lg overflow-hidden">
-                    <div
-                      style={{ width: chartVisible ? `${percent}%` : '0%' }}
-                      className="h-5 bg-gradient-to-r from-[#b8901c] to-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[20px]"
-                    >
-                      <span className="text-[10px] font-black text-white drop-shadow">
-                        <AnimatedCounter end={counts.total} duration={1400} trigger={chartVisible} />
+                  <div className="flex-1 bg-slate-100 p-1 rounded-lg overflow-hidden flex items-center">
+                    {counts.total > 0 ? (
+                      <div
+                        style={{ width: chartVisible ? `${percent}%` : '0%' }}
+                        className="h-5 bg-gradient-to-r from-[#b8901c] to-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[24px]"
+                      >
+                        <span className="text-[10px] font-black text-white drop-shadow">
+                          <AnimatedCounter end={counts.total} duration={1400} trigger={chartVisible} />
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">
+                        0
                       </span>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
