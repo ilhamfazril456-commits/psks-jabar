@@ -88,51 +88,40 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 my-12 sm:my-16">
-      {/* Decorative Gold Divider with Center Emblem */}
-      <div className="relative flex items-center justify-center my-8">
+    <section className="max-w-7xl mx-auto px-4 my-8 sm:my-14">
+      {/* Decorative Gold Divider */}
+      <div className="w-full flex items-center justify-center my-4 sm:my-6">
         <div className="w-full h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent" />
-        <div className="absolute bg-[#0f2b5c] border-2 border-[#d4af37] text-amber-300 px-4 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-widest shadow-md flex items-center gap-2">
-          <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-          <span>PUSAT KONTROL OTORITAS PUSAT</span>
-        </div>
       </div>
 
       <div className="flex flex-col items-center text-center">
-        {/* Category Badge */}
-        <div className="inline-flex items-center gap-2 bg-emerald-950/10 border border-emerald-900/20 text-[#0f2b5c] text-xs font-black px-4 py-1.5 rounded-full mb-3 shadow-xs">
-          <KeyRound className="w-4 h-4 text-[#d4af37]" />
-          <span>KREDENSIAL & HAK AKSES PUSAT</span>
-          <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-        </div>
-
         {/* Section Heading */}
-        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0f2b5c] tracking-tight uppercase">
+        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0f2b5c] tracking-tight uppercase mb-1.5 sm:mb-2">
           Kredensial & Otorisasi Sistem
         </h3>
 
-        {/* Section Subtitle */}
-        <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-3xl mt-2 mb-6 leading-relaxed">
-          Pusat Kendali Utama untuk Pengelolaan Akun Admin Wilayah 27 Kabupaten/Kota, Pemantauan Sinyal Kehadiran Real-Time, Riwayat Aktivitas Perubahan Data, dan Saklar Proteksi Pemeliharaan Sistem.
+        {/* Simple & Concise Subtitle */}
+        <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-2xl mb-6 leading-relaxed">
+          Pusat kendali dan otorisasi terpadu pengelolaan akun admin wilayah 27 Kab/Kota, monitoring real-time, dan pemeliharaan sistem.
         </p>
 
-        {/* System Telemetry Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-2.5 mb-10 text-xs font-bold text-slate-700">
-          <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            27 Wilayah Terkoneksi
+        {/* 4 Label Telemetri Sistem: Compact 2x2 grid pada HP (tidak bertingkat 4), flex row pada tablet & desktop */}
+        <div className="grid grid-cols-2 gap-2 w-full max-w-sm sm:max-w-none sm:w-auto sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2.5 mb-6 sm:mb-8 text-[10px] xs:text-[11px] sm:text-xs font-bold text-slate-700 px-1 sm:px-0">
+          <span className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200/90 py-1.5 sm:py-1 px-2.5 sm:px-3 rounded-lg sm:rounded-xl shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span className="truncate">27 Wilayah Terkoneksi</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-xs">
-            <Activity className="w-3.5 h-3.5 text-teal-600" />
-            Telemetri Real-Time
+          <span className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200/90 py-1.5 sm:py-1 px-2.5 sm:px-3 rounded-lg sm:rounded-xl shadow-2xs">
+            <Activity className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <span className="truncate">Telemetri Real-Time</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-xs">
-            <History className="w-3.5 h-3.5 text-amber-600" />
-            Audit Trail Terverifikasi
+          <span className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200/90 py-1.5 sm:py-1 px-2.5 sm:px-3 rounded-lg sm:rounded-xl shadow-2xs">
+            <History className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="truncate">Audit Trail Terverifikasi</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-xs">
-            <Lock className="w-3.5 h-3.5 text-amber-600" />
-            Proteksi Multi-Tier
+          <span className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200/90 py-1.5 sm:py-1 px-2.5 sm:px-3 rounded-lg sm:rounded-xl shadow-2xs">
+            <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="truncate">Proteksi Multi-Tier</span>
           </span>
         </div>
 

@@ -335,7 +335,7 @@ export const exportPillarToExcel = ({
     dataRows = records.map((item, idx) => ({
       'No': idx + 1,
       'Kabupaten / Kota': item.wilayah || '-',
-      'Nama SLRT_PUSKESOS': item.namaSlrt || item.nama || '-',
+      'Nama SLRT PUSKESOS': item.namaSlrt || item.nama || '-',
       'Desa / Kelurahan': item.kelDesa || '-',
       'Kecamatan': item.kec || '-',
       'Tahun Berdiri': item.tahunBerdiri || '-',

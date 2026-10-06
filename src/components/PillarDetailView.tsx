@@ -1221,7 +1221,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     } else if (pillarId === 'slrt_puskesos') {
       // 9. SLRT PUSKESOS: Nama SLRT, Desa/Kelurahan, Kecamatan, Kabupaten/Kota, Tahun Berdiri, Operator Puskesos, Status Aktif
       if (!formData.namaSlrt.trim()) {
-        setAlertInfo({ title: 'Kolom Wajib Diisi', message: 'Nama SLRT_PUSKESOS wajib diisi.', type: 'error' });
+        setAlertInfo({ title: 'Kolom Wajib Diisi', message: 'Nama SLRT PUSKESOS wajib diisi.', type: 'error' });
         return;
       }
       if (!formData.kelDesa.trim()) {
@@ -1369,8 +1369,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               </div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
-              SLRT_PUSKESOS
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
+              SLRT PUSKESOS
             </h1>
             <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
               Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Provinsi Jawa Barat
@@ -1390,13 +1390,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             <div className="space-y-1">
               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-widest text-[#f1c40f] bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
                 <Building2 className="w-3.5 h-3.5 text-[#f1c40f]" />
-                <span>Direktori Wilayah SLRT_PUSKESOS</span>
+                <span>Direktori Wilayah SLRT PUSKESOS</span>
               </span>
               <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
                 Daftar Wilayah Kerja 27 Kabupaten / Kota
               </h3>
               <p className="text-xs sm:text-sm text-blue-100 font-medium max-w-2xl leading-relaxed">
-                Silakan pilih salah satu Kabupaten atau Kota di bawah ini untuk membuka data Sistem Layanan & Rujukan Terpadu (SLRT_PUSKESOS) pada wilayah tersebut.
+                Silakan pilih salah satu Kabupaten atau Kota di bawah ini untuk membuka data Sistem Layanan & Rujukan Terpadu (SLRT PUSKESOS) pada wilayah tersebut.
               </p>
             </div>
             <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-center shrink-0 self-stretch sm:self-auto">
@@ -1486,7 +1486,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
             <BackToHomeButton onClick={onBackToDashboard} id="btn-back-bottom-slrt-lvl1" />
             <div className="text-xs text-slate-500 font-semibold">
-              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT_PUSKESOS</span>
+              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT PUSKESOS</span>
             </div>
           </div>
         </div>
@@ -1568,8 +1568,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               </div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
-              SLRT_PUSKESOS - {activeRegion.toUpperCase()}
+            <h1 className="text-base sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
+              SLRT PUSKESOS - {activeRegion.toUpperCase()}
             </h1>
             <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
               Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Wilayah {activeRegion}
@@ -1645,7 +1645,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               id="btn-back-bottom-slrt-lvl2"
             />
             <div className="text-xs text-slate-500 font-semibold">
-              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT_PUSKESOS ({activeRegion})</span>
+              <span>Dinas Sosial Provinsi Jawa Barat • PSKS JABAR Pilar SLRT PUSKESOS ({activeRegion})</span>
             </div>
           </div>
         </div>

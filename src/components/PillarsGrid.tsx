@@ -141,7 +141,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
             <div
               key={key}
               onClick={() => onSelectPillar(key)}
-              className="group relative bg-white border border-slate-200/90 rounded-xl sm:rounded-3xl p-1.5 sm:p-4 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#d4af37] transition-all duration-300 h-full overflow-hidden"
+              className="group relative bg-white border border-slate-200/90 rounded-xl sm:rounded-3xl p-1 sm:p-4 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#d4af37] transition-all duration-300 h-full overflow-hidden"
             >
               {/* Subtle accent bar on hover */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-[#0f2b5c] via-amber-500 to-[#1a4a9c]" />
@@ -165,8 +165,8 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
               </div>
 
               {/* Title & Description section */}
-              <div className="flex-1 flex flex-col items-center justify-center w-full px-0.5 my-0.5 sm:my-1.5">
-                <h3 className="text-[9px] sm:text-xs md:text-sm font-black text-[#0f2b5c] uppercase tracking-tighter sm:tracking-wider group-hover:text-[#b8901c] transition-colors leading-tight sm:leading-snug min-h-[22px] sm:min-h-[36px] flex items-center justify-center text-center">
+              <div className="flex-1 flex flex-col items-center justify-center w-full px-0 sm:px-0.5 my-0.5 sm:my-1.5">
+                <h3 className="text-[6.5px] min-[380px]:text-[7.5px] sm:text-xs md:text-sm font-black text-[#0f2b5c] uppercase tracking-tight sm:tracking-wider group-hover:text-[#b8901c] transition-colors leading-[1.12] sm:leading-snug min-h-[26px] sm:min-h-[36px] flex items-center justify-center text-center break-words hyphens-none w-full">
                   {pillar?.title || key}
                 </h3>
                 {/* Sub-title / shortName is hidden on mobile screens, visible on desktop/laptop (sm:) */}
@@ -176,10 +176,10 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
               </div>
 
               {/* Label Real-time Jumlah Orang/Lembaga Terdata */}
-              <div className="w-full my-0.5 sm:my-2 px-0.5">
+              <div className="w-full my-0.5 sm:my-2 px-0 sm:px-0.5">
                 <div className="inline-flex items-center justify-center gap-0.5 sm:gap-1.5 w-full bg-slate-50 group-hover:bg-amber-50/70 border border-slate-200/80 group-hover:border-[#d4af37]/60 rounded-md sm:rounded-xl py-0.5 sm:py-1.5 px-0.5 sm:px-2 transition-all duration-300 shadow-2xs">
                   <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${count > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'} shrink-0`} />
-                  <div className="flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-xs font-black text-slate-800 whitespace-nowrap">
+                  <div className="flex items-center gap-0.5 sm:gap-1 text-[7px] min-[380px]:text-[8px] sm:text-xs font-black text-slate-800 whitespace-nowrap">
                     <span className="text-[#0f2b5c] group-hover:text-amber-900 font-black">
                       {count.toLocaleString('id-ID')}
                     </span>
@@ -192,7 +192,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
 
               {/* Bottom Action Footer */}
               <div className="mt-auto pt-1 sm:pt-2 border-t border-slate-100 w-full flex items-center justify-center gap-0.5 shrink-0">
-                <span className="text-[7.5px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
+                <span className="text-[7px] min-[380px]:text-[7.5px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
                   <span>Buka</span>
                   <ArrowRight className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transform group-hover:translate-x-1 transition-transform" />
                 </span>

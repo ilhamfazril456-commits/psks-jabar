@@ -97,7 +97,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
       { id: 'pensos', label: 'Penyuluh Sosial Masyarakat', short: 'PENSOS', icon: '📢', color: 'from-pink-800 to-rose-900', border: 'border-pink-500' },
       { id: 'tksk', label: 'Tenaga KS Kecamatan', short: 'TKSK', icon: '💼', color: 'from-teal-800 to-emerald-950', border: 'border-teal-500' },
       { id: 'badanusaha', label: 'Badan Usaha / KUBE', short: 'BADAN USAHA', icon: '🏪', color: 'from-emerald-700 to-green-900', border: 'border-green-500' },
-      { id: 'slrt_puskesos', label: 'SLRT_PUSKESOS', short: 'SLRT_PUSKESOS', icon: '🛡️', color: 'from-cyan-800 to-blue-900', border: 'border-cyan-500' },
+      { id: 'slrt_puskesos', label: 'SLRT PUSKESOS', short: 'SLRT PUSKESOS', icon: '🛡️', color: 'from-cyan-800 to-blue-900', border: 'border-cyan-500' },
     ];
     return list;
   }, []);
