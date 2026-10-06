@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Share2,
+  ShieldCheck,
   Phone,
   Instagram,
   Youtube,
@@ -87,29 +88,53 @@ export const SocialMediaManagementPage: React.FC<SocialMediaManagementPageProps>
         </div>
       )}
 
-      {/* TOP HEADER BAR */}
-      <header className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-950 text-white border-b-2 border-cyan-400 shadow-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <BackToHomeButton onClick={onBackToHome} variant="light" />
-            <div>
-              <div className="inline-flex items-center gap-2 bg-cyan-900 border border-cyan-400/60 px-3 py-0.5 rounded-full text-[10px] font-black text-cyan-300 uppercase tracking-wider mb-1">
-                <Sparkles className="w-3 h-3 text-cyan-300" />
-                <span>KONTROL OTORITAS PUSAT • FITUR 13</span>
-              </div>
-              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+      {/* TOP NAVIGATION BAR */}
+      <div className="max-w-5xl mx-auto px-4 pt-4 sm:pt-6 pb-3 flex items-center justify-between gap-3">
+        <BackToHomeButton onClick={onBackToHome} id="btn-back-top-social-media" />
+
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-cyan-950 text-cyan-300 border border-cyan-400/60 px-3 sm:px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs font-black shadow-md tracking-wider uppercase">
+          <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+          <span>KONTROL OTORITAS PUSAT • FITUR 13</span>
+        </div>
+      </div>
+
+      {/* HERO HEADER SECTION */}
+      <div className="max-w-5xl mx-auto px-4 mb-6 sm:mb-8">
+        <div className="relative bg-gradient-to-r from-slate-950 via-[#083344] to-slate-950 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white border-2 border-cyan-400/80 shadow-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="space-y-2 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[10px] sm:text-[11px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" />
+                <span>Otoritas Superadmin & Developer</span>
+              </span>
+              <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase leading-snug break-words">
                 Pengaturan 7 Media Sosial & Saluran Resmi Dinsos Jabar
               </h1>
+              <p className="text-xs sm:text-sm text-cyan-100/90 leading-relaxed font-medium">
+                Pusat kendali kanal komunikasi publik resmi: kelola URL Instagram, YouTube, Facebook, X/Twitter, TikTok, Website, dan WhatsApp Center Dinsos Jabar yang langsung terhubung ke seluruh halaman publik dan footer portal.
+              </p>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            <div className="w-10 h-10 rounded-xl bg-cyan-900/80 border border-cyan-400/50 flex items-center justify-center text-cyan-300">
-              <Share2 className="w-5 h-5" />
+            {/* Quick Preview Badge Box */}
+            <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-4 text-center shrink-0 shadow-inner">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-cyan-900/80 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-md">
+                <Share2 className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <div className="text-right sm:text-center">
+                <span className="text-[10px] font-black text-cyan-300 uppercase tracking-wider block">
+                  7 Media Sosial
+                </span>
+                <span className="text-[9px] text-cyan-200 font-semibold block">
+                  Kanal Terintegrasi
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* MAIN CONTENT AREA */}
       <main className="max-w-5xl mx-auto px-4 mt-8 space-y-8">

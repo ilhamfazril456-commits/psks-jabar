@@ -175,27 +175,51 @@ export const BackgroundLogoManagementPage: React.FC<BackgroundLogoManagementPage
         </div>
       )}
 
-      {/* TOP HEADER BAR */}
-      <header className="bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 text-white border-b-2 border-[#d4af37] shadow-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <BackToHomeButton onClick={onBackToHome} variant="light" />
-            <div>
-              <div className="inline-flex items-center gap-2 bg-[#043e2e] border border-[#d4af37]/60 px-3 py-0.5 rounded-full text-[10px] font-black text-[#d4af37] uppercase tracking-wider mb-1">
-                <Sparkles className="w-3 h-3 text-[#d4af37]" />
-                <span>KONTROL OTORITAS PUSAT • FITUR 11</span>
-              </div>
-              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+      {/* TOP NAVIGATION BAR */}
+      <div className="max-w-5xl mx-auto px-4 pt-4 sm:pt-6 pb-3 flex items-center justify-between gap-3">
+        <BackToHomeButton onClick={onBackToHome} id="btn-back-top-bg-logo" />
+
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-[#043e2e] text-[#d4af37] border border-[#d4af37]/60 px-3 sm:px-3.5 py-1.5 rounded-full text-[10px] sm:text-xs font-black shadow-md tracking-wider uppercase">
+          <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+          <span>KONTROL OTORITAS PUSAT • FITUR 11</span>
+        </div>
+      </div>
+
+      {/* HERO HEADER SECTION */}
+      <div className="max-w-5xl mx-auto px-4 mb-6 sm:mb-8">
+        <div className="relative bg-gradient-to-r from-slate-950 via-[#043e2e] to-slate-950 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white border-2 border-[#d4af37] shadow-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="space-y-2 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] sm:text-[11px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                <span>Otoritas Superadmin & Developer</span>
+              </span>
+              <h1 className="text-xl sm:text-3xl font-black text-white tracking-tight uppercase leading-snug break-words">
                 Pengaturan Background Hero & Logo Resmi PSKS
               </h1>
+              <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium">
+                Pusat kendali visual beranda utama: konfigurasi video gerak EcoOffice / foto gambar hero resolusi tinggi, serta pembaruan logo resmi PSKS yang tersinkronisasi global secara realtime.
+              </p>
+            </div>
+
+            {/* Quick Preview Badge Box */}
+            <div className="flex sm:flex-col items-center justify-between sm:justify-center gap-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 sm:p-4 text-center shrink-0 shadow-inner">
+              <OfficialPsksLogo logoUrl={formData.logoUrl || appSettings.logoUrl} sizeClassName="w-12 h-12 sm:w-16 sm:h-16" />
+              <div className="text-right sm:text-center">
+                <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider block">
+                  Logo Resmi
+                </span>
+                <span className="text-[9px] text-emerald-200 font-semibold block">
+                  Aktif Global
+                </span>
+              </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            <OfficialPsksLogo logoUrl={formData.logoUrl || appSettings.logoUrl} sizeClassName="w-10 h-10 sm:w-11 sm:h-11" />
-          </div>
         </div>
-      </header>
+      </div>
 
       {/* MAIN CONTENT AREA */}
       <main className="max-w-5xl mx-auto px-4 mt-8 space-y-8">
