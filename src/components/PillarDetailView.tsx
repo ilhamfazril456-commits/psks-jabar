@@ -11,9 +11,7 @@ import { SlrtSmartImportModal } from './slrt/SlrtSmartImportModal';
 import { SlrtAddRecordModal } from './slrt/SlrtAddRecordModal';
 import { SlrtTableView } from './slrt/SlrtTableView';
 import { isSameWilayah } from '../utils/submissionStatus';
-import { SlrtRegionalAnalyticsChart } from './slrt/SlrtRegionalAnalyticsChart';
 import { RegionalSummaryMap } from '../services/regionalDistributionService';
-import { Lk3VerticalBarChart } from './lk3/Lk3VerticalBarChart';
 import { PillarHorizontalBarChart } from './pillar/PillarHorizontalBarChart';
 
 interface AnimatedCounterProps {
@@ -1432,9 +1430,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           </div>
 
           {/* Grafik Batang Eksekutif Realtime Khusus Superadmin & Developer (Kab. Bogor s.d. Kota Banjar) */}
-          <SlrtRegionalAnalyticsChart
-            dataRecords={dataRecords}
+          <PillarHorizontalBarChart
+            pillarId="slrt_puskesos"
+            pillarShortName="SLRT Puskesos"
+            chartRegions={KAB_KOTA_ONLY}
+            regionalCounts={regionalCounts}
             regionalSummary={regionalSummary}
+            chartVisible={chartVisible}
             onSelectRegion={(regionName) => {
               setSelectedSlrtRegion(regionName);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1748,28 +1750,16 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           )}
         </div>
 
-        {/* 3. Bar Chart: Dedicated Vertical Purple Chart for LK3 (SLRT Puskesos concept), Horizontal for other pillars */}
-        {pillarId === 'lk3' ? (
-          <Lk3VerticalBarChart
-            chartRegions={chartRegions}
-            regionalCounts={regionalCounts}
-            regionalSummary={regionalSummary}
-            dataRecords={dataRecords}
-            chartVisible={chartVisible}
-            pillarTitle={pillar.title}
-            pillarShortName={pillar.shortName}
-          />
-        ) : (
-          <PillarHorizontalBarChart
-            pillarId={pillarId}
-            pillarShortName={pillar.shortName}
-            chartRegions={chartRegions}
-            regionalCounts={regionalCounts}
-            regionalSummary={regionalSummary}
-            maxChartCount={maxChartCount}
-            chartVisible={chartVisible}
-          />
-        )}
+        {/* 3. Bar Chart: Seragam Horizontal untuk Seluruh Pilar (Termasuk LK3) */}
+        <PillarHorizontalBarChart
+          pillarId={pillarId}
+          pillarShortName={pillar.shortName}
+          chartRegions={chartRegions}
+          regionalCounts={regionalCounts}
+          regionalSummary={regionalSummary}
+          maxChartCount={maxChartCount}
+          chartVisible={chartVisible}
+        />
 
         {/* 4. Regional Isolation Banner */}
         {session.role !== 'superadmin' &&

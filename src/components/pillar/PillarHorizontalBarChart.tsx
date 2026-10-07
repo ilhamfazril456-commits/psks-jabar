@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { MapPin, Building2, Users } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { RegionalSummaryMap } from '../../services/regionalDistributionService';
 
 interface PillarHorizontalBarChartProps {
@@ -8,8 +8,9 @@ interface PillarHorizontalBarChartProps {
   chartRegions: string[];
   regionalCounts: Record<string, { total: number; gov: number; swasta: number }>;
   regionalSummary?: RegionalSummaryMap;
-  maxChartCount: number;
+  maxChartCount?: number;
   chartVisible: boolean;
+  onSelectRegion?: (regionName: string) => void;
 }
 
 // Satuan data resmi per pilar sosial Jawa Barat
@@ -20,11 +21,13 @@ const PILLAR_UNITS: Record<string, string> = {
   tksk: 'Orang',
   peksos: 'Orang',
   lks: 'Lembaga',
+  lk3: 'Lembaga',
   pensos: 'Orang',
   badan_usaha: 'Unit',
+  slrt_puskesos: 'Unit',
 };
 
-// Gradasi warna tematik sesuai identitas masing-masing pilar
+// Gradasi warna tematik sesuai identitas masing-masing 10 pilar
 const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string }> = {
   psm: {
     bar: 'from-[#b8901c] to-[#d4af37]',
@@ -51,6 +54,11 @@ const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string
     glow: 'ring-amber-400/40',
     text: 'text-amber-400',
   },
+  lk3: {
+    bar: 'from-purple-600 via-violet-600 to-indigo-700',
+    glow: 'ring-purple-400/40',
+    text: 'text-purple-400',
+  },
   pensos: {
     bar: 'from-teal-600 to-emerald-700',
     glow: 'ring-emerald-400/40',
@@ -61,6 +69,11 @@ const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string
     glow: 'ring-purple-400/40',
     text: 'text-purple-400',
   },
+  slrt_puskesos: {
+    bar: 'from-emerald-600 via-teal-600 to-emerald-800',
+    glow: 'ring-emerald-400/40',
+    text: 'text-emerald-400',
+  },
 };
 
 export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> = ({
@@ -68,8 +81,10 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
   pillarShortName,
   chartRegions,
   regionalCounts,
-  maxChartCount,
+  regionalSummary,
+  maxChartCount: customMaxChartCount,
   chartVisible,
+  onSelectRegion,
 }) => {
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -81,13 +96,36 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
     text: 'text-amber-400',
   };
 
+  // Helper untuk mendapatkan nilai total akurat per wilayah (menggabungkan data lokal & regional summary)
+  const getEffectiveCounts = (region: string) => {
+    const local = regionalCounts[region] || { total: 0, gov: 0, swasta: 0 };
+    const summaryVal = regionalSummary?.[region]?.byPillar?.[pillarId] || 0;
+    const total = Math.max(local.total, summaryVal);
+    return {
+      total,
+      gov: local.gov,
+      swasta: local.swasta,
+    };
+  };
+
   // Hitung total kuantitas pilar di seluruh wilayah Jawa Barat
   const totalAccumulated = useMemo(() => {
     return chartRegions.reduce((sum, region) => {
-      const counts = regionalCounts[region];
-      return sum + (counts ? counts.total : 0);
+      const counts = getEffectiveCounts(region);
+      return sum + counts.total;
     }, 0);
-  }, [chartRegions, regionalCounts]);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId]);
+
+  // Skala maksimum untuk proporsi batang grafik
+  const maxVal = useMemo(() => {
+    if (customMaxChartCount && customMaxChartCount > 0) return customMaxChartCount;
+    let peak = 1;
+    chartRegions.forEach((reg) => {
+      const counts = getEffectiveCounts(reg);
+      if (counts.total > peak) peak = counts.total;
+    });
+    return Math.max(peak, 1);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId, customMaxChartCount]);
 
   // Auto-dismiss floating tooltip saat klik/sentuh di luar chart pada smartphone
   useEffect(() => {
@@ -151,16 +189,16 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
       {/* Daftar Baris Grafik Horizontal (Rata Kiri & Batang Diperluas) */}
       <div className="space-y-2 sm:space-y-2.5 border-l-2 border-slate-300 pl-2 sm:pl-3">
         {chartRegions.map((region, idx) => {
-          const counts = regionalCounts[region] || { total: 0, gov: 0, swasta: 0 };
+          const counts = getEffectiveCounts(region);
           const isHovered = activeRegion === region;
           const contribution =
             totalAccumulated > 0 ? ((counts.total / totalAccumulated) * 100).toFixed(1) : '0';
 
           // Kasus Khusus PEKSOS (Dual Bar: Pemerintah vs Masyarakat)
           if (pillarId === 'peksos') {
-            const percentGov = counts.gov > 0 ? Math.max(3, (counts.gov / maxChartCount) * 100) : 0;
+            const percentGov = counts.gov > 0 ? Math.max(3, (counts.gov / maxVal) * 100) : 0;
             const percentSwasta =
-              counts.swasta > 0 ? Math.max(3, (counts.swasta / maxChartCount) * 100) : 0;
+              counts.swasta > 0 ? Math.max(3, (counts.swasta / maxVal) * 100) : 0;
 
             return (
               <div
@@ -175,6 +213,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveRegion(activeRegion === region ? null : region);
+                  if (onSelectRegion) onSelectRegion(region);
                 }}
               >
                 {/* KOTAK MELAYANG LICIN (Tooltip) */}
@@ -273,8 +312,8 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
             );
           }
 
-          // Format 7 Pilar Horizontal Lainnya (LKS, PSM, TAGANA, KARANG TARUNA, PENSOS, TKSK, BADAN USAHA)
-          const percent = counts.total > 0 ? Math.max(3, (counts.total / maxChartCount) * 100) : 0;
+          // Format Seluruh Pilar Lainnya Termasuk LK3 (Ungu) dan SLRT Puskesos (Hijau)
+          const percent = counts.total > 0 ? Math.max(3, (counts.total / maxVal) * 100) : 0;
 
           return (
             <div
@@ -291,6 +330,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveRegion(activeRegion === region ? null : region);
+                if (onSelectRegion) onSelectRegion(region);
               }}
             >
               {/* KOTAK MELAYANG LICIN (Tooltip saat Hover / Touch) */}
@@ -324,7 +364,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
                 </div>
               )}
 
-              {/* JUDUL WILAYAH: RATA KIRI, LEBIH RAMPING DI HP SEHINGGA TIDAK KE TENGAH */}
+              {/* JUDUL WILAYAH: RATA KIRI, LEBIH RAMPING DI HP SEHINGGA TIDAK MENUMPUK/KE TENGAH */}
               <div className="w-24 sm:w-28 md:w-36 text-left font-bold text-slate-700 truncate shrink-0 text-[11px] sm:text-xs">
                 {region}
               </div>
