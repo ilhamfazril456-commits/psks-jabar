@@ -13,6 +13,7 @@ import { SlrtTableView } from './slrt/SlrtTableView';
 import { isSameWilayah } from '../utils/submissionStatus';
 import { RegionalSummaryMap } from '../services/regionalDistributionService';
 import { PillarHorizontalBarChart } from './pillar/PillarHorizontalBarChart';
+import { resolveRegionLogoUrl } from '../services/regionalLogoService';
 
 interface AnimatedCounterProps {
   end: number;
@@ -59,6 +60,7 @@ interface PillarDetailViewProps {
   summaryCount?: number;
   isLoadingRecords?: boolean;
   regionalSummary?: RegionalSummaryMap;
+  regionalLogos?: Record<string, string>;
 }
 
 export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
@@ -66,6 +68,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   session,
   dataRecords,
   regionalSummary,
+  regionalLogos = {},
   onBackToDashboard,
   onAddRecord,
   onUpdateRecord,
@@ -151,6 +154,22 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const isSlrtLevel1 = pillarId === 'slrt_puskesos' && isSuperAdminOrDev && !selectedSlrtRegion;
   const isSlrtLevel2 = pillarId === 'slrt_puskesos' && (selectedSlrtRegion !== null || !isSuperAdminOrDev);
   const activeSlrtRegion = isSuperAdminOrDev ? (selectedSlrtRegion || 'Jawa Barat') : (session.wilayah || 'Jawa Barat');
+
+  // Resolusi Lambang Resmi Daerah (1 Induk Jabar & 27 Kab/Kota) untuk Header Plang 10 Pilar
+  const targetRegionMain = useMemo(() => {
+    if (session.wilayah && session.wilayah !== 'Semua Kab/Kota' && session.wilayah !== 'Provinsi Jawa Barat' && session.wilayah !== 'Jawa Barat') {
+      return session.wilayah;
+    }
+    return 'Provinsi Jawa Barat';
+  }, [session.wilayah]);
+
+  const mainPillarLogoUrl = useMemo(() => {
+    return resolveRegionLogoUrl(targetRegionMain, regionalLogos, '/official_logo_128.webp');
+  }, [targetRegionMain, regionalLogos]);
+
+  const slrtLvl1LogoUrl = useMemo(() => {
+    return resolveRegionLogoUrl('Provinsi Jawa Barat', regionalLogos, '/official_logo_128.webp');
+  }, [regionalLogos]);
 
   // State khusus Popover Kotak Melayang Export LKS (Role Superadmin & Developer)
   const [activeLksExportType, setActiveLksExportType] = useState<'excel' | 'pdf' | null>(null);
@@ -1371,16 +1390,37 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               </div>
             </div>
 
-            <h1 className="text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
-              SLRT PUSKESOS
-            </h1>
-            <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
-              Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Provinsi Jawa Barat
-            </p>
-            <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
-              <span>Dinas Sosial Provinsi Jawa Barat</span>
-              <span className="text-blue-400/80">•</span>
-              <span>Pilih Wilayah Kerja (27 Kabupaten / Kota)</span>
+            <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-6">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
+                  SLRT PUSKESOS
+                </h1>
+                <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+                  Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Provinsi Jawa Barat
+                </p>
+                <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
+                  <span>Dinas Sosial Provinsi Jawa Barat</span>
+                  <span className="text-blue-400/80">•</span>
+                  <span>Pilih Wilayah Kerja (27 Kabupaten / Kota)</span>
+                </div>
+              </div>
+
+              {/* Dudukan Plakat Lambang Resmi Daerah (Pojok Kanan Plang Pilar) */}
+              <div className="shrink-0 flex flex-col items-end justify-center self-start sm:self-center">
+                <div className="group relative bg-white rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border-2 border-[#d4af37] shadow-md shadow-blue-950/30 ring-2 ring-white/20 flex items-center justify-center transition-all duration-300 hover:scale-105 w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
+                  <img
+                    src={slrtLvl1LogoUrl}
+                    alt="Lambang Provinsi Jawa Barat"
+                    className="w-full h-full object-contain filter drop-shadow-xs"
+                    loading="eager"
+                  />
+                </div>
+                <div className="mt-1 text-right max-w-[110px] sm:max-w-[140px]">
+                  <span className="inline-block text-[8.5px] sm:text-[10px] font-black text-amber-300 uppercase tracking-wider truncate">
+                    Pemprov Jabar
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1551,6 +1591,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       }
     };
     const backBtnLabel = isSuperAdminOrDev ? 'Kembali ke Pilihan Wilayah' : 'Kembali ke Beranda';
+    const slrtLvl2LogoUrl = resolveRegionLogoUrl(activeRegion, regionalLogos, '/official_logo_128.webp');
 
     return (
       <div className="min-h-screen bg-slate-50 pb-16">
@@ -1574,16 +1615,37 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               </div>
             </div>
 
-            <h1 className="text-base sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
-              SLRT PUSKESOS - {activeRegion.toUpperCase()}
-            </h1>
-            <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
-              Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Wilayah {activeRegion}
-            </p>
-            <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
-              <span>Dinas Sosial Provinsi Jawa Barat</span>
-              <span className="text-blue-400/80">•</span>
-              <span>Wilayah: {activeRegion}</span>
+            <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-6">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5 break-words">
+                  SLRT PUSKESOS - {activeRegion.toUpperCase()}
+                </h1>
+                <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+                  Sistem Layanan & Rujukan Terpadu / Pusat Kesejahteraan Sosial Wilayah {activeRegion}
+                </p>
+                <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
+                  <span>Dinas Sosial Provinsi Jawa Barat</span>
+                  <span className="text-blue-400/80">•</span>
+                  <span>Wilayah: {activeRegion}</span>
+                </div>
+              </div>
+
+              {/* Dudukan Plakat Lambang Resmi Daerah (Pojok Kanan Plang Pilar) */}
+              <div className="shrink-0 flex flex-col items-end justify-center self-start sm:self-center">
+                <div className="group relative bg-white rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border-2 border-[#d4af37] shadow-md shadow-blue-950/30 ring-2 ring-white/20 flex items-center justify-center transition-all duration-300 hover:scale-105 w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
+                  <img
+                    src={slrtLvl2LogoUrl}
+                    alt={`Lambang ${activeRegion}`}
+                    className="w-full h-full object-contain filter drop-shadow-xs"
+                    loading="eager"
+                  />
+                </div>
+                <div className="mt-1 text-right max-w-[110px] sm:max-w-[140px]">
+                  <span className="inline-block text-[8.5px] sm:text-[10px] font-black text-amber-300 uppercase tracking-wider truncate">
+                    {activeRegion === 'Provinsi Jawa Barat' || activeRegion === 'Jawa Barat' ? 'Pemprov Jabar' : activeRegion}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1699,16 +1761,37 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             </div>
           </div>
 
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
-            {pillar.title}
-          </h1>
-          <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
-            {pillar.subtitle}
-          </p>
-          <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
-            <span>Dinas Sosial Provinsi Jawa Barat</span>
-            <span className="text-blue-400/80">•</span>
-            <span>Wilayah: {session.wilayah || 'Semua Kab/Kota'}</span>
+          <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight text-white mb-1 sm:mb-1.5">
+                {pillar.title}
+              </h1>
+              <p className="text-blue-100 font-medium text-xs sm:text-sm max-w-3xl leading-relaxed mb-2 sm:mb-2.5">
+                {pillar.subtitle}
+              </p>
+              <div className="text-[#d4af37] font-semibold text-[11px] sm:text-xs flex flex-wrap items-center gap-2 pt-0.5">
+                <span>Dinas Sosial Provinsi Jawa Barat</span>
+                <span className="text-blue-400/80">•</span>
+                <span>Wilayah: {session.wilayah || 'Semua Kab/Kota'}</span>
+              </div>
+            </div>
+
+            {/* Dudukan Plakat Lambang Resmi Daerah (Pojok Kanan Plang Pilar) */}
+            <div className="shrink-0 flex flex-col items-end justify-center self-start sm:self-center">
+              <div className="group relative bg-white rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border-2 border-[#d4af37] shadow-md shadow-blue-950/30 ring-2 ring-white/20 flex items-center justify-center transition-all duration-300 hover:scale-105 w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
+                <img
+                  src={mainPillarLogoUrl}
+                  alt={`Lambang ${targetRegionMain}`}
+                  className="w-full h-full object-contain filter drop-shadow-xs"
+                  loading="eager"
+                />
+              </div>
+              <div className="mt-1 text-right max-w-[110px] sm:max-w-[140px]">
+                <span className="inline-block text-[8.5px] sm:text-[10px] font-black text-amber-300 uppercase tracking-wider truncate">
+                  {targetRegionMain === 'Provinsi Jawa Barat' ? 'Pemprov Jabar' : targetRegionMain}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

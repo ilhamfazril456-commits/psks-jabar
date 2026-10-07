@@ -74,7 +74,9 @@ const PublicDocumentRepoSection = React.lazy(() => import('./components/PublicDo
 const BackgroundLogoManagementPage = React.lazy(() => import('./components/BackgroundLogoManagementPage').then(m => ({ default: m.BackgroundLogoManagementPage })));
 const ProfileKadinasManagementPage = React.lazy(() => import('./components/ProfileKadinasManagementPage').then(m => ({ default: m.ProfileKadinasManagementPage })));
 const SocialMediaManagementPage = React.lazy(() => import('./components/SocialMediaManagementPage').then(m => ({ default: m.SocialMediaManagementPage })));
+const RegionalLogoManagementPage = React.lazy(() => import('./components/RegionalLogoManagementPage').then(m => ({ default: m.RegionalLogoManagementPage })));
 const WebsiteInfoManagementPage = React.lazy(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
+import { subscribeToRegionalLogos, getLocalCachedRegionalLogos } from './services/regionalLogoService';
 import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
 import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
@@ -2126,6 +2128,20 @@ export default function App() {
     await incrementDocumentDownloadCount(docId, currentCount);
   }, []);
 
+  // 3f. Regional Logos 28 Wilayah (1 Induk Jabar & 27 Kab/Kota) Realtime Listener & Instant Local Cache
+  const [regionalLogos, setRegionalLogos] = useState<Record<string, string>>(() =>
+    getLocalCachedRegionalLogos()
+  );
+
+  useEffect(() => {
+    const unsubscribe = subscribeToRegionalLogos((logos) => {
+      React.startTransition(() => {
+        setRegionalLogos(logos);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');
   const [profileSubView, setProfileSubView] = useState<'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi'>('kadinas');
@@ -2272,6 +2288,7 @@ export default function App() {
       'bg_logo_manage',
       'profile_kadinas_manage',
       'social_media_manage',
+      'regional_logo_manage',
       'website_info_manage',
     ];
 
@@ -2393,6 +2410,10 @@ export default function App() {
 
   const handleOpenSocialMediaConsole = () => {
     navigateToTab('social_media_manage');
+  };
+
+  const handleOpenRegionalLogoConsole = () => {
+    navigateToTab('regional_logo_manage');
   };
 
   const handleOpenWebsiteInfoConsole = () => {
@@ -4297,6 +4318,7 @@ export default function App() {
                   onOpenBackgroundLogoConsole={handleOpenBackgroundLogoConsole}
                   onOpenProfileKadinasConsole={handleOpenProfileKadinasConsole}
                   onOpenSocialMediaConsole={handleOpenSocialMediaConsole}
+                  onOpenRegionalLogoConsole={handleOpenRegionalLogoConsole}
                   onOpenWebsiteInfoConsole={handleOpenWebsiteInfoConsole}
                 />
               </React.Suspense>
@@ -4397,6 +4419,7 @@ export default function App() {
             summaryCount={pillarSummaryCounts[activePillar]}
             isLoadingRecords={!isPillarRecordsLoaded}
             regionalSummary={regionalSummary}
+            regionalLogos={regionalLogos}
           />
         )}
 
@@ -4595,6 +4618,14 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'regional_logo_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <RegionalLogoManagementPage
+            session={session}
+            regionalLogos={regionalLogos}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
         {currentTab === 'website_info_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <WebsiteInfoManagementPage
             session={session}
@@ -4647,6 +4678,7 @@ export default function App() {
               'bg_logo_manage',
               'profile_kadinas_manage',
               'social_media_manage',
+              'regional_logo_manage',
               'website_info_manage',
             ];
             const isSuperadminOrDev =

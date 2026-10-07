@@ -28,6 +28,7 @@ import {
   Video,
   Image as ImageIcon,
   Info,
+  Building2,
 } from 'lucide-react';
 
 interface Section11AdminProps {
@@ -46,6 +47,7 @@ interface Section11AdminProps {
   onOpenBackgroundLogoConsole?: () => void;
   onOpenProfileKadinasConsole?: () => void;
   onOpenSocialMediaConsole?: () => void;
+  onOpenRegionalLogoConsole?: () => void;
   onOpenWebsiteInfoConsole?: () => void;
   submissions?: PillarRegistrationSubmission[];
   pendingCount?: number;
@@ -67,6 +69,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   onOpenBackgroundLogoConsole,
   onOpenProfileKadinasConsole,
   onOpenSocialMediaConsole,
+  onOpenRegionalLogoConsole,
   onOpenWebsiteInfoConsole,
   submissions = [],
   pendingCount,
@@ -752,7 +755,49 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             </button>
           </div>
 
-          {/* FITUR 14: INFORMASI WEBSITE (Theme: Deep Emerald & Gold) */}
+          {/* FITUR 14: MANAJEMEN LOGO RESMI 28 WILAYAH (Theme: Deep Blue & Gold) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-amber-50/20 rounded-xl sm:rounded-2xl border border-amber-300 hover:border-amber-500 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#0f2b5c] via-[#d4af37] to-amber-600 absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#0f2b5c] to-blue-900 text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-amber-400/30 shrink-0">
+                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                </div>
+                <span className="bg-amber-100 text-amber-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-300 shadow-2xs leading-none">
+                  FITUR 14
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-blue-900 transition-colors leading-snug">
+                Logo 28 Kab / Kota
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Upload & kelola 28 lambang resmi daerah (1 Pemprov & 27 Kab/Kota) beresolusi jernih & kompresi otomatis untuk plang pilar.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 shrink-0" />
+                  <span>28 Slot Wilayah Jabar</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0 hidden sm:block" />
+                  <span>Kompresi Retina ~40KB</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenRegionalLogoConsole}
+              className="w-full bg-gradient-to-r from-[#0f2b5c] to-blue-900 hover:from-[#143b7d] hover:to-blue-950 text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-blue-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/40"
+            >
+              <span className="truncate">Kelola 28 Logo Wilayah</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 15: INFORMASI WEBSITE (Theme: Deep Emerald & Gold) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-emerald-50/30 rounded-xl sm:rounded-2xl border border-emerald-300 hover:border-emerald-500 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#043e2e] via-[#d4af37] to-teal-700 absolute top-0 left-0" />
 
@@ -762,7 +807,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Info className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
                 </div>
                 <span className="bg-emerald-100 text-emerald-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300 shadow-2xs leading-none">
-                  FITUR 14
+                  FITUR 15
                 </span>
               </div>
 
