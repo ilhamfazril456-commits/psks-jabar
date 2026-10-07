@@ -116,14 +116,18 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
     }, 0);
   }, [chartRegions, regionalCounts, regionalSummary, pillarId]);
 
-  // Skala maksimum untuk proporsi batang grafik
+  // Skala maksimum untuk proporsi batang grafik (Dihitung dari nilai tertinggi aktual di Jawa Barat)
   const maxVal = useMemo(() => {
-    if (customMaxChartCount && customMaxChartCount > 0) return customMaxChartCount;
     let peak = 1;
     chartRegions.forEach((reg) => {
       const counts = getEffectiveCounts(reg);
       if (counts.total > peak) peak = counts.total;
+      if (counts.gov > peak) peak = counts.gov;
+      if (counts.swasta > peak) peak = counts.swasta;
     });
+    if (customMaxChartCount && customMaxChartCount > peak) {
+      peak = customMaxChartCount;
+    }
     return Math.max(peak, 1);
   }, [chartRegions, regionalCounts, regionalSummary, pillarId, customMaxChartCount]);
 
@@ -196,9 +200,9 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
 
           // Kasus Khusus PEKSOS (Dual Bar: Pemerintah vs Masyarakat)
           if (pillarId === 'peksos') {
-            const percentGov = counts.gov > 0 ? Math.max(3, (counts.gov / maxVal) * 100) : 0;
+            const percentGov = counts.gov > 0 ? Math.min(100, Math.max(3, (counts.gov / maxVal) * 100)) : 0;
             const percentSwasta =
-              counts.swasta > 0 ? Math.max(3, (counts.swasta / maxVal) * 100) : 0;
+              counts.swasta > 0 ? Math.min(100, Math.max(3, (counts.swasta / maxVal) * 100)) : 0;
 
             return (
               <div
@@ -313,7 +317,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
           }
 
           // Format Seluruh Pilar Lainnya Termasuk LK3 (Ungu) dan SLRT Puskesos (Hijau)
-          const percent = counts.total > 0 ? Math.max(3, (counts.total / maxVal) * 100) : 0;
+          const percent = counts.total > 0 ? Math.min(100, Math.max(3, (counts.total / maxVal) * 100)) : 0;
 
           return (
             <div

@@ -536,15 +536,17 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     let max = 1;
     chartRegions.forEach((r) => {
       const item = regionalCounts[r] || { total: 0, gov: 0, swasta: 0 };
+      const summaryVal = regionalSummary?.[r]?.byPillar?.[pillarId] || 0;
+      const effectiveTotal = Math.max(item.total, summaryVal);
       if (pillarId === 'peksos') {
         if (item.gov > max) max = item.gov;
         if (item.swasta > max) max = item.swasta;
       } else {
-        if (item.total > max) max = item.total;
+        if (effectiveTotal > max) max = effectiveTotal;
       }
     });
     return max;
-  }, [chartRegions, regionalCounts, pillarId]);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId]);
 
   // Regions for modal dropdown - includes Prov. Jabar for Superadmin & Developer across all pillars
   const regionOptions = useMemo(() => {
