@@ -1120,11 +1120,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 15 }}
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 15 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-            className="absolute bottom-14 right-0 z-50 w-[calc(100vw-24px)] xs:w-[380px] sm:w-[440px] md:w-[475px] max-w-[96vw] h-[min(540px,calc(100dvh-150px))] max-h-[calc(100dvh-130px)] flex flex-col bg-slate-950/98 backdrop-blur-2xl border border-emerald-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden select-text"
+            className="fixed inset-x-2.5 xs:inset-x-3.5 top-[64px] bottom-[72px] sm:inset-auto sm:absolute sm:bottom-14 sm:right-0 sm:top-auto z-50 w-auto sm:w-[440px] md:w-[475px] sm:h-[min(510px,calc(100dvh-225px))] sm:max-h-[calc(100dvh-225px)] flex flex-col bg-slate-950/98 backdrop-blur-2xl border border-emerald-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden select-text"
             style={{ boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)' }}
           >
             {/* Header */}
