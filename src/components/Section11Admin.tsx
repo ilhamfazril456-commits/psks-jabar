@@ -770,7 +770,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
               </div>
 
               <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-blue-900 transition-colors leading-snug">
-                Logo 28 Kab / Kota
+                Pengelolaan Logo Wilayah
               </h4>
               <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
                 Upload & kelola 28 lambang resmi daerah (1 Pemprov & 27 Kab/Kota) beresolusi jernih & kompresi otomatis untuk plang pilar.
@@ -792,7 +792,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
               onClick={onOpenRegionalLogoConsole}
               className="w-full bg-gradient-to-r from-[#0f2b5c] to-blue-900 hover:from-[#143b7d] hover:to-blue-950 text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-blue-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-amber-400/40"
             >
-              <span className="truncate">Kelola 28 Logo Wilayah</span>
+              <span className="truncate">Pengelolaan Logo Wilayah</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
             </button>
           </div>
