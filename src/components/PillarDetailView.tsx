@@ -14,6 +14,7 @@ import { isSameWilayah } from '../utils/submissionStatus';
 import { SlrtRegionalAnalyticsChart } from './slrt/SlrtRegionalAnalyticsChart';
 import { RegionalSummaryMap } from '../services/regionalDistributionService';
 import { Lk3VerticalBarChart } from './lk3/Lk3VerticalBarChart';
+import { PillarHorizontalBarChart } from './pillar/PillarHorizontalBarChart';
 
 interface AnimatedCounterProps {
   end: number;
@@ -1759,120 +1760,15 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             pillarShortName={pillar.shortName}
           />
         ) : (
-          <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-6 border border-slate-200 shadow-xs mb-6 sm:mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <h3 className="text-base font-bold text-[#0f2b5c]">
-                Perbandingan Komposisi Kuantitas {pillar.shortName} di Wilayah Tugas
-              </h3>
-
-              {/* Note / Legend khusus PEKSOS */}
-              {pillarId === 'peksos' && (
-                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm bg-[#0f2b5c] inline-block shadow-sm"></span>
-                    <span className="font-bold">Peksos Pemerintah</span>
-                  </div>
-                  <span className="text-slate-300">|</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm bg-[#d4af37] inline-block shadow-sm"></span>
-                    <span className="font-bold">Peksos Masyarakat</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 border-l-2 border-slate-300 pl-2">
-              {chartRegions.map((region) => {
-                const counts = regionalCounts[region] || { total: 0, gov: 0, swasta: 0 };
-
-                if (pillarId === 'peksos') {
-                  const percentGov = counts.gov > 0 ? Math.max(3, (counts.gov / maxChartCount) * 100) : 0;
-                  const percentSwasta = counts.swasta > 0 ? Math.max(3, (counts.swasta / maxChartCount) * 100) : 0;
-
-                  return (
-                    <div key={region} className="py-1.5 border-b border-slate-100 last:border-none">
-                      <div className="flex items-center justify-between text-xs font-extrabold text-slate-800 mb-1">
-                        <span>{region}</span>
-                        <span className="text-[11px] font-semibold text-slate-500">
-                          Total: <AnimatedCounter end={counts.total} duration={1400} trigger={chartVisible} /> Orang
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 pl-2">
-                        {/* Batang 1: Peksos Lembaga Pemerintah (Biru Jabar) */}
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="w-24 text-[10px] font-bold text-blue-900 shrink-0 truncate">
-                            Pemerintah
-                          </span>
-                          <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden flex items-center">
-                            {counts.gov > 0 ? (
-                              <div
-                                style={{ width: chartVisible ? `${percentGov}%` : '0%' }}
-                                className="h-4 bg-[#0f2b5c] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[22px]"
-                              >
-                                <span className="text-[10px] font-black text-white">
-                                  <AnimatedCounter end={counts.gov} duration={1400} trigger={chartVisible} />
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">0</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Batang 2: Peksos Masyarakat (Golden) */}
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="w-24 text-[10px] font-bold text-amber-900 shrink-0 truncate">
-                            Masyarakat
-                          </span>
-                          <div className="flex-1 bg-slate-100 p-0.5 rounded-lg overflow-hidden flex items-center">
-                            {counts.swasta > 0 ? (
-                              <div
-                                style={{ width: chartVisible ? `${percentSwasta}%` : '0%' }}
-                                className="h-4 bg-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[22px]"
-                              >
-                                <span className="text-[10px] font-black text-[#0f2b5c]">
-                                  <AnimatedCounter end={counts.swasta} duration={1400} trigger={chartVisible} />
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">0</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Single bar for other pillars (LKS, PSM, TAGANA, KARANG TARUNA, PENSOS, TKSK, BADAN USAHA, SLRT PUSKESOS)
-                const percent = counts.total > 0 ? Math.max(3, (counts.total / maxChartCount) * 100) : 0;
-                return (
-                  <div key={region} className="flex items-center gap-3 py-1 text-xs">
-                    <div className="w-36 text-right font-bold text-slate-700 truncate shrink-0">
-                      {region}
-                    </div>
-                    <div className="flex-1 bg-slate-100 p-1 rounded-lg overflow-hidden flex items-center">
-                      {counts.total > 0 ? (
-                        <div
-                          style={{ width: chartVisible ? `${percent}%` : '0%' }}
-                          className="h-5 bg-gradient-to-r from-[#b8901c] to-[#d4af37] rounded flex items-center justify-end px-2 shadow-sm transition-all duration-1000 ease-out min-w-[24px]"
-                        >
-                          <span className="text-[10px] font-black text-white drop-shadow">
-                            <AnimatedCounter end={counts.total} duration={1400} trigger={chartVisible} />
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5">
-                          0
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <PillarHorizontalBarChart
+            pillarId={pillarId}
+            pillarShortName={pillar.shortName}
+            chartRegions={chartRegions}
+            regionalCounts={regionalCounts}
+            regionalSummary={regionalSummary}
+            maxChartCount={maxChartCount}
+            chartVisible={chartVisible}
+          />
         )}
 
         {/* 4. Regional Isolation Banner */}
