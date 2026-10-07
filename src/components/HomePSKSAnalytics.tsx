@@ -129,6 +129,18 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   const [sortBy, setSortBy] = useState<'COUNT' | 'MAP'>('MAP');
   const [mobileTab, setMobileTab] = useState<'DONUT' | 'BAR'>('DONUT');
   const [activeDonutIndex, setActiveDonutIndex] = useState<number | null>(null);
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const donutContainerRef = useRef<HTMLDivElement>(null);
   const mobileCardRef = useRef<HTMLDivElement>(null);
   const desktopCardRef = useRef<HTMLDivElement>(null);
@@ -288,9 +300,17 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
         session.wilayah !== 'Semua Wilayah' &&
         normalizeRegion(session.wilayah) === wilayah;
 
+      // Nama ringkas tanpa kata 'Kabupaten' / 'Kab.' khusus sumbu X di HP agar tidak bertumpuk
+      const mobileWilayah = wilayah
+        .replace(/^Kabupaten\s+/i, '')
+        .replace(/^Kab\.\s+/i, '')
+        .replace(/^Kab\s+/i, '')
+        .replace('Bandung Barat', 'KBB');
+
       return {
         wilayah,
         shortWilayah: wilayah.replace('Kabupaten ', 'Kab. '),
+        mobileWilayah,
         count,
         mapOrder: mapOrderIndex.get(wilayah) ?? 999,
         isUserRegion,
@@ -747,7 +767,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
 
           {/* ================= COLUMN KANAN: GRAFIK BATANG SEBARAN 27 KAB/KOTA ================= */}
           <div
-            className={`lg:col-span-7 bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-md flex flex-col justify-between transition-all ${
+            className={`lg:col-span-7 bg-white rounded-3xl p-2.5 sm:p-6 border border-slate-200/80 shadow-md flex flex-col justify-between transition-all ${
               mobileTab !== 'BAR' ? 'hidden md:flex' : 'flex'
             }`}
           >
@@ -819,24 +839,36 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
               </div>
 
               {/* Bar Chart Container */}
-              <div className="h-[280px] sm:h-[310px] w-full pt-2">
+              <div className="h-[290px] sm:h-[310px] w-full pt-1 sm:pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    key={`barchart-${totalAllPillars}-${selectedPillarFilter}-${sortBy}`}
+                    key={`barchart-${totalAllPillars}-${selectedPillarFilter}-${sortBy}-${isMobileScreen}`}
                     data={regionalData}
-                    margin={{ top: 10, right: 10, left: -15, bottom: 55 }}
+                    margin={{
+                      top: 10,
+                      right: isMobileScreen ? 4 : 10,
+                      left: isMobileScreen ? -25 : -15,
+                      bottom: isMobileScreen ? 65 : 55,
+                    }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
-                      dataKey="shortWilayah"
+                      dataKey={isMobileScreen ? 'mobileWilayah' : 'shortWilayah'}
                       interval={0}
-                      angle={-45}
+                      angle={isMobileScreen ? -70 : -45}
                       textAnchor="end"
-                      tick={{ fontSize: 9.5, fill: '#475569', fontWeight: 600 }}
-                      height={60}
+                      tick={{
+                        fontSize: isMobileScreen ? 8 : 9.5,
+                        fill: isMobileScreen ? '#334155' : '#475569',
+                        fontWeight: isMobileScreen ? 700 : 600,
+                      }}
+                      height={isMobileScreen ? 70 : 60}
+                      dx={isMobileScreen ? -2 : 0}
+                      dy={isMobileScreen ? 2 : 0}
                     />
                     <YAxis
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      width={isMobileScreen ? 28 : undefined}
+                      tick={{ fontSize: isMobileScreen ? 8.5 : 10, fill: '#64748b' }}
                       allowDecimals={false}
                       domain={[0, 'auto']}
                       tickFormatter={(val: number) =>
