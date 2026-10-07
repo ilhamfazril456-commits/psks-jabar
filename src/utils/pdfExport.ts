@@ -522,6 +522,15 @@ export const exportPillarToPDF = ({
       7: { halign: 'left', cellWidth: 36, fontStyle: 'bold' },
       8: { halign: 'left', cellWidth: 56 },
       9: { halign: 'left', cellWidth: 57 },
+    } : pillarId === 'lks' ? {
+      0: { halign: 'center', cellWidth: 8 }, // No
+      1: { halign: 'left', cellWidth: 28, fontStyle: 'bold' }, // Kabupaten/Kota
+      2: { halign: 'left', cellWidth: 44, fontStyle: 'bold' }, // Nama LKS
+      3: { halign: 'left', cellWidth: 30 }, // Bidang Pelayanan
+      4: { halign: 'left', cellWidth: 26 }, // Ketua
+      5: { halign: 'left', cellWidth: 38 }, // Alamat
+      6: { halign: 'left', cellWidth: 44, cellPadding: 1.5 }, // Nomor Tanda Daftar (auto multiline)
+      7: { halign: 'center', cellWidth: 22 }, // Masa Berlaku
     } : {
       0: { halign: 'center', cellWidth: 8 },
     },

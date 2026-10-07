@@ -317,12 +317,12 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 {isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 bg-[#143b7d] text-amber-300">Kabupaten/Kota</th>
                 )}
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nama LKS</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 min-w-[170px] max-w-[220px]">Nama LKS</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bidang pelayanan</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Ketua</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Alamat</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor Tanda Daftar</th>
-                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Masa Berlaku</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 min-w-[160px] max-w-[200px]">Alamat</th>
+                <th className="py-3.5 px-3 font-bold border-r border-blue-800/70 w-[190px] max-w-[210px]">Nomor Tanda Daftar</th>
+                <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70 text-center">Masa Berlaku</th>
                 {!isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
@@ -622,14 +622,20 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                           {record.wilayah}
                         </td>
                       )}
-                      <td className="py-3 px-3 font-extrabold text-[#0f2b5c] whitespace-nowrap border-r border-slate-100">{record.namaLks || record.nama}</td>
+                      <td className="py-2.5 px-3 font-extrabold text-[#0f2b5c] border-r border-slate-100 min-w-[170px] max-w-[220px] whitespace-normal break-words leading-snug">
+                        {record.namaLks || record.nama}
+                      </td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.bidangPelayanan || '-'}</td>
                       <td className="py-3 px-3 text-slate-800 font-bold whitespace-nowrap border-r border-slate-100">{record.ketua || '-'}</td>
-                      <td className="py-3 px-3 text-slate-700 text-xs max-w-[200px] truncate border-r border-slate-100" title={record.alamat || record.kec || '-'}>{record.alamat || record.kec || '-'}</td>
-                      <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">
-                        {record.nomorTandaDaftar || (record.sertifikasi && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '-')}
+                      <td className="py-2.5 px-3 text-slate-700 text-xs min-w-[160px] max-w-[200px] border-r border-slate-100 whitespace-normal break-words leading-relaxed" title={record.alamat || record.kec || '-'}>
+                        {record.alamat || record.kec || '-'}
                       </td>
-                      <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.masaBerlaku || '-'}</td>
+                      <td className="py-2.5 px-3 font-mono text-xs text-slate-700 border-r border-slate-100 w-[190px] max-w-[210px] whitespace-normal leading-normal align-middle select-text" title={record.nomorTandaDaftar || (record.sertifikasi && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '-')}>
+                        <div className="whitespace-normal break-all leading-snug font-semibold text-slate-800 bg-slate-50 p-1.5 rounded border border-slate-200/60 max-w-[190px]">
+                          {record.nomorTandaDaftar || (record.sertifikasi && record.sertifikasi !== 'CERT-2026' ? record.sertifikasi : '-')}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100 text-center">{record.masaBerlaku || '-'}</td>
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
                       )}
