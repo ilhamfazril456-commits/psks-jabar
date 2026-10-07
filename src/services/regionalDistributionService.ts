@@ -9,116 +9,130 @@ export interface RegionalSummaryItem {
 export type RegionalSummaryMap = Record<string, RegionalSummaryItem>;
 
 // Baseline real-world distribution data for all 27 Kabupaten/Kota in Jawa Barat
-// Calibrated to West Java Social Services statistical baseline so newly opened devices,
-// public guests, and refreshing tabs never experience empty gray maps or zero counts.
+// Calibrated to authentic West Java Social Services snapshot (6,731 official records)
+// so newly opened devices, public guests, and refreshing tabs immediately load
+// exact real data (0ms lag) without flickering or showing outdated baseline numbers.
+export const DEFAULT_PILLAR_SUMMARY_COUNTS: Record<string, number> = {
+  slrt_puskesos: 3920,
+  lks: 2768,
+  peksos: 11,
+  tagana: 7,
+  psm: 6,
+  karangtaruna: 5,
+  tksk: 4,
+  pensos: 4,
+  badanusaha: 3,
+  lk3: 3,
+};
+
 export const DEFAULT_REGIONAL_BASELINE: RegionalSummaryMap = {
-  'Kab. Bogor': {
-    total: 1420,
-    byPillar: { psm: 340, tagana: 110, lks: 260, karangtaruna: 350, peksos: 45, lk3: 40, pensos: 35, tksk: 120, badanusaha: 80, slrt_puskesos: 40 }
-  },
-  'Kab. Sukabumi': {
-    total: 1120,
-    byPillar: { psm: 280, tagana: 95, lks: 180, karangtaruna: 290, peksos: 35, lk3: 30, pensos: 30, tksk: 95, badanusaha: 55, slrt_puskesos: 30 }
-  },
-  'Kab. Cianjur': {
-    total: 980,
-    byPillar: { psm: 240, tagana: 85, lks: 150, karangtaruna: 260, peksos: 30, lk3: 25, pensos: 25, tksk: 85, badanusaha: 50, slrt_puskesos: 30 }
-  },
-  'Kab. Bandung': {
-    total: 1350,
-    byPillar: { psm: 320, tagana: 105, lks: 240, karangtaruna: 330, peksos: 40, lk3: 35, pensos: 35, tksk: 110, badanusaha: 90, slrt_puskesos: 45 }
-  },
-  'Kab. Garut': {
-    total: 1080,
-    byPillar: { psm: 270, tagana: 90, lks: 170, karangtaruna: 280, peksos: 35, lk3: 30, pensos: 30, tksk: 90, badanusaha: 55, slrt_puskesos: 30 }
-  },
-  'Kab. Tasikmalaya': {
-    total: 870,
-    byPillar: { psm: 220, tagana: 75, lks: 140, karangtaruna: 220, peksos: 30, lk3: 25, pensos: 25, tksk: 75, badanusaha: 40, slrt_puskesos: 20 }
-  },
-  'Kab. Ciamis': {
-    total: 730,
-    byPillar: { psm: 180, tagana: 60, lks: 120, karangtaruna: 190, peksos: 25, lk3: 20, pensos: 20, tksk: 65, badanusaha: 35, slrt_puskesos: 15 }
-  },
-  'Kab. Kuningan': {
-    total: 680,
-    byPillar: { psm: 170, tagana: 55, lks: 110, karangtaruna: 175, peksos: 25, lk3: 20, pensos: 20, tksk: 60, badanusaha: 30, slrt_puskesos: 15 }
-  },
-  'Kab. Cirebon': {
-    total: 950,
-    byPillar: { psm: 235, tagana: 80, lks: 155, karangtaruna: 245, peksos: 30, lk3: 25, pensos: 25, tksk: 85, badanusaha: 45, slrt_puskesos: 25 }
-  },
-  'Kab. Majalengka': {
-    total: 660,
-    byPillar: { psm: 165, tagana: 55, lks: 105, karangtaruna: 170, peksos: 25, lk3: 20, pensos: 20, tksk: 55, badanusaha: 30, slrt_puskesos: 15 }
-  },
-  'Kab. Sumedang': {
-    total: 710,
-    byPillar: { psm: 175, tagana: 60, lks: 115, karangtaruna: 180, peksos: 25, lk3: 20, pensos: 20, tksk: 65, badanusaha: 35, slrt_puskesos: 15 }
-  },
-  'Kab. Indramayu': {
-    total: 890,
-    byPillar: { psm: 225, tagana: 75, lks: 145, karangtaruna: 230, peksos: 30, lk3: 25, pensos: 25, tksk: 75, badanusaha: 40, slrt_puskesos: 20 }
-  },
-  'Kab. Subang': {
-    total: 760,
-    byPillar: { psm: 190, tagana: 65, lks: 125, karangtaruna: 195, peksos: 25, lk3: 20, pensos: 20, tksk: 70, badanusaha: 35, slrt_puskesos: 15 }
-  },
-  'Kab. Purwakarta': {
-    total: 580,
-    byPillar: { psm: 145, tagana: 50, lks: 95, karangtaruna: 150, peksos: 20, lk3: 15, pensos: 15, tksk: 50, badanusaha: 25, slrt_puskesos: 15 }
-  },
-  'Kab. Karawang': {
-    total: 1020,
-    byPillar: { psm: 250, tagana: 85, lks: 165, karangtaruna: 260, peksos: 35, lk3: 30, pensos: 30, tksk: 90, badanusaha: 50, slrt_puskesos: 25 }
-  },
-  'Kab. Bekasi': {
-    total: 1280,
-    byPillar: { psm: 310, tagana: 100, lks: 220, karangtaruna: 320, peksos: 40, lk3: 35, pensos: 35, tksk: 105, badanusaha: 75, slrt_puskesos: 40 }
-  },
-  'Kab. Bandung Barat': {
-    total: 850,
-    byPillar: { psm: 210, tagana: 70, lks: 140, karangtaruna: 220, peksos: 30, lk3: 25, pensos: 25, tksk: 75, badanusaha: 35, slrt_puskesos: 20 }
-  },
-  'Kab. Pangandaran': {
-    total: 420,
-    byPillar: { psm: 105, tagana: 40, lks: 65, karangtaruna: 110, peksos: 15, lk3: 10, pensos: 10, tksk: 40, badanusaha: 15, slrt_puskesos: 10 }
+  'Kota Bekasi': {
+    total: 470,
+    byPillar: { peksos: 1, slrt_puskesos: 12, lks: 457 }
   },
   'Kota Bogor': {
-    total: 620,
-    byPillar: { psm: 150, tagana: 50, lks: 105, karangtaruna: 160, peksos: 25, lk3: 20, pensos: 20, tksk: 45, badanusaha: 30, slrt_puskesos: 15 }
+    total: 214,
+    byPillar: { slrt_puskesos: 68, lks: 146 }
   },
-  'Kota Sukabumi': {
-    total: 390,
-    byPillar: { psm: 95, tagana: 35, lks: 65, karangtaruna: 100, peksos: 15, lk3: 10, pensos: 10, tksk: 35, badanusaha: 15, slrt_puskesos: 10 }
+  'Kab. Bogor': {
+    total: 565,
+    byPillar: { tagana: 1, lks: 149, slrt_puskesos: 413, peksos: 1, pensos: 1 }
+  },
+  'Kab. Bekasi': {
+    total: 41,
+    byPillar: { lks: 18, slrt_puskesos: 23 }
+  },
+  'Kab. Pangandaran': {
+    total: 27,
+    byPillar: { slrt_puskesos: 10, lks: 17 }
+  },
+  'Kab. Sumedang': {
+    total: 317,
+    byPillar: { slrt_puskesos: 277, karangtaruna: 1, lks: 39 }
+  },
+  'Kab. Garut': {
+    total: 696,
+    byPillar: { pensos: 1, tksk: 1, psm: 1, lks: 252, slrt_puskesos: 436, lk3: 1, karangtaruna: 1, badanusaha: 1, peksos: 1, tagana: 1 }
+  },
+  'Kab. Tasikmalaya': {
+    total: 88,
+    byPillar: { slrt_puskesos: 30, lks: 58 }
+  },
+  'Kab. Sukabumi': {
+    total: 31,
+    byPillar: { slrt_puskesos: 2, lks: 27, peksos: 1, psm: 1 }
+  },
+  'Kab. Kuningan': {
+    total: 188,
+    byPillar: { lks: 138, slrt_puskesos: 50 }
   },
   'Kota Bandung': {
-    total: 1480,
-    byPillar: { psm: 350, tagana: 115, lks: 275, karangtaruna: 360, peksos: 55, lk3: 45, pensos: 40, tksk: 115, badanusaha: 80, slrt_puskesos: 45 }
+    total: 299,
+    byPillar: { karangtaruna: 1, pensos: 1, badanusaha: 1, lk3: 1, tksk: 1, psm: 1, lks: 136, peksos: 5, tagana: 1, slrt_puskesos: 151 }
   },
-  'Kota Cirebon': {
-    total: 410,
-    byPillar: { psm: 100, tagana: 35, lks: 70, karangtaruna: 105, peksos: 20, lk3: 15, pensos: 15, tksk: 30, badanusaha: 10, slrt_puskesos: 10 }
-  },
-  'Kota Bekasi': {
-    total: 940,
-    byPillar: { psm: 230, tagana: 75, lks: 160, karangtaruna: 240, peksos: 35, lk3: 25, pensos: 25, tksk: 80, badanusaha: 45, slrt_puskesos: 25 }
-  },
-  'Kota Depok': {
-    total: 820,
-    byPillar: { psm: 200, tagana: 65, lks: 140, karangtaruna: 210, peksos: 30, lk3: 25, pensos: 25, tksk: 70, badanusaha: 35, slrt_puskesos: 20 }
-  },
-  'Kota Cimahi': {
-    total: 460,
-    byPillar: { psm: 115, tagana: 40, lks: 75, karangtaruna: 120, peksos: 20, lk3: 15, pensos: 15, tksk: 35, badanusaha: 15, slrt_puskesos: 10 }
+  'Kota Sukabumi': {
+    total: 100,
+    byPillar: { lks: 67, slrt_puskesos: 33 }
   },
   'Kota Tasikmalaya': {
-    total: 480,
-    byPillar: { psm: 120, tagana: 40, lks: 80, karangtaruna: 125, peksos: 20, lk3: 15, pensos: 15, tksk: 40, badanusaha: 15, slrt_puskesos: 10 }
+    total: 48,
+    byPillar: { slrt_puskesos: 2, lks: 46 }
+  },
+  'Kab. Cianjur': {
+    total: 407,
+    byPillar: { lks: 47, slrt_puskesos: 359, tagana: 1 }
+  },
+  'Kab. Bandung Barat': {
+    total: 216,
+    byPillar: { slrt_puskesos: 165, lks: 51 }
+  },
+  'Kab. Purwakarta': {
+    total: 63,
+    byPillar: { slrt_puskesos: 4, lks: 59 }
+  },
+  'Kab. Bandung': {
+    total: 432,
+    byPillar: { lks: 152, slrt_puskesos: 280 }
+  },
+  'Kab. Subang': {
+    total: 98,
+    byPillar: { lks: 32, slrt_puskesos: 66 }
+  },
+  'Kota Cirebon': {
+    total: 56,
+    byPillar: { lks: 34, slrt_puskesos: 22 }
+  },
+  'Kab. Karawang': {
+    total: 411,
+    byPillar: { slrt_puskesos: 309, lks: 102 }
   },
   'Kota Banjar': {
-    total: 260,
-    byPillar: { psm: 65, tagana: 25, lks: 40, karangtaruna: 70, peksos: 10, lk3: 10, pensos: 10, tksk: 20, badanusaha: 5, slrt_puskesos: 5 }
+    total: 36,
+    byPillar: { lks: 11, slrt_puskesos: 25 }
+  },
+  'Kab. Majalengka': {
+    total: 288,
+    byPillar: { lks: 147, slrt_puskesos: 141 }
+  },
+  'Kota Cimahi': {
+    total: 43,
+    byPillar: { peksos: 2, tagana: 3, psm: 3, karangtaruna: 2, badanusaha: 1, lks: 13, tksk: 2, pensos: 1, lk3: 1, slrt_puskesos: 15 }
+  },
+  'Kab. Ciamis': {
+    total: 475,
+    byPillar: { lks: 210, slrt_puskesos: 265 }
+  },
+  'Kab. Cirebon': {
+    total: 490,
+    byPillar: { lks: 67, slrt_puskesos: 423 }
+  },
+  'Kab. Indramayu': {
+    total: 376,
+    byPillar: { slrt_puskesos: 317, lks: 59 }
+  },
+  'Kota Depok': {
+    total: 256,
+    byPillar: { slrt_puskesos: 22, lks: 234 }
   }
 };
 
@@ -214,12 +228,15 @@ export function getInitialRegionalSummary(): RegionalSummaryMap {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         let validKeys = 0;
+        let totalSum = 0;
         for (const reg of KAB_KOTA_ONLY) {
           if (parsed[reg] && typeof parsed[reg].total === 'number') {
             validKeys++;
+            totalSum += parsed[reg].total;
           }
         }
-        if (validKeys >= 25) {
+        // If stored data was the old broken 22k baseline or less than 1000, ignore and use calibrated 6.731
+        if (validKeys >= 25 && totalSum >= 5000 && totalSum < 15000) {
           return parsed as RegionalSummaryMap;
         }
       }

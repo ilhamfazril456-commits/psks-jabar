@@ -39,6 +39,7 @@ interface HomePSKSAnalyticsProps {
   regionalSummary?: Record<string, { total: number; byPillar?: Record<string, number> }>;
   onSelectPillar?: (pillarId: string) => void;
   onScrollToGrid?: () => void;
+  isSummarySynced?: boolean;
 }
 
 // Ultra-fast and smooth animated number counter for real-time numeric climbing
@@ -122,6 +123,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   regionalSummary,
   onSelectPillar,
   onScrollToGrid,
+  isSummarySynced = false,
 }) => {
   const [selectedPillarFilter, setSelectedPillarFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'COUNT' | 'MAP'>('MAP');
@@ -239,10 +241,12 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       countsMap[wil] = 0;
     });
 
-    const hasRealRecords = isRealDataLoaded(allPillarData as any);
+    const summaryTotal = Object.values(regionalSummary || {}).reduce((acc, curr) => acc + (curr?.total || 0), 0);
+    const pillarTotal = Object.values(allPillarData || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
 
-    // If real records from Firestore haven't loaded yet, immediately use accurate regionalSummary
-    if (!hasRealRecords && regionalSummary && Object.keys(regionalSummary).length > 0) {
+    // If regionalSummary represents the comprehensive official dataset (e.g. 6.731 Live Firestore),
+    // immediately use accurate regionalSummary to avoid dropping to partial records
+    if (regionalSummary && Object.keys(regionalSummary).length > 0 && (summaryTotal >= pillarTotal || pillarTotal < 1000)) {
       KAB_KOTA_ONLY.forEach((wil) => {
         const item = regionalSummary[wil];
         if (item) {
@@ -336,7 +340,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0f2b5c]/10 border border-[#0f2b5c]/20 text-[#0f2b5c] text-[11px] font-black tracking-wide uppercase">
               <Sparkles className="w-3.5 h-3.5 text-[#b8901c]" />
               <span>DASHBOARD ANALITIK TERPADU JAWA BARAT</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className={`w-1.5 h-1.5 rounded-full ${isSummarySynced ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
             </div>
             <h2 className="text-xl sm:text-3xl font-black text-[#0f2b5c] tracking-tight flex items-center gap-2">
               <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] shrink-0" />
@@ -352,7 +356,10 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
             <div className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center gap-2">
               <Users2 className="w-4 h-4 text-blue-600" />
               <div className="text-left">
-                <div className="text-[9px] font-bold text-slate-400 uppercase leading-none">Total PSKS Terdata</div>
+                <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase leading-none">
+                  <span>Total PSKS Terdata</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSummarySynced ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} title={isSummarySynced ? 'Data Terverifikasi Cloud Firestore' : 'Sinkronisasi real-time...'} />
+                </div>
                 <div className="text-sm font-black text-[#0f2b5c] leading-none mt-0.5 font-mono">
                   {animatedTotalAllPillars.toLocaleString('id-ID')} <span className="text-[10px] font-semibold text-slate-500 font-sans">Record</span>
                 </div>

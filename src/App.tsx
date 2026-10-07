@@ -119,6 +119,7 @@ import {
   computeRegionalSummaryFromPillars,
   isRealDataLoaded,
   normalizeRegionName,
+  DEFAULT_PILLAR_SUMMARY_COUNTS,
   type RegionalSummaryMap,
 } from './services/regionalDistributionService';
 import { setCachedPillarData, getCachedPillarData } from './services/dbCacheService';
@@ -938,14 +939,21 @@ export default function App() {
 
   // 3. Pillar Datasets with Firestore Real-time Sync
   // 3a. Real-time Pillar Summary Counts tracking (< 1 KB payload, sub-100ms instant sync across all devices)
+  const [isSummarySynced, setIsSummarySynced] = useState<boolean>(false);
   const [pillarSummaryCounts, setPillarSummaryCounts] = useState<Record<string, number>>(() => {
     try {
       const saved = localStorage.getItem('psks_summary_counts');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          const totalVal: number = (Object.values(parsed) as any[]).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
+          if (totalVal >= 5000 && totalVal < 15000) {
+            return parsed;
+          }
+        }
+      }
     } catch {}
-    return {
-      lks: 2700, // Baseline for LKS so newly opened devices never show 0 or 4
-    };
+    return { ...DEFAULT_PILLAR_SUMMARY_COUNTS };
   });
 
   const [regionalSummary, setRegionalSummary] = useState<RegionalSummaryMap>(() => {
@@ -1059,6 +1067,7 @@ export default function App() {
     try {
       unsubscribe = subscribeToDoc('psks_records_meta', 'summary', (data, exists) => {
         if (exists && data) {
+          setIsSummarySynced(true);
           if (data.counts && typeof data.counts === 'object') {
             const sCounts = data.counts as Record<string, number>;
             setPillarSummaryCounts((prev) => {
@@ -1251,26 +1260,47 @@ export default function App() {
             } catch {}
             setCachedPillarData(loaded);
 
-            // Compute and store exact regional distribution from loaded records
+            // Compute regional distribution from loaded raw records
             const exactRegions = computeRegionalSummaryFromPillars(loaded);
-            setRegionalSummary(exactRegions);
-            saveRegionalSummary(exactRegions);
+            const loadedTotal = Object.values(exactRegions).reduce((acc, c) => acc + (c?.total || 0), 0);
 
-            // Auto-update summary counts from actual loaded records
+            // Protect the authoritative regionalSummary (e.g. 6.731) from being overwritten by partial records (e.g. 291)
+            setRegionalSummary((prev) => {
+              const currentTotal = Object.values(prev || {}).reduce((acc, c) => acc + (c?.total || 0), 0);
+              if (loadedTotal >= currentTotal && loadedTotal > 0) {
+                saveRegionalSummary(exactRegions);
+                return exactRegions;
+              }
+              if (prev && Object.keys(prev).length > 0) {
+                saveRegionalSummary(prev);
+              }
+              return prev;
+            });
+
+            // Update summary counts from actual loaded records only if individual pillar count increased
             const realCounts: Record<string, number> = {};
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
               realCounts[k] = loaded[k]?.length || 0;
             });
             setPillarSummaryCounts((prev) => {
-              const updated = { ...prev, ...realCounts };
-              try {
-                localStorage.setItem('psks_summary_counts', JSON.stringify(updated));
-              } catch {}
+              const updated = { ...prev };
+              let hasAnyHigher = false;
+              Object.keys(realCounts).forEach((k) => {
+                if (realCounts[k] > (prev[k] || 0)) {
+                  updated[k] = realCounts[k];
+                  hasAnyHigher = true;
+                }
+              });
+              if (hasAnyHigher) {
+                try {
+                  localStorage.setItem('psks_summary_counts', JSON.stringify(updated));
+                } catch {}
+              }
               return updated;
             });
 
-            // Automatically sync updated summary counts and 27-region distribution to Cloud Firestore meta
-            if (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) {
+            // Automatically sync to Cloud Firestore meta ONLY if loaded records represent full dataset (>= 6000)
+            if ((session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && loadedTotal >= 6000) {
               setFirestoreDoc('psks_records_meta', 'summary', {
                 counts: realCounts,
                 regions: exactRegions,
@@ -4119,6 +4149,7 @@ export default function App() {
                 regionalSummary={regionalSummary}
                 onSelectPillar={handleSelectPillar}
                 onScrollToGrid={handleScrollToGrid}
+                isSummarySynced={isSummarySynced}
               />
             </React.Suspense>
           </ErrorBoundary>
@@ -4226,6 +4257,7 @@ export default function App() {
                   allPillarData={allPillarData}
                   regionalSummary={regionalSummary}
                   pillarSummaryCounts={pillarSummaryCounts}
+                  isSummarySynced={isSummarySynced}
                 />
               </React.Suspense>
             </ErrorBoundary>

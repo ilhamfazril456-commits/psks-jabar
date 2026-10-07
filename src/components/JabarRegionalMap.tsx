@@ -29,6 +29,7 @@ interface JabarRegionalMapProps {
   regionalSummary?: Record<string, { total: number; byPillar?: Record<string, number> }>;
   pillarSummaryCounts?: Record<string, number>;
   onSelectRegion?: (regionName: string) => void;
+  isSummarySynced?: boolean;
 }
 
 interface JabarGeoRegion {
@@ -341,6 +342,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
   regionalSummary,
   pillarSummaryCounts,
   onSelectRegion,
+  isSummarySynced = false,
 }) => {
   const [selectedKabKota, setSelectedKabKota] = useState<string>('Semua Kabupaten/Kota');
   const [hoveredKabKota, setHoveredKabKota] = useState<string | null>(null);
@@ -421,10 +423,12 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
       stats[region] = { total: 0, byPillar: {} };
     });
 
-    const hasRealRecords = isRealDataLoaded(allPillarData);
+    const summaryTotal = Object.values(regionalSummary || {}).reduce((acc, curr) => acc + (curr?.total || 0), 0);
+    const pillarTotal = Object.values(allPillarData || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
 
-    // If allPillarData hasn't loaded real records from Firestore yet, use the instantly available regionalSummary
-    if (!hasRealRecords && regionalSummary && Object.keys(regionalSummary).length > 0) {
+    // Prefer the authoritative regionalSummary (e.g. 6.731 Live Firestore) whenever available,
+    // preventing the map from flickering to incomplete partial records (e.g. 291)
+    if (regionalSummary && Object.keys(regionalSummary).length > 0 && (summaryTotal >= pillarTotal || pillarTotal < 1000)) {
       KAB_KOTA_ONLY.forEach((region) => {
         const item = regionalSummary[region];
         if (item) {
@@ -1284,9 +1288,9 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                   <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">
                     DETAIL WILAYAH
                   </span>
-                  <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE FIRESTORE
+                  <span className={`text-[10px] font-bold flex items-center gap-1.5 transition-colors ${isSummarySynced ? 'text-emerald-300' : 'text-amber-300'}`}>
+                    <span className={`w-2 h-2 rounded-full ${isSummarySynced ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+                    <span>{isSummarySynced ? 'LIVE FIRESTORE • TERVERIFIKASI' : 'SINKRONISASI REALTIME'}</span>
                   </span>
                 </div>
 
