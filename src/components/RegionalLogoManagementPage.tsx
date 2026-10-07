@@ -42,6 +42,7 @@ export const RegionalLogoManagementPage: React.FC<RegionalLogoManagementPageProp
   const [uploadSuccessModal, setUploadSuccessModal] = useState<{
     regionName: string;
     logoUrl?: string;
+    quotaNotice?: boolean;
   } | null>(null);
 
   // Auto-dismiss popup modal setelah 3.5 detik jika tidak disentuh
@@ -100,8 +101,8 @@ export const RegionalLogoManagementPage: React.FC<RegionalLogoManagementPageProp
       // 1. Kompresi otomatis di sisi browser (Canvas)
       const compressedBase64 = await compressLogoImage(file);
 
-      // 2. Simpan ke Firestore & LocalStorage
-      await saveRegionalLogoToFirestore(regionName, compressedBase64);
+      // 2. Simpan ke Firestore, IndexedDB, dan LocalStorage
+      const result = await saveRegionalLogoToFirestore(regionName, compressedBase64);
 
       // 3. Catat aktivitas sistem
       try {
@@ -121,6 +122,7 @@ export const RegionalLogoManagementPage: React.FC<RegionalLogoManagementPageProp
       setUploadSuccessModal({
         regionName,
         logoUrl: compressedBase64,
+        quotaNotice: result.quotaNotice,
       });
     } catch (err: any) {
       console.error('Gagal mengupload logo:', err);
@@ -386,11 +388,17 @@ export const RegionalLogoManagementPage: React.FC<RegionalLogoManagementPageProp
             </h3>
 
             {/* Deskripsi Singkat & Simpel */}
-            <p className="text-xs text-slate-600 font-medium leading-relaxed mb-4">
+            <p className="text-xs text-slate-600 font-medium leading-relaxed mb-3">
               Logo resmi untuk{' '}
               <strong className="text-slate-900 font-bold">{uploadSuccessModal.regionName}</strong>{' '}
-              telah berhasil diunggah, dikompresi jernih, dan tersimpan ke sistem.
+              telah berhasil diunggah, dikompresi jernih, dan tersimpan aktif.
             </p>
+
+            {uploadSuccessModal.quotaNotice && (
+              <div className="mb-3 p-2 bg-amber-50 border border-amber-300 rounded-xl text-[10.5px] font-semibold text-amber-900 text-left">
+                ℹ️ Data tersimpan aman di memori lokal perangkat (tersinkronisasi saat kuota cloud kembali aktif).
+              </div>
+            )}
 
             {/* Preview Logo yang Baru Saja Disimpan */}
             {uploadSuccessModal.logoUrl && (

@@ -1057,76 +1057,74 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
       <div
         ref={widgetRef}
-        className="fixed bottom-[70px] right-3.5 sm:bottom-[88px] sm:right-6 z-50 flex flex-col items-end select-none"
+        className="select-none"
       >
-        {/* Floating Trigger Button */}
-        <button
-          id="btn-open-ai-assistant"
-          type="button"
-          onClick={handleToggleWidget}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className="group relative flex items-center bg-gradient-to-r from-emerald-700 via-teal-800 to-slate-900 text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(16,185,129,0.4)] border border-emerald-500/50 transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(16,185,129,0.6)] hover:scale-105 active:scale-95 cursor-pointer select-none touch-manipulation ring-2 ring-emerald-400/40"
-          title="Tanya Asisten AI PSKS JABAR"
-        >
-        {/* Soft Glowing Ring Layer with Gentle Opacity Transition */}
-        <span
-          className={`absolute -inset-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-amber-300 blur-sm transition-opacity duration-300 pointer-events-none ${
-            isHovered || isLoading ? 'opacity-80 animate-pulse' : 'opacity-30'
-          }`}
-        />
-
-        {/* Unread / Background Completed Answer Badge */}
-        {!isOpen && hasUnreadInBackground && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 border-2 border-slate-950 items-center justify-center text-[8px] font-black text-slate-950">
-              ✓
-            </span>
-          </span>
-        )}
-
-        {/* Loading in background indicator badge */}
-        {!isOpen && isLoading && (
-          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-            <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-amber-400 border-t-transparent bg-slate-950" />
-          </span>
-        )}
-
-        {/* Consistent Fixed Dimension Icon Container (Matches WhatsApp 1:1) */}
-        <div className="relative flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 shrink-0 aspect-square">
-          {isOpen ? (
-            <X className="w-6 h-6 sm:w-7 sm:h-7 text-white shrink-0 transition-transform duration-300 ease-out" />
-          ) : (
-            <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-300 shrink-0 animate-bounce transition-transform duration-300 ease-out group-hover:scale-105" />
-          )}
-        </div>
-
-        {/* Smooth Opacity & Width Transition Text Label - Optically Centered on desktop, stays compact round circle on mobile */}
+        {/* Floating Trigger Button (Tampil saat chat tertutup) */}
         {!isOpen && (
-          <div
-            className={`relative hidden sm:flex items-center overflow-hidden transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${
-              isHovered ? 'max-w-[180px] opacity-100 ml-2.5' : 'max-w-0 opacity-0 ml-0'
-            }`}
-          >
-            <span className="text-[11px] sm:text-xs font-black whitespace-nowrap pr-1.5 sm:pr-2.5 leading-none flex items-center tracking-wide text-white drop-shadow-sm transition-opacity duration-300">
-              {isLoading ? 'AI Menjawab...' : hasUnreadInBackground ? 'Jawaban Siap!' : 'Chat Asisten AI'}
-            </span>
+          <div className="fixed bottom-[70px] right-3.5 sm:bottom-[88px] sm:right-6 z-50 flex flex-col items-end">
+            <button
+              id="btn-open-ai-assistant"
+              type="button"
+              onClick={handleToggleWidget}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="group relative flex items-center bg-gradient-to-r from-emerald-700 via-teal-800 to-slate-900 text-white p-2.5 sm:p-3.5 rounded-full shadow-[0_8px_25px_rgba(16,185,129,0.4)] border border-emerald-500/50 transition-all duration-300 cubic-bezier(0.16,1,0.3,1) hover:shadow-[0_10px_30px_rgba(16,185,129,0.6)] hover:scale-105 active:scale-95 cursor-pointer select-none touch-manipulation ring-2 ring-emerald-400/40"
+              title="Tanya Asisten AI PSKS JABAR"
+            >
+              {/* Soft Glowing Ring Layer with Gentle Opacity Transition */}
+              <span
+                className={`absolute -inset-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-amber-300 blur-sm transition-opacity duration-300 pointer-events-none ${
+                  isHovered || isLoading ? 'opacity-80 animate-pulse' : 'opacity-30'
+                }`}
+              />
+
+              {/* Unread / Background Completed Answer Badge */}
+              {hasUnreadInBackground && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 border-2 border-slate-950 items-center justify-center text-[8px] font-black text-slate-950">
+                    ✓
+                  </span>
+                </span>
+              )}
+
+              {/* Loading in background indicator badge */}
+              {isLoading && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-amber-400 border-t-transparent bg-slate-950" />
+                </span>
+              )}
+
+              {/* Consistent Fixed Dimension Icon Container */}
+              <div className="relative flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 shrink-0 aspect-square">
+                <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-300 shrink-0 animate-bounce transition-transform duration-300 ease-out group-hover:scale-105" />
+              </div>
+
+              {/* Smooth Opacity & Width Transition Text Label */}
+              <div
+                className={`relative hidden sm:flex items-center overflow-hidden transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${
+                  isHovered ? 'max-w-[180px] opacity-100 ml-2.5' : 'max-w-0 opacity-0 ml-0'
+                }`}
+              >
+                <span className="text-[11px] sm:text-xs font-black whitespace-nowrap pr-1.5 sm:pr-2.5 leading-none flex items-center tracking-wide text-white drop-shadow-sm transition-opacity duration-300">
+                  {isLoading ? 'AI Menjawab...' : hasUnreadInBackground ? 'Jawaban Siap!' : 'Chat Asisten AI'}
+                </span>
+              </div>
+            </button>
           </div>
         )}
-      </button>
 
-      {/* AI Chat Window Modal: Ultra Responsive with Anti-Clipping Height Math */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-            className="fixed inset-x-2.5 xs:inset-x-3.5 top-[64px] bottom-[72px] sm:inset-auto sm:absolute sm:bottom-14 sm:right-0 sm:top-auto z-50 w-auto sm:w-[440px] md:w-[475px] sm:h-[min(510px,calc(100dvh-225px))] sm:max-h-[calc(100dvh-225px)] flex flex-col bg-slate-950/98 backdrop-blur-2xl border border-emerald-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden select-text"
-            style={{ boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)' }}
-          >
+        {/* AI Chat Window Modal: Ultra Responsive with Anti-Collision Math */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="fixed inset-x-2.5 xs:inset-x-3.5 top-[76px] bottom-3 sm:inset-auto sm:fixed sm:bottom-6 sm:right-6 sm:top-auto z-50 w-auto sm:w-[430px] md:w-[465px] sm:h-[min(480px,calc(100dvh-130px))] sm:max-h-[calc(100dvh-130px)] flex flex-col bg-slate-950/98 backdrop-blur-2xl border border-emerald-500/40 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden select-text"
+              style={{ boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)' }}
+            >
             {/* Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border-b border-emerald-800/50 shrink-0">
               <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
