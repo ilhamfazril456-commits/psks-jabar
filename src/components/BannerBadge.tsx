@@ -53,7 +53,7 @@ export const BannerBadge: React.FC<BannerBadgeProps> = ({ session }) => {
         {/* Main Title: Clean, Modern, Authoritative Typography */}
         <h2
           id="judul-gerbang-psks"
-          className="text-base sm:text-xl md:text-2xl lg:text-3xl font-black text-white uppercase tracking-tight leading-snug sm:leading-tight"
+          className="scroll-mt-[80px] sm:scroll-mt-[90px] text-base sm:text-xl md:text-2xl lg:text-3xl font-black text-white uppercase tracking-tight leading-snug sm:leading-tight"
         >
           GERBANG DIGITAL POTENSI SUMBER KESEJAHTERAAN SOSIAL
         </h2>

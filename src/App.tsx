@@ -4019,9 +4019,25 @@ export default function App() {
   };
 
   const handleScrollToGrid = () => {
-    const gridEl = document.getElementById('judul-gerbang-psks');
-    if (gridEl) {
-      gridEl.scrollIntoView({ behavior: 'smooth' });
+    const titleEl = document.getElementById('judul-gerbang-psks');
+    if (titleEl) {
+      const isMobile = window.innerWidth < 640;
+      const navbarHeight = isMobile ? 68 : 72;
+      const breathingGap = isMobile ? 12 : 16;
+      const offset = navbarHeight + breathingGap;
+
+      const elementTop = titleEl.getBoundingClientRect().top + window.scrollY;
+      const targetY = Math.max(0, elementTop - offset);
+
+      window.scrollTo({
+        top: targetY,
+        behavior: 'smooth',
+      });
+    } else {
+      const bannerEl = document.getElementById('banner-gerbang-digital');
+      if (bannerEl) {
+        bannerEl.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 

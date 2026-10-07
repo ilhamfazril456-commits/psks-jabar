@@ -175,29 +175,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
 
       {/* Main Content Container: Left-aligned on Desktop (md:), Centered and balanced on Mobile */}
       <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto flex flex-col items-center md:items-start text-center md:text-left">
-        <div className="max-w-2xl lg:max-w-3xl">
+        <div className="max-w-xl md:max-w-2xl lg:max-w-3xl">
           <h1 
-            className="text-2xl sm:text-3xl md:text-4xl lg:text-[46px] xl:text-[50px] font-extrabold text-white tracking-tight leading-[1.2] mb-3 sm:mb-4 [text-shadow:_0_2px_12px_rgba(0,0,0,0.85),_0_4px_24px_rgba(0,0,0,0.6)]"
+            className="text-[27px] min-[380px]:text-[29px] sm:text-3xl md:text-4xl lg:text-[46px] xl:text-[50px] font-black text-white tracking-tight leading-[1.15] md:leading-[1.18] mb-3.5 sm:mb-4 [text-shadow:_0_2px_14px_rgba(0,0,0,0.85),_0_4px_28px_rgba(0,0,0,0.6)]"
           >
-            Potensi dan Sumber{' '}
-            <span className="inline md:block">Kesejahteraan Sosial</span>{' '}
-            <span className="text-amber-300 font-extrabold whitespace-nowrap [text-shadow:_0_2px_12px_rgba(0,0,0,0.85)]">(PSKS Jabar)</span>
+            <span className="block">Potensi dan Sumber</span>
+            <span className="block">Kesejahteraan Sosial</span>
+            <span className="text-amber-300 font-black whitespace-nowrap [text-shadow:_0_2px_14px_rgba(0,0,0,0.85)]">
+              (PSKS Jabar)
+            </span>
           </h1>
 
           <p 
-            className="text-xs sm:text-base md:text-lg text-white/95 max-w-xl lg:max-w-2xl mb-6 sm:mb-8 leading-relaxed font-medium [text-shadow:_0_1px_8px_rgba(0,0,0,0.9),_0_2px_16px_rgba(0,0,0,0.7)]"
+            className="text-[13.5px] min-[380px]:text-[14.5px] sm:text-base md:text-lg text-slate-100 max-w-md md:max-w-xl lg:max-w-2xl mb-6 sm:mb-8 leading-relaxed font-normal [text-shadow:_0_1px_8px_rgba(0,0,0,0.9),_0_2px_16px_rgba(0,0,0,0.7)]"
           >
             Sistem pemantauan terintegrasi dan tata kelola data 10 Pilar Kesejahteraan Sosial Dinas Sosial Provinsi Jawa Barat.
           </p>
 
-          <div className="flex items-center justify-center md:justify-start">
+          <div className="flex items-center justify-center md:justify-start w-full sm:w-auto">
             <button
               onClick={onScrollToGrid}
               aria-label="Lihat Data Dashboard Pilar PSKS Jawa Barat"
-              className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-[#071732] font-bold text-xs sm:text-sm md:text-base px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:shadow-2xl transition-all transform hover:-translate-y-0.5 active:scale-95 cursor-pointer border border-amber-200/60"
+              className="group inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-[#071732] font-extrabold text-sm sm:text-sm md:text-base px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:shadow-2xl transition-all transform hover:-translate-y-0.5 active:scale-95 cursor-pointer border border-amber-200/60 w-auto min-w-[220px]"
             >
               <span>Lihat Data Dashboard</span>
-              <ArrowDownCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#071732] transition-transform group-hover:translate-y-0.5" />
+              <ArrowDownCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#071732] transition-transform group-hover:translate-y-0.5 shrink-0" />
             </button>
           </div>
         </div>

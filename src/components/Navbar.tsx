@@ -246,8 +246,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div 
         className={`w-full relative transition-all duration-300 ease-in-out ${
           isBeranda && !isScrolledPastHero
-            ? 'bg-[#0a234a]/60 md:bg-transparent backdrop-blur-md border-b border-amber-400/25 jabarprov-navbar-transparent'
-            : 'bg-[#081c3c]/92 backdrop-blur-xl border-b border-amber-400/35 shadow-lg shadow-black/25 jabarprov-navbar-scrolled'
+            ? 'bg-[#081c3c] md:bg-transparent border-b border-amber-400/25 jabarprov-navbar-transparent'
+            : 'bg-[#081c3c] md:bg-[#081c3c]/92 md:backdrop-blur-xl border-b border-amber-400/35 shadow-lg shadow-black/25 jabarprov-navbar-scrolled'
         }`}
       >
         <div className="relative z-10 max-w-[1440px] mx-auto px-3 sm:px-5 lg:px-8 h-[68px] sm:h-[72px] flex items-center justify-between gap-3 sm:gap-4">
