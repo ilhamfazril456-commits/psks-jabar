@@ -1747,12 +1747,13 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           )}
         </div>
 
-        {/* 3. Bar Chart: Dedicated Vertical Pink Chart for LK3, Horizontal for other pillars */}
+        {/* 3. Bar Chart: Dedicated Vertical Purple Chart for LK3 (SLRT Puskesos concept), Horizontal for other pillars */}
         {pillarId === 'lk3' ? (
           <Lk3VerticalBarChart
             chartRegions={chartRegions}
             regionalCounts={regionalCounts}
             regionalSummary={regionalSummary}
+            dataRecords={dataRecords}
             chartVisible={chartVisible}
             pillarTitle={pillar.title}
             pillarShortName={pillar.shortName}
