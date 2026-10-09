@@ -2,7 +2,7 @@ import { PortalFaqItem } from '../types';
 import { DEFAULT_PORTAL_FAQS } from '../data/defaultFaqs';
 import { getFirestoreModule, cleanFirestoreData } from './firestoreDataService';
 import { OperationType, handleFirestoreError } from '../lib/firebaseErrors';
-import { supabase } from '../lib/supabase';
+import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 
 const TABLE_NAME = 'portal_faqs';
 const LOCAL_STORAGE_KEY = 'portal_faqs_cache_v1';
@@ -101,7 +101,7 @@ export function subscribeToFaqs(
     }
   });
 
-  // Realtime channel
+  // Realtime channel (with WebSocket safe guard)
   const channelName = `sub_faqs_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -111,12 +111,13 @@ export function subscribeToFaqs(
       () => {
         if (!isCancelled) fetchFaqs().catch(() => {});
       }
-    )
-    .subscribe();
+    );
+
+  const unsubChannel = safeSubscribeRealtime(channel);
 
   return () => {
     isCancelled = true;
-    channel.unsubscribe();
+    unsubChannel();
   };
 }
 

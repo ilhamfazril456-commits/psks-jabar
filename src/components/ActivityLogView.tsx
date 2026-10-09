@@ -22,7 +22,7 @@ import {
   Database
 } from 'lucide-react';
 import { getLocalLogs, autoPurgeOldLogs } from '../lib/activityLogger';
-import { supabase } from '../lib/supabase';
+import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 
 interface ActivityLogViewProps {
   session?: UserSession;
@@ -112,11 +112,12 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
         () => {
           fetchSupabaseLogs();
         }
-      )
-      .subscribe();
+      );
+
+    const unsubChannel = safeSubscribeRealtime(channel);
 
     return () => {
-      channel.unsubscribe();
+      unsubChannel();
     };
   }, []);
 

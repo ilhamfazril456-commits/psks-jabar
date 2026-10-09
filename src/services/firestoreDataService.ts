@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import { OperationType, handleFirestoreError, isQuotaError } from '../lib/firebaseErrors';
 
 let firestoreModulePromise: Promise<{
@@ -358,7 +358,7 @@ export function subscribeToDoc(
   };
   loadInitial();
 
-  // 2. Realtime listener via Supabase Channels
+  // 2. Realtime listener via Supabase Channels (with graceful WebSocket fallback)
   const channelName = `sub_${collectionName}_${docId}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -378,12 +378,13 @@ export function subscribeToDoc(
           onNext(mapSupabaseRowToDoc(collectionName, payload.new), true);
         }
       }
-    )
-    .subscribe();
+    );
+
+  const unsubChannel = safeSubscribeRealtime(channel);
 
   return () => {
     isCancelled = true;
-    channel.unsubscribe();
+    unsubChannel();
   };
 }
 
@@ -468,7 +469,7 @@ export function subscribeToCollection(
   // 1. Initial bulk fetch
   refreshCollection();
 
-  // 2. Realtime listener with debounce protection
+  // 2. Realtime listener with debounce protection & WebSocket safe guard
   const channelName = `sub_col_${collectionName}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -486,13 +487,14 @@ export function subscribeToCollection(
           refreshCollection();
         }, 1200);
       }
-    )
-    .subscribe();
+    );
+
+  const unsubChannel = safeSubscribeRealtime(channel);
 
   return () => {
     isCancelled = true;
     if (debounceTimer) clearTimeout(debounceTimer);
-    channel.unsubscribe();
+    unsubChannel();
   };
 }
 
@@ -604,12 +606,13 @@ export function subscribeToIndexedQuery(
           if (!isCancelled) onNext(docs);
         }).catch(() => {});
       }
-    )
-    .subscribe();
+    );
+
+  const unsubChannel = safeSubscribeRealtime(channel);
 
   return () => {
     isCancelled = true;
-    channel.unsubscribe();
+    unsubChannel();
   };
 }
 

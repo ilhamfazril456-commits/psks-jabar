@@ -43,7 +43,7 @@ import {
 } from '../lib/activityLogger';
 import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { supabase } from '../lib/supabase';
+import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import { JABAR_REGIONS } from '../data/initialData';
 import { BackToHomeButton } from './BackToHomeButton';
 
@@ -188,11 +188,12 @@ export const ActivityLogPage: React.FC<ActivityLogPageProps> = ({
         () => {
           fetchLogs();
         }
-      )
-      .subscribe();
+      );
+
+    const unsubChannel = safeSubscribeRealtime(channel);
 
     return () => {
-      channel.unsubscribe();
+      unsubChannel();
     };
   }, []);
 

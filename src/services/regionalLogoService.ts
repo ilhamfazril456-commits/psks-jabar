@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { supabase } from '../lib/supabase';
+import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import {
   doc,
   getDoc,
@@ -257,11 +257,12 @@ export function subscribeToRegionalLogos(
           }
         }
       }
-    )
-    .subscribe();
+    );
+
+  const unsubChannel = safeSubscribeRealtime(channel);
 
   return () => {
-    channel.unsubscribe();
+    unsubChannel();
   };
 }
 
