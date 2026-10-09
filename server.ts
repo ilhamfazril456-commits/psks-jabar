@@ -140,6 +140,18 @@ async function startServer() {
     });
   });
 
+  // Client-side runtime error report receiver
+  app.post('/api/client-error', (req, res) => {
+    try {
+      const { message, stack, componentStack, url } = req.body || {};
+      console.error('\n🔴 [CLIENT RUNTIME ERROR]:', message);
+      if (stack) console.error('Stack:', stack);
+      if (componentStack) console.error('Component Stack:', componentStack);
+      if (url) console.error('URL:', url);
+    } catch {}
+    res.json({ received: true });
+  });
+
 
 
   // Cross-Site Request Forgery (CSRF) & Strict Origin Validation for API Endpoints
