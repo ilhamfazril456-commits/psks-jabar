@@ -153,7 +153,7 @@ export const MaintenanceManagementPage: React.FC<MaintenanceManagementPageProps>
       await onSaveSettings(updatedSettings);
       setPopupNotice({
         title: 'Status Saklar Maintenance Terpembarui',
-        subtitle: 'Sinkronisasi Real-Time Firestore • 27 Wilayah Jawa Barat',
+        subtitle: 'Sinkronisasi Real-Time Supabase Cloud • 27 Wilayah Jawa Barat',
         detail: labelInfo || 'Perubahan status mode pemeliharaan sistem telah berhasil disinkronkan dan aktif secara otomatis.',
         timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB',
       });
@@ -806,7 +806,7 @@ export const MaintenanceManagementPage: React.FC<MaintenanceManagementPageProps>
               <div className="flex items-center justify-between text-[11px] text-slate-600 font-bold px-1 pt-1 border-t border-slate-100">
                 <span className="flex items-center gap-1.5 text-emerald-700">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                  Status: Terhubung Cloud Firestore
+                  Status: Terhubung Supabase Cloud
                 </span>
                 <span className="text-slate-500 font-mono">{popupNotice.timestamp}</span>
               </div>
