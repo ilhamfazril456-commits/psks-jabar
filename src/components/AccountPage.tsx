@@ -320,7 +320,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     setIsLoginModalOpen(false);
   };
 
-  const handleFormLogin = (e: React.FormEvent) => {
+  const handleFormLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (lockoutRemaining > 0) {
@@ -342,10 +342,39 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     const userLower = usernameInput.trim().toLowerCase();
     const passInput = passwordInput.trim();
 
+    // 0. SERVER-SIDE AUTHORITATIVE LOGIN (SECURE & ENCRYPTED)
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userLower, password: passInput }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.valid && data.session) {
+        setFailedAttempts(0);
+        setLockoutRemaining(0);
+        setErrorMessage('');
+        setUsernameInput('');
+        setPasswordInput('');
+        setCaptchaInput('');
+        setCaptchaError(false);
+        onLogin(data.session.role, data.session.namaAdmin, data.session.wilayahTugas);
+        setIsLoginModalOpen(false);
+        return;
+      }
+      if (resp.status === 401 || resp.status === 403 || resp.status === 429) {
+        setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+        triggerFailedAttempt();
+        return;
+      }
+    } catch {
+      // Offline fallback: continue to local check only if server is unreachable
+    }
+
     // 0. VALIDASI AKUN DEVELOPER KHUSUS (ILHAM FAZRIL)
     const devAcc = adminAccounts.find((a) => a.role === 'developer' && (a.username || '').toLowerCase() === 'ilhamfazril');
     if (userLower === "ilhamfazril") {
-      const isDevValid = comparePassword(passInput, devAcc?.passwordHash || devAcc?.passwordPolos || "IlhamSangDeveloper") || (devAcc?.passwordPolos && passInput === devAcc.passwordPolos);
+      const isDevValid = comparePassword(passInput, devAcc?.passwordHash || devAcc?.passwordPolos);
       if (isDevValid) {
         setFailedAttempts(0);
         setLockoutRemaining(0);
@@ -366,7 +395,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     // A. VALIDASI AKUN SUPERADMIN PUSAT
     const superAcc = adminAccounts.find((a) => a.role === 'superadmin' || (a.username || '').toLowerCase() === 'superadmin jabar');
     if (userLower === "superadmin jabar" || userLower === "superadmin") {
-      const isSuperValid = comparePassword(passInput, superAcc?.passwordHash || superAcc?.passwordPolos || "super12345jabar") || (superAcc?.passwordPolos && passInput === superAcc.passwordPolos);
+      const isSuperValid = comparePassword(passInput, superAcc?.passwordHash || superAcc?.passwordPolos);
       if (isSuperValid) {
         setFailedAttempts(0);
         setLockoutRemaining(0);

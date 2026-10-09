@@ -165,7 +165,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   }
 
   if (collectionName === 'admin_accounts') {
-    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, ...rest } = cleaned;
+    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos: _pp, ...rest } = cleaned;
     return {
       id: docId,
       username: username || docId,

@@ -279,15 +279,29 @@ export function getComprehensiveSmartAnswer(
     return `Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
+  // 0.00 CONVERSATIONAL REACTION REGARDING FIREBASE / SUPABASE
+  const isReactionFirebase =
+    /\b(kirain|sangka|pikir|kira)\s*(di\s*)?(firebase|firestore)\b/i.test(q) ||
+    /\b(kenapa|naha)\s*(bukan|teu\s*pake|nggak\s*pake|gak\s*pake)\s*(firebase|firestore)\b/i.test(q) ||
+    /\b(bukannya|pan)\s*(di\s*)?(firebase|firestore)\b/i.test(q);
+
+  if (isReactionFirebase) {
+    if (isDeveloperUser) {
+      return `Hehe iya bos **Ilham Fazril**! Sebelumnya memang arsitekturnya sempat dirancang dengan Firebase/Firestore, tapi sekarang sistem PSKS JABAR sudah beralih penuh menggunakan **Supabase** (PostgreSQL Cloud) agar skema relasional 10 pilar, RLS security, dan integritas datanya makin rapi dan solid. Ada modul kodingan atau query database yang mau kita diskusikan lagi bro? 😎⚡`;
+    }
+    if (userRole === 'superadmin') {
+      return `Iya betul Bapak/Ibu **Superadmin** 😊. Sebelumnya memang sempat dirancang menggunakan Firebase/Firestore, namun saat ini arsitektur resmi sistem **PSKS JABAR** telah menggunakan **Supabase** (PostgreSQL Cloud) untuk manajemen data relasional 10 pilar yang lebih andal, aman dengan Row Level Security (RLS), dan tersinkronisasi optimal ke seluruh 27 Kabupaten/Kota. Ada hal lain yang ingin Bapak/Ibu ketahui seputar sistem ini?`;
+    }
+    return `Mohon maaf Bapak/Ibu, untuk menjaga privasi data warga dan keamanan teknis sistem PSKS JABAR, rincian infrastruktur basis data tidak dipublikasikan ke umum. Ada informasi seputar 10 Pilar PSKS atau layanan sosial yang bisa saya bantu?`;
+  }
+
   // 0.00 SENSITIVE DATABASE INFRASTRUCTURE & STORAGE QUERY (PROTECTED ZERO-DISCLOSURE)
   const isAskingDatabaseStorage =
-    (/\b(database|basis\s*data|pangkalan\s*data|data)\b/i.test(q) &&
-      /\b(disimpan|simpan|dimana|di\s*mana|lokasi|penyimpanan|hosting|tempat|arsitektur|jenis|teknologi|server)\b/i.test(q)) ||
+    (/\b(database|basis\s*data|pangkalan\s*data)\b/i.test(q) &&
+      /\b(disimpan|simpan|dimana|di\s*mana|lokasi|penyimpanan|hosting|tempat|arsitektur|jenis|teknologi|server|apa)\b/i.test(q)) ||
     /\b(database(\s*nya)?|basis\s*data(\s*nya)?)\s*(di\s*mana|dimana|apa|pakai\s*apa|disimpan\s*di\s*mana|disimpan\s*dimana)\b/i.test(q) ||
     /\b(disimpan\s*di\s*mana|disimpan\s*dimana)\s*(database|basis\s*data|datanya|data)\b/i.test(q) ||
-    /\b(pakai|pake|menggunakan)\s*(database|basis\s*data)\s*(apa)?\b/i.test(q) ||
-    /\b(apakah\s+(pakai|pake|menggunakan)\s+)?(supabase|firebase|firestore)\b/i.test(q) ||
-    /\b(database(\s*nya)?\s*(supabase|firebase|firestore))\b/i.test(q);
+    /\b(pakai|pake|menggunakan)\s*(database|basis\s*data)\b/i.test(q);
 
   if (isAskingDatabaseStorage) {
     if (!isDeveloperUser && userRole !== 'superadmin') {

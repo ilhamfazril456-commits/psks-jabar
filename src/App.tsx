@@ -1341,13 +1341,17 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    // Subscribe to admin_accounts if the user is an active logged in admin OR if the gate modal is open
-    if (session.statusActive !== 'SAH_TERDAFTAR' && !gateModalOpen) {
+    // Strict Least-Privilege RBAC: NEVER fetch all admin accounts to anonymous visitors or guests!
+    const isPrivilegedAdmin =
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      (session.role === 'admin' || session.role === 'superadmin' || session.role === 'developer');
+
+    if (!isPrivilegedAdmin) {
       return;
     }
 
     let unsubscribe: (() => void) | null = null;
-    const delay = (session.statusActive === 'SAH_TERDAFTAR' || gateModalOpen) ? 100 : 2500;
+    const delay = 100;
     const timer = setTimeout(() => {
       unsubscribe = subscribeToCollection(
         'admin_accounts',
@@ -1495,7 +1499,8 @@ export default function App() {
           const finalList = Array.from(dedupedMap.values());
           setAdminAccounts(finalList);
           try {
-            localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
+            const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }: any) => rest);
+            localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
           } catch {}
         }
       },

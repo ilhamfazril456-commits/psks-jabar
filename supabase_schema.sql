@@ -194,7 +194,8 @@ CREATE TABLE IF NOT EXISTS public.psks_app_settings (
 );
 
 -- ========================================================================
--- KEAMANAN: AKTIFKAN ROW LEVEL SECURITY (RLS) & IZINKAN AKSES PENUH
+-- KEAMANAN PRODUKSI: ROW LEVEL SECURITY (RLS) TERTUTUP & PRINSIP LEAST-PRIVILEGE
+-- Sesuai standar kepatuhan siber & UU Pelindungan Data Pribadi (UU PDP No. 27/2022)
 -- ========================================================================
 ALTER TABLE public.psks_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_accounts ENABLE ROW LEVEL SECURITY;
@@ -212,7 +213,7 @@ ALTER TABLE public.ai_knowledge_base ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_unmatched_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.psks_app_settings ENABLE ROW LEVEL SECURITY;
 
--- Kebijakan Akses Publik / Anon / Authenticated (Read & Write)
+-- 1. Bersihkan seluruh policy lama yang insecure (allow_all_ops)
 DO $$
 DECLARE
     tbl text;
@@ -240,10 +241,67 @@ BEGIN
           )
     LOOP
         EXECUTE format('DROP POLICY IF EXISTS "allow_all_ops" ON public.%I;', tbl);
-        EXECUTE format('CREATE POLICY "allow_all_ops" ON public.%I FOR ALL TO public USING (true) WITH CHECK (true);', tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "read_public" ON public.%I;', tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "insert_public" ON public.%I;', tbl);
+        EXECUTE format('DROP POLICY IF EXISTS "service_all" ON public.%I;', tbl);
     END LOOP;
 END $$;
 
--- Berikan hak akses penuh ke role anon dan authenticated
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+-- 2. Proteksi Mutlak: admin_accounts (DILARANG DIBACA OLEH PUBLIK / ANON)
+-- Mencegah kebocoran username, hash password, dan session token ke pihak ketiga.
+REVOKE ALL ON public.admin_accounts FROM anon;
+CREATE POLICY "service_only_admin_accounts" ON public.admin_accounts 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- 3. Proteksi Data Master: psks_records (Publik HANYA boleh membaca data terverifikasi)
+-- Mencegah penghapusan massal atau manipulasi data pilar oleh orang luar.
+CREATE POLICY "psks_records_public_read" ON public.psks_records 
+    FOR SELECT TO public USING (true);
+CREATE POLICY "psks_records_service_all" ON public.psks_records 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- 4. Proteksi Pendaftaran Mandiri: registration_submissions
+-- Publik (warga) hanya diizinkan mengirim pendaftaran (INSERT), tetapi DILARANG membaca data NIK pendaftar lain (SELECT).
+CREATE POLICY "reg_submissions_public_insert" ON public.registration_submissions 
+    FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "reg_submissions_service_all" ON public.registration_submissions 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- 5. Proteksi Audit Trail: system_logs
+-- Mencegah manipulasi atau pembersihan log aktivitas kedinasan oleh pengguna umum.
+CREATE POLICY "system_logs_public_insert" ON public.system_logs 
+    FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "system_logs_service_all" ON public.system_logs 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- 6. Tabel Publik Terbaca: portal_faqs, app_settings, logos, ai_knowledge
+-- Publik boleh membaca konfigurasi tampilan dan FAQ, namun pengubahan hanya melalui service_role.
+DO $$
+DECLARE
+    read_tbl text;
+BEGIN
+    FOR read_tbl IN
+        SELECT unnest(ARRAY[
+            'portal_faqs',
+            'app_settings',
+            'psks_regional_logos',
+            'psks_records_meta',
+            'psks_app_settings',
+            'ai_config',
+            'ai_vocabulary',
+            'ai_knowledge_base',
+            'task_items',
+            'ip_registrations'
+        ])
+    LOOP
+        EXECUTE format('CREATE POLICY "public_read_only" ON public.%I FOR SELECT TO public USING (true);', read_tbl);
+        EXECUTE format('CREATE POLICY "service_role_manage" ON public.%I FOR ALL TO service_role USING (true) WITH CHECK (true);', read_tbl);
+    END LOOP;
+END $$;
+
+-- 7. Hak Akses Schema: Cabut hak destruktif dari anon
+REVOKE DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM anon;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT SELECT ON public.psks_records, public.portal_faqs, public.app_settings, public.psks_regional_logos, public.ai_knowledge_base TO anon;
+GRANT INSERT ON public.registration_submissions, public.system_logs TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;

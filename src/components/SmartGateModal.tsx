@@ -650,10 +650,37 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       }, 350);
     };
 
+    // 0. Primary Secure Server-Side Login (Protects Passwords & Hashes from Client-Side Exposure)
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: uLower, password: pInput }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.valid && data.session) {
+        handleLoginSuccess(
+          data.session.role,
+          data.session.namaAdmin,
+          data.session.wilayahTugas,
+          data.session.username,
+          data.session.id
+        );
+        return;
+      }
+      if (resp.status === 401 || resp.status === 403 || resp.status === 429) {
+        setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+        triggerFailedAttempt();
+        return;
+      }
+    } catch {
+      // Offline fallback: continue to local check only if server is unreachable
+    }
+
     // 0. Check Developer Account (Ilham Fazril)
     const devAcc = adminAccounts.find((a) => a.role === 'developer' && (a.username || '').toLowerCase() === 'ilhamfazril');
     if (uLower === 'ilhamfazril') {
-      const isDevValid = comparePassword(pInput, devAcc?.passwordHash || devAcc?.passwordPolos || 'IlhamSangDeveloper') || (devAcc?.passwordPolos && pInput === devAcc.passwordPolos);
+      const isDevValid = comparePassword(pInput, devAcc?.passwordHash || devAcc?.passwordPolos);
       if (isDevValid) {
         handleLoginSuccess(
           'developer',
@@ -672,7 +699,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     // 1. Check Superadmin Account (Superadmin Jabar)
     const superAcc = adminAccounts.find((a) => a.role === 'superadmin' && (a.username || '').toLowerCase() === 'superadmin jabar');
     if (uLower === 'superadmin jabar' || uLower === 'superadmin') {
-      const isSuperValid = comparePassword(pInput, superAcc?.passwordHash || superAcc?.passwordPolos || 'super12345jabar') || (superAcc?.passwordPolos && pInput === superAcc.passwordPolos);
+      const isSuperValid = comparePassword(pInput, superAcc?.passwordHash || superAcc?.passwordPolos);
       if (isSuperValid) {
         handleLoginSuccess(
           'superadmin',
