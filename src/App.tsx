@@ -611,33 +611,8 @@ export default function App() {
       );
     };
 
-    if (session.statusActive === 'SAH_TERDAFTAR') {
-      timer = setTimeout(startSettingsSubscription, 100);
-    } else {
-      // Real users interact instantly (pointerdown / touchstart / keydown / scroll).
-      // Synthetic audit bots (Lighthouse, PageSpeed) never touch or scroll, avoiding
-      // long-task main-thread stalls from Firebase initial loading during the 5s TBT audit window.
-      const handleUserInteraction = () => {
-        startSettingsSubscription();
-      };
-
-      window.addEventListener('pointerdown', handleUserInteraction, { passive: true, once: true });
-      window.addEventListener('touchstart', handleUserInteraction, { passive: true, once: true });
-      window.addEventListener('keydown', handleUserInteraction, { passive: true, once: true });
-      window.addEventListener('scroll', handleUserInteraction, { passive: true, once: true });
-
-      unsubListeners = () => {
-        window.removeEventListener('pointerdown', handleUserInteraction);
-        window.removeEventListener('touchstart', handleUserInteraction);
-        window.removeEventListener('keydown', handleUserInteraction);
-        window.removeEventListener('scroll', handleUserInteraction);
-      };
-
-      // Fallback timer after 6.5s in case user doesn't touch anything
-      timer = setTimeout(() => {
-        startSettingsSubscription();
-      }, 6500);
-    }
+    // Start settings subscription immediately so maintenance and global settings are active right away
+    timer = setTimeout(startSettingsSubscription, 50);
 
     return () => {
       if (timer) clearTimeout(timer);
@@ -888,11 +863,6 @@ export default function App() {
     }
     if (firestoreSettings.kadinasPhotoUrl && firestoreSettings.kadinasPhotoUrl.length > 800000) {
       firestoreSettings.kadinasPhotoUrl = 'LOCAL_STORAGE_SAVED_PHOTO';
-    }
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'app_settings', docId: 'global', type: 'SET', data: firestoreSettings });
-      return;
     }
 
     try {
@@ -1828,11 +1798,6 @@ export default function App() {
       return next;
     });
 
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'admin_messages', docId: newId, type: 'SET', data: newMsg });
-      return;
-    }
-
     try {
       await setFirestoreDoc('admin_messages', newId, newMsg);
     } catch (err) {
@@ -1852,10 +1817,6 @@ export default function App() {
       } catch {}
       return next;
     });
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      return;
-    }
 
     try {
       await setFirestoreDoc('admin_messages', msgId, { isRead: true }, { merge: true });
@@ -3040,11 +3001,6 @@ export default function App() {
       details: `${actorLabel} telah MENAMBAHKAN anggota baru Pilar ${pilarName} atas nama [${memberName}] (Wilayah: ${memberWilayah})`,
     });
 
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'SET', data: fullRecord });
-      return;
-    }
-
     try {
       await setFirestoreDoc('psks_records', recordId, cleanFirestoreData(fullRecord));
     } catch (err) {
@@ -3104,11 +3060,6 @@ export default function App() {
       targetWilayah: memberWilayah,
       details: `${actorLabel} telah MENGEDIT data anggota Pilar ${pilarName} atas nama [${memberName}] (Wilayah: ${memberWilayah})`,
     });
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'SET', data: fullUpdatedRecord });
-      return;
-    }
 
     try {
       await setFirestoreDoc('psks_records', recordId, cleanFirestoreData(fullUpdatedRecord), { merge: true });
@@ -3668,11 +3619,6 @@ export default function App() {
     });
 
     // 4. Remove from Firestore psks_records
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'psks_records', docId: recordId, type: 'DELETE' });
-      return;
-    }
-
     try {
       await deleteFirestoreDoc('psks_records', recordId);
     } catch (err) {
@@ -3761,14 +3707,6 @@ export default function App() {
       return next;
     });
 
-    // 4. Remove from Firestore psks_records
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      recordIds.forEach((id) => {
-        addToSyncQueue({ collection: 'psks_records', docId: id, type: 'DELETE' });
-      });
-      return;
-    }
-
     try {
       await batchDeleteFirestoreDocs('psks_records', recordIds);
     } catch (err) {
@@ -3830,11 +3768,6 @@ export default function App() {
       targetWilayah: fullAdmin.wilayahTugas,
       details: `${actorLabel} telah MENAMBAHKAN akun admin baru [${fullAdmin.namaAdmin}] (${fullAdmin.username}) untuk wilayah [${fullAdmin.wilayahTugas}] dengan peran [${fullAdmin.role === 'superadmin' ? 'Superadmin' : 'Admin Wilayah'}]`,
     });
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'admin_accounts', docId: adminId, type: 'SET', data: cleanFirestoreData(fullAdmin) });
-      return;
-    }
 
     try {
       await setFirestoreDoc('admin_accounts', adminId, cleanFirestoreData(fullAdmin));
@@ -3908,11 +3841,6 @@ export default function App() {
       targetWilayah: sanitizedAdmin.wilayahTugas,
       details: `${actorLabel} telah MENGUBAH data/status akun admin [${sanitizedAdmin.namaAdmin}] (${sanitizedAdmin.username}) - Wilayah: [${sanitizedAdmin.wilayahTugas}]`,
     });
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'admin_accounts', docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(sanitizedAdmin) });
-      return;
-    }
 
     try {
       await setFirestoreDoc('admin_accounts', sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin));
@@ -4016,14 +3944,6 @@ export default function App() {
       targetWilayah: targetWil,
       details: `${actorLabel} telah MENGHAPUS akun admin [${targetName}] (${targetUname}) - Wilayah: [${targetWil}]`,
     });
-
-    if (quotaExceededRef.current || isQuotaExceeded) {
-      addToSyncQueue({ collection: 'admin_accounts', docId: targetId, type: 'DELETE' });
-      if (id !== targetId) {
-        addToSyncQueue({ collection: 'admin_accounts', docId: id, type: 'DELETE' });
-      }
-      return;
-    }
 
     try {
       await deleteFirestoreDoc('admin_accounts', targetId);

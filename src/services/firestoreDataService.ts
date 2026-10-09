@@ -313,6 +313,7 @@ export function subscribeToDoc(
   onError?: (err: any) => void
 ): () => void {
   let isCancelled = false;
+  let lastDataHash = '';
 
   const loadFromFirestoreFallback = async () => {
     try {
@@ -321,17 +322,25 @@ export function subscribeToDoc(
       const snap = await firestore.getDoc(docRef);
       if (isCancelled) return;
       if (snap.exists()) {
-        onNext(snap.data(), true);
+        const d = snap.data();
+        const hash = JSON.stringify(d);
+        if (hash !== lastDataHash) {
+          lastDataHash = hash;
+          onNext(d, true);
+        }
       } else {
-        onNext(null, false);
+        if (lastDataHash !== '__NULL__') {
+          lastDataHash = '__NULL__';
+          onNext(null, false);
+        }
       }
     } catch (fErr) {
       if (!isCancelled && onError) onError(fErr);
     }
   };
 
-  // 1. Initial fetch from Supabase
-  const loadInitial = async () => {
+  // 1. Fetch from Supabase
+  const loadFromSupabase = async () => {
     try {
       const { data, error } = await supabase
         .from(collectionName)
@@ -341,14 +350,21 @@ export function subscribeToDoc(
 
       if (isCancelled) return;
       if (error) {
-        // Fallback to Firestore
         await loadFromFirestoreFallback();
         return;
       }
       if (data) {
-        onNext(mapSupabaseRowToDoc(collectionName, data), true);
+        const mapped = mapSupabaseRowToDoc(collectionName, data);
+        const hash = JSON.stringify(mapped);
+        if (hash !== lastDataHash) {
+          lastDataHash = hash;
+          onNext(mapped, true);
+        }
       } else {
-        onNext(null, false);
+        if (lastDataHash !== '__NULL__') {
+          lastDataHash = '__NULL__';
+          onNext(null, false);
+        }
       }
     } catch {
       if (!isCancelled) {
@@ -356,9 +372,20 @@ export function subscribeToDoc(
       }
     }
   };
-  loadInitial();
 
-  // 2. Realtime listener via Supabase Channels (with graceful WebSocket fallback)
+  // Immediate initial load
+  loadFromSupabase();
+
+  // 2. High-speed adaptive polling interval (guarantees sync across multiple devices even without websocket publication)
+  // Check every 3 seconds for critical app_settings/security signals, 5 seconds for others
+  const pollIntervalMs = collectionName === 'app_settings' || collectionName === 'security_signals' ? 3000 : 5000;
+  const pollTimer = setInterval(() => {
+    if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
+      loadFromSupabase();
+    }
+  }, pollIntervalMs);
+
+  // 3. Realtime listener via Supabase Channels (with graceful WebSocket fallback)
   const channelName = `sub_${collectionName}_${docId}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -373,9 +400,12 @@ export function subscribeToDoc(
       (payload) => {
         if (isCancelled) return;
         if (payload.eventType === 'DELETE') {
+          lastDataHash = '__NULL__';
           onNext(null, false);
         } else if (payload.new) {
-          onNext(mapSupabaseRowToDoc(collectionName, payload.new), true);
+          const mapped = mapSupabaseRowToDoc(collectionName, payload.new);
+          lastDataHash = JSON.stringify(mapped);
+          onNext(mapped, true);
         }
       }
     );
@@ -384,6 +414,7 @@ export function subscribeToDoc(
 
   return () => {
     isCancelled = true;
+    clearInterval(pollTimer);
     unsubChannel();
   };
 }
@@ -586,13 +617,31 @@ export function subscribeToIndexedQuery(
     }
   }
 
-  executeQuery()
-    .then((docs) => {
-      if (!isCancelled) onNext(docs);
-    })
-    .catch((err) => {
-      if (!isCancelled && onError) onError(err);
-    });
+  let lastDocsHash = '';
+
+  const runQuery = () => {
+    executeQuery()
+      .then((docs) => {
+        if (isCancelled) return;
+        const hash = `${docs.length}_${docs.slice(0, 3).map((d: any) => d.id).join('_')}_${docs.slice(-3).map((d: any) => d.id).join('_')}`;
+        if (hash !== lastDocsHash) {
+          lastDocsHash = hash;
+          onNext(docs);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled && onError) onError(err);
+      });
+  };
+
+  runQuery();
+
+  // Periodic fallback poll every 8s when tab is active (ensures other devices see new registrations/messages)
+  const pollTimer = setInterval(() => {
+    if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
+      runQuery();
+    }
+  }, 8000);
 
   const channelName = `sub_idx_${collectionName}_${Date.now()}`;
   const channel = supabase
@@ -602,9 +651,7 @@ export function subscribeToIndexedQuery(
       { event: '*', schema: 'public', table: collectionName },
       () => {
         if (isCancelled) return;
-        executeQuery().then((docs) => {
-          if (!isCancelled) onNext(docs);
-        }).catch(() => {});
+        runQuery();
       }
     );
 
@@ -612,6 +659,7 @@ export function subscribeToIndexedQuery(
 
   return () => {
     isCancelled = true;
+    clearInterval(pollTimer);
     unsubChannel();
   };
 }
@@ -692,27 +740,31 @@ export async function setFirestoreDoc(
   _options?: { merge?: boolean }
 ): Promise<void> {
   let supabaseOk = false;
+  let supabaseError: any = null;
   try {
     const row = mapDocToSupabaseRow(collectionName, docId, data);
     const { error } = await supabase.from(collectionName).upsert(row);
     if (!error) {
       supabaseOk = true;
+    } else {
+      supabaseError = error;
     }
-  } catch {}
-
-  // If Supabase write failed or table doesn't exist, ensure Firestore write completes
-  try {
-    const { firestore, db } = await getFirestoreModule();
-    const docRef = firestore.doc(db, collectionName, docId);
-    await firestore.setDoc(docRef, cleanFirestoreData(data), { merge: true });
-  } catch (err) {
-    if (!supabaseOk) {
-      console.warn(`Write error on ${collectionName}/${docId}:`, err);
-    }
+  } catch (sbErr) {
+    supabaseError = sbErr;
   }
 
-  // Also do silent passive background sync
-  if (supabaseOk) {
+  // If Supabase write failed or table doesn't exist, fallback to Firestore write
+  if (!supabaseOk) {
+    try {
+      const { firestore, db } = await getFirestoreModule();
+      const docRef = firestore.doc(db, collectionName, docId);
+      await firestore.setDoc(docRef, cleanFirestoreData(data), { merge: true });
+    } catch (err) {
+      console.warn(`Write error on ${collectionName}/${docId}:`, supabaseError || err);
+      throw err;
+    }
+  } else {
+    // If Supabase was successful, do silent background backup to Firestore without throwing or blocking
     passiveFirestoreBackup('set', collectionName, docId, data);
   }
 }
