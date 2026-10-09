@@ -463,7 +463,7 @@ export const AnnouncementManagementPage: React.FC<AnnouncementManagementPageProp
                   <div>
                     <h3 className="text-sm font-black text-[#043e2e]">Upload Foto Pengumuman</h3>
                     <p className="text-[11px] text-slate-500 font-medium">
-                      Otomatis dikompresi agar hemat ruang penyimpanan Firebase (&lt; 60 KB)
+                      Otomatis dikompresi agar hemat ruang penyimpanan Supabase (&lt; 60 KB)
                     </p>
                   </div>
                 </div>

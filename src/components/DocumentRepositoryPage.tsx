@@ -1241,7 +1241,7 @@ export const DocumentRepositoryPage: React.FC<DocumentRepositoryPageProps> = ({
             <h4 className="text-base font-black text-slate-900">Pulihkan Dokumen Standar Kedinasan?</h4>
 
             <p className="text-xs text-slate-600">
-              Tindakan ini akan mengembalikan seluruh 10 berkas regulasi resmi (Permensos RI, Pergub Jabar, Juknis TAGANA, SOP 10 Pilar PSKS, dan Blanko Resmi) ke dalam Firestore dan memulihkan pengaturan default.
+              Tindakan ini akan mengembalikan seluruh 10 berkas regulasi resmi (Permensos RI, Pergub Jabar, Juknis TAGANA, SOP 10 Pilar PSKS, dan Blanko Resmi) ke dalam Supabase dan memulihkan pengaturan default.
             </p>
 
             <div className="pt-2 flex items-center justify-center gap-2">

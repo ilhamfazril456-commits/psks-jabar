@@ -378,7 +378,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
               <div className="text-left">
                 <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase leading-none">
                   <span>Total PSKS Terdata</span>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isSummarySynced ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} title={isSummarySynced ? 'Data Terverifikasi Cloud Firestore' : 'Sinkronisasi real-time...'} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSummarySynced ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} title={isSummarySynced ? 'Data Terverifikasi Supabase' : 'Sinkronisasi real-time...'} />
                 </div>
                 <div className="text-sm font-black text-[#0f2b5c] leading-none mt-0.5 font-mono">
                   {animatedTotalAllPillars.toLocaleString('id-ID')} <span className="text-[10px] font-semibold text-slate-500 font-sans">Record</span>

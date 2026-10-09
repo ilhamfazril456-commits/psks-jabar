@@ -1168,7 +1168,7 @@ export const AdminRegistrationManager: React.FC<AdminRegistrationManagerProps> =
                           Nama Berkas: <span className="font-mono text-slate-900">{selectedSubmissionForDetail.berkasFotoNama || 'Foto Berkas'}</span>
                         </p>
                         <p className="text-[11px] text-slate-500 leading-relaxed">
-                          Foto berkas ini telah dikompresi otomatis di sisi browser klien sebelum tersimpan ke sistem, memastikan kuota database Firebase aman dari kepenuhan.
+                          Foto berkas ini telah dikompresi otomatis di sisi browser klien sebelum tersimpan ke sistem, memastikan kuota database Supabase aman dari kepenuhan.
                         </p>
                         <button
                           type="button"

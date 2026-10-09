@@ -623,7 +623,7 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
       ],
     },
     {
-      category: '🔥 Database Firestore, Schema & Caching Engine',
+      category: '🔥 Database Supabase, Skema & Keamanan Data',
       iconName: 'Database',
       description: 'Skema koleksi NoSQL, Security Rules, backup JSON, dan efisiensi query.',
       questions: [
@@ -631,15 +631,15 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           id: 'd-6',
           category: 'Database & Caching',
           role: 'developer',
-          question: 'Bagaimana struktur schema NoSQL database Firestore untuk koleksi pilar, akun, dan pengumuman?',
+          question: 'Bagaimana struktur schema database Supabase untuk koleksi pilar, akun, dan pengumuman?',
           hint: 'Skema Firestore NoSQL',
         },
         {
           id: 'd-7',
           category: 'Database & Caching',
           role: 'developer',
-          question: 'Bagaimana aturan keamanan (Firestore Security Rules) yang diterapkan pada database?',
-          hint: 'Firestore Security Rules',
+          question: 'Bagaimana aturan keamanan (Supabase Row Level Security (RLS)) yang diterapkan pada database?',
+          hint: 'Supabase Row Level Security (RLS)',
         },
         {
           id: 'd-8',
@@ -652,7 +652,7 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           id: 'd-9',
           category: 'Database & Caching',
           role: 'developer',
-          question: 'Bagaimana strategi caching client-side untuk meminimalkan beban query Firebase Firestore?',
+          question: 'Bagaimana strategi caching client-side untuk meminimalkan beban query Supabase?',
           hint: 'Optimasi Read/Write Cache',
         },
       ],

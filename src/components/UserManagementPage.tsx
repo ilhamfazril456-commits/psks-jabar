@@ -687,7 +687,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
             </div>
 
             <div className="text-xs font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/20">
-              Sinkronisasi Realtime Firestore
+              Sinkronisasi Realtime Supabase
             </div>
           </div>
 
@@ -1208,7 +1208,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
             </div>
 
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 font-medium">
-              ⚠️ <strong>Peringatan:</strong> Akun ini akan dihapus secara permanen dari database Firestore dan cache lokal. Tindakan ini tidak dapat dibatalkan.
+              ⚠️ <strong>Peringatan:</strong> Akun ini akan dihapus secara permanen dari database Supabase dan cache lokal. Tindakan ini tidak dapat dibatalkan.
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2">

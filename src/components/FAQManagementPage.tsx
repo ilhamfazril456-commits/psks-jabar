@@ -271,7 +271,7 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
               <span>Kelola Tanya Jawab Portal (FAQ Management)</span>
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/80 mt-1 max-w-2xl">
-              Tambah, edit, hapus, dan atur prioritas pertanyaan yang sering diajukan di portal publik PSKS Jabar secara *realtime* di Cloud Firestore.
+              Tambah, edit, hapus, dan atur prioritas pertanyaan yang sering diajukan di portal publik PSKS Jabar secara *realtime* di Supabase.
             </p>
           </div>
 
@@ -699,7 +699,7 @@ export const FAQManagementPage: React.FC<FAQManagementPageProps> = ({
               Pulihkan ke Pertanyaan Bawaan?
             </h3>
             <p className="text-xs text-slate-600 mb-4">
-              Sistem akan memulihkan 11 daftar pertanyaan FAQ bawaan resmi Dinas Sosial Jawa Barat ke database Cloud Firestore.
+              Sistem akan memulihkan 11 daftar pertanyaan FAQ bawaan resmi Dinas Sosial Jawa Barat ke database Supabase.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button

@@ -1542,7 +1542,7 @@ export const PillarModal: React.FC<PillarModalProps> = ({
                     <span className="text-[10px] font-bold text-slate-500 font-normal">(Opsional)</span>
                   </h4>
                   <p className="text-[10px] sm:text-xs text-slate-600 font-medium">
-                    Otomatis dikompresi di browser (Client-Side Canvas) sehingga hemat penyimpanan Firebase dan upload instan.
+                    Otomatis dikompresi di browser (Client-Side Canvas) sehingga hemat penyimpanan Supabase dan upload instan.
                   </p>
                 </div>
               </div>

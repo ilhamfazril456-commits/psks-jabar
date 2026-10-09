@@ -2498,7 +2498,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="w-4 h-4 text-emerald-700 animate-spin" />
-                      Sedang menyimpan massal ke Database Firestore...
+                      Sedang menyimpan massal ke Database Supabase...
                     </span>
                     <div className="flex items-center gap-3">
                       <span>
@@ -2540,7 +2540,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                   Import Data Excel Berhasil!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                  Sebanyak <strong>{importResultCount} data anggota</strong> berhasil dimasukkan dan disinkronkan secara realtime ke database Firestore untuk Tabel <strong>{pillar.shortName}</strong> dari <strong>Sheet "{selectedSheet}"</strong>.
+                  Sebanyak <strong>{importResultCount} data anggota</strong> berhasil dimasukkan dan disinkronkan secara realtime ke database Supabase untuk Tabel <strong>{pillar.shortName}</strong> dari <strong>Sheet "{selectedSheet}"</strong>.
                 </p>
               </div>
               <div className="pt-4 flex flex-wrap items-center justify-center gap-3">

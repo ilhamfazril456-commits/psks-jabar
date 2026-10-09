@@ -94,7 +94,7 @@ export const DEFAULT_PORTAL_FAQS: PortalFaqItem[] = [
   {
     id: 'faq-8',
     question: 'Apakah data pribadi dan NIK saya aman di portal ini?',
-    answer: '**Sangat aman**. Portal PSKS JABAR menerapkan standar keamanan berlapis berbasis Google Cloud Firestore, enkripsi data, dan mematuhi regulasi **UU Pelindungan Data Pribadi (UU PDP No. 27/2022)**. NIK dan data sensitif dilindungi dengan kontrol akses berbasis peran (RBAC) dan hanya digunakan untuk verifikasi kedinasan sosial resmi Pemerintah Provinsi Jawa Barat.',
+    answer: '**Sangat aman**. Portal PSKS JABAR menerapkan standar keamanan berlapis berbasis arsitektur data terenkripsi, perlindungan akses ketat, dan mematuhi regulasi **UU Pelindungan Data Pribadi (UU PDP No. 27/2022)**. NIK dan data sensitif dilindungi dengan kontrol akses berbasis peran (RBAC) dan hanya digunakan untuk verifikasi kedinasan sosial resmi Pemerintah Provinsi Jawa Barat.',
     category: 'akun_keamanan',
     order: 8,
     isActive: true,

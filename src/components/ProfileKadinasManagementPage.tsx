@@ -375,7 +375,7 @@ export const ProfileKadinasManagementPage: React.FC<ProfileKadinasManagementPage
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto justify-end order-1 sm:order-2">
             <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Perubahan tersimpan otomatis ke database Firestore dan langsung tampil di halaman Profil.</span>
+              <span>Perubahan tersimpan otomatis ke database Supabase dan langsung tampil di halaman Profil.</span>
             </div>
             <button
               type="button"

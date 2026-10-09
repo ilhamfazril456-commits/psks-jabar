@@ -200,7 +200,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
                 <span>Auto-Purge 30 Hari Aktif</span>
               </span>
               <span className="text-[10px] font-black bg-amber-400 text-slate-950 px-2.5 py-1 rounded-xl uppercase shadow-xs">
-                Realtime Firestore
+                Realtime Supabase
               </span>
             </div>
           </div>

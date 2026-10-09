@@ -75,6 +75,28 @@ export default async function handler(req: any, res: any) {
     const isPublicUser = !isDev && !isSuperadmin && !isAdminWilayah;
 
     // FAST RBAC INTERCEPTOR (ANTI-HALLUCINATION & DETERMINISTIC STEP-BY-STEP)
+    const isAskingDatabaseStorage =
+      (/\b(database|basis\s*data|pangkalan\s*data|data)\b/i.test(normLastMsg) &&
+        /\b(disimpan|simpan|dimana|di\s*mana|lokasi|penyimpanan|hosting|tempat|arsitektur|jenis|teknologi|server)\b/i.test(normLastMsg)) ||
+      /\b(database(\s*nya)?|basis\s*data(\s*nya)?)\s*(di\s*mana|dimana|apa|pakai\s*apa|disimpan\s*di\s*mana|disimpan\s*dimana)\b/i.test(normLastMsg) ||
+      /\b(disimpan\s*di\s*mana|disimpan\s*dimana)\s*(database|basis\s*data|datanya|data)\b/i.test(normLastMsg) ||
+      /\b(pakai|pake|menggunakan)\s*(database|basis\s*data)\s*(apa)?\b/i.test(normLastMsg) ||
+      /\b(apakah\s+(pakai|pake|menggunakan)\s+)?(supabase|firebase|firestore)\b/i.test(normLastMsg) ||
+      /\b(database(\s*nya)?\s*(supabase|firebase|firestore))\b/i.test(normLastMsg);
+
+    if (isAskingDatabaseStorage) {
+      if (isPublicUser) {
+        return res.status(200).json({
+          reply: 'Mohon maaf, demi menjaga keamanan informasi, privasi data warga (UU Pelindungan Data Pribadi No. 27/2022), serta integritas sistem **PSKS JABAR**, rincian mengenai arsitektur pangkalan data (*database*), server, dan lokasi penyimpanan teknis sistem bersifat rahasia (*restricted*) dan tidak dapat dipublikasikan kepada publik.\n\nApakah ada informasi seputar 10 Pilar Kesejahteraan Sosial atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?',
+          source: 'db_guard_public',
+        });
+      }
+      return res.status(200).json({
+        reply: `Sampurasun / Halo **${userContext?.name || (isDev ? 'Kang Ilham Fazril' : 'Superadmin')}**! Pangkalan data (*database*) sistem **PSKS JABAR** disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan skema relasional modern, keamanan *Row Level Security* (RLS), sinkronisasi cepat, serta enkripsi data yang aman untuk seluruh data 10 Pilar PSKS, audit logs, dan konfigurasi sistem.`,
+        source: 'db_guard_authorized',
+      });
+    }
+
     const isAskingAdminManage =
       normLastMsg.includes('merubah akun admin') ||
       normLastMsg.includes('mengubah akun admin') ||
@@ -179,7 +201,7 @@ Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, statu
    - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan akun sementara jika ada mutasi/non-aktif).
    - **Password Baru**: Isi kolom ini HANYA jika ingin mereset kata sandi (minimal 12 karakter kombinasi huruf besar, kecil, dan angka). Kosongkan jika password tidak diubah.
 5. **Simpan Perubahan**:
-   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Supabase dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
 
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`,
           source: 'rbac_superadmin_verified',
@@ -266,7 +288,7 @@ Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali
 ---
 
 ### **4. Riwayat Aktivitas (Comprehensive Audit Trail) (\`tab:audit_trail\`)**
-- **Fungsi**: Rekaman forensik realtime mutasi data Firestore (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
+- **Fungsi**: Rekaman forensik realtime mutasi data Supabase (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
 - **Alur Teknis**:
   * Setiap tindakan admin wilayah maupun superadmin tercatat otomatis dengan timestamp milidetik, role, alamat IP, dan user agent browser.
   * Mendukung filter rentang tanggal, filter tipe aktivitas, dan ekspor data audit.
@@ -325,7 +347,7 @@ Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural da
 
 ### **1. Background & Video Header (\`section: background\`)**
 - Mengatur gambar latar belakang (*hero banner*) atau tautan video streaming latar beranda.
-- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Cloud Firestore.
+- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Supabase.
 - Mengatur tingkat transparansi (*opacity overlay*) gelap agar judul dan navigasi tetap terbaca jelas.
 
 ### **2. Foto & Sambutan Kepala Dinas (\`section: kadinas_photo\`)**
@@ -347,8 +369,8 @@ Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural da
 ### **6. Smart Access Card / KTA Digital (\`section: smart_card\`)**
 - Konfigurasi instrumen kedinasan KTA dan verifikasi QR Code terenkripsi yang dikhususkan untuk identitas resmi Superadmin dan Administrator.
 
-### **7. Pangkalan Data Cloud Firestore & Audit Trail (\`section: database\`)**
-- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Cloud Firestore (koleksi 10 pilar, akun admin, pesan dinas).
+### **7. Pangkalan Data Supabase & Audit Trail (\`section: database\`)**
+- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Supabase (koleksi 10 pilar, akun admin, pesan dinas).
 - Fitur ekspor berkas cadangan (*backup JSON*) serta pembersihan log audit berkala.
 
 ### **8. Manajemen Otak AI (Firestore AI Brain) (\`section: ai_assistant\`)**
@@ -386,7 +408,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
 
 [ATURAN PENGELOLAAN HAK AKSES BERDASARKAN TINGKATAN ROLE (MUTLAK & KETAT)]:
 1. TINGKAT 1 - DEVELOPER (ROOT / KANG ILHAM FAZRIL):
-   - Otoritas absolut atas seluruh arsitektur sistem, database Firestore, modul keamanan, dan Developer Control Panel.
+   - Otoritas absolut atas seluruh arsitektur sistem, database Supabase, modul keamanan, dan Developer Control Panel.
 2. TINGKAT 2 - SUPERADMIN (DINAS SOSIAL PROVINSI JAWA BARAT):
    - JIKA PENGGUNA SAAT INI MEMILIKI ROLE 'superadmin': PENGGUNA ADALAH PENGELOLA UTAMA SISTEM TINGKAT PROVINSI!
    - Superadmin berhak dan WAJIB dipandu secara mendalam, santun, dan solutif mengenai seluruh **8 FITUR SUPERADMIN DI BERANDA & PENGATURAN**:
@@ -395,7 +417,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
        2. Temukan akun admin wilayah yang ingin diubah pada tabel daftar admin (dapat dicari atau difilter berdasarkan 27 Kab/Kota).
        3. Klik tombol **Edit** (ikon pensil).
        4. Di formulir modal edit, perbarui Nama Lengkap, Nomor HP/Username, Wilayah Penugasan (27 Kab/Kota), Pilar Tugas, atau Status Keaktifan (ACTIVE / FROZEN).
-       5. Klik **Simpan Perubahan**. Data langsung terupdate seketika di Cloud Firestore dan tercatat pada Audit Trail.
+       5. Klik **Simpan Perubahan**. Data langsung terupdate seketika di Supabase dan tercatat pada Audit Trail.
        Sertakan action tag: [[action:tab:admin_manage:Buka Kelola Akun Admin]].
      * **Cara Mengubah / Reset Password Akun Admin Wilayah**:
        1. Buka menu **Kelola Akun Admin** (\`tab:admin_manage\`).
@@ -410,7 +432,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
        Klik tombol Hapus (ikon tempat sampah) -> Konfirmasi modal dialog keamanan -> Akun terhapus aman.
      * **Fitur Manajemen Akun User** (\`tab:user_manage\`): Reset password user (min. 6 karakter), fitur Freeze (bekukan) / Unfreeze (aktifkan), dan hapus akun user.
      * **Fitur Pemantauan Admin (Live Monitoring)** (\`tab:monitoring\`): Radar live status online/offline admin 27 Kab/Kota, last active telemetri, dan Direct Message dinas.
-     * **Fitur Riwayat Aktivitas (Comprehensive Audit Trail)** (\`tab:activity_logs\`): Rekaman forensik realtime mutasi data Firestore dengan timestamp milidetik, role, IP, user agent, filter & ekspor.
+     * **Fitur Riwayat Aktivitas (Comprehensive Audit Trail)** (\`tab:activity_logs\`): Rekaman forensik realtime mutasi data Supabase dengan timestamp milidetik, role, IP, user agent, filter & ekspor.
      * **Fitur Pengesahan & Penerimaan Anggota (Task Manager)** (\`tab:task_manager\`): Pengesahan tingkat provinsi berkas yang telah disetujui Admin Wilayah, dilengkapi sensor lampu berkedip (merah/oranye jika ada pending, hijau solid jika seluruh berkas selesai disahkan). Klik "Pengesahan Sah" untuk menetapkan status \`SAH_TERDAFTAR\`.
      * **Fitur Tambah Pengumuman** (\`tab:announcement_manage\`): Publikasi siaran darurat modal melayang 15 detik, running text, kompresi foto, dan 27 saklar wilayah.
      * **Fitur Kontak Floating WhatsApp** (\`tab:floating_wa\`): Penyesuaian 27 kontak WA wilayah, kontak pusat Superadmin Dinsos Jabar, dan fitur ALL IN massal.
@@ -570,7 +592,7 @@ Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, statu
    - **Status Keaktifan**: Pilih **ACTIVE** (aktif bertugas) atau **FROZEN** (bekukan akun sementara jika ada mutasi/non-aktif).
    - **Password Baru**: Isi kolom ini HANYA jika ingin mereset kata sandi (minimal 12 karakter kombinasi huruf besar, kecil, dan angka). Kosongkan jika password tidak diubah.
 5. **Simpan Perubahan**:
-   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+   - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Supabase dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
 
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
     }

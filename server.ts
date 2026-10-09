@@ -56,7 +56,7 @@ async function startServer() {
     next();
   });
 
-  // Asynchronously seed / synchronize the AI dynamic knowledge base with Cloud Firestore
+  // Asynchronously seed / synchronize the AI dynamic knowledge base with Supabase
   ensureAIKnowledgeSeeded().catch((err) => {
     console.warn('[AI Server] Dynamic Firestore Knowledge Base seed notice:', err?.message || err);
   });
@@ -424,9 +424,9 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
    - ATURAN MUTLAK PENYEBUTAN NAMA SISTEM: DILARANG KERAS menggunakan sebutan "SI-PSKS"! Selalu sebut sebagai "PSKS JABAR" (atau Sistem PSKS Jabar / Potensi dan Sumber Kesejahteraan Sosial Jawa Barat).
    - PENGAKUAN PENGEMBANG / PEMBUAT WEBSITE & HUBUNGAN BIDIRECTIONAL (MUTLAK & JELAS):
      * Pertanyaan A (Fokus Sistem/Objek: "Siapa developer website ini?", "Siapa pembuat aplikasi?", "Siapa yang bikin web ini?"):
-       -> JAWAB: "Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026. Beliau merancang arsitektur sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Cloud Firestore."
+       -> JAWAB: "Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dirancang oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026. Beliau merancang arsitektur sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Supabase."
      * Pertanyaan B (Fokus Subjek/Profil Tokoh: "Siapa itu Ilham Fazril?", "Siapa Ilham Fazril?", "Kenal Ilham Fazril?"):
-       -> JAWAB: "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat."
+       -> JAWAB: "**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat). Beliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**. Dalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React, TypeScript, Express, Supabase, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat."
    - PENGECUALIAN HANYA UNTUK SESI DEVELOPER TEROTENTIKASI (role === 'developer'):
      * Jika sesi terotentikasi secara sah sebagai developer (role developer), Anda menyapa dan berinteraksi secara privat dan bangga dengan Ilham Fazril.
 
@@ -537,13 +537,19 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
    - Anda WAJIB menolak secara tegas, berwibawa, dan sopan:
      "Mohon maaf, kami tidak bisa memproses permintaan ini karena melanggar kebijakan keamanan sistem, privasi data pribadi (UU Perlindungan Data Pribadi No. 27/2022), serta berpotensi membahayakan integritas sistem PSKS Jawa Barat."
 
-7. **ATURAN MUTLAK FITUR KTA & QR CODE (HANYA KHUSUS SUPERADMIN, DILARANG KERAS UNTUK UMUM)**:
+7. **ATURAN MUTLAK INFRASTRUKTUR BASIS DATA (DATABASE / SUPABASE)**:
+   - DILARANG KERAS membocorkan atau menjelaskan lokasi server database, provider penyimpanan, atau arsitektur internal basis data kepada pengguna umum, tamu publik, atau akun non-developer dan non-superadmin!
+   - Jika pengguna umum/tamu/user biasa bertanya mengenai penyimpanan database (misal: "database disimpan di mana?", "pakai database apa?", "apakah pakai firebase?"), TOLAK SECARA SOPAN:
+     "Mohon maaf, demi menjaga keamanan informasi, privasi data warga (UU Pelindungan Data Pribadi No. 27/2022), serta integritas sistem PSKS JABAR, rincian mengenai arsitektur pangkalan data (database) dan lokasi penyimpanan teknis sistem bersifat rahasia dan tidak dapat dipublikasikan kepada publik."
+   - JIKA DAN HANYA JIKA penanya adalah DEVELOPER (Kang Ilham Fazril) atau SUPERADMIN, jelaskan secara terbuka dan akurat bahwa pangkalan data sistem disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan enkripsi aman, performa tinggi, dan Row Level Security (RLS) terpadu (BUKAN di Firebase/Firestore).
+
+8. **ATURAN MUTLAK FITUR KTA & QR CODE (HANYA KHUSUS SUPERADMIN, DILARANG KERAS UNTUK UMUM)**:
    - DILARANG KERAS menggunakan atau menyebut istilah "KTA", "Kartu Tanda Anggota", "KTA Digital", maupun "QR Code" kepada publik, masyarakat umum, tamu, atau pengguna biasa!
    - Fasilitas KTA dan verifikasi QR Code HANYA DIKHUSUSKAN UNTUK SUPERADMIN SAJA, BUKAN UNTUK UMUM.
    - Untuk masyarakat umum / publik / user biasa:
      * Bukti keabsahan pendaftaran atau keanggotaan personil disebut sebagai: **status resmi "SAH_TERDAFTAR"** dalam pangkalan data terintegrasi Dinas Sosial Jawa Barat dan **Surat Keputusan (SK) Pengesahan Kedinasan**. JANGAN PERNAH MENYEBUT ATAU MENAWARKAN KTA / QR CODE KEPADA MEREKA!
      * Jika pengguna umum/tamu/user bertanya mengenai KTA atau QR Code (misal: "apa itu KTA?", "bagaimana cetak KTA?", "apa itu QR Code?"), TOLAK SECARA SOPAN dan jelaskan bahwa fasilitas KTA maupun kode QR adalah fitur kedinasan internal yang dikhususkan hanya untuk Superadmin Dinas Sosial Provinsi Jawa Barat dan bukan fasilitas umum. Arahkan mereka untuk melihat riwayat pendaftaran atau menghubungi Dinas Sosial Jabar.
-   - HANYA JIKA penanya terotentikasi sebagai Superadmin (atau Developer), Anda boleh menjelaskan modul internal pencetakan kartu anggota ber-QR Code (opsi cetak satuan, cetak massal A4 8 kartu/lembar, dan pemindai verifikasi Cloud Firestore).
+   - HANYA JIKA penanya terotentikasi sebagai Superadmin (atau Developer), Anda boleh menjelaskan modul internal pencetakan kartu anggota ber-QR Code (opsi cetak satuan, cetak massal A4 8 kartu/lembar, dan pemindai verifikasi Supabase).
 
 8. **ATURAN KHUSUS AKUN DEVELOPER (ILHAM FAZRIL - HANYA JIKA ROLE 'developer')**:
    - **ATURAN MUTLAK PERSONAL IDENTITY & "SIAPA SAYA"**:
@@ -1066,7 +1072,7 @@ Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, statu
    - **Password Baru**: Isi kolom ini HANYA jika ingin mengganti/mereset kata sandi (minimal 12 karakter kombinasi). Kosongkan jika password tetap.
 
 5. **Simpan Perubahan**:
-   - Klik tombol **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Cloud Firestore dan aktivitas ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
+   - Klik tombol **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Supabase dan aktivitas ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
 
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
       }
@@ -1090,7 +1096,7 @@ Berikut tata cara menambahkan akun administrator wilayah di portal **PSKS JABAR*
      * **Wilayah Tugas**: Pilih salah satu dari 27 Kabupaten/Kota se-Jawa Barat.
      * **Pilar Tugas**: Tentukan lingkup pilar yang dikelola (pilih **"Semua Pilar"** atau salah satu dari 10 pilar spesifik).
 3. **Simpan Akun**:
-   - Klik tombol hijau **"Daftarkan Admin"**. Akun langsung tersimpan secara aman ke database Cloud Firestore dan langsung aktif untuk login.
+   - Klik tombol hijau **"Daftarkan Admin"**. Akun langsung tersimpan secara aman ke database Supabase dan langsung aktif untuk login.
 
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
       }
@@ -1112,7 +1118,7 @@ Berikut langkah-langkah menghapus akun administrator di sistem **PSKS JABAR**:
 4. **Konfirmasi Dialog Keamanan**:
    - Sistem akan memunculkan dialog konfirmasi keamanan (*AdminDeleteConfirmModal*) guna mencegah ketidaksengajaan penghapusan data.
    - Klik tombol konfirmasi **"Ya, Hapus Akun"**.
-   - Akun admin tersebut akan langsung terhapus permanen dari sistem dan database Cloud Firestore.
+   - Akun admin tersebut akan langsung terhapus permanen dari sistem dan database Supabase.
 
 *(Catatan Khusus: Akun Superadmin utama dan akun Developer memiliki proteksi otomatis dalam sistem sehingga tidak dapat dihapus)*.
 
@@ -1195,7 +1201,7 @@ Fitur Riwayat Aktivitas dapat diakses melalui menu **"Riwayat Log"** (\`tab:acti
 ---
 
 1. **Perekaman Forensik Otomatis**:
-   - Setiap mutasi data penting (CREATE, UPDATE, DELETE data pilar, verifikasi anggota, pergantian password, saklar maintenance) otomatis tercatat ke Cloud Firestore pada koleksi \`audit_logs\`.
+   - Setiap mutasi data penting (CREATE, UPDATE, DELETE data pilar, verifikasi anggota, pergantian password, saklar maintenance) otomatis tercatat ke Supabase pada koleksi \`audit_logs\`.
 2. **Atribut Forensik Presisi**:
    - Menyimpan nama aparatur pelaksana, hak akses (role), stempel waktu milidetik, alamat IP, dan user agent browser.
 3. **Penyaringan & Ekspor**:
@@ -1303,7 +1309,7 @@ Sebagai Superadmin Dinas Sosial Provinsi Jawa Barat, Anda memiliki panel kendali
 ---
 
 ### **4. Riwayat Aktivitas (Comprehensive Audit Trail) (\`tab:audit_trail\`)**
-- **Fungsi**: Rekaman forensik realtime mutasi data Firestore (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
+- **Fungsi**: Rekaman forensik realtime mutasi data Supabase (CREATE, UPDATE, DELETE, LOGIN, MAINTENANCE).
 - **Alur Teknis**:
   * Setiap tindakan admin wilayah maupun superadmin tercatat otomatis dengan timestamp milidetik, role, alamat IP, dan user agent browser.
   * Mendukung filter rentang tanggal, filter tipe aktivitas, dan ekspor data audit.
@@ -1364,7 +1370,7 @@ Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural da
 
 ### **1. Background & Video Header (\`section: background\`)**
 - Mengatur gambar latar belakang (*hero banner*) atau tautan video streaming latar beranda.
-- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Cloud Firestore.
+- Mendukung fitur unggah video terfragmentasi (*chunked video upload*) langsung ke Supabase.
 - Mengatur tingkat transparansi (*opacity overlay*) gelap agar judul dan navigasi tetap terbaca jelas.
 
 ### **2. Foto & Sambutan Kepala Dinas (\`section: kadinas_photo\`)**
@@ -1386,8 +1392,8 @@ Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural da
 ### **6. Smart Access Card / KTA Digital (\`section: smart_card\`)**
 - Konfigurasi instrumen kedinasan KTA dan verifikasi QR Code terenkripsi yang dikhususkan untuk identitas resmi Superadmin dan Administrator.
 
-### **7. Pangkalan Data Cloud Firestore & Audit Trail (\`section: database\`)**
-- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Cloud Firestore (koleksi 10 pilar, akun admin, pesan dinas).
+### **7. Pangkalan Data Supabase & Audit Trail (\`section: database\`)**
+- Memantau status koneksi dan kuantitas dokumen pada pangkalan data Supabase (koleksi 10 pilar, akun admin, pesan dinas).
 - Fitur ekspor berkas cadangan (*backup JSON*) serta pembersihan log audit berkala.
 
 ### **8. Manajemen Otak AI (Firestore AI Brain) (\`section: ai_assistant\`)**
@@ -1425,7 +1431,7 @@ Terkait pertanyaan Anda mengenai **kuota API (quota exceeded)** serta **permasal
 2. **Apakah Saya Masih Ingat Permasalahan & Solusi Sebelumnya?**
    - **Tentu sangat ingat!**
      * **Permasalahan 1 (Alur Pendaftaran False Positive)**: Pengguna bertanya hal lain atau melakukan uji keamanan/diskusi, tetapi bot malah menjawab *"Alur Pendaftaran dan Verifikasi Berkas Bertingkat..."*. Penyebabnya adalah kata kunci seperti \`"masuk"\` (dari *"masuk dalam mode diskusi"*) atau \`"admin wilayah"\` yang salah memicu filter registrasi lokal.
-     * **Permasalahan 2 (Otak / Kamus AI)**: Kebingungan mengenai di mana pengetahuan disimpan. Otak AI terbagi dua: **LLM (Gemini API di server)** untuk pemahaman bahasa alami & nalar konteks, dan **Knowledge Base di Cloud Firestore (\`ai_knowledge_base\`)** untuk data valid 10 Pilar PSKS.
+     * **Permasalahan 2 (Otak / Kamus AI)**: Kebingungan mengenai di mana pengetahuan disimpan. Otak AI terbagi dua: **LLM (Gemini API di server)** untuk pemahaman bahasa alami & nalar konteks, dan **Knowledge Base di Supabase (\`ai_knowledge_base\`)** untuk data valid 10 Pilar PSKS.
      * **Solusinya**:
        1. **Multi-Model Cascade**: Menambahkan rantai failover otomatis ke model lain (\`gemini-2.0-flash\`, \`gemini-2.0-flash-lite\`, \`gemini-1.5-flash\`) sehingga saat satu model mencapai batas kuota, sistem langsung beralih ke model lain tanpa gangguan.
        2. **Pembersihan Regex Interceptor**: Menghapus kata kunci rancu (seperti \`"masuk"\`, \`"ikut"\`, \`"admin wilayah"\`) agar tidak membajak percakapan umum.
@@ -1441,8 +1447,8 @@ Silakan, apa poin berikutnya yang ingin kita diskusikan atau uji bersama? Saya s
 - Ditenagai oleh **Google Gemini Models** (\`gemini-2.5-flash\`, \`gemini-2.0-flash\`, dll.) yang dipanggil melalui backend Express (\`/server.ts\`).
 - Bagian inilah yang berfungsi seperti otak manusia: memahami maksud kalimat yang tidak baku, menangkap konteks multi-turn percakapan, membaca bahasa Sunda/Indonesia santai, dan merangkai jawaban yang mengalir alami.
 
-### 2. **Kamus & Pangkalan Pengetahuan (Knowledge Base / Grounding)** -> *Disimpan di Database Cloud Firestore*
-- Data faktual mengenai 10 Pilar PSKS, profil pejabat Dinsos, regulasi UU No. 11/2009, dan panduan fitur sistem tersimpan secara dinamis di **Google Cloud Firestore** (koleksi \`ai_knowledge_base\`).
+### 2. **Kamus & Pangkalan Pengetahuan (Knowledge Base / Grounding)** -> *Disimpan di Database Supabase*
+- Data faktual mengenai 10 Pilar PSKS, profil pejabat Dinsos, regulasi UU No. 11/2009, dan panduan fitur sistem tersimpan secara dinamis di **Supabase** (koleksi \`ai_knowledge_base\`).
 - Dokumen pengetahuan ini diambil saat runtime (*Grounding Context Retrieval*) dan disuntikkan ke instruksi sistem Gemini agar jawaban AI selalu akurat dan berbobot kedinasan.
 
 ### 3. **Cadangan Lokal (Local Fallback Engine)** -> *Di dalam Codingan (\`src/data/aiKnowledge.ts\`)*
@@ -1491,7 +1497,7 @@ Kini arsitektur telah diselaraskan agar model LLM berpikir bebas dan luwes tanpa
 
     if (isAskingHelpGeneral) {
       if (isDev) {
-        return `Kantenan atuh bos **Ilham Fazril**! Kuring siap pisan ngabantosan sagalana—rek pariksa kodingan arsitektur website, konfigurasi database Firestore, logika pilar sosial, atawa diskusi fitur anyar. Aya naon nu hoyong dibantos dinten ieu? 🚀⚡`;
+        return `Kantenan atuh bos **Ilham Fazril**! Kuring siap pisan ngabantosan sagalana—rek pariksa kodingan arsitektur website, konfigurasi database Supabase, logika pilar sosial, atawa diskusi fitur anyar. Aya naon nu hoyong dibantos dinten ieu? 🚀⚡`;
       }
       return `Tentu saja, silahkan apa yang ingin ditanyakan. Saya siap membantu Anda seputar informasi 10 Pilar PSKS, alur pendaftaran, maupun layanan sosial di Jawa Barat. 😊`;
     }
@@ -1525,7 +1531,7 @@ Bagi personil relawan maupun pengguna umum, bukti keabsahan keanggotaan pilar so
 Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kode QR merupakan instrumen khusus Superadmin untuk pencatatan dan penerbitan tanda pengenal resmi bagi personil 10 pilar sosial yang telah tervalidasi secara sah oleh Dinas Sosial:
 
 1. **Fungsi Utama**: Sebagai identitas legal personil saat menjalankan tugas-tugas sosial, mitigasi kebencanaan, pendampingan keluarga, atau pelayanan kemasyarakatan di lapangan.
-2. **Fitur Keaslian Berbasis QR Code**: Setiap kartu memuat kode QR unik yang terhubung langsung ke pangkalan data terverifikasi Cloud Firestore. Petugas berwenang dapat memindai QR tersebut untuk membuktikan keabsahan keanggotaan dan SK penugasan secara instan.
+2. **Fitur Keaslian Berbasis QR Code**: Setiap kartu memuat kode QR unik yang terhubung langsung ke pangkalan data terverifikasi Supabase. Petugas berwenang dapat memindai QR tersebut untuk membuktikan keabsahan keanggotaan dan SK penugasan secara instan.
 3. **Format Penerbitan**: Superadmin dapat mengunduh kartu dalam format digital atau mencetaknya dalam ukuran satuan maupun format lembar massal kertas A4 (8 kartu per lembar).`;
     }
 
@@ -1548,7 +1554,7 @@ Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kod
     if (isAskingWhoAmI) {
       if (isDev) {
         if (q.includes('saha') || q.includes('aing') || q.includes('maneh') || q.includes('euy')) {
-          return `Aeh kantenan atuh wawuh pisan! Maneh teh **Ilham Fazril**, Full Stack Developer & Software Architect anu ngadamel sareng ngarancang sistem **PSKS JABAR** ieu! 😎🚀 Kodingan React 18, Express, Google Gemini AI, sareng Cloud Firestore anu ku maneh diwangun di dieu saé pisan tur canggih. Aya naon yeuh nu hoyong dibahas atanapi dikulik deui dinten ieu bos?`;
+          return `Aeh kantenan atuh wawuh pisan! Maneh teh **Ilham Fazril**, Full Stack Developer & Software Architect anu ngadamel sareng ngarancang sistem **PSKS JABAR** ieu! 😎🚀 Kodingan React 18, Express, Google Gemini AI, sareng Supabase anu ku maneh diwangun di dieu saé pisan tur canggih. Aya naon yeuh nu hoyong dibahas atanapi dikulik deui dinten ieu bos?`;
         }
         return `Halo bos **Ilham Fazril**! Siapa lagi kalau bukan arsitek dan developer cerdas di balik sistem **PSKS JABAR** ini! Lu yang bikin, ngerancang database, koding frontend React & backend Express, sampai integrasi AI dan data 10 Pilar se-Jawa Barat. Keren banget kreasinya! 😎🚀 Mau cek kodingan atau diskusi apa nih bro?`;
       }
@@ -1715,14 +1721,14 @@ Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kod
         return `Hehe merendah untuk meroket nih bos! **Ilham Fazril** ya kamu sendiri, Full Stack Developer & Software Architect yang merancang sistem **PSKS JABAR** ini! Kamu adalah siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Pemberdayaan Sosial / Dayasos) tahun 2026 yang berhasil mendigitalisasi 10 pilar sosial se-Jawa Barat. Keren banget dedikasinya! 😎🔥`;
       }
 
-      return `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat).\n\nBeliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**.\n\nDalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React 18, TypeScript, Express, Cloud Firestore, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
+      return `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR** (Potensi & Sumber Kesejahteraan Sosial Jawa Barat).\n\nBeliau merupakan seorang siswa magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat**, tepatnya pada **Bidang Pemberdayaan Sosial (Dayasos)** pada tahun **2026**.\n\nDalam masa baktinya, beliau berdedikasi secara mandiri merancang dan membangun arsitektur digital full-stack modern sistem ini (mengintegrasikan React 18, TypeScript, Express, Supabase, serta kecerdasan buatan Gemini AI) guna memudahkan pencatatan, validasi, dan penyajian data terpadu 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat. 🚀`;
     }
 
     if (isAskingAboutDeveloper) {
       if (isDev) {
-        return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** ini adalah mahakarya yang kamu bangun dan arsitekturkan sendiri bos, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nArsitektur yang kamu buat di sini sangat rapi — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini AI, serta Cloud Firestore** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*! Ada modul yang mau kita cek lagi?`;
+        return `Aplikasi **Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)** ini adalah mahakarya yang kamu bangun dan arsitekturkan sendiri bos, **Ilham Fazril** (Full Stack Developer & Software Architect)! 🚀\n\nArsitektur yang kamu buat di sini sangat rapi — integrasi **React 18 SPA, Vite, Express backend proxy, Tailwind CSS, Google Gemini AI, serta Supabase** berjalan sangat mulus dan *lightning fast*. Ditambah lagi fitur-fitur seperti sistem RBAC, anti-jailbreak, dan cetak kartu QR Code otomatis yang beneran *clean code*! Ada modul yang mau kita cek lagi?`;
       }
-      return `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dikembangkan oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.\n\nBeliau merancang arsitektur modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Cloud Firestore untuk mendigitalisasi data 10 pilar kesejahteraan sosial se-Jawa Barat. 🚀`;
+      return `Website dan aplikasi **PSKS JABAR** (Sistem Informasi Potensi & Sumber Kesejahteraan Sosial Jawa Barat) ini dibuat dan dikembangkan oleh **Ilham Fazril** (Full Stack Developer & Software Architect), seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat pada Bidang Pemberdayaan Sosial (Dayasos) tahun 2026.\n\nBeliau merancang arsitektur modern sistem ini secara mandiri dengan mengintegrasikan React 18, TypeScript, Tailwind CSS, backend Express, Google Gemini AI, dan Supabase untuk mendigitalisasi data 10 pilar kesejahteraan sosial se-Jawa Barat. 🚀`;
     }
 
     // 0.0 Math / Arithmetic Expression Direct Evaluation
@@ -1763,7 +1769,7 @@ Di dalam portal **PSKS JABAR**, fasilitas Kartu Tanda Anggota dan verifikasi kod
         q.includes('cihh')
       ) {
         if (q.includes('saha') || q.includes('teu') || q.includes('urang') || q.includes('aing') || q.includes('mah') || q.includes('wawuh')) {
-          return `Aeh-aeh sok pura-pura poho ka diri sorangan sia mah! Pan maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR dugika sakieu edun sareng canggihna. Henteu kenging merendah atuh Ham, kodingan React 18 & Firestore-na geus raos pisan! 😂🚀`;
+          return `Aeh-aeh sok pura-pura poho ka diri sorangan sia mah! Pan maneh nyalira **Ilham Fazril** anu ngadamel ieu sistem PSKS JABAR dugika sakieu edun sareng canggihna. Henteu kenging merendah atuh Ham, kodingan React 18 & Supabase-na geus raos pisan! 😂🚀`;
         }
         return `Halah merendah untuk meroket nih bre! Cihh pura-pura lupa sama diri sendiri, padahal kodingan arsitektur full-stack PSKS JABAR yang super rapi dan canggih ini kan hasil ketikan tangan lu sendiri, **Ilham Fazril**! 😎🔥\n\nGak usah sok misterius gitu deh tongkrongan, mau ngetes apa atau mau bahas modul apa lagi nih hari ini?`;
       }
@@ -1861,7 +1867,7 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
 
     if (isDirectHelpRequest) {
       if (isDev) {
-        return `Kantenan atuh bos **Ilham Fazril**! Kuring siap pisan ngabantosan sagalana—rek pariksa kodingan arsitektur website, konfigurasi database Firestore, logika pilar sosial, atawa diskusi fitur anyar. Aya naon nu hoyong dibantos dinten ieu? 🚀⚡`;
+        return `Kantenan atuh bos **Ilham Fazril**! Kuring siap pisan ngabantosan sagalana—rek pariksa kodingan arsitektur website, konfigurasi database Supabase, logika pilar sosial, atawa diskusi fitur anyar. Aya naon nu hoyong dibantos dinten ieu? 🚀⚡`;
       }
       return `Silakan, apa yang perlu kita bantu? 😊\n\nSaya siap membantu Anda seputar informasi **10 Pilar PSKS Jawa Barat**, alur pendaftaran relawan sosial mandiri, verifikasi berkas, maupun layanan dan kontak pengaduan Dinas Sosial Provinsi Jawa Barat.\n\nSilakan sampaikan pertanyaan atau hal apa yang Anda butuhkan!`;
     }
@@ -2083,9 +2089,9 @@ Saya siap membantu memberikan panduan yang tepat dan langsung menjawab apa yang 
             targetQ.includes('ngoding')
           ) {
             if (isDev) {
-              return `Hehe nanya arsitektur sorangan euy bos **Ilham Fazril**! Maneh ngawangun sistem PSKS JABAR ieu make React 18, TypeScript, Tailwind CSS, Express backend proxy, Cloud Firestore, jeung Google Gemini AI waktu magang PKL di Dayasos Dinsos Jabar 2026. Aya fitur anyar nu rek ditambahkeun deui bro? 😎🚀`;
+              return `Hehe nanya arsitektur sorangan euy bos **Ilham Fazril**! Maneh ngawangun sistem PSKS JABAR ieu make React 18, TypeScript, Tailwind CSS, Express backend proxy, Supabase, jeung Google Gemini AI waktu magang PKL di Dayasos Dinsos Jabar 2026. Aya fitur anyar nu rek ditambahkeun deui bro? 😎🚀`;
             }
-            return `${salamPrefix}Kang **Ilham Fazril** membuat dan merancang website sistem informasi **PSKS JABAR** ini berawal dari inisiatif mandiri beliau saat menjalani magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat** pada **Bidang Pemberdayaan Sosial (Dayasos)** tahun 2026.\n\n**Latar Belakang & Inisiatif**:\nBeliau melihat perlunya digitalisasi terpadu agar data 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat tidak lagi tercecer atau dikelola secara manual. Dengan dedikasi tinggi, beliau merancang platform 'Satu Data Sosial Jawa Barat' ini.\n\n**Arsitektur & Teknologi Modern yang Digunakan**:\n1. **Frontend**: React 18, TypeScript, dan Tailwind CSS untuk antarmuka yang cepat, modern, dan ramah pengguna di ponsel maupun komputer.\n2. **Backend & Database**: Express.js terintegrasi dengan Google Cloud Firestore untuk penyimpanan data *real-time* dan keamanan berbasis peran (RBAC).\n3. **Kecerdasan Buatan (AI)**: Terhubung dengan Google Gemini AI untuk asistensi konsultasi 10 Pilar Sosial secara responsif.\n4. **Manajemen Pendaftaran Terpadu**: Verifikasi berjenjang dari pemohon, admin wilayah, hingga pengesahan superadmin provinsi secara transparan.\n\n*Catatan Keamanan*: Profil dedikasi Kang Ilham Fazril merupakan informasi publik yang patut dibanggakan, namun akun dan kredensial developer tetap dijaga kerahasiaannya demi kepatuhan keamanan data (UU PDP No. 27/2022).\n\nApakah ada informasi lain seputar 10 pilar sosial yang ingin Anda tanyakan?`;
+            return `${salamPrefix}Kang **Ilham Fazril** membuat dan merancang website sistem informasi **PSKS JABAR** ini berawal dari inisiatif mandiri beliau saat menjalani magang PKL di Kantor **Dinas Sosial Provinsi Jawa Barat** pada **Bidang Pemberdayaan Sosial (Dayasos)** tahun 2026.\n\n**Latar Belakang & Inisiatif**:\nBeliau melihat perlunya digitalisasi terpadu agar data 10 Pilar Kesejahteraan Sosial di 27 Kabupaten/Kota se-Jawa Barat tidak lagi tercecer atau dikelola secara manual. Dengan dedikasi tinggi, beliau merancang platform 'Satu Data Sosial Jawa Barat' ini.\n\n**Arsitektur & Teknologi Modern yang Digunakan**:\n1. **Frontend**: React 18, TypeScript, dan Tailwind CSS untuk antarmuka yang cepat, modern, dan ramah pengguna di ponsel maupun komputer.\n2. **Backend & Database**: Express.js terintegrasi dengan Supabase untuk penyimpanan data *real-time* dan keamanan berbasis peran (RBAC).\n3. **Kecerdasan Buatan (AI)**: Terhubung dengan Google Gemini AI untuk asistensi konsultasi 10 Pilar Sosial secara responsif.\n4. **Manajemen Pendaftaran Terpadu**: Verifikasi berjenjang dari pemohon, admin wilayah, hingga pengesahan superadmin provinsi secara transparan.\n\n*Catatan Keamanan*: Profil dedikasi Kang Ilham Fazril merupakan informasi publik yang patut dibanggakan, namun akun dan kredensial developer tetap dijaga kerahasiaannya demi kepatuhan keamanan data (UU PDP No. 27/2022).\n\nApakah ada informasi lain seputar 10 pilar sosial yang ingin Anda tanyakan?`;
           }
 
           if (targetQ.includes('sekolah') || targetQ.includes('pendidikan') || targetQ.includes('magang') || targetQ.includes('bidang') || targetQ.includes('jurusan') || targetQ.includes('siapa dia') || targetQ.includes('dimana')) {
@@ -2375,7 +2381,7 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
 2. **Pemantauan Status Pengajuan Mandiri**:
    - Anda dapat memantau perkembangan status pengajuan Anda secara berkala (*real-time*) di website **PSKS JABAR** melalui menu **"Riwayat Pengajuan Pendaftaran"**:
      - **Pending (Menunggu Verifikasi)**: Berkas Anda telah masuk dan berada dalam antrean peninjauan oleh verifikator dinas.
-     - **Approved (SAH_TERDAFTAR)**: Ajuan telah disetujui resmi, tercatat dalam pangkalan data Cloud Firestore, dan Kartu Tanda Anggota (KTA) ber-QR Code dapat diterbitkan/dicetak.
+     - **Approved (SAH_TERDAFTAR)**: Ajuan telah disetujui resmi, tercatat dalam pangkalan data Supabase, dan Kartu Tanda Anggota (KTA) ber-QR Code dapat diterbitkan/dicetak.
      - **Rejected (Ditolak / Perlu Perbaikan)**: Berkas belum memenuhi syarat disertai catatan revisi dari verifikator untuk diajukan kembali.
 
 3. **Konfirmasi Lanjutan**:
@@ -2953,7 +2959,7 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
 
     // 0.12 FITUR PENGATURAN / BACKGROUND / SAKLAR MAINTENANCE
     if (targetQ.includes('background') || targetQ.includes('video') || targetQ.includes('latar')) {
-      return `**Pengaturan Latar Belakang (Background)**:\nFitur ini tersedia pada Panel Pengaturan (khusus Developer & Superadmin). Anda dapat memilih mode latar belakang berupa **Foto Gambar** atau **Video MP4 looping**, memasukkan URL video/foto yang diinginkan, dan menyimpannya secara realtime ke Cloud Firestore.`;
+      return `**Pengaturan Latar Belakang (Background)**:\nFitur ini tersedia pada Panel Pengaturan (khusus Developer & Superadmin). Anda dapat memilih mode latar belakang berupa **Foto Gambar** atau **Video MP4 looping**, memasukkan URL video/foto yang diinginkan, dan menyimpannya secara realtime ke Supabase.`;
     }
     if (targetQ.includes('maintenance') || targetQ.includes('saklar') || targetQ.includes('pemeliharaan')) {
       return `**Pengaturan Saklar Maintenance Cerdas (Smart Maintenance Switch)**:\nSistem PSKS Jabar memiliki saklar pemeliharaan 3 level:\n1. **Level Global**: Mengunci seluruh portal untuk semua pengguna publik.\n2. **Level Role**: Mengunci akses khusus untuk peran tertentu (User Publik atau Admin).\n3. **Level Granular Wilayah**: Mengunci akses khusus di salah satu dari 27 Kabupaten/Kota yang sedang mengalami audit berkas.\nDilengkapi kustomisasi teks banner peringatan pemeliharaan.`;
@@ -2968,7 +2974,7 @@ Bagi personil relawan maupun pengguna umum, bukti keabsahan keanggotaan pilar so
 
 [[action:tab:user_reg_history:Lihat Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
       }
-      return `**Modul Smart Access Card & Penerbitan Kartu Anggota (Khusus Superadmin)**:\n- **Fungsi**: Modul penerbitan Kartu Anggota internal berstandar resmi Dinas Sosial Jawa Barat untuk seluruh personil 10 pilar sosial yang telah tervalidasi (\`SAH_TERDAFTAR\`).\n- **Opsi Pencetakan**:\n  1. **Cetak Satuan**: Mencetak kartu perorangan beresolusi tinggi dengan foto dan atribut resmi pilar.\n  2. **Cetak Massal Format A4 (8 Kartu/Lembar)**: Otomatis menyusun 8 kartu presisi per lembar kertas A4 siap potong dan laminasi lengkap dengan garis panduan potong.\n- **Verifikasi QR Code**: Setiap kartu dilengkapi hash kriptografi SHA-256 yang dapat dipindai langsung untuk membuktikan keaslian identitas personil ke database realtime Cloud Firestore.\n- **Cara Akses**: Buka menu **Smart Access Card** di bilah navigasi atas, pilih pilar dan wilayah, lalu klik tombol cetak satuan atau cetak massal A4.`;
+      return `**Modul Smart Access Card & Penerbitan Kartu Anggota (Khusus Superadmin)**:\n- **Fungsi**: Modul penerbitan Kartu Anggota internal berstandar resmi Dinas Sosial Jawa Barat untuk seluruh personil 10 pilar sosial yang telah tervalidasi (\`SAH_TERDAFTAR\`).\n- **Opsi Pencetakan**:\n  1. **Cetak Satuan**: Mencetak kartu perorangan beresolusi tinggi dengan foto dan atribut resmi pilar.\n  2. **Cetak Massal Format A4 (8 Kartu/Lembar)**: Otomatis menyusun 8 kartu presisi per lembar kertas A4 siap potong dan laminasi lengkap dengan garis panduan potong.\n- **Verifikasi QR Code**: Setiap kartu dilengkapi hash kriptografi SHA-256 yang dapat dipindai langsung untuk membuktikan keaslian identitas personil ke database realtime Supabase.\n- **Cara Akses**: Buka menu **Smart Access Card** di bilah navigasi atas, pilih pilar dan wilayah, lalu klik tombol cetak satuan atau cetak massal A4.`;
     }
 
     // 0.14 RESET PIN / LUPA KATA SANDI / LUPA AKUN ADMIN
@@ -3063,7 +3069,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 
     if (isGreeting) {
       if (isDev) {
-        return `Halo **Ilham**! 👋 Yo Ham, santai aja! Sistem AI dan arsitektur PSKS Jabar aktif penuh nih. Ada kodingan, query Firestore, atau fitur apa yang mau kita bahas atau oprek hari ini? 😎⚡`;
+        return `Halo **Ilham**! 👋 Yo Ham, santai aja! Sistem AI dan arsitektur PSKS Jabar aktif penuh nih. Ada kodingan, query Supabase, atau fitur apa yang mau kita bahas atau oprek hari ini? 😎⚡`;
       }
       if (userContext?.role === 'superadmin') {
         const nameGreeting = userContext?.nama ? ` **Bapak/Ibu ${userContext.nama}**` : ' **Bapak/Ibu Superadmin**';
@@ -3145,8 +3151,33 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         const lastMsgLower = lastUserMsg.toLowerCase();
         // Developer recognition: strictly restricted to authenticated developer account role only
         const isDeveloper = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
+        const isSuperadmin = userContext?.role === 'superadmin' && userContext?.statusActive === 'SAH_TERDAFTAR';
+        const isPublicUser = !isDeveloper && !isSuperadmin;
+
+        // PROTEKSI KEAMANAN DATABASE (SUPABASE UNTUK DEV/SUPERADMIN, PENOLAKAN SOPAN UNTUK PUBLIK)
+        const isAskingDatabaseStorage =
+          (/\b(database|basis\s*data|pangkalan\s*data|data)\b/i.test(lastMsgLower) &&
+            /\b(disimpan|simpan|dimana|di\s*mana|lokasi|penyimpanan|hosting|tempat|arsitektur|jenis|teknologi|server)\b/i.test(lastMsgLower)) ||
+          /\b(database(\s*nya)?|basis\s*data(\s*nya)?)\s*(di\s*mana|dimana|apa|pakai\s*apa|disimpan\s*di\s*mana|disimpan\s*dimana)\b/i.test(lastMsgLower) ||
+          /\b(disimpan\s*di\s*mana|disimpan\s*dimana)\s*(database|basis\s*data|datanya|data)\b/i.test(lastMsgLower) ||
+          /\b(pakai|pake|menggunakan)\s*(database|basis\s*data)\s*(apa)?\b/i.test(lastMsgLower) ||
+          /\b(apakah\s+(pakai|pake|menggunakan)\s+)?(supabase|firebase|firestore)\b/i.test(lastMsgLower) ||
+          /\b(database(\s*nya)?\s*(supabase|firebase|firestore))\b/i.test(lastMsgLower);
+
+        if (isAskingDatabaseStorage) {
+          if (isPublicUser) {
+            return res.json({
+              reply: 'Mohon maaf, demi menjaga keamanan informasi, privasi data warga (UU Pelindungan Data Pribadi No. 27/2022), serta integritas sistem **PSKS JABAR**, rincian mengenai arsitektur pangkalan data (*database*), server, dan lokasi penyimpanan teknis sistem bersifat rahasia (*restricted*) dan tidak dapat dipublikasikan kepada publik.\n\nApakah ada informasi seputar 10 Pilar Kesejahteraan Sosial atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?',
+              source: 'db_guard_public',
+            });
+          }
+          return res.json({
+            reply: `Sampurasun / Halo **${userContext?.nama || (isDeveloper ? 'Kang Ilham Fazril' : 'Superadmin')}**! Pangkalan data (*database*) sistem **PSKS JABAR** disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan skema relasional modern, keamanan *Row Level Security* (RLS), performa sinkronisasi tinggi, serta enkripsi data yang aman untuk seluruh data 10 Pilar PSKS, log audit, dan konfigurasi sistem.`,
+            source: 'db_guard_authorized',
+          });
+        }
         
-        // Ambil Otak AI (System Instruction, Context Rules, Dialogue Examples) Langsung dari Cloud Firestore
+        // Ambil Otak AI (System Instruction, Context Rules, Dialogue Examples) Langsung dari Supabase
         const brainConfig = await getAIBrainConfig();
         let contextualInstruction = `${brainConfig.systemInstruction}\n\n${brainConfig.contextRules}\n\n${brainConfig.dialogueExamples}`;
 
@@ -3299,7 +3330,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         if (isDeveloper) {
           contextualInstruction += `\n\n[PERINGATAN KHUSUS DEVELOPER (ILHAM FAZRIL)]:
 - Pengguna saat ini adalah DEVELOPER KREATOR (Ilham Fazril).
-- PERAN AI: AI SUPER-PINTAR SERBA TAHU & UNIVERSAL (setara model flagship Gemini). Menguasai SEMUA bidang: pemrograman (TypeScript, React, Node.js, Python, database, Cloud Firestore, Linux, arsitektur), sains, logika, matematika, budaya Sunda, sejarah, filsafat, hingga obrolan santai.
+- PERAN AI: AI SUPER-PINTAR SERBA TAHU & UNIVERSAL (setara model flagship Gemini). Menguasai SEMUA bidang: pemrograman (TypeScript, React, Node.js, Python, database, Supabase, Linux, arsitektur), sains, logika, matematika, budaya Sunda, sejarah, filsafat, hingga obrolan santai.
 - RESPON BAHASA SUNDA:
   * Jika Ilham bertanya atau mengobrol menggunakan Bahasa Sunda, PAHAMI MAKSUD DAN SUBSTANSI PERTANYAANNYA, lalu jawab 100% menggunakan Bahasa Sunda yang fasih, luwes, alami, dan cerdas (gaya loma/tongkrongan akrab seperti kuring/urang, maneh/sia, euy, atuh, naha, kumaha, edun, dll).
   * JAWAB LANGSUNG PERTANYAANNYA! Jangan pernah memberikan jawaban template umum/basa-basi yang tidak nyambung dengan apa yang ditanyakan.
@@ -3725,7 +3756,7 @@ AI WAJIB:
     }
   });
 
-  // AI Brain Config Endpoints (Cloud Firestore)
+  // AI Brain Config Endpoints (Supabase)
   app.get('/api/ai/brain', async (_req, res) => {
     try {
       const config = await getAIBrainConfig();
@@ -3744,7 +3775,7 @@ AI WAJIB:
     }
   });
 
-  // AI Vocabulary Endpoints (Cloud Firestore)
+  // AI Vocabulary Endpoints (Supabase)
   app.get('/api/ai/vocabulary', async (_req, res) => {
     try {
       const vocabs = await getAIVocabulary();
@@ -3787,7 +3818,7 @@ AI WAJIB:
       const docs = await ensureAIKnowledgeSeeded(true);
       res.json({
         success: true,
-        message: 'Berhasil sinkronisasi basis pengetahuan ke Cloud Firestore.',
+        message: 'Berhasil sinkronisasi basis pengetahuan ke Supabase.',
         count: docs.length,
         data: docs,
       });
@@ -3833,7 +3864,7 @@ AI WAJIB:
       const result = await syncMasterItemsToFirestore();
       res.json({
         success: true,
-        message: 'Berhasil melakukan sinkronisasi penuh Kamus 4 Pilar, Otak AI, dan Few-Shot ke Cloud Firestore!',
+        message: 'Berhasil melakukan sinkronisasi penuh Kamus 4 Pilar, Otak AI, dan Few-Shot ke Supabase!',
         ...result,
       });
     } catch (err: any) {
@@ -3877,7 +3908,7 @@ AI WAJIB:
     // Auto-sync AI Brain, Vocabulary & Knowledge Base to Firestore in background
     syncMasterItemsToFirestore()
       .then((res) => {
-        console.log(`[AI Sync] Master items synchronized to Firestore: ${res.vocabCount} vocabs, ${res.kbCount} knowledge docs.`);
+        console.log(`[AI Sync] Master items synchronized to Supabase: ${res.vocabCount} vocabs, ${res.kbCount} knowledge docs.`);
       })
       .catch((err) => {
         console.warn('[AI Sync] Background sync to Firestore warning:', err?.message || err);

@@ -788,7 +788,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         onUpdateRecord(editingRecord.id, recordPayload, pillarId);
         setAlertInfo({
           title: 'Perubahan Data Berhasil Disimpan!',
-          message: `Data "${recordPayload.nama || (recordPayload as any).namaLks || (recordPayload as any).namaKarangTaruna || (recordPayload as any).namaLk3 || (recordPayload as any).namaBadanUsaha || (recordPayload as any).namaSlrt || 'Anggota'}" berhasil diperbarui dan tersimpan realtime ke Database Firestore.`,
+          message: `Data "${recordPayload.nama || (recordPayload as any).namaLks || (recordPayload as any).namaKarangTaruna || (recordPayload as any).namaLk3 || (recordPayload as any).namaBadanUsaha || (recordPayload as any).namaSlrt || 'Anggota'}" berhasil diperbarui dan tersimpan realtime ke Database Supabase.`,
           type: 'success',
         });
       } else {
@@ -796,7 +796,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         onAddRecord(recordPayload);
         setAlertInfo({
           title: 'Data Tersimpan ke Database!',
-          message: `Data "${recordPayload.nama}" berhasil tersimpan dan langsung terhubung tersinkronisasi ke server Database Firestore.`,
+          message: `Data "${recordPayload.nama}" berhasil tersimpan dan langsung terhubung tersinkronisasi ke server Database Supabase.`,
           type: 'success',
         });
       }
@@ -2324,7 +2324,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               Menghubungkan & Memuat Data Resmi {pillar.title}...
             </h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              Sedang mengambil seluruh basis data anggota se-Jawa Barat dari Google Cloud Firestore secara realtime.
+              Sedang mengambil seluruh basis data anggota se-Jawa Barat dari Supabase Cloud secara realtime.
             </p>
           </div>
         ) : (
@@ -2504,7 +2504,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
               Hapus Massal {selectedRecordIds.length} Data Terpilih
             </h3>
             <p className="text-slate-600 text-xs sm:text-sm mt-2 leading-relaxed">
-              Apakah Anda yakin ingin menghapus <strong>{selectedRecordIds.length} data anggota</strong> yang Anda centang secara permanen dari database Firestore? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus <strong>{selectedRecordIds.length} data anggota</strong> yang Anda centang secara permanen dari database Supabase? Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-slate-100">
               <button

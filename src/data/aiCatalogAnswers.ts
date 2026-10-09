@@ -356,12 +356,12 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   'd-1': `**Arsitektur Teknis Full-Stack PSKS JABAR**:
 - **Frontend**: React 18 SPA + Vite bundler + Tailwind CSS v4 + Motion animations + Lucide React.
 - **Backend**: Node.js + Express proxy server + Google Gen AI SDK (@google/genai).
-- **Database**: Cloud Firestore NoSQL Database dengan security rules granular.
+- **Database**: Supabase (PostgreSQL Cloud Database) dengan security rules granular.
 - **Kompilasi & Build**: esbuild CJS bundle (\`dist/server.cjs\`) yang siap jalan di Cloud Run container port 3000.`,
 
   'd-2': `**Modul Developer Control Panel (Ilham Fazril)**:
 - Panel eksklusif developer mencakup:
-  1. **Telemetri Sistem**: Status memory heap, uptime server, latency Firestore, dan status socket.
+  1. **Telemetri Sistem**: Status memory heap, uptime server, latency Supabase, dan status socket.
   2. **Security Simulator**: Pengujian brute-force lockout, rate limit test, dan sandbox payload JSON.
   3. **Database Inspector**: Raw collection snapshot viewer, backup/export JSON, dan schema validator.
   4. **AI Debugger**: Token counter, latency benchmark Gemini Flash, dan log dialog real-time.`,
@@ -382,14 +382,14 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   'd-5b': `**State Management & Optimasi Re-Render Tabel**:
 - Menggunakan local React memoization (\`useMemo\`, \`useCallback\`), debounced search inputs, dan virtualized pagination rendering untuk memastikan 100% mulus, licin, dan anti-lag meskipun mengelola ribuan record personil.`,
 
-  'd-6': `**Skema Koleksi NoSQL Cloud Firestore**:
+  'd-6': `**Skema Koleksi NoSQL Supabase**:
 - \`psks_personil\`: Dokumen anggota 10 pilar (NIK, Nama, Pilar, Wilayah, SK, Status).
 - \`accounts\`: Kredensial dan profil hak akses (Role, Wilayah, HashPIN, Status [ACTIVE/FROZEN]).
 - \`announcements\`: Data pengumuman siaga, floating banner, foto, dan kategori.
 - \`system_config\`: Konfigurasi saklar maintenance (global, per-role, per-wilayah), kontak floating WA, dan tema.
 - \`activity_logs\`: Audit trail seluruh mutasi data dengan timestamp dan metadata.`,
 
-  'd-7': `**Aturan Keamanan (Firestore Security Rules)**:
+  'd-7': `**Aturan Keamanan (Supabase Row Level Security (RLS))**:
 - Menerapkan aturan read/write berbasis role:
   - Role \`superadmin\` & \`developer\`: Hak penuh baca/tulis seluruh koleksi.
   - Role \`admin\`: Hak tulis terbatas pada dokumen yang memiliki \`wilayah == request.auth.wilayah\`.
@@ -478,7 +478,7 @@ Setelah menyelesaikan Diklatsar Dasar, personil Tagana dapat mengambil spesialis
 
 **⚙️ Alur & Tata Cara Pengelolaan**:
 1. **Buka Konsol**: Klik tombol **"Kelola FAQ Portal"** pada kotak fitur di beranda.
-2. **Tambah Tanya Jawab**: Klik **"+ Tambah Tanya Jawab"**, masukkan redaksi pertanyaan, pilih salah satu dari 4 kategori resmi, ketik jawaban lengkap, atur nomor prioritas urutan, dan tentukan status tayang publik -> Klik **"Simpan Tanya Jawab"**. Data langsung tersimpan *realtime* di Cloud Firestore koleksi \`portal_faqs\`.
+2. **Tambah Tanya Jawab**: Klik **"+ Tambah Tanya Jawab"**, masukkan redaksi pertanyaan, pilih salah satu dari 4 kategori resmi, ketik jawaban lengkap, atur nomor prioritas urutan, dan tentukan status tayang publik -> Klik **"Simpan Tanya Jawab"**. Data langsung tersimpan *realtime* di Supabase koleksi \`portal_faqs\`.
 3. **Edit Redaksi**: Klik tombol pensil pada kartu FAQ, perbaiki teks atau jawaban, lalu klik **"Simpan Perubahan"**.
 4. **Saklar Tayang Instan**: Geser saklar **Aktif / Nonaktif** untuk mengendalikan visibilitas pertanyaan di portal publik seketika.
 5. **Hapus / Reset**: Hapus pertanyaan usang via ikon tempat sampah, atau gunakan tombol **"Pulihkan Standar Dinsos"** untuk merestore daftar rekomendasi Dinsos Jabar.

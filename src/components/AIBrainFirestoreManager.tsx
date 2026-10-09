@@ -144,10 +144,10 @@ export const AIBrainFirestoreManager: React.FC = () => {
         dialogueExamples,
         updatedAt: new Date().toISOString(),
       });
-      setBrainSuccessMsg('Otak & Instruksi Sistem AI Berhasil Disimpan ke Cloud Firestore!');
+      setBrainSuccessMsg('Otak & Instruksi Sistem AI Berhasil Disimpan ke Supabase!');
       setTimeout(() => setBrainSuccessMsg(null), 4000);
     } catch (err: any) {
-      alert('Gagal menyimpan otak AI ke Firestore: ' + (err?.message || err));
+      alert('Gagal menyimpan otak AI ke Supabase: ' + (err?.message || err));
     } finally {
       setIsSavingBrain(false);
     }
@@ -251,7 +251,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
       setKSummary('');
       setKContent('');
       setIsAddingKnowledge(false);
-      setKnowledgeSuccessMsg(`Materi pengetahuan "${docItem.title}" berhasil disimpan ke Cloud Firestore!`);
+      setKnowledgeSuccessMsg(`Materi pengetahuan "${docItem.title}" berhasil disimpan ke Supabase!`);
       setTimeout(() => setKnowledgeSuccessMsg(null), 4000);
     } catch (err: any) {
       alert('Gagal menyimpan materi pengetahuan: ' + (err?.message || err));
@@ -273,7 +273,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
   };
 
   const handleDeleteKnowledge = async (id: string, title: string) => {
-    if (confirm(`Hapus materi pengetahuan "${title}" dari Cloud Firestore?`)) {
+    if (confirm(`Hapus materi pengetahuan "${title}" dari Supabase?`)) {
       try {
         await deleteAIKnowledgeItem(id);
         setKnowledgeSuccessMsg(`Materi pengetahuan "${title}" berhasil dihapus.`);
@@ -341,13 +341,13 @@ export const AIBrainFirestoreManager: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-lg font-black text-white">Otak & Kamus AI di Cloud Firestore</h4>
+                <h4 className="text-lg font-black text-white">Otak & Kamus AI di Supabase</h4>
                 <span className="text-[10px] font-extrabold bg-[#d4af37] text-slate-950 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   Realtime Sync
                 </span>
               </div>
               <p className="text-xs text-amber-200/90 font-medium mt-0.5">
-                Pusat instruksi sistem, kamus kosakata, dan pemahaman sambungan konteks tersimpan 100% di Firebase.
+                Pusat instruksi sistem, kamus kosakata, dan pemahaman sambungan konteks tersimpan 100% di Supabase.
               </p>
             </div>
           </div>
@@ -355,7 +355,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
           <div className="flex items-center gap-2.5 bg-slate-900/90 px-3.5 py-2 rounded-2xl border border-emerald-500/50">
             <Flame className="w-4 h-4 text-amber-500 fill-amber-500 animate-pulse" />
             <div className="text-[11px] font-bold text-slate-300">
-              <span className="text-white block font-mono">Firestore: ai_config, ai_vocabulary &amp; ai_knowledge_base</span>
+              <span className="text-white block font-mono">Supabase: ai_config, ai_vocabulary &amp; ai_knowledge_base</span>
               <span className="text-emerald-400 text-[10px]">● Terhubung &amp; Terproteksi</span>
             </div>
           </div>
@@ -434,7 +434,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
                 <span>Instruksi Sistem Utama (System Instruction)</span>
               </label>
               <span className="text-[10px] font-mono font-bold text-slate-400">
-                Firestore doc: ai_config/system_brain
+                Supabase table: ai_config/system_brain
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">
@@ -501,7 +501,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
               className="px-6 py-2.5 rounded-xl bg-[#043e2e] hover:bg-[#065f46] text-[#d4af37] text-xs font-black flex items-center gap-2 cursor-pointer transition-all shadow-md"
             >
               <Save className="w-4 h-4" />
-              <span>{isSavingBrain ? 'Menyimpan ke Firestore...' : 'Simpan Otak AI ke Cloud Firestore'}</span>
+              <span>{isSavingBrain ? 'Menyimpan ke Firestore...' : 'Simpan Otak AI ke Supabase'}</span>
             </button>
           </div>
         </div>
@@ -641,7 +641,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-[#043e2e] text-[#d4af37] text-xs font-black flex items-center gap-2 cursor-pointer shadow-sm hover:bg-[#065f46]"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Simpan ke Firestore</span>
+                  <span>Simpan ke Supabase</span>
                 </button>
               </div>
             </form>
@@ -886,7 +886,7 @@ export const AIBrainFirestoreManager: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-[#043e2e] hover:bg-[#065f46] text-[#d4af37] text-xs font-black flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{isSavingKnowledge ? 'Menyimpan...' : 'Simpan Materi ke Cloud Firestore'}</span>
+                  <span>{isSavingKnowledge ? 'Menyimpan...' : 'Simpan Materi ke Supabase'}</span>
                 </button>
               </div>
             </form>

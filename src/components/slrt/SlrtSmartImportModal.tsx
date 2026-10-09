@@ -172,7 +172,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
                   Seluruh data kelembagaan Puskesos telah berhasil dipetakan, disortir ke wilayah masing-masing, dan
-                  tersimpan secara permanen ke Google Cloud Firestore.
+                  tersimpan secara permanen ke Supabase.
                 </p>
               </div>
               <div className="pt-3 flex justify-center gap-3">
@@ -551,7 +551,7 @@ export const SlrtSmartImportModal: React.FC<SlrtSmartImportModalProps> = ({
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Menyimpan ke Cloud Firestore...</span>
+                    <span>Menyimpan ke Supabase...</span>
                   </>
                 ) : (
                   <>

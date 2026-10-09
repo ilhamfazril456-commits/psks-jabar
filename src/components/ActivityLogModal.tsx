@@ -467,7 +467,7 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
           <div className="h-96 flex flex-col items-center justify-center gap-3 text-center">
             <RefreshCw className="w-10 h-10 text-amber-400 animate-spin" />
             <p className="text-sm font-bold text-slate-300">Mengambil seluruh catatan log aktivitas real-time...</p>
-            <span className="text-xs text-slate-500">Memeriksa sinkronisasi data valid Firestore</span>
+            <span className="text-xs text-slate-500">Memeriksa sinkronisasi data valid Supabase</span>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="h-96 flex flex-col items-center justify-center text-center p-6 sm:p-8 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">

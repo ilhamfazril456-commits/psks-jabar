@@ -1290,7 +1290,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                   </span>
                   <span className={`text-[10px] font-bold flex items-center gap-1.5 transition-colors ${isSummarySynced ? 'text-emerald-300' : 'text-amber-300'}`}>
                     <span className={`w-2 h-2 rounded-full ${isSummarySynced ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
-                    <span>{isSummarySynced ? 'LIVE FIRESTORE • TERVERIFIKASI' : 'SINKRONISASI REALTIME'}</span>
+                    <span>{isSummarySynced ? 'LIVE SUPABASE • TERVERIFIKASI' : 'SINKRONISASI REALTIME'}</span>
                   </span>
                 </div>
 

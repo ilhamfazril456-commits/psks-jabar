@@ -2121,7 +2121,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       icon: Activity,
                       iconColor: 'text-amber-600',
                       accentBox: 'bg-slate-950 border-amber-500/50 text-amber-200 font-mono text-[11px]',
-                      desc: 'Aturan integritas log audit aktivitas forensik yang dikunci secara permanen di database Cloud Firestore untuk memenuhi standar audit BSSN.',
+                      desc: 'Aturan integritas log audit aktivitas forensik yang dikunci secara permanen di database Supabase untuk memenuhi standar audit BSSN.',
                       details: [
                         'Sifat Log Append-Only: Catatan riwayat aktivitas di `system_logs` HANYA dapat ditambah (create) dan dibaca (read).',
                         'Dilarang Keras Update & Delete: Aturan Firestore `allow update, delete: if false;` memastikan jejak digital perubahan data tidak dapat dihapus atau dimanipulasi oleh siapa pun.',
@@ -2576,7 +2576,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       name: 'Firebase Client SDK v12.1.0',
                       cat: 'cloud',
                       version: 'v12.1.0',
-                      purpose: 'Cloud Firestore Realtime Listener & Auth Integration',
+                      purpose: 'Supabase Realtime Listener & Auth Integration',
                       cmd: 'npm i firebase',
                       features: ['NoSQL Document Storage', 'onSnapshot Realtime Listener', 'Firebase Auth Engine', 'Cross-Device State Sync'],
                     },
@@ -3563,7 +3563,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       members: [
                         { role: 'Data Analyst / Data Scientist', name: 'Ilham Fazril', tag: 'Regional PSKS Analytics & Modeling' },
                         { role: 'CyberSecurity Specialist', name: 'Ilham Fazril', tag: 'Bcrypt Hash & Firestore Shielding' },
-                        { role: 'Database Administrator ( DBA )', name: 'Ilham Fazril', tag: 'Cloud Firestore Realtime DB Ops' },
+                        { role: 'Database Administrator ( DBA )', name: 'Ilham Fazril', tag: 'Supabase Realtime DB Ops' },
                       ],
                     },
                     {

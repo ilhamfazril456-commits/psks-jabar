@@ -563,7 +563,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
               <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-600 shrink-0" />
-                  <span>Sinkronisasi Firestore</span>
+                  <span>Sinkronisasi Supabase</span>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0 hidden sm:block" />

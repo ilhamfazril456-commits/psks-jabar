@@ -1490,7 +1490,7 @@ export const ActivityLogPage: React.FC<ActivityLogPageProps> = ({
                 Peringatan: Hapus Semua 4 Kategori Riwayat?
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Tindakan ini akan <strong>menghapus seluruh log audit riwayat aktivitas ({logs.length} data)</strong> dari keempat kategori secara instan dan permanen dari database Cloud Firestore.
+                Tindakan ini akan <strong>menghapus seluruh log audit riwayat aktivitas ({logs.length} data)</strong> dari keempat kategori secara instan dan permanen dari database Supabase.
               </p>
               <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-left text-[11px] text-rose-900 font-medium">
                 ⚠️ Catatan: Riwayat yang sudah dihapus tidak dapat dipulihkan kembali. Pastikan Anda telah mengonfirmasi tindakan ini.

@@ -196,10 +196,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToGrid, appSet
             <button
               onClick={onScrollToGrid}
               aria-label="Lihat Data Dashboard Pilar PSKS Jawa Barat"
-              className="group inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-[#071732] font-extrabold text-sm sm:text-sm md:text-base px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] hover:shadow-2xl transition-all transform hover:-translate-y-0.5 active:scale-95 cursor-pointer border border-amber-200/60 w-auto min-w-[220px]"
+              className="group relative overflow-hidden inline-flex items-center justify-center gap-3 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:via-yellow-300 hover:to-amber-400 text-[#071732] font-black text-sm sm:text-base px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl shadow-[0_4px_22px_rgba(0,0,0,0.45)] hover:shadow-[0_0_35px_rgba(251,191,36,0.75),_0_12px_30px_rgba(0,0,0,0.5)] transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.03] active:scale-[0.98] cursor-pointer border border-amber-100/90 hover:border-white ring-2 ring-amber-400/40 hover:ring-amber-300 w-auto min-w-[220px]"
             >
-              <span>Lihat Data Dashboard</span>
-              <ArrowDownCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#071732] transition-transform group-hover:translate-y-0.5 shrink-0" />
+              {/* Shimmer light sweep shine animation across button on hover */}
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 ease-in-out pointer-events-none" />
+
+              {/* Ambient radial glow on hover */}
+              <span className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-300 opacity-0 group-hover:opacity-40 blur-md transition-opacity duration-300 -z-10" />
+
+              <span className="relative z-10 tracking-wide font-black">Lihat Data Dashboard</span>
+              <ArrowDownCircle className="relative z-10 w-5 h-5 text-[#071732] transition-all duration-300 ease-out transform group-hover:translate-y-1 group-hover:scale-120 shrink-0" />
             </button>
           </div>
         </div>

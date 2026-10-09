@@ -1513,7 +1513,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                         Ukuran: {selectedDetailSub.recordData?.berkasFotoSize ? `${(selectedDetailSub.recordData.berkasFotoSize / 1024).toFixed(1)} KB` : 'Terkonversi WebP Kompresi'}
                       </div>
                       <div className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded inline-block border border-emerald-200">
-                        ✓ Lolos Validasi Klien Aman Firebase
+                        ✓ Lolos Validasi Klien Aman Supabase
                       </div>
                     </div>
                   </div>
@@ -1848,7 +1848,7 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
                 />
               </div>
               <div className="p-3 bg-slate-950/90 border-t border-white/10 text-center text-xs text-slate-400 flex items-center justify-between px-6">
-                <span>Format terkompresi WebP (Aman memori Firebase)</span>
+                <span>Format terkompresi WebP (Aman memori Supabase)</span>
                 <button
                   type="button"
                   onClick={() => setZoomPhotoUrl(null)}

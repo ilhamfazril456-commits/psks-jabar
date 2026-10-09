@@ -734,7 +734,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     let welcomeText = '';
 
     if (isDeveloperUser) {
-      welcomeText = `Sampurasun! Halo **Ilham** 🚀 (Developer Mode)\nSaya **Asisten AI PSKS Jabar**.\n\nYoo Ham! Santai aja, mau ngutak-ngatik kodingan apa kita hari ini? Developer Control Panel, validasi RBAC, optimasi Firestore, atau mau simulasi fitur gokil lainnya? Gas langsung sebutin aja bro! 😎⚡`;
+      welcomeText = `Sampurasun! Halo **Ilham** 🚀 (Developer Mode)\nSaya **Asisten AI PSKS Jabar**.\n\nYoo Ham! Santai aja, mau ngutak-ngatik kodingan apa kita hari ini? Developer Control Panel, validasi RBAC, optimasi Supabase, atau mau simulasi fitur gokil lainnya? Gas langsung sebutin aja bro! 😎⚡`;
     } else if (isUserLoggedIn) {
       const displayName = session.nama;
       let roleDescription = 'informasi seputar 10 Pilar PSKS dan sebaran data Jawa Barat';
@@ -1146,9 +1146,9 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                       <Zap className="w-2.5 h-2.5 text-amber-400" />
                       Gemini 3.8 Flash
                     </span>
-                    <span className="hidden sm:inline-flex bg-amber-500/15 text-amber-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-amber-500/30 font-mono font-bold shrink-0 items-center gap-0.5" title="Otak dan Kamus Pengetahuan AI tersimpan dinamis di Cloud Firestore">
+                    <span className="hidden sm:inline-flex bg-amber-500/15 text-amber-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-amber-500/30 font-mono font-bold shrink-0 items-center gap-0.5" title="Otak dan Kamus Pengetahuan AI tersimpan dinamis di Supabase">
                       <Database className="w-2.5 h-2.5 text-amber-400" />
-                      Firestore Brain
+                      Supabase Brain
                     </span>
                   </div>
                   <p className="text-[9.5px] sm:text-[10px] text-emerald-300/80 font-medium truncate">
