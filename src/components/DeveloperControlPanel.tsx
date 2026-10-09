@@ -315,7 +315,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
 
     const totalKB = totalBytes / 1024;
     const totalMB = totalBytes / (1024 * 1024);
-    const quotaMB = 1000; // 1 GB in Megabytes
+    const quotaMB = 500; // 500 MB Supabase Free Tier Capacity
     const quotaKB = quotaMB * 1024;
     const quotaBytes = quotaMB * 1024 * 1024;
 
@@ -325,7 +325,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
 
     const usagePercentage = (totalMB / quotaMB) * 100;
     const remainingPercentage = Math.max(100 - usagePercentage, 0);
-    const remainingEstimatedDocs = Math.max(1000000 - totalDocuments, 0);
+    const remainingEstimatedDocs = Math.max(500000 - totalDocuments, 0);
 
     const formattedMB = totalMB < 0.01 ? (totalKB / 1024).toFixed(3) : totalMB.toFixed(2);
     const formattedPercent = usagePercentage < 0.01 ? '0.03%' : `${usagePercentage.toFixed(2)}%`;
@@ -337,7 +337,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
       {
         id: 'pillar_members',
         title: 'Data 10 Pilar PSKS',
-        collection: 'pillar_members / psks_records',
+        collection: 'psks_records (Tabel Utama Pilar)',
         purpose: 'Menyimpan seluruh basis data keanggotaan, pengurus, NIK, kontak, legalitas SK, dan alamat 10 Pilar Sosial se-Jawa Barat (Karang Taruna, TKSK, PSM, LKS, KSB, WKSBM, dll.).',
         count: pillarRecordsCount,
         bytes: pillarBytes,
@@ -352,7 +352,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
       {
         id: 'admin_accounts',
         title: 'Kredensial Akun Dinas & Wilayah',
-        collection: 'admin_accounts',
+        collection: 'admin_accounts (Kredensial)',
         purpose: 'Autentikasi 27 Dinas Sosial Kabupaten/Kota se-Jawa Barat, Superadmin Provinsi, dan Developer Master lengkap dengan hash kredensial, NIP, kontak resmi, dan hak otoritas wilayah.',
         count: adminAccountsCount,
         bytes: adminBytes,
@@ -368,7 +368,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
         id: 'app_settings',
         title: 'Konfigurasi & Identitas Portal',
         collection: 'app_settings (Master Config)',
-        purpose: 'Menyimpan preferensi global portal, nama instansi, visi misi, foto resmi Kepala Dinas Sosial, teks berjalan (running text), nomor helpdesk WhatsApp, dan tema visual.',
+        purpose: 'Menyimpan preferensi global portal, nama instansi, visi misi, foto resmi Kepala Dinas Sosial, saklar mode maintenance per wilayah, nomor WhatsApp CS, dan video latar.',
         count: settingsCount,
         bytes: settingsBytes,
         kb: settingsBytes / 1024,
@@ -457,8 +457,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
       usagePercentage,
       remainingPercentage,
       remainingEstimatedDocs,
-      formattedDisplay: `${formattedMB} MB / 1.000 MB (${formattedPercent} Terpakai)`,
-      formattedRemaining: `${formattedRemainingMB} MB / 1.000 MB (${formattedRemainingPercent} Bebas)`,
+      formattedDisplay: `${formattedMB} MB / 500 MB (${formattedPercent} Terpakai)`,
+      formattedRemaining: `${formattedRemainingMB} MB / 500 MB (${formattedRemainingPercent} Bebas)`,
       formattedDetailKB: `${totalKB.toFixed(1)} KB`,
       sections,
     };
@@ -594,8 +594,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
         };
       case 'database':
         return {
-          title: 'Informasi Database Cloud Firestore',
-          desc: 'Informasi penyimpanan Cloud Firestore 1 GB, sinyal realtime & estimasi 1.000.000 data.',
+          title: 'Informasi Database Supabase Cloud',
+          desc: 'Informasi penyimpanan Supabase Cloud PostgreSQL 500 MB, sinyal realtime & estimasi 500.000 data.',
           badge: 'INFORMASI WEBSITE 5/8',
         };
       case 'ai_assistant':
@@ -626,7 +626,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
         if (viewFilter === 'info_only') {
           return {
             title: 'Informasi Website',
-            desc: 'Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa pemrograman, pustaka, database Firestore, AI, dan pengembang.',
+            desc: 'Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa pemrograman, pustaka, database Supabase, AI, dan pengembang.',
             badge: 'FITUR 15 • KONTROL PUSAT',
           };
         }
@@ -1140,7 +1140,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                           Database
                         </h4>
                         <span className="text-[8.5px] sm:text-[10px] font-black bg-emerald-100 text-emerald-900 px-2 sm:px-2.5 py-0.5 rounded-md border border-emerald-300 whitespace-nowrap">
-                          FIRESTORE
+                          SUPABASE
                         </span>
                       </div>
                       <p className="text-[10.5px] sm:text-xs text-slate-500 font-medium mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
@@ -2759,52 +2759,49 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         DATABASE INFRASTRUCTURE &amp; CLOUD STORAGE
                       </h3>
                       <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Penyimpanan Utama Berbasis Google Firebase &amp; NoSQL Cloud Firestore dengan Sinkronisasi Sinyal Realtime.
+                        Penyimpanan Utama Berbasis Supabase Cloud PostgreSQL &amp; JSONB dengan Sinkronisasi Sinyal Realtime.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-                    <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl border border-amber-300 flex items-center gap-1.5 shadow-2xs">
-                      <Flame className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                      <span>FIREBASE SDK v12.1.0</span>
+                    <span className="text-[10px] font-black bg-emerald-100 text-emerald-900 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                      <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-500" />
+                      <span>SUPABASE JS v2.49.1</span>
                     </span>
                     <span className="text-[10px] font-black bg-emerald-100 text-emerald-900 px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs">
-                      1 GB Storage (1.000 MB)
+                      500 MB Storage (500.000 KB)
                     </span>
                   </div>
                 </div>
 
-                {/* HERO BANNER: FIREBASE & LIVE SIGNAL CONNECTION ANIMATION */}
+                {/* HERO BANNER: SUPABASE & LIVE SIGNAL CONNECTION ANIMATION */}
                 <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-[#043e2e] border-2 border-[#d4af37]/60 text-white shadow-xl space-y-6 relative overflow-hidden">
                   {/* BACKGROUND GLOW ACCENTS */}
-                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
 
                   {/* TOP BRANDING & ANIMATED SIGNAL INDICATOR */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5 relative z-10">
                     {/* LOGO & BRANDING */}
                     <div className="flex items-center gap-4">
-                      {/* FIREBASE SVG LOGO */}
-                      <div className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/40 shadow-inner flex items-center justify-center shrink-0">
-                        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3.878 15.716l2.906-12.78a.86.86 0 011.62-.257l2.843 5.485-7.369 7.552z" fill="#FFC107"/>
-                          <path d="M11.247 8.164L8.404 2.679a.861.861 0 00-1.62.257L3.878 15.716l7.369-7.552z" fill="#FFA000"/>
-                          <path d="M13.82 9.615l1.627-3.238a.861.861 0 011.545.013l3.13 6.076-6.302-2.851z" fill="#FFC107"/>
-                          <path d="M3.925 15.824l8.286 4.671a1.29 1.29 0 001.218 0l8.286-4.671-2.92-12.355a.861.861 0 00-1.545-.013L15.617 2.69 3.925 15.824z" fill="#FF3D00"/>
-                          <path d="M13.43 20.495a1.29 1.29 0 01-1.218 0L3.925 15.824l7.322-7.504 2.183 12.175z" fill="#DD2C00"/>
+                      {/* SUPABASE SVG LOGO */}
+                      <div className="p-3 rounded-2xl bg-slate-900/90 border border-emerald-500/40 shadow-inner flex items-center justify-center shrink-0">
+                        <svg className="w-10 h-10" viewBox="0 0 109 113" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M63.7076 110.284C60.848 113.885 55.0502 111.912 54.9813 107.314L53.9738 40.0632L99.1934 40.0632C106.007 40.0632 110.015 47.7871 105.748 53.1118L63.7076 110.284Z" fill="#3ECF8E"/>
+                          <path d="M45.317 2.71603C48.1766 -0.885144 53.9744 1.08779 54.0433 5.68593L55.0508 72.9368H9.8312C3.01736 72.9368 -0.990886 65.2129 3.27648 59.8882L45.317 2.71603Z" fill="#3ECF8E" fillOpacity="0.7"/>
                         </svg>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-lg font-black tracking-wide text-white">
-                            Disimpan di FIREBASE
+                            Disimpan di SUPABASE
                           </h4>
-                          <span className="text-[10px] font-extrabold bg-[#d4af37] text-slate-950 px-2.5 py-0.5 rounded-md uppercase font-mono shadow-sm">
-                            CLOUD FIRESTORE
+                          <span className="text-[10px] font-extrabold bg-[#3ECF8E] text-slate-950 px-2.5 py-0.5 rounded-md uppercase font-mono shadow-sm">
+                            POSTGRESQL CLOUD
                           </span>
                         </div>
-                        <p className="text-xs text-amber-200/80 font-medium mt-0.5">
-                          Google Cloud Firestore Distributed NoSQL Document Database
+                        <p className="text-xs text-emerald-200/80 font-medium mt-0.5">
+                          Supabase Managed PostgreSQL &amp; High-Speed JSONB Realtime Database
                         </p>
                       </div>
                     </div>
@@ -2824,7 +2821,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                         </div>
                         <span className="text-[10px] font-mono text-slate-400 block">
-                          Realtime WebSocket Sync &bull; Latency &lt; 45ms
+                          Supabase Channels &bull; Latency &lt; 40ms
                         </span>
                       </div>
                     </div>
@@ -2834,13 +2831,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
                     <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
                       <span className="text-[10px] font-bold text-amber-300/80 uppercase tracking-wider block">
-                        Project ID GCP / Firebase
+                        Project ID Supabase Cloud
                       </span>
-                      <span className="text-xs font-mono font-black text-white truncate block" title="gen-lang-client-0671610320">
-                        gen-lang-client-0671610320
+                      <span className="text-xs font-mono font-black text-white truncate block" title="zwjbjmafxixudhlvaxef">
+                        zwjbjmafxixudhlvaxef
                       </span>
-                      <span className="text-[9px] font-mono text-emerald-300/90 truncate block" title="ai-studio-sisteminformasip-5ccd2c2a-19e7-46db-ae5d-63189556c2fb">
-                        DB: ai-studio-sisteminformasip...
+                      <span className="text-[9px] font-mono text-emerald-300/90 truncate block" title="zwjbjmafxixudhlvaxef.supabase.co">
+                        Host: zwjbjmafxixudhlv...
                       </span>
                     </div>
 
@@ -2849,7 +2846,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         Kapasitas Kuota Total
                       </span>
                       <span className="text-xs font-mono font-black text-emerald-300 block">
-                        1 GB ( 1.000 Megabyte )
+                        500 MB ( 500.000 KB )
                       </span>
                       <span className="text-[9px] font-medium text-slate-400 block">
                         Status Quota: 100% Active &amp; Ready
@@ -2873,10 +2870,10 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         Sistem Sinkronisasi Data
                       </span>
                       <span className="text-xs font-mono font-black text-cyan-300 block">
-                        Automatic Realtime Listener
+                        Realtime Channel + Fast Poll
                       </span>
                       <span className="text-[9px] font-medium text-slate-400 block">
-                        Method: onSnapshot() Sync
+                        Method: Supabase Rest &amp; WS
                       </span>
                     </div>
                   </div>
@@ -2886,7 +2883,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-bold">
                       <span className="text-slate-300 flex items-center gap-1.5">
                         <HardDrive className="w-4 h-4 text-[#d4af37]" />
-                        <span>Visualisasi Kuota Ruang Penyimpanan Cloud Firestore (1 GB)</span>
+                        <span>Visualisasi Kuota Ruang Penyimpanan Supabase Cloud (500 MB)</span>
                       </span>
                       <span className="font-mono text-emerald-300 text-xs">
                         {storageMetrics.formattedDisplay}
@@ -2934,7 +2931,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         <span className="text-sm font-black text-slate-600">MB</span>
                       </div>
                       <p className="text-[11px] font-medium text-slate-500">
-                        Setara dengan <strong className="text-slate-800 font-mono">{storageMetrics.totalKB.toFixed(1)} KB</strong> ({storageMetrics.totalBytes.toLocaleString('id-ID')} Bytes) dari 1.000 MB.
+                        Setara dengan <strong className="text-slate-800 font-mono">{storageMetrics.totalKB.toFixed(1)} KB</strong> ({storageMetrics.totalBytes.toLocaleString('id-ID')} Bytes) dari 500 MB.
                       </p>
                     </div>
 
@@ -2942,7 +2939,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
                         <span>Porsi Pemakaian</span>
                         <span className="font-mono text-emerald-800 font-black">
-                          {storageMetrics.usagePercentage < 0.01 ? '0.03%' : `${storageMetrics.usagePercentage.toFixed(2)}%`} dari 1 GB
+                          {storageMetrics.usagePercentage < 0.01 ? '0.03%' : `${storageMetrics.usagePercentage.toFixed(2)}%`} dari 500 MB
                         </span>
                       </div>
                       <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
@@ -3058,11 +3055,11 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                           PERHITUNGAN KAPASITAS REKAM DATA
                         </span>
                         <span className="text-xs font-black text-slate-900">
-                          Analisis Efisiensi Penyimpanan 1 GB Cloud Firestore
+                          Analisis Efisiensi Penyimpanan 500 MB Supabase Cloud
                         </span>
                       </div>
                       <p className="text-xs text-slate-800 font-extrabold leading-relaxed pt-1">
-                        &quot;Note: 1 Data tabel berukuran sedang hanya menghabiskan sekitar 1 KB (kilobyte) saja, jadi 1GB cukup untuk menampung kurang lebih 1.000.000 data Tabel berukuran sedang.&quot;
+                        &quot;Note: 1 Data tabel berukuran sedang hanya menghabiskan sekitar 1 KB (kilobyte) saja, jadi 500 MB cukup untuk menampung kurang lebih 500.000 data Tabel berukuran sedang.&quot;
                       </p>
                     </div>
                   </div>
@@ -3078,7 +3075,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     </div>
                     <div className="flex items-center gap-2 bg-white/90 p-2.5 rounded-xl border border-amber-200 shadow-2xs">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>1 GB = &plusmn; 1.000.000 Data Tabel</span>
+                      <span>500 MB = &plusmn; 500.000 Data Tabel</span>
                     </div>
                   </div>
                 </div>
@@ -3099,7 +3096,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     </div>
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
                       <Activity className="w-4 h-4 text-emerald-600 animate-pulse" />
-                      <span>Live onSnapshot State</span>
+                      <span>Live Supabase Channel State</span>
                     </div>
                   </div>
 
@@ -3165,7 +3162,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
 
                               <div className="text-center px-2.5 py-1">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
-                                  Beban Kuota 1 GB
+                                  Beban Kuota 500 MB
                                 </span>
                                 <span className="text-xs font-black font-mono text-emerald-700">
                                   {sec.percentOfQuota < 0.01 ? '< 0.01%' : `${sec.percentOfQuota.toFixed(2)}%`}
@@ -3182,7 +3179,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                                 <span>Konsumsi Data: <strong className="text-slate-800 font-mono">{sec.mb < 0.001 ? (sec.kb / 1024).toFixed(4) : sec.mb.toFixed(3)} MB</strong></span>
                               </span>
                               <span className="font-mono text-emerald-800 font-bold">
-                                Beban Kuota: {sec.percentOfQuota < 0.01 ? '< 0.01%' : `${sec.percentOfQuota.toFixed(3)}%`} dari 1.000 MB (1 GB)
+                                Beban Kuota: {sec.percentOfQuota < 0.01 ? '< 0.01%' : `${sec.percentOfQuota.toFixed(3)}%`} dari 500 MB
                               </span>
                             </div>
                             <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
@@ -3198,17 +3195,17 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   </div>
                 </div>
 
-                {/* FEATURE CARDS GRID: 4 KEUNGGULAN UTAMA CLOUD FIRESTORE */}
+                {/* FEATURE CARDS GRID: 4 KEUNGGULAN UTAMA SUPABASE CLOUD */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 hover:border-[#043e2e] transition-all">
                     <div className="flex items-center gap-2.5">
                       <div className="p-2 rounded-xl bg-[#043e2e] text-[#d4af37]">
-                        <Flame className="w-4 h-4" />
+                        <Zap className="w-4 h-4 text-emerald-400" />
                       </div>
-                      <h5 className="text-xs font-black text-slate-900">Firebase Client SDK</h5>
+                      <h5 className="text-xs font-black text-slate-900">Supabase Client SDK</h5>
                     </div>
                     <p className="text-[11px] text-slate-600 font-medium leading-normal">
-                      Terintegrasi penuh dengan Firebase Web Client SDK v12.1.0 untuk autentikasi dan kueri NoSQL cepat.
+                      Terintegrasi penuh dengan Supabase Client SDK v2.49.1 untuk autentikasi dan kueri PostgreSQL cepat.
                     </p>
                   </div>
 
@@ -3217,10 +3214,10 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       <div className="p-2 rounded-xl bg-[#043e2e] text-[#d4af37]">
                         <Database className="w-4 h-4" />
                       </div>
-                      <h5 className="text-xs font-black text-slate-900">Cloud Firestore 1 GB</h5>
+                      <h5 className="text-xs font-black text-slate-900">Supabase Cloud 500 MB</h5>
                     </div>
                     <p className="text-[11px] text-slate-600 font-medium leading-normal">
-                      Kapasitas 1.000 MB penyimpanan NoSQL terdistribusi sanggup menampung hingga 1 Juta rekaman data.
+                      Kapasitas 500 MB penyimpanan PostgreSQL &amp; JSONB sanggup menampung hingga 500 Ribu rekaman data.
                     </p>
                   </div>
 
@@ -3232,7 +3229,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       <h5 className="text-xs font-black text-slate-900">Sinyal Live Realtime</h5>
                     </div>
                     <p className="text-[11px] text-slate-600 font-medium leading-normal">
-                      Sinyal listener <code className="text-emerald-800 font-mono text-[10px]">onSnapshot</code> menyebarkan perubahan data otomatis tanpa reload browser.
+                      Sinyal channel <code className="text-emerald-800 font-mono text-[10px]">postgres_changes</code> menyebarkan perubahan data otomatis tanpa reload browser.
                     </p>
                   </div>
 
@@ -3241,26 +3238,26 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       <div className="p-2 rounded-xl bg-[#043e2e] text-[#d4af37]">
                         <ShieldCheck className="w-4 h-4" />
                       </div>
-                      <h5 className="text-xs font-black text-slate-900">Firestore Rules Shield</h5>
+                      <h5 className="text-xs font-black text-slate-900">Row Level Security (RLS)</h5>
                     </div>
                     <p className="text-[11px] text-slate-600 font-medium leading-normal">
-                      Proteksi keamanan tingkat dokumen NoSQL memisahkan hak akses Public, Admin Wilayah &amp; Superadmin.
+                      Proteksi keamanan tingkat baris PostgreSQL memisahkan hak akses Public, Admin Wilayah &amp; Superadmin.
                     </p>
                   </div>
                 </div>
 
-                {/* KOLEKSI FIRESTORE AKTIF LIST */}
+                {/* KOLEKSI TABEL SUPABASE AKTIF LIST */}
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    Koleksi Firestore Utama Terhubung (Realtime Collections):
+                    Tabel Supabase Utama Terhubung (Realtime Tables):
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                     {[
-                      { name: 'pillar_members', label: 'Data 10 Pilar PSKS' },
+                      { name: 'psks_records', label: 'Data 10 Pilar PSKS' },
                       { name: 'admin_accounts', label: 'Kredensial 27 Kab/Kota' },
                       { name: 'app_settings', label: 'Konfigurasi & Latar' },
                       { name: 'admin_messages', label: 'Kotak Masuk Wilayah' },
-                      { name: 'psks_system_logs', label: 'Audit Trail Keamanan' },
+                      { name: 'system_logs', label: 'Audit Trail Keamanan' },
                     ].map((col, cIdx) => (
                       <div key={cIdx} className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
                         <span className="text-[10px] font-mono font-black text-emerald-800 block truncate">
@@ -3774,8 +3771,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       { num: '27', label: 'Kab/Kota Jabar', sub: 'Spasial GIS GeoJSON' },
                       { num: '10', label: 'Pilar PSKS', sub: 'Infrastruktur Data' },
                       { num: '100%', label: 'Type-Safe', sub: 'TypeScript Clean Code' },
-                      { num: '< 45ms', label: 'Realtime Sync', sub: 'Cloud Firestore' },
-                      { num: '1 Juta', label: 'Kapasitas Data', sub: '1 GB Storage Limit' },
+                      { num: '< 40ms', label: 'Realtime Sync', sub: 'Supabase Cloud' },
+                      { num: '500 Ribu', label: 'Kapasitas Data', sub: '500 MB Storage Limit' },
                       { num: '6', label: 'Divisi Spesialis', sub: 'Single-Handed Dev' },
                     ].map((st, sIdx) => (
                       <div key={sIdx} className="p-3 rounded-2xl bg-slate-950/60 border border-white/10 text-center space-y-0.5 hover:border-[#d4af37]/50 transition-all">
@@ -3822,9 +3819,9 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                             tag: 'Security Proxy',
                           },
                           {
-                            title: 'Realtime Cloud Firestore NoSQL Sync',
-                            desc: 'Arsitektur database terdistribusi Google Cloud Firestore dengan latensi kurang dari 45ms menggunakan listener WebSocket onSnapshot() dua arah.',
-                            tag: 'NoSQL Sync',
+                            title: 'Realtime Supabase Cloud PostgreSQL Sync',
+                            desc: 'Arsitektur database terdistribusi Supabase Cloud PostgreSQL & JSONB dengan latensi kurang dari 40ms menggunakan channels realtime dan REST adaptif dua arah.',
+                            tag: 'PostgreSQL Sync',
                           },
                           {
                             title: 'Akses Multi-Tier & Role Gate RBAC',
@@ -3832,8 +3829,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                             tag: 'RBAC Shield',
                           },
                           {
-                            title: 'Optimasi Efisiensi Ruang 1 GB Storage',
-                            desc: 'Skema data presisi tinggi di mana 1 KB menampung 1 data tabel sedang, memungkinkan kapasitas hingga 1.000.000 data terenkripsi dalam 1 GB storage.',
+                            title: 'Optimasi Efisiensi Ruang 500 MB Storage',
+                            desc: 'Skema data presisi tinggi di mana 1 KB menampung 1 data tabel sedang, memungkinkan kapasitas hingga 500.000 data terenkripsi dalam 500 MB storage.',
                             tag: 'Storage Opt',
                           },
                         ],
