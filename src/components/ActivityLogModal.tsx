@@ -22,8 +22,7 @@ import {
 } from 'lucide-react';
 import { SystemLog, UserSession, PillarId } from '../types';
 import { getLocalLogs, autoPurgeOldLogs, formatRelativeTime, sanitizeLogEntries } from '../lib/activityLogger';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { JABAR_REGIONS, PILLARS_CONFIG } from '../data/initialData';
 
 interface ActivityLogModalProps {
@@ -64,23 +63,41 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch from Firestore system_logs
-      let firestoreLogs: SystemLog[] = [];
+      // 1. Fetch from Supabase system_logs
+      let cloudLogs: SystemLog[] = [];
       try {
-        const q = query(
-          collection(db, 'system_logs'),
-          orderBy('createdAt', 'desc'),
-          limit(200)
-        );
-        const snap = await getDocs(q);
-        snap.forEach((docSnap) => {
-          firestoreLogs.push({ id: docSnap.id, ...(docSnap.data() as any) });
-        });
+        const { data, error } = await supabase
+          .from('system_logs')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(200);
+
+        if (!error && data && data.length > 0) {
+          data.forEach((row: any) => {
+            const restData = row.data && typeof row.data === 'object' ? row.data : {};
+            cloudLogs.push({
+              id: row.id,
+              timestamp: row.timestamp || restData.timestamp || '',
+              createdAt: typeof row.createdAt === 'string' ? new Date(row.createdAt).getTime() : (row.createdAt || Date.now()),
+              actorName: row.actorName || restData.actorName || '',
+              actorRole: row.actorRole || restData.actorRole || '',
+              actorWilayah: row.actorWilayah || restData.actorWilayah || '',
+              category: row.category || restData.category || '',
+              actionType: row.actionType || restData.actionType || '',
+              targetCollection: row.targetCollection || restData.targetCollection || '',
+              targetId: row.targetId || restData.targetId || '',
+              targetName: row.targetName || restData.targetName,
+              targetPillar: row.targetPillar || restData.targetPillar,
+              targetWilayah: row.targetWilayah || restData.targetWilayah,
+              details: row.details || restData.details || '',
+            });
+          });
+        }
       } catch (err) {
         console.warn('Fallback to local storage logs:', err);
       }
 
-      const rawLogs = firestoreLogs.length > 0 ? firestoreLogs : getLocalLogs();
+      const rawLogs = cloudLogs.length > 0 ? cloudLogs : getLocalLogs();
 
       // STRICT SANITIZATION: Eliminate 'Tamu Publik', 'user' role, corrupt entries, and developer logs
       const cleanLogs = sanitizeLogEntries(rawLogs);

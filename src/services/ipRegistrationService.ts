@@ -1,4 +1,5 @@
 import { AdminAccount } from '../types';
+import { supabase } from '../lib/supabase';
 
 export interface QuotaInfo {
   registeredAccounts: string[];
@@ -293,6 +294,18 @@ export async function recordAccountRegistration(
             },
             { merge: true }
           );
+
+          try {
+            await supabase.from('ip_registrations').upsert({
+              id: getSafeDeviceDocId(deviceId),
+              identifier: deviceId,
+              type: 'device',
+              count: existingList.length,
+              lastRegisteredAt: nowIso,
+              updatedAt: nowIso,
+              data: { registeredAccounts: existingList },
+            });
+          } catch {}
         } catch (err) {
           console.warn('[Device Registration] Error updating Device doc in Firestore:', err);
         }
@@ -322,6 +335,18 @@ export async function recordAccountRegistration(
             },
             { merge: true }
           );
+
+          try {
+            await supabase.from('ip_registrations').upsert({
+              id: getSafeIpDocId(ip),
+              identifier: ip,
+              type: 'ip',
+              count: existingList.length,
+              lastRegisteredAt: nowIso,
+              updatedAt: nowIso,
+              data: { registeredAccounts: existingList },
+            });
+          } catch {}
         } catch (err) {
           console.warn('[IP Registration] Error updating IP doc in Firestore:', err);
         }
@@ -339,6 +364,12 @@ export async function recordAccountRegistration(
             },
             { merge: true }
           );
+
+          try {
+            await supabase.from('admin_accounts').update({
+              data: { registeredIp: hasValidPublicIp ? ip : undefined, deviceId: deviceId || undefined },
+            }).eq('id', adminId);
+          } catch {}
         } catch {}
       }
     } catch (importErr) {

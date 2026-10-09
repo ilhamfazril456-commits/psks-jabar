@@ -1,5 +1,6 @@
 import { writeBatch, doc, collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db, isQuotaError } from './firebase';
+import { supabase } from './supabase';
 import { SystemLog, UserSession } from '../types';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -349,7 +350,7 @@ export async function recordSystemActivity(params: {
   // 1. Immediately save to LocalStorage for instant UI feedback
   saveLocalLog(logData);
 
-  // 2. Clean undefined values for Firestore compatibility
+  // 2. Clean undefined values for database compatibility
   const cleanLogData: Record<string, any> = {};
   Object.keys(logData).forEach((k) => {
     const val = (logData as Record<string, any>)[k];
@@ -358,25 +359,39 @@ export async function recordSystemActivity(params: {
     }
   });
 
-  // 3. Commit to Firestore using batch write
+  // 3. Commit to Supabase system_logs
+  try {
+    await supabase.from('system_logs').upsert({
+      id: logId,
+      actorName: logData.actorName || '',
+      actorRole: logData.actorRole || '',
+      actorWilayah: logData.actorWilayah || '',
+      actionType: logData.actionType || '',
+      category: logData.category || '',
+      timestamp: logData.timestamp || '',
+      createdAt: new Date(now).toISOString(),
+      details: typeof logData.details === 'string' ? logData.details : JSON.stringify(logData.details || {}),
+      data: cleanLogData,
+    });
+  } catch (sbErr) {
+    console.warn('[Activity Log] Supabase log write notice:', sbErr);
+  }
+
+  // 4. Passive silent commit to Firestore
   try {
     const batch = writeBatch(db);
     const logRef = doc(db, 'system_logs', logId);
     batch.set(logRef, cleanLogData);
     await batch.commit();
   } catch (err) {
-    if (isQuotaError(err)) {
-      console.warn('[Activity Log] Quota exceeded, log saved to offline local storage.');
-    } else {
-      console.error('[Activity Log] Error committing batch write log:', err);
-    }
+    // Non-blocking cold backup
   }
 
   return logData;
 }
 
 /**
- * Instantly wipe all activity logs from both LocalStorage and Firestore database.
+ * Instantly wipe all activity logs from LocalStorage, Supabase, and Firestore.
  */
 export async function clearAllSystemLogs(): Promise<number> {
   let totalDeleted = 0;
@@ -389,7 +404,15 @@ export async function clearAllSystemLogs(): Promise<number> {
     console.error('Failed to wipe local logs:', e);
   }
 
-  // 2. Wipe Firestore collection `system_logs` in batches of 400
+  // 2. Wipe Supabase system_logs
+  try {
+    const { count } = await supabase.from('system_logs').delete().neq('id', '__keep_none__');
+    totalDeleted = count || 0;
+  } catch (err) {
+    console.warn('[Clear All Logs] Supabase wipe notice:', err);
+  }
+
+  // 3. Wipe Firestore collection system_logs in batches of 400
   try {
     const logsRef = collection(db, 'system_logs');
     let hasMore = true;

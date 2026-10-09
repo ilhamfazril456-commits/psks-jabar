@@ -2,8 +2,9 @@ import { PortalFaqItem } from '../types';
 import { DEFAULT_PORTAL_FAQS } from '../data/defaultFaqs';
 import { getFirestoreModule, cleanFirestoreData } from './firestoreDataService';
 import { OperationType, handleFirestoreError } from '../lib/firebaseErrors';
+import { supabase } from '../lib/supabase';
 
-const COLLECTION_NAME = 'portal_faqs';
+const TABLE_NAME = 'portal_faqs';
 const LOCAL_STORAGE_KEY = 'portal_faqs_cache_v1';
 
 // In-memory cache
@@ -45,7 +46,7 @@ function setCachedFaqs(faqs: PortalFaqItem[]) {
 }
 
 /**
- * Realtime listener for FAQs from Firestore with Index Query support
+ * Realtime listener for FAQs powered by Supabase
  */
 export function subscribeToFaqs(
   onUpdate: (faqs: PortalFaqItem[]) => void,
@@ -55,79 +56,67 @@ export function subscribeToFaqs(
   const activeOnly = typeof activeOnlyOrError === 'boolean' ? activeOnlyOrError : false;
   const onError = typeof activeOnlyOrError === 'function' ? activeOnlyOrError : onErrorCallback;
 
-  let unsub: (() => void) | null = null;
   let isCancelled = false;
 
   // Emit current cached FAQs immediately
   const initialCached = getCachedFaqs();
   onUpdate(activeOnly ? initialCached.filter((f) => f.isActive) : initialCached);
 
-  getFirestoreModule().then(({ firestore, db }) => {
-    if (isCancelled) return;
+  async function fetchFaqs() {
+    let q = supabase.from(TABLE_NAME).select('*').order('order', { ascending: true });
+    if (activeOnly) {
+      q = q.eq('isActive', true);
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      onUpdate(DEFAULT_PORTAL_FAQS);
+      setCachedFaqs(DEFAULT_PORTAL_FAQS);
+      return;
+    }
 
-    try {
-      const colRef = firestore.collection(db, COLLECTION_NAME);
-      // Query terindeks Firestore:
-      // Jika activeOnly: where('isActive', '==', true) + orderBy('order', 'asc')
-      // Jika semua: orderBy('order', 'asc')
-      const indexedQuery = activeOnly
-        ? firestore.query(colRef, firestore.where('isActive', '==', true), firestore.orderBy('order', 'asc'))
-        : firestore.query(colRef, firestore.orderBy('order', 'asc'));
+    const items: PortalFaqItem[] = data.map((row) => ({
+      id: row.id,
+      question: row.question || '',
+      answer: row.answer || '',
+      category: row.category || 'pilar_psks',
+      order: typeof row.order === 'number' ? row.order : 99,
+      isActive: row.isActive !== false,
+      createdAt: row.createdAt || new Date().toISOString(),
+      updatedAt: row.updatedAt || new Date().toISOString(),
+      updatedBy: 'Superadmin',
+    }));
 
-      unsub = firestore.onSnapshot(
-        indexedQuery as any,
-        (snapshot) => {
-          if (isCancelled) return;
-          if (snapshot.empty) {
-            // If collection is empty in Firestore, populate with default FAQs in background if needed
-            onUpdate(DEFAULT_PORTAL_FAQS);
-            setCachedFaqs(DEFAULT_PORTAL_FAQS);
-            return;
-          }
+    items.sort((a, b) => a.order - b.order);
+    setCachedFaqs(items);
+    if (!isCancelled) {
+      onUpdate(items);
+    }
+  }
 
-          const items: PortalFaqItem[] = [];
-          snapshot.forEach((doc: any) => {
-            const data = doc.data() as any;
-            items.push({
-              id: doc.id,
-              question: data.question || '',
-              answer: data.answer || '',
-              category: data.category || 'pilar_psks',
-              order: typeof data.order === 'number' ? data.order : 99,
-              isActive: data.isActive !== false,
-              createdAt: data.createdAt || new Date().toISOString(),
-              updatedAt: data.updatedAt || new Date().toISOString(),
-              updatedBy: data.updatedBy || 'Superadmin',
-            });
-          });
-
-          // Secondary in-memory sort guard
-          items.sort((a, b) => a.order - b.order);
-
-          setCachedFaqs(items);
-          onUpdate(items);
-        },
-        (error) => {
-          if (isCancelled) return;
-          handleFirestoreError(error, OperationType.LIST, COLLECTION_NAME);
-          if (onError) onError(error);
-          // Fallback to cache on error
-          onUpdate(getCachedFaqs());
-        }
-      );
-    } catch (err) {
-      if (isCancelled) return;
-      handleFirestoreError(err, OperationType.LIST, COLLECTION_NAME);
+  fetchFaqs().catch((err) => {
+    if (!isCancelled) {
       if (onError) onError(err);
       onUpdate(getCachedFaqs());
     }
   });
 
+  // Realtime channel
+  const channelName = `sub_faqs_${Date.now()}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: TABLE_NAME },
+      () => {
+        if (!isCancelled) fetchFaqs().catch(() => {});
+      }
+    )
+    .subscribe();
+
   return () => {
     isCancelled = true;
-    if (unsub) {
-      unsub();
-    }
+    channel.unsubscribe();
   };
 }
 
@@ -135,78 +124,82 @@ export function subscribeToFaqs(
  * Save / Update single FAQ item
  */
 export async function saveFaqToFirestore(faq: PortalFaqItem): Promise<boolean> {
+  const docId = faq.id || `faq-${Date.now()}`;
+  const payload = {
+    id: docId,
+    question: faq.question.trim(),
+    answer: faq.answer.trim(),
+    category: faq.category || 'pilar_psks',
+    order: Number(faq.order) || 1,
+    isActive: Boolean(faq.isActive),
+    createdAt: faq.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from(TABLE_NAME).upsert(payload);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  // Update in-memory cache
+  const current = getCachedFaqs();
+  const idx = current.findIndex((i) => i.id === docId);
+  let updated: PortalFaqItem[];
+  if (idx >= 0) {
+    updated = [...current];
+    updated[idx] = { ...updated[idx], ...payload } as PortalFaqItem;
+  } else {
+    updated = [...current, payload as PortalFaqItem];
+  }
+  updated.sort((a, b) => a.order - b.order);
+  setCachedFaqs(updated);
+
+  // Passive cold backup to Firestore
   try {
     const { firestore, db } = await getFirestoreModule();
-    const docId = faq.id || `faq-${Date.now()}`;
-    const payload = cleanFirestoreData({
-      id: docId,
-      question: faq.question.trim(),
-      answer: faq.answer.trim(),
-      category: faq.category || 'pilar_psks',
-      order: Number(faq.order) || 1,
-      isActive: Boolean(faq.isActive),
-      createdAt: faq.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      updatedBy: faq.updatedBy || 'Superadmin',
-    });
+    await firestore.setDoc(firestore.doc(db, TABLE_NAME, docId), cleanFirestoreData(payload), { merge: true });
+  } catch {}
 
-    await firestore.setDoc(firestore.doc(db, COLLECTION_NAME, docId), payload, { merge: true });
-
-    // Update in-memory cache
-    const current = getCachedFaqs();
-    const idx = current.findIndex((i) => i.id === docId);
-    let updated: PortalFaqItem[];
-    if (idx >= 0) {
-      updated = [...current];
-      updated[idx] = { ...updated[idx], ...payload } as PortalFaqItem;
-    } else {
-      updated = [...current, payload as PortalFaqItem];
-    }
-    updated.sort((a, b) => a.order - b.order);
-    setCachedFaqs(updated);
-
-    return true;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${COLLECTION_NAME}/${faq.id}`);
-    throw error;
-  }
+  return true;
 }
 
 /**
  * Delete single FAQ item
  */
 export async function deleteFaqFromFirestore(faqId: string): Promise<boolean> {
+  const { error } = await supabase.from(TABLE_NAME).delete().eq('id', faqId);
+  if (error) throw new Error(error.message);
+
+  const current = getCachedFaqs().filter((i) => i.id !== faqId);
+  setCachedFaqs(current);
+
+  // Passive cold backup to Firestore
   try {
     const { firestore, db } = await getFirestoreModule();
-    await firestore.deleteDoc(firestore.doc(db, COLLECTION_NAME, faqId));
+    await firestore.deleteDoc(firestore.doc(db, TABLE_NAME, faqId));
+  } catch {}
 
-    const current = getCachedFaqs().filter((i) => i.id !== faqId);
-    setCachedFaqs(current);
-    return true;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `${COLLECTION_NAME}/${faqId}`);
-    throw error;
-  }
+  return true;
 }
 
 /**
- * Seed or restore default FAQs into Firestore
+ * Seed or restore default FAQs
  */
 export async function seedDefaultFaqsToFirestore(): Promise<boolean> {
-  try {
-    const { firestore, db } = await getFirestoreModule();
-    const batch = firestore.writeBatch(db);
+  const list = DEFAULT_PORTAL_FAQS.map((faq) => ({
+    id: faq.id,
+    question: faq.question,
+    answer: faq.answer,
+    category: faq.category,
+    order: faq.order,
+    isActive: faq.isActive,
+    createdAt: faq.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
 
-    DEFAULT_PORTAL_FAQS.forEach((faq) => {
-      const docRef = firestore.doc(db, COLLECTION_NAME, faq.id);
-      batch.set(docRef, cleanFirestoreData(faq), { merge: true });
-    });
+  const { error } = await supabase.from(TABLE_NAME).upsert(list);
+  if (error) throw new Error(error.message);
 
-    await batch.commit();
-    setCachedFaqs([...DEFAULT_PORTAL_FAQS]);
-    return true;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, COLLECTION_NAME);
-    throw error;
-  }
+  setCachedFaqs([...DEFAULT_PORTAL_FAQS]);
+  return true;
 }

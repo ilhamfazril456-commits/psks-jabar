@@ -1,4 +1,5 @@
 import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import {
   doc,
   getDoc,
@@ -182,7 +183,7 @@ export function setLocalCachedRegionalLogos(logos: Record<string, string>): void
   }
 }
 
-// Langganan pembaruan realtime dari Firestore & sinkronisasi IndexedDB
+// Langganan pembaruan realtime dari Supabase & sinkronisasi IndexedDB
 export function subscribeToRegionalLogos(
   callback: (logos: Record<string, string>) => void
 ): () => void {
@@ -200,81 +201,72 @@ export function subscribeToRegionalLogos(
     }
   });
 
-  try {
-    // 1. Dengarkan koleksi terdistribusi psks_regional_logos
-    const colRef = collection(db, REGIONAL_LOGOS_COLLECTION);
-    const unsubscribeCol = onSnapshot(
-      colRef,
-      (snapshot) => {
-        const fromFirestore: Record<string, string> = {};
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (data?.regionName && data?.logo) {
-            fromFirestore[data.regionName] = data.logo;
-            // Sinkronkan ke IndexedDB lokal untuk backup offline permanen
-            saveLogoToIndexedDb(data.regionName, data.logo);
+  // 1. Ambil data logo lengkap dari Supabase
+  const loadInitialLogos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('psks_regional_logos')
+        .select('regionName, logo');
+
+      if (!error && data && data.length > 0) {
+        const fromSupabase: Record<string, string> = {};
+        data.forEach((row) => {
+          if (row.regionName && row.logo) {
+            fromSupabase[row.regionName] = row.logo;
+            saveLogoToIndexedDb(row.regionName, row.logo);
           }
         });
-
-        // Gabungkan dengan cache lokal yang ada
         const cached = getLocalCachedRegionalLogos();
-        const merged = { ...cached, ...fromFirestore };
-
+        const merged = { ...cached, ...fromSupabase };
         setLocalCachedRegionalLogos(merged);
         callback(merged);
-      },
-      (error) => {
-        console.warn('Firestore onSnapshot notice untuk psks_regional_logos:', error);
       }
-    );
+    } catch (err) {
+      console.warn('Supabase fetch regional_logos notice:', err);
+    }
+  };
+  loadInitialLogos();
 
-    // 2. Baca dokumen lama psks_app_settings/regional_logos sekali untuk migrasi logo lama jika ada
-    const legacyDocRef = doc(db, 'psks_app_settings', 'regional_logos');
-    getDoc(legacyDocRef)
-      .then((snap) => {
-        if (snap.exists()) {
-          const legacyData = snap.data();
-          const legacyLogos = (legacyData?.logos as Record<string, string>) || {};
-          if (Object.keys(legacyLogos).length > 0) {
-            const currentCache = getLocalCachedRegionalLogos();
-            const merged = { ...legacyLogos, ...currentCache };
-            setLocalCachedRegionalLogos(merged);
-            callback(merged);
-
-            // Migrasi otomatis tiap logo ke dokumen terpisah & IndexedDB
-            Object.entries(legacyLogos).forEach(async ([regName, logoBase64]) => {
-              if (regName && logoBase64) {
-                saveLogoToIndexedDb(regName, logoBase64);
-                try {
-                  const docId = getRegionDocId(regName);
-                  await setDoc(
-                    doc(db, REGIONAL_LOGOS_COLLECTION, docId),
-                    {
-                      regionName: regName,
-                      logo: logoBase64,
-                      updatedAt: new Date().toISOString(),
-                    },
-                    { merge: true }
-                  );
-                } catch {}
-              }
-            });
+  // 2. Realtime listener via Supabase Channels
+  const channelName = `sub_regional_logos_${Date.now()}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'psks_regional_logos' },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldName = (payload.old as any)?.regionName;
+          if (oldName) {
+            delete memoryCacheLogos[oldName];
+            const current = getLocalCachedRegionalLogos();
+            const updated = { ...current };
+            delete updated[oldName];
+            setLocalCachedRegionalLogos(updated);
+            callback(updated);
+          }
+        } else if (payload.new) {
+          const newDoc = payload.new as any;
+          if (newDoc.regionName && newDoc.logo) {
+            memoryCacheLogos[newDoc.regionName] = newDoc.logo;
+            saveLogoToIndexedDb(newDoc.regionName, newDoc.logo);
+            const current = getLocalCachedRegionalLogos();
+            const updated = { ...current, [newDoc.regionName]: newDoc.logo };
+            setLocalCachedRegionalLogos(updated);
+            callback(updated);
           }
         }
-      })
-      .catch((err) => {
-        console.warn('Legacy logo check notice:', err);
-      });
+      }
+    )
+    .subscribe();
 
-    return unsubscribeCol;
-  } catch (err) {
-    console.warn('Gagal inisialisasi subscriber regional_logos:', err);
-    return () => {};
-  }
+  return () => {
+    channel.unsubscribe();
+  };
 }
 
-// Simpan atau perbarui 1 logo wilayah tertentu ke Firestore & IndexedDB
-// Tidak pernah crash saat kuota Firestore harian habis
+// Simpan atau perbarui 1 logo wilayah tertentu ke Supabase & IndexedDB
+// Anti-limit kuota dan instan tersimpan
 export async function saveRegionalLogoToFirestore(
   regionName: string,
   base64Logo: string
@@ -282,7 +274,7 @@ export async function saveRegionalLogoToFirestore(
   // 1. Simpan ke memory cache seketika (langsung aktif di UI tanpa lag)
   memoryCacheLogos[regionName] = base64Logo;
 
-  // 2. Simpan ke IndexedDB (kapasitas gigabyte, anti-kuota 5MB)
+  // 2. Simpan ke IndexedDB (kapasitas gigabyte, anti-kuota)
   await saveLogoToIndexedDb(regionName, base64Logo);
 
   // 3. Simpan ke LocalStorage secara aman
@@ -293,36 +285,43 @@ export async function saveRegionalLogoToFirestore(
   };
   setLocalCachedRegionalLogos(updated);
 
-  // 4. Upayakan simpan ke Firestore
+  // 4. Simpan ke Supabase cloud database
+  const docId = getRegionDocId(regionName);
   try {
-    const docId = getRegionDocId(regionName);
-    const regionDocRef = doc(db, REGIONAL_LOGOS_COLLECTION, docId);
-    await setDoc(
-      regionDocRef,
-      {
-        regionName,
-        logo: base64Logo,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-    return { savedToCloud: true };
-  } catch (err: any) {
-    const isQuotaError =
-      err?.code === 'resource-exhausted' ||
-      err?.code === 'quota-exceeded' ||
-      (err?.message && String(err.message).toLowerCase().includes('quota')) ||
-      (err?.message && String(err.message).toLowerCase().includes('resource-exhausted'));
+    const { error } = await supabase.from('psks_regional_logos').upsert({
+      id: docId,
+      regionName,
+      logo: base64Logo,
+      updatedAt: new Date().toISOString(),
+    });
 
-    if (isQuotaError) {
-      console.warn('Firestore kuota tercapai, data logo aman tersimpan di IndexedDB lokal');
-      return { savedToCloud: false, quotaNotice: true };
-    } else {
-      console.warn('Firestore write warning:', err);
-      return { savedToCloud: false };
+    if (error) {
+      console.warn('Supabase logo write warning:', error.message);
     }
+
+    // Passive silent backup to Firestore
+    try {
+      const regionDocRef = doc(db, REGIONAL_LOGOS_COLLECTION, docId);
+      await setDoc(
+        regionDocRef,
+        {
+          regionName,
+          logo: base64Logo,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch {}
+
+    return { savedToCloud: !error };
+  } catch (err: any) {
+    console.warn('Error saving logo to cloud:', err);
+    return { savedToCloud: false };
   }
 }
+
+// Alias nama modern
+export const saveRegionalLogoToCloud = saveRegionalLogoToFirestore;
 
 // Hapus logo kustom wilayah tertentu (kembali ke default Pemprov)
 export async function removeRegionalLogoFromFirestore(regionName: string): Promise<void> {
@@ -333,12 +332,17 @@ export async function removeRegionalLogoFromFirestore(regionName: string): Promi
 
   setLocalCachedRegionalLogos(updated);
 
+  const docId = getRegionDocId(regionName);
   try {
-    const docId = getRegionDocId(regionName);
-    await deleteDoc(doc(db, REGIONAL_LOGOS_COLLECTION, docId));
+    await supabase.from('psks_regional_logos').delete().eq('id', docId);
   } catch (err) {
-    console.warn('Gagal menghapus logo wilayah dari Firestore:', err);
+    console.warn('Gagal menghapus logo wilayah dari Supabase:', err);
   }
+
+  // Passive silent delete from Firestore
+  try {
+    await deleteDoc(doc(db, REGIONAL_LOGOS_COLLECTION, docId));
+  } catch {}
 }
 
 // Helper untuk mencocokkan nama wilayah dan mengambil logo yang tepat

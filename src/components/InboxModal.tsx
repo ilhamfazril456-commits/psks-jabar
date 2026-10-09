@@ -14,8 +14,7 @@ import {
   Check,
   MessageSquare
 } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { setFirestoreDoc, deleteFirestoreDoc } from '../services/firestoreDataService';
 
 export const WILAYAH_JABAR_LIST = [
   'Kota Bandung',
@@ -139,9 +138,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
         onMarkAsRead(msg.id);
       }
       try {
-        await updateDoc(doc(db, 'admin_messages', msg.id), {
-          isRead: true,
-        });
+        await setFirestoreDoc('admin_messages', msg.id, { isRead: true }, { merge: true });
       } catch (err) {
         console.error('Error updating read status:', err);
       }
@@ -151,7 +148,7 @@ export const InboxModal: React.FC<InboxModalProps> = ({
   const handleDeleteMessage = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      await deleteDoc(doc(db, 'admin_messages', id));
+      await deleteFirestoreDoc('admin_messages', id);
       if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }

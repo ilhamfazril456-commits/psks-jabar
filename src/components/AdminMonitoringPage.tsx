@@ -22,8 +22,8 @@ import {
   Inbox
 } from 'lucide-react';
 import { BackToHomeButton } from './BackToHomeButton';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '../lib/firebase';
+import { setFirestoreDoc } from '../services/firestoreDataService';
 import { AdminRadarMonitoringMap } from './AdminRadarMonitoringMap';
 
 interface AdminMonitoringPageProps {
@@ -774,7 +774,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
                       });
                     } else {
                       try {
-                        await setDoc(doc(db, 'admin_messages', msgId), {
+                        await setFirestoreDoc('admin_messages', msgId, {
                           id: msgId,
                           senderName: session?.nama || senderTitle,
                           senderRole: isDeveloperUser ? 'developer' : 'superadmin',

@@ -21,9 +21,8 @@ import {
   Activity,
   Database
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { getLocalLogs, autoPurgeOldLogs } from '../lib/activityLogger';
+import { supabase } from '../lib/supabase';
 
 interface ActivityLogViewProps {
   session?: UserSession;
@@ -41,56 +40,84 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
   const [isPurging, setIsPurging] = useState(false);
   const [purgeFeedback, setPurgeFeedback] = useState<string | null>(null);
 
-  // 1. Setup Firestore real-time listener for system_logs
+  // 1. Setup Supabase real-time listener for system_logs
   useEffect(() => {
     // Run initial auto purge for >30 days old logs
     autoPurgeOldLogs().catch(() => {});
 
-    try {
-      const logsRef = collection(db, 'system_logs');
-      const q = query(logsRef, orderBy('createdAt', 'desc'), limit(200));
+    const fetchSupabaseLogs = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('system_logs')
+          .select('*')
+          .order('createdAt', { ascending: false })
+          .limit(200);
 
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const firestoreLogs: SystemLog[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as SystemLog;
-              // STRICT RULE: Double check developer filter just in case
-              const isDev =
-                (data.actorRole as string) === 'developer' ||
-                (data.actorName || '').toLowerCase().includes('ilham') ||
-                (data.actorName || '').toLowerCase().includes('developer');
-              if (!isDev) {
-                firestoreLogs.push({ ...data, id: docSnap.id });
-              }
-            });
+        if (!error && data && data.length > 0) {
+          const cloudLogs: SystemLog[] = [];
+          data.forEach((row: any) => {
+            const restData = row.data && typeof row.data === 'object' ? row.data : {};
+            const logItem: SystemLog = {
+              id: row.id,
+              timestamp: row.timestamp || restData.timestamp || '',
+              createdAt: typeof row.createdAt === 'string' ? new Date(row.createdAt).getTime() : (row.createdAt || Date.now()),
+              actorName: row.actorName || restData.actorName || '',
+              actorRole: row.actorRole || restData.actorRole || '',
+              actorWilayah: row.actorWilayah || restData.actorWilayah || '',
+              category: row.category || restData.category || '',
+              actionType: row.actionType || restData.actionType || '',
+              targetCollection: row.targetCollection || restData.targetCollection || '',
+              targetId: row.targetId || restData.targetId || '',
+              targetName: row.targetName || restData.targetName,
+              targetPillar: row.targetPillar || restData.targetPillar,
+              targetWilayah: row.targetWilayah || restData.targetWilayah,
+              details: row.details || restData.details || '',
+            };
 
-            // Merge with local logs if any
-            const local = getLocalLogs();
-            const combinedMap = new Map<string, SystemLog>();
-            [...firestoreLogs, ...local].forEach((item) => {
-              if (item.id && !combinedMap.has(item.id)) {
-                combinedMap.set(item.id, item);
-              }
-            });
+            const isDev =
+              (logItem.actorRole as string) === 'developer' ||
+              (logItem.actorName || '').toLowerCase().includes('ilham') ||
+              (logItem.actorName || '').toLowerCase().includes('developer');
+            if (!isDev) {
+              cloudLogs.push(logItem);
+            }
+          });
 
-            const sorted = Array.from(combinedMap.values()).sort(
-              (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-            );
-            setLogs(sorted);
-          }
-        },
-        (error) => {
-          console.warn('[ActivityLogView] Firestore snapshot listener warning (operating on local logs):', error);
+          const local = getLocalLogs();
+          const combinedMap = new Map<string, SystemLog>();
+          [...cloudLogs, ...local].forEach((item) => {
+            if (item.id && !combinedMap.has(item.id)) {
+              combinedMap.set(item.id, item);
+            }
+          });
+
+          const sorted = Array.from(combinedMap.values()).sort(
+            (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+          );
+          setLogs(sorted);
         }
-      );
+      } catch (err) {
+        console.warn('[ActivityLogView] Error fetching logs:', err);
+      }
+    };
 
-      return () => unsubscribe();
-    } catch (e) {
-      console.error('[ActivityLogView] Setup listener error:', e);
-    }
+    fetchSupabaseLogs();
+
+    const channelName = `sub_act_view_${Date.now()}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_logs' },
+        () => {
+          fetchSupabaseLogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   // Filter logs according to search & filter criteria

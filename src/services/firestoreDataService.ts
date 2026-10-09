@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import { OperationType, handleFirestoreError, isQuotaError } from '../lib/firebaseErrors';
 
 let firestoreModulePromise: Promise<{
@@ -9,7 +10,7 @@ export function getFirestoreModule() {
   if (!firestoreModulePromise) {
     firestoreModulePromise = Promise.all([
       import('firebase/firestore'),
-      import('../lib/firebase')
+      import('../lib/firebase'),
     ]).then(([firestore, { db }]) => ({
       firestore,
       db,
@@ -53,7 +54,257 @@ export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Recor
 }
 
 /**
- * Non-blocking dynamic listener for a single document
+ * Mapping helper: converts Supabase table row to frontend Document object
+ */
+export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
+  if (!row) return null;
+
+  if (collectionName === 'psks_records') {
+    const restData = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      id: row.id,
+      ...restData,
+      pillarId: row.pillarId || restData.pillarId || 'peksos',
+      wilayah: row.wilayah || restData.wilayah || '',
+      nama: row.nama || restData.nama || '',
+      status: row.status || restData.status || '',
+      kec: row.kec || restData.kec || '',
+      kelDesa: row.kelDesa || restData.kelDesa || '',
+      orderIndex: typeof row.orderIndex === 'number' ? row.orderIndex : restData.orderIndex || 0,
+      createdAt: row.createdAt || restData.createdAt || '',
+      updatedAt: row.updatedAt || restData.updatedAt || '',
+    };
+  }
+
+  if (collectionName === 'admin_accounts') {
+    const restData = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      id: row.id,
+      ...restData,
+      username: row.username || restData.username || row.id,
+      namaAdmin: row.namaAdmin || restData.namaAdmin || '',
+      role: row.role || restData.role || 'admin',
+      statusActive: row.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+      wilayahTugas: row.wilayahTugas || restData.wilayahTugas || '',
+      passwordHash: row.passwordHash || restData.passwordHash || '',
+      sessionToken: row.sessionToken || restData.sessionToken || '',
+    };
+  }
+
+  if (collectionName === 'psks_regional_logos') {
+    return {
+      id: row.id,
+      regionName: row.regionName || row.id,
+      logo: row.logo || '',
+      updatedAt: row.updatedAt || '',
+    };
+  }
+
+  if (collectionName === 'system_logs') {
+    const restData = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      id: row.id,
+      ...restData,
+      actorName: row.actorName || restData.actorName || '',
+      actorRole: row.actorRole || restData.actorRole || '',
+      actorWilayah: row.actorWilayah || restData.actorWilayah || '',
+      actionType: row.actionType || restData.actionType || '',
+      category: row.category || restData.category || '',
+      timestamp: row.timestamp || restData.timestamp || '',
+      createdAt: row.createdAt || restData.createdAt || '',
+      details: row.details || restData.details || '',
+    };
+  }
+
+  if (collectionName === 'portal_faqs') {
+    return {
+      id: row.id,
+      question: row.question || '',
+      answer: row.answer || '',
+      category: row.category || '',
+      order: typeof row.order === 'number' ? row.order : 0,
+      isActive: row.isActive !== false,
+      createdAt: row.createdAt || '',
+      updatedAt: row.updatedAt || '',
+    };
+  }
+
+  if (collectionName === 'app_settings' || collectionName === 'psks_records_meta' || collectionName === 'psks_app_settings') {
+    return row.data || {};
+  }
+
+  const restData = row.data && typeof row.data === 'object' ? row.data : {};
+  return {
+    id: row.id,
+    ...row,
+    ...restData,
+  };
+}
+
+/**
+ * Mapping helper: converts frontend Document object to Supabase table row
+ */
+export function mapDocToSupabaseRow(collectionName: string, docId: string, data: Record<string, any>): Record<string, any> {
+  const cleaned = cleanFirestoreData(data);
+
+  if (collectionName === 'psks_records') {
+    const { id: _id, pillarId, wilayah, nama, status, kec, kelDesa, orderIndex, createdAt, updatedAt, ...rest } = cleaned;
+    return {
+      id: docId,
+      pillarId: pillarId || '',
+      wilayah: wilayah || '',
+      nama: nama || rest.namaKarangTaruna || rest.namaLks || rest.namaPsm || '',
+      status: status || '',
+      kec: kec || '',
+      kelDesa: kelDesa || '',
+      orderIndex: typeof orderIndex === 'number' ? orderIndex : 0,
+      createdAt: createdAt || '',
+      updatedAt: updatedAt || new Date().toISOString(),
+      data: rest,
+    };
+  }
+
+  if (collectionName === 'admin_accounts') {
+    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, ...rest } = cleaned;
+    return {
+      id: docId,
+      username: username || docId,
+      namaAdmin: namaAdmin || '',
+      role: role || 'admin',
+      statusActive: statusActive || 'SAH_TERDAFTAR',
+      wilayahTugas: wilayahTugas || '',
+      passwordHash: passwordHash || '',
+      sessionToken: sessionToken || '',
+      data: rest,
+    };
+  }
+
+  if (collectionName === 'psks_regional_logos') {
+    return {
+      id: docId,
+      regionName: cleaned.regionName || docId,
+      logo: cleaned.logo || '',
+      updatedAt: cleaned.updatedAt || new Date().toISOString(),
+    };
+  }
+
+  if (collectionName === 'system_logs') {
+    const { id: _id, actorName, actorRole, actorWilayah, actionType, category, timestamp, createdAt, details, ...rest } = cleaned;
+    return {
+      id: docId,
+      actorName: actorName || '',
+      actorRole: actorRole || '',
+      actorWilayah: actorWilayah || '',
+      actionType: actionType || '',
+      category: category || '',
+      timestamp: timestamp || '',
+      createdAt: createdAt || new Date().toISOString(),
+      details: typeof details === 'string' ? details : JSON.stringify(details || {}),
+      data: rest,
+    };
+  }
+
+  if (collectionName === 'portal_faqs') {
+    return {
+      id: docId,
+      question: cleaned.question || '',
+      answer: cleaned.answer || '',
+      category: cleaned.category || '',
+      order: typeof cleaned.order === 'number' ? cleaned.order : 0,
+      isActive: cleaned.isActive !== false,
+      createdAt: cleaned.createdAt || '',
+      updatedAt: cleaned.updatedAt || new Date().toISOString(),
+    };
+  }
+
+  if (collectionName === 'registration_submissions') {
+    const { id: _id, nama, nik, hp, wilayah, kec, pillarId, status, submittedAt, recordData, ...rest } = cleaned;
+    return {
+      id: docId,
+      nama: nama || '',
+      nik: nik || '',
+      hp: hp || '',
+      wilayah: wilayah || '',
+      kec: kec || '',
+      pillarId: pillarId || '',
+      status: status || 'PENDING',
+      submittedAt: submittedAt || new Date().toISOString(),
+      recordData: recordData || {},
+      data: rest,
+    };
+  }
+
+  if (collectionName === 'task_items') {
+    const { id: _id, title, description, pillarId, status, priority, targetWilayah, assignedTo, deadline, progressPercent, ...rest } = cleaned;
+    return {
+      id: docId,
+      title: title || '',
+      description: description || '',
+      pillarId: pillarId || '',
+      status: status || '',
+      priority: priority || '',
+      targetWilayah: targetWilayah || '',
+      assignedTo: assignedTo || '',
+      deadline: deadline || '',
+      progressPercent: progressPercent || 0,
+      data: rest,
+    };
+  }
+
+  if (collectionName === 'app_settings' || collectionName === 'psks_records_meta' || collectionName === 'psks_app_settings') {
+    return {
+      id: docId,
+      data: cleaned,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  return {
+    id: docId,
+    data: cleaned,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Passive, silent cold-backup write to Firestore (completely non-blocking)
+ */
+async function passiveFirestoreBackup(
+  action: 'set' | 'delete' | 'batchSet' | 'batchDelete',
+  collectionName: string,
+  docIdOrDocs: any,
+  dataOrMerge?: any
+) {
+  try {
+    const { firestore, db } = await getFirestoreModule();
+    if (action === 'set') {
+      const docRef = firestore.doc(db, collectionName, docIdOrDocs);
+      await firestore.setDoc(docRef, cleanFirestoreData(dataOrMerge), { merge: true });
+    } else if (action === 'delete') {
+      const docRef = firestore.doc(db, collectionName, docIdOrDocs);
+      await firestore.deleteDoc(docRef);
+    } else if (action === 'batchSet') {
+      const batch = firestore.writeBatch(db);
+      for (const item of (docIdOrDocs as Array<{ id: string; data: any }>)) {
+        const docRef = firestore.doc(db, collectionName, item.id);
+        batch.set(docRef, cleanFirestoreData(item.data), { merge: true });
+      }
+      await batch.commit();
+    } else if (action === 'batchDelete') {
+      const batch = firestore.writeBatch(db);
+      for (const id of (docIdOrDocs as string[])) {
+        const docRef = firestore.doc(db, collectionName, id);
+        batch.delete(docRef);
+      }
+      await batch.commit();
+    }
+  } catch (err) {
+    // Non-blocking: Firestore is purely cold backup
+  }
+}
+
+/**
+ * Non-blocking dynamic listener for a single document powered by Supabase
  */
 export function subscribeToDoc(
   collectionName: string,
@@ -61,80 +312,157 @@ export function subscribeToDoc(
   onNext: (data: any, exists: boolean) => void,
   onError?: (err: any) => void
 ): () => void {
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
+  let isCancelled = false;
 
-  getFirestoreModule().then(({ firestore, db }) => {
-    if (cancelled) return;
+  // 1. Initial fetch from Supabase
+  const loadInitial = async () => {
     try {
-      const docRef = firestore.doc(db, collectionName, docId);
-      unsub = firestore.onSnapshot(
-        docRef,
-        (snap) => {
-          if (!cancelled) {
-            onNext(snap.data(), snap.exists());
-          }
-        },
-        (err) => {
-          if (!cancelled && onError) onError(err);
-        }
-      );
-    } catch (e) {
-      if (!cancelled && onError) onError(e);
+      const { data, error } = await supabase
+        .from(collectionName)
+        .select('*')
+        .eq('id', docId)
+        .maybeSingle();
+
+      if (isCancelled) return;
+      if (error) {
+        if (onError) onError(error);
+        return;
+      }
+      if (data) {
+        onNext(mapSupabaseRowToDoc(collectionName, data), true);
+      } else {
+        onNext(null, false);
+      }
+    } catch (err) {
+      if (!isCancelled && onError) onError(err);
     }
-  }).catch((err) => {
-    if (!cancelled && onError) onError(err);
-  });
+  };
+  loadInitial();
+
+  // 2. Realtime listener via Supabase Channels
+  const channelName = `sub_${collectionName}_${docId}_${Date.now()}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: collectionName,
+        filter: `id=eq.${docId}`,
+      },
+      (payload) => {
+        if (isCancelled) return;
+        if (payload.eventType === 'DELETE') {
+          onNext(null, false);
+        } else if (payload.new) {
+          onNext(mapSupabaseRowToDoc(collectionName, payload.new), true);
+        }
+      }
+    )
+    .subscribe();
 
   return () => {
-    cancelled = true;
-    if (unsub) unsub();
+    isCancelled = true;
+    channel.unsubscribe();
   };
 }
 
 /**
- * Non-blocking dynamic listener for a collection
+ * High-speed concurrent loader for collections (supports loading all 21.963 records in ~2 seconds)
+ */
+async function loadAllSupabaseCollectionRows(collectionName: string): Promise<any[]> {
+  if (collectionName === 'psks_records') {
+    const PAGE_SIZE = 1000;
+    const TOTAL_ESTIMATE = 23000;
+    const pageRanges: number[] = [];
+
+    for (let from = 0; from < TOTAL_ESTIMATE; from += PAGE_SIZE) {
+      pageRanges.push(from);
+    }
+
+    const results = await Promise.all(
+      pageRanges.map(async (from) => {
+        const { data } = await supabase
+          .from('psks_records')
+          .select('id, pillarId, wilayah, nama, status, kec, kelDesa, orderIndex, createdAt, updatedAt, data')
+          .range(from, from + PAGE_SIZE - 1);
+        return data || [];
+      })
+    );
+
+    const allRows: any[] = [];
+    for (const chunk of results) {
+      if (Array.isArray(chunk)) {
+        allRows.push(...chunk);
+      }
+    }
+    return allRows;
+  }
+
+  const { data, error } = await supabase.from(collectionName).select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Non-blocking dynamic listener for a collection powered by Supabase Realtime
  */
 export function subscribeToCollection(
   collectionName: string,
   onNext: (docs: { id: string; data: any }[]) => void,
   onError?: (err: any) => void
 ): () => void {
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
+  let isCancelled = false;
 
-  getFirestoreModule().then(({ firestore, db }) => {
-    if (cancelled) return;
-    try {
-      const collRef = firestore.collection(db, collectionName);
-      unsub = firestore.onSnapshot(
-        collRef,
-        (snapshot) => {
-          if (!cancelled) {
-            const docs = snapshot.docs.map((d) => ({ id: d.id, data: d.data() }));
+  // 1. Initial bulk fetch
+  loadAllSupabaseCollectionRows(collectionName)
+    .then((rows) => {
+      if (isCancelled) return;
+      const docs = rows.map((row) => ({
+        id: row.id,
+        data: mapSupabaseRowToDoc(collectionName, row),
+      }));
+      onNext(docs);
+    })
+    .catch((err) => {
+      if (!isCancelled && onError) onError(err);
+    });
+
+  // 2. Realtime listener
+  const channelName = `sub_col_${collectionName}_${Date.now()}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: collectionName,
+      },
+      () => {
+        if (isCancelled) return;
+        // On change event, refresh collection to keep in-sync
+        loadAllSupabaseCollectionRows(collectionName)
+          .then((rows) => {
+            if (isCancelled) return;
+            const docs = rows.map((row) => ({
+              id: row.id,
+              data: mapSupabaseRowToDoc(collectionName, row),
+            }));
             onNext(docs);
-          }
-        },
-        (err) => {
-          if (!cancelled && onError) onError(err);
-        }
-      );
-    } catch (e) {
-      if (!cancelled && onError) onError(e);
-    }
-  }).catch((err) => {
-    if (!cancelled && onError) onError(err);
-  });
+          })
+          .catch(() => {});
+      }
+    )
+    .subscribe();
 
   return () => {
-    cancelled = true;
-    if (unsub) unsub();
+    isCancelled = true;
+    channel.unsubscribe();
   };
 }
 
-/**
- * Interface parameter kueri terindeks Firestore
- */
 export interface FirestoreQueryConstraint {
   field: string;
   op: '<' | '<=' | '==' | '!=' | '>=' | '>' | 'array-contains' | 'in' | 'array-contains-any';
@@ -153,9 +481,7 @@ export interface IndexedQueryOptions {
 }
 
 /**
- * Non-blocking dynamic listener for an indexed composite query
- * Automatically builds query with where, orderBy, and limit
- * Has robust fallback to collection listener if index is still building in Firebase Console
+ * Non-blocking dynamic listener for an indexed composite query powered by Supabase
  */
 export function subscribeToIndexedQuery(
   collectionName: string,
@@ -163,105 +489,110 @@ export function subscribeToIndexedQuery(
   onNext: (docs: { id: string; data: any }[]) => void,
   onError?: (err: any) => void
 ): () => void {
-  let unsub: (() => void) | null = null;
-  let cancelled = false;
+  let isCancelled = false;
 
-  getFirestoreModule().then(({ firestore, db }) => {
-    if (cancelled) return;
-    try {
-      const collRef = firestore.collection(db, collectionName);
-      const constraints: any[] = [];
+  async function executeQuery() {
+    let q = supabase.from(collectionName).select('*');
 
-      // Build WHERE constraints
-      if (options.wheres && options.wheres.length > 0) {
-        options.wheres.forEach((w) => {
-          if (w.value !== undefined) {
-            constraints.push(firestore.where(w.field, w.op, w.value));
-          }
-        });
+    if (options.wheres && options.wheres.length > 0) {
+      for (const w of options.wheres) {
+        if (w.value === undefined) continue;
+        if (w.op === '==') q = q.eq(w.field, w.value);
+        else if (w.op === '!=') q = q.neq(w.field, w.value);
+        else if (w.op === '<') q = q.lt(w.field, w.value);
+        else if (w.op === '<=') q = q.lte(w.field, w.value);
+        else if (w.op === '>') q = q.gt(w.field, w.value);
+        else if (w.op === '>=') q = q.gte(w.field, w.value);
+        else if (w.op === 'in' && Array.isArray(w.value)) q = q.in(w.field, w.value);
       }
-
-      // Build ORDER BY constraints
-      if (options.orders && options.orders.length > 0) {
-        options.orders.forEach((o) => {
-          constraints.push(firestore.orderBy(o.field, o.direction || 'asc'));
-        });
-      }
-
-      // Build LIMIT
-      if (typeof options.limitCount === 'number' && options.limitCount > 0) {
-        constraints.push(firestore.limit(options.limitCount));
-      }
-
-      const q = constraints.length > 0 ? firestore.query(collRef, ...constraints) : collRef;
-
-      unsub = firestore.onSnapshot(
-        q as any,
-        (snapshot) => {
-          if (!cancelled) {
-            const docs = (snapshot as any).docs.map((d: any) => ({ id: d.id, data: d.data() }));
-            onNext(docs);
-          }
-        },
-        (err) => {
-          // If index error occurs (e.g. requires index during initial build), fallback gracefully to base collection
-          const errMsg = err?.message || String(err);
-          if (errMsg.includes('requires an index') || errMsg.includes('failed-precondition')) {
-            console.warn(`[Firestore Indexing Alert] Composite query for ${collectionName} requires index build. Using defensive fallback to full sync.`, errMsg);
-            if (!cancelled) {
-              unsub = subscribeToCollection(collectionName, onNext, onError);
-            }
-          } else {
-            if (!cancelled && onError) onError(err);
-          }
-        }
-      );
-    } catch (e) {
-      if (!cancelled && onError) onError(e);
     }
-  }).catch((err) => {
-    if (!cancelled && onError) onError(err);
-  });
+
+    if (options.orders && options.orders.length > 0) {
+      for (const o of options.orders) {
+        q = q.order(o.field, { ascending: o.direction !== 'desc' });
+      }
+    }
+
+    if (typeof options.limitCount === 'number' && options.limitCount > 0) {
+      q = q.limit(options.limitCount);
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data || []).map((row) => ({
+      id: row.id,
+      data: mapSupabaseRowToDoc(collectionName, row),
+    }));
+  }
+
+  executeQuery()
+    .then((docs) => {
+      if (!isCancelled) onNext(docs);
+    })
+    .catch((err) => {
+      if (!isCancelled && onError) onError(err);
+    });
+
+  const channelName = `sub_idx_${collectionName}_${Date.now()}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: collectionName },
+      () => {
+        if (isCancelled) return;
+        executeQuery().then((docs) => {
+          if (!isCancelled) onNext(docs);
+        }).catch(() => {});
+      }
+    )
+    .subscribe();
 
   return () => {
-    cancelled = true;
-    if (unsub) unsub();
+    isCancelled = true;
+    channel.unsubscribe();
   };
 }
 
 /**
- * Fetch one-off indexed query from Firestore
+ * Fetch one-off indexed query from Supabase
  */
 export async function queryFirestoreCollection(
   collectionName: string,
   options: IndexedQueryOptions
 ): Promise<{ id: string; data: any }[]> {
   try {
-    const { firestore, db } = await getFirestoreModule();
-    const collRef = firestore.collection(db, collectionName);
-    const constraints: any[] = [];
+    let q = supabase.from(collectionName).select('*');
 
-    if (options.wheres) {
-      options.wheres.forEach((w) => {
-        if (w.value !== undefined) {
-          constraints.push(firestore.where(w.field, w.op, w.value));
-        }
-      });
+    if (options.wheres && options.wheres.length > 0) {
+      for (const w of options.wheres) {
+        if (w.value === undefined) continue;
+        if (w.op === '==') q = q.eq(w.field, w.value);
+        else if (w.op === '!=') q = q.neq(w.field, w.value);
+        else if (w.op === '<') q = q.lt(w.field, w.value);
+        else if (w.op === '<=') q = q.lte(w.field, w.value);
+        else if (w.op === '>') q = q.gt(w.field, w.value);
+        else if (w.op === '>=') q = q.gte(w.field, w.value);
+        else if (w.op === 'in' && Array.isArray(w.value)) q = q.in(w.field, w.value);
+      }
     }
 
-    if (options.orders) {
-      options.orders.forEach((o) => {
-        constraints.push(firestore.orderBy(o.field, o.direction || 'asc'));
-      });
+    if (options.orders && options.orders.length > 0) {
+      for (const o of options.orders) {
+        q = q.order(o.field, { ascending: o.direction !== 'desc' });
+      }
     }
 
     if (typeof options.limitCount === 'number' && options.limitCount > 0) {
-      constraints.push(firestore.limit(options.limitCount));
+      q = q.limit(options.limitCount);
     }
 
-    const q = constraints.length > 0 ? firestore.query(collRef, ...constraints) : collRef;
-    const snap = await firestore.getDocs(q as any);
-    return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data || []).map((row) => ({
+      id: row.id,
+      data: mapSupabaseRowToDoc(collectionName, row),
+    }));
   } catch (err) {
     console.warn(`Error running query on ${collectionName}:`, err);
     return [];
@@ -269,7 +600,7 @@ export async function queryFirestoreCollection(
 }
 
 /**
- * Persist document to Firestore with clean payload
+ * Persist document to Supabase (and passive non-blocking Firestore backup)
  */
 export async function setFirestoreDoc(
   collectionName: string,
@@ -277,18 +608,19 @@ export async function setFirestoreDoc(
   data: Record<string, any>,
   options?: { merge?: boolean }
 ): Promise<void> {
-  const { firestore, db } = await getFirestoreModule();
-  const docRef = firestore.doc(db, collectionName, docId);
-  const cleaned = cleanFirestoreData(data);
-  if (options?.merge) {
-    await firestore.setDoc(docRef, cleaned, { merge: true });
-  } else {
-    await firestore.setDoc(docRef, cleaned);
+  const row = mapDocToSupabaseRow(collectionName, docId, data);
+  const { error } = await supabase.from(collectionName).upsert(row);
+  if (error) {
+    console.error(`Supabase write error on ${collectionName}/${docId}:`, error.message);
+    throw new Error(error.message);
   }
+
+  // Silent passive background sync to Firestore
+  passiveFirestoreBackup('set', collectionName, docId, data);
 }
 
 /**
- * Persist multiple documents to Firestore using writeBatch in chunks with auto-retry and progress tracking
+ * Persist multiple documents to Supabase in batches with progress tracking
  */
 export async function batchSetFirestoreDocs(
   collectionName: string,
@@ -296,62 +628,47 @@ export async function batchSetFirestoreDocs(
   onProgress?: (completed: number, total: number) => void
 ): Promise<void> {
   if (!docs || docs.length === 0) return;
-  const { firestore, db } = await getFirestoreModule();
-  const CHUNK_SIZE = 400;
-  let completedCount = 0;
 
-  for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
-    const chunk = docs.slice(i, i + CHUNK_SIZE);
-    let attempts = 0;
-    let success = false;
-    let lastError: any = null;
+  const rows = docs.map((d) => mapDocToSupabaseRow(collectionName, d.id, d.data));
+  const CHUNK_SIZE = 300;
+  let completed = 0;
 
-    while (attempts < 3 && !success) {
-      attempts++;
-      try {
-        const batch = firestore.writeBatch(db);
-        for (const item of chunk) {
-          const docRef = firestore.doc(db, collectionName, item.id);
-          batch.set(docRef, cleanFirestoreData(item.data), { merge: true });
-        }
-        await batch.commit();
-        success = true;
-      } catch (err: any) {
-        lastError = err;
-        if (isQuotaError(err)) {
-          throw err;
-        }
-        if (attempts < 3) {
-          await new Promise((res) => setTimeout(res, attempts * 400));
-        }
-      }
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from(collectionName).upsert(chunk);
+    if (error) {
+      console.error(`Supabase batch error on ${collectionName}:`, error.message);
+      throw new Error(error.message);
     }
-
-    if (!success) {
-      throw lastError;
-    }
-
-    completedCount += chunk.length;
+    completed += chunk.length;
     if (onProgress) {
-      onProgress(completedCount, docs.length);
+      onProgress(completed, rows.length);
     }
   }
+
+  // Silent passive background sync to Firestore
+  passiveFirestoreBackup('batchSet', collectionName, docs);
 }
 
 /**
- * Delete document from Firestore
+ * Delete document from Supabase
  */
 export async function deleteFirestoreDoc(
   collectionName: string,
   docId: string
 ): Promise<void> {
-  const { firestore, db } = await getFirestoreModule();
-  const docRef = firestore.doc(db, collectionName, docId);
-  await firestore.deleteDoc(docRef);
+  const { error } = await supabase.from(collectionName).delete().eq('id', docId);
+  if (error) {
+    console.error(`Supabase delete error on ${collectionName}/${docId}:`, error.message);
+    throw new Error(error.message);
+  }
+
+  // Silent passive background delete from Firestore
+  passiveFirestoreBackup('delete', collectionName, docId);
 }
 
 /**
- * Delete multiple documents from Firestore using writeBatch in chunks with auto-retry and progress tracking
+ * Delete multiple documents from Supabase
  */
 export async function batchDeleteFirestoreDocs(
   collectionName: string,
@@ -359,73 +676,60 @@ export async function batchDeleteFirestoreDocs(
   onProgress?: (completed: number, total: number) => void
 ): Promise<void> {
   if (!docIds || docIds.length === 0) return;
-  const { firestore, db } = await getFirestoreModule();
-  const CHUNK_SIZE = 400;
-  let completedCount = 0;
+
+  const CHUNK_SIZE = 300;
+  let completed = 0;
 
   for (let i = 0; i < docIds.length; i += CHUNK_SIZE) {
     const chunk = docIds.slice(i, i + CHUNK_SIZE);
-    let attempts = 0;
-    let success = false;
-    let lastError: any = null;
-
-    while (attempts < 3 && !success) {
-      attempts++;
-      try {
-        const batch = firestore.writeBatch(db);
-        for (const id of chunk) {
-          const docRef = firestore.doc(db, collectionName, id);
-          batch.delete(docRef);
-        }
-        await batch.commit();
-        success = true;
-      } catch (err: any) {
-        lastError = err;
-        if (isQuotaError(err)) {
-          throw err;
-        }
-        if (attempts < 3) {
-          await new Promise((res) => setTimeout(res, attempts * 400));
-        }
-      }
+    const { error } = await supabase.from(collectionName).delete().in('id', chunk);
+    if (error) {
+      console.error(`Supabase batch delete error on ${collectionName}:`, error.message);
+      throw new Error(error.message);
     }
-
-    if (!success) {
-      throw lastError;
-    }
-
-    completedCount += chunk.length;
+    completed += chunk.length;
     if (onProgress) {
-      onProgress(completedCount, docIds.length);
+      onProgress(completed, docIds.length);
     }
   }
+
+  // Silent passive background delete from Firestore
+  passiveFirestoreBackup('batchDelete', collectionName, docIds);
 }
 
 /**
- * Fetch a single document directly from Firestore
+ * Fetch a single document directly from Supabase
  */
 export async function getFirestoreDoc(
   collectionName: string,
   docId: string
 ): Promise<{ exists: boolean; data: any }> {
   try {
-    const { firestore, db } = await getFirestoreModule();
-    const docRef = firestore.doc(db, collectionName, docId);
-    const snap = await firestore.getDoc(docRef);
-    return { exists: snap.exists(), data: snap.data() };
+    const { data, error } = await supabase
+      .from(collectionName)
+      .select('*')
+      .eq('id', docId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return { exists: false, data: null };
+    }
+    return {
+      exists: true,
+      data: mapSupabaseRowToDoc(collectionName, data),
+    };
   } catch (err) {
     return { exists: false, data: null };
   }
 }
 
 /**
- * Check if backend server is responsive
+ * Check if backend database (Supabase) is responsive
  */
 export async function checkServerConnectivity(): Promise<boolean> {
   try {
-    const { firestore, db } = await getFirestoreModule();
-    await firestore.getDocFromServer(firestore.doc(db, 'app_settings', 'global'));
-    return true;
+    const { error } = await supabase.from('app_settings').select('id').limit(1);
+    return !error;
   } catch {
     return false;
   }

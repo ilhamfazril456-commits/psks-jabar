@@ -43,6 +43,7 @@ import {
 } from '../lib/activityLogger';
 import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { JABAR_REGIONS } from '../data/initialData';
 import { BackToHomeButton } from './BackToHomeButton';
 
@@ -100,32 +101,51 @@ export const ActivityLogPage: React.FC<ActivityLogPageProps> = ({
   const [isClearingCategory, setIsClearingCategory] = useState<boolean>(false);
   const [clearedCategoryName, setClearedCategoryName] = useState<string>('');
 
-  // Fetch / Sync logs from Firestore real-time
+  // Fetch / Sync logs from Supabase real-time
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      const logsRef = collection(db, 'system_logs');
-      const q = query(logsRef, orderBy('createdAt', 'desc'), limit(400));
-      const snap = await getDocs(q);
+      const { data, error } = await supabase
+        .from('system_logs')
+        .select('*')
+        .order('createdAt', { ascending: false })
+        .limit(400);
 
       let fetchedList: SystemLog[] = [];
-      if (!snap.empty) {
-        snap.forEach((docSnap) => {
-          const data = docSnap.data() as SystemLog;
+      if (!error && data && data.length > 0) {
+        data.forEach((row: any) => {
+          const restData = row.data && typeof row.data === 'object' ? row.data : {};
+          const logItem: SystemLog = {
+            id: row.id,
+            timestamp: row.timestamp || restData.timestamp || '',
+            createdAt: typeof row.createdAt === 'string' ? new Date(row.createdAt).getTime() : (row.createdAt || Date.now()),
+            actorName: row.actorName || restData.actorName || '',
+            actorRole: row.actorRole || restData.actorRole || '',
+            actorWilayah: row.actorWilayah || restData.actorWilayah || '',
+            category: row.category || restData.category || '',
+            actionType: row.actionType || restData.actionType || '',
+            targetCollection: row.targetCollection || restData.targetCollection || '',
+            targetId: row.targetId || restData.targetId || '',
+            targetName: row.targetName || restData.targetName,
+            targetPillar: row.targetPillar || restData.targetPillar,
+            targetWilayah: row.targetWilayah || restData.targetWilayah,
+            details: row.details || restData.details || '',
+          };
+
           const isDev =
-            (data.actorRole as string) === 'developer' ||
-            (data.actorName || '').toLowerCase().includes('ilham') ||
-            (data.actorName || '').toLowerCase().includes('developer');
+            (logItem.actorRole as string) === 'developer' ||
+            (logItem.actorName || '').toLowerCase().includes('ilham') ||
+            (logItem.actorName || '').toLowerCase().includes('developer');
           if (!isDev) {
-            fetchedList.push({ ...data, id: docSnap.id });
+            fetchedList.push(logItem);
           }
         });
+
         // Sync local storage to match cloud
         try {
           localStorage.setItem('psks_system_logs', JSON.stringify(fetchedList));
         } catch {}
       } else {
-        // If Firestore collection is empty, check local storage (which might also be empty or wiped)
         fetchedList = getLocalLogs();
       }
 
@@ -159,66 +179,21 @@ export const ActivityLogPage: React.FC<ActivityLogPageProps> = ({
     fetchLogs();
     autoPurgeOldLogs().catch(() => {});
 
-    try {
-      const logsRef = collection(db, 'system_logs');
-      const q = query(logsRef, orderBy('createdAt', 'desc'), limit(400));
-
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          if (snapshot.empty) {
-            // When firestore logs collection is empty (e.g. wiped/cleared), set state to empty and clear localStorage
-            setLogs([]);
-            try {
-              localStorage.setItem('psks_system_logs', JSON.stringify([]));
-            } catch {}
-          } else {
-            const firestoreLogs: SystemLog[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as SystemLog;
-              const isDev =
-                (data.actorRole as string) === 'developer' ||
-                (data.actorName || '').toLowerCase().includes('ilham') ||
-                (data.actorName || '').toLowerCase().includes('developer');
-              if (!isDev) {
-                firestoreLogs.push({ ...data, id: docSnap.id });
-              }
-            });
-
-            // Update local storage to match authoritative Firestore
-            try {
-              localStorage.setItem('psks_system_logs', JSON.stringify(firestoreLogs));
-            } catch {}
-
-            const sorted = firestoreLogs.sort(
-              (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-            );
-
-            const normalized = sorted.map((l) => {
-              if (!l.category) {
-                if (l.actionType === 'APPROVE' || l.actionType === 'REJECT' || l.targetCollection === 'registration_submissions') {
-                  return { ...l, category: 'VERIFIKASI' as const };
-                }
-                if (l.targetCollection === 'admin_accounts' || l.details?.toLowerCase().includes('akun admin')) {
-                  return { ...l, category: 'ADMIN_ACCOUNT' as const };
-                }
-                return { ...l, category: 'PSKS' as const };
-              }
-              return l;
-            });
-
-            setLogs(normalized);
-          }
-        },
-        (error) => {
-          console.warn('[ActivityLogPage] Snapshot listener notice:', error);
+    const channelName = `sub_act_page_${Date.now()}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_logs' },
+        () => {
+          fetchLogs();
         }
-      );
+      )
+      .subscribe();
 
-      return () => unsubscribe();
-    } catch (e) {
-      console.error('[ActivityLogPage] Listener setup error:', e);
-    }
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   // Handler: Uji Pembersihan Otomatis 30 Hari
