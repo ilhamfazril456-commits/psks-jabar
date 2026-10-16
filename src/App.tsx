@@ -1413,15 +1413,36 @@ export default function App() {
               }
             }
 
+            const safeRole =
+              docId === 'adm-dev' || uname === 'ilhamfazril'
+                ? 'developer'
+                : docId === 'adm-super' || uname.includes('superadmin')
+                ? 'superadmin'
+                : accData.role || defaultMatch?.role || 'admin';
+
+            const safeUsername =
+              docId === 'adm-dev' && (!accData.username || accData.username === 'adm-dev')
+                ? 'ilhamfazril'
+                : docId === 'adm-super' && (!accData.username || accData.username === 'adm-super')
+                ? 'superadmin jabar'
+                : accData.username || defaultMatch?.username || '';
+
+            const safeWilayah =
+              safeRole === 'superadmin' && (!accData.wilayahTugas || accData.wilayahTugas === 'Provinsi Jabar' || accData.wilayahTugas === '')
+                ? 'PROVINSI JAWA BARAT'
+                : safeRole === 'developer' && (!accData.wilayahTugas || accData.wilayahTugas === '')
+                ? 'Pusat Developer Jabar'
+                : accData.wilayahTugas || defaultMatch?.wilayahTugas || '';
+
             loadedMap.set(docId, {
               id: docId,
-              username: accData.username || defaultMatch?.username || '',
-              namaAdmin: accData.namaAdmin || defaultMatch?.namaAdmin || '',
-              wilayahTugas: accData.wilayahTugas || defaultMatch?.wilayahTugas || '',
-              role: accData.role || defaultMatch?.role || 'admin',
+              ...accData,
+              username: safeUsername,
+              namaAdmin: accData.namaAdmin || defaultMatch?.namaAdmin || safeUsername,
+              wilayahTugas: safeWilayah,
+              role: safeRole,
               passwordHash: passHash,
               terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
-              ...accData,
               passwordPolos: plainPass,
               registeredIp: accData.registeredIp || undefined,
               deviceId: accData.deviceId || undefined,

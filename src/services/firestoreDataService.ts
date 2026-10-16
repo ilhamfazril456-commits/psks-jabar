@@ -166,13 +166,36 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
 
   if (collectionName === 'admin_accounts') {
     const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos: _pp, ...rest } = cleaned;
+
+    // Strict protection for master accounts: prevent accidental downgrade or ID-as-username overwrite
+    const safeRole =
+      docId === 'adm-dev' || username === 'ilhamfazril'
+        ? 'developer'
+        : docId === 'adm-super' || (username && username.includes('superadmin'))
+        ? 'superadmin'
+        : role || 'admin';
+
+    const safeUsername =
+      docId === 'adm-dev' && (!username || username === 'adm-dev')
+        ? 'ilhamfazril'
+        : docId === 'adm-super' && (!username || username === 'adm-super')
+        ? 'superadmin jabar'
+        : username || docId;
+
+    const safeWilayah =
+      safeRole === 'superadmin' && (!wilayahTugas || wilayahTugas === 'Provinsi Jabar' || wilayahTugas === '')
+        ? 'PROVINSI JAWA BARAT'
+        : safeRole === 'developer' && (!wilayahTugas || wilayahTugas === '')
+        ? 'Pusat Developer Jabar'
+        : wilayahTugas || '';
+
     return {
       id: docId,
-      username: username || docId,
-      namaAdmin: namaAdmin || '',
-      role: role || 'admin',
+      username: safeUsername,
+      namaAdmin: namaAdmin || safeUsername,
+      role: safeRole,
       statusActive: statusActive || 'SAH_TERDAFTAR',
-      wilayahTugas: wilayahTugas || '',
+      wilayahTugas: safeWilayah,
       passwordHash: passwordHash || '',
       sessionToken: sessionToken || '',
       data: rest,
@@ -737,17 +760,68 @@ export async function setFirestoreDoc(
   collectionName: string,
   docId: string,
   data: Record<string, any>,
-  _options?: { merge?: boolean }
+  options?: { merge?: boolean }
 ): Promise<void> {
   let supabaseOk = false;
   let supabaseError: any = null;
+  const isMerge = options?.merge === true;
+
   try {
-    const row = mapDocToSupabaseRow(collectionName, docId, data);
-    const { error } = await supabase.from(collectionName).upsert(row);
-    if (!error) {
-      supabaseOk = true;
+    if (isMerge && collectionName === 'admin_accounts') {
+      // PARTIAL UPDATE for admin_accounts: NEVER wipe omitted columns (like username, role, passwordHash)!
+      const partialUpdate: Record<string, any> = {};
+      if (data.username !== undefined && data.username !== '' && data.username !== docId) {
+        partialUpdate.username = data.username;
+      }
+      if (data.namaAdmin !== undefined && data.namaAdmin !== '') {
+        partialUpdate.namaAdmin = data.namaAdmin;
+      }
+      if (data.role !== undefined && data.role !== '') {
+        // Protect developer & superadmin roles from accidental downgrade
+        const lockedRole =
+          docId === 'adm-dev' || data.username === 'ilhamfazril'
+            ? 'developer'
+            : docId === 'adm-super' || (data.username && data.username.includes('superadmin'))
+            ? 'superadmin'
+            : data.role;
+        partialUpdate.role = lockedRole;
+      }
+      if (data.statusActive !== undefined) partialUpdate.statusActive = data.statusActive;
+      if (data.wilayahTugas !== undefined && data.wilayahTugas !== '') {
+        partialUpdate.wilayahTugas =
+          (docId === 'adm-super' || data.role === 'superadmin') && (data.wilayahTugas === 'Provinsi Jabar' || data.wilayahTugas === '')
+            ? 'PROVINSI JAWA BARAT'
+            : data.wilayahTugas;
+      }
+      if (data.passwordHash !== undefined && data.passwordHash !== '') {
+        partialUpdate.passwordHash = data.passwordHash;
+      }
+      if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
+
+      // Extract non-column fields to store in JSONB data
+      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, ...rest } = data;
+      if (Object.keys(rest).length > 0) {
+        try {
+          const existing = await supabase.from('admin_accounts').select('data').eq('id', docId).maybeSingle();
+          const existingData = existing.data?.data && typeof existing.data.data === 'object' ? existing.data.data : {};
+          partialUpdate.data = { ...existingData, ...rest };
+        } catch {}
+      }
+
+      const { error } = await supabase.from('admin_accounts').update(partialUpdate).eq('id', docId);
+      if (!error) {
+        supabaseOk = true;
+      } else {
+        supabaseError = error;
+      }
     } else {
-      supabaseError = error;
+      const row = mapDocToSupabaseRow(collectionName, docId, data);
+      const { error } = await supabase.from(collectionName).upsert(row);
+      if (!error) {
+        supabaseOk = true;
+      } else {
+        supabaseError = error;
+      }
     }
   } catch (sbErr) {
     supabaseError = sbErr;

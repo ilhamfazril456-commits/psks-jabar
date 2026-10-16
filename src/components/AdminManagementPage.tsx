@@ -73,8 +73,8 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
 
     list.forEach((acc) => {
       const uLower = (acc.username || '').toLowerCase().trim();
-      const isDev = acc.role === 'developer' || uLower === 'ilhamfazril';
-      const isSuper = acc.role === 'superadmin' || uLower.includes('superadmin');
+      const isDev = acc.id === 'adm-dev' || acc.role === 'developer' || uLower === 'ilhamfazril';
+      const isSuper = acc.id === 'adm-super' || acc.role === 'superadmin' || uLower.includes('superadmin');
 
       if (isDev) {
         devAccounts.push(acc);
@@ -543,8 +543,8 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                 <tbody className="divide-y divide-slate-200">
                   {displayedAccounts.map((item, idx) => {
                     const uLower = (item.username || '').toLowerCase().trim();
-                    const isDevAccount = item.role === 'developer' || uLower === 'ilhamfazril';
-                    const isSuperAccount = item.role === 'superadmin' || uLower.includes('superadmin');
+                    const isDevAccount = item.id === 'adm-dev' || item.role === 'developer' || uLower === 'ilhamfazril';
+                    const isSuperAccount = item.id === 'adm-super' || item.role === 'superadmin' || uLower.includes('superadmin');
                     
                     // Password masking rule:
                     // By default passwords are plain text / uncensored.
