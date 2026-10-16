@@ -8,7 +8,7 @@ interface TurnstileWidgetProps {
   isVerified?: boolean;
 }
 
-export const CLOUDFLARE_SITE_KEY = '0x4AAAAAAFYHSeNPeQmA14PB';
+export const CLOUDFLARE_SITE_KEY = '1x00000000000000000000AA';
 
 declare global {
   interface Window {
