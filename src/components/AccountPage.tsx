@@ -371,55 +371,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       // Offline fallback: continue to local check only if server is unreachable
     }
 
-    // 0. VALIDASI AKUN DEVELOPER KHUSUS (ILHAM FAZRIL)
-    const devAcc = adminAccounts.find((a) => a.role === 'developer' && (a.username || '').toLowerCase() === 'ilhamfazril');
-    if (userLower === "ilhamfazril") {
-      const isDevValid = comparePassword(passInput, devAcc?.passwordHash || devAcc?.passwordPolos);
-      if (isDevValid) {
-        setFailedAttempts(0);
-        setLockoutRemaining(0);
-        setErrorMessage('');
-        setUsernameInput('');
-        setPasswordInput('');
-        setCaptchaInput('');
-        setCaptchaError(false);
-        onLogin('developer', devAcc?.namaAdmin || 'Ilham Fazril', 'Pusat Developer Jabar');
-        setIsLoginModalOpen(false);
-        return;
-      } else {
-        triggerFailedAttempt();
-        return;
-      }
-    }
-
-    // A. VALIDASI AKUN SUPERADMIN PUSAT
-    const superAcc = adminAccounts.find((a) => a.role === 'superadmin' || (a.username || '').toLowerCase() === 'superadmin jabar');
-    if (userLower === "superadmin jabar" || userLower === "superadmin") {
-      const isSuperValid = comparePassword(passInput, superAcc?.passwordHash || superAcc?.passwordPolos);
-      if (isSuperValid) {
-        setFailedAttempts(0);
-        setLockoutRemaining(0);
-        setErrorMessage('');
-        setUsernameInput('');
-        setPasswordInput('');
-        setCaptchaInput('');
-        setCaptchaError(false);
-        onLogin('superadmin', 'Superadmin jabar', 'PROVINSI JAWA BARAT');
-        setIsLoginModalOpen(false);
-        return;
-      } else {
-        triggerFailedAttempt();
-        return;
-      }
-    }
-
-    // B. VALIDASI AKUN ADMIN REGIONAL
+    // Local / Offline fallback: strictly validate against database passwordHash
     const matchedAccount = adminAccounts.find(
       (a) => (a.username || '').toLowerCase() === userLower
     );
 
     if (matchedAccount) {
-      const isValid = comparePassword(passInput, matchedAccount.passwordHash || matchedAccount.passwordPolos) || (matchedAccount.passwordPolos && passInput === matchedAccount.passwordPolos);
+      const isValid = comparePassword(passInput, matchedAccount.passwordHash);
       if (!isValid) {
         triggerFailedAttempt();
         return;

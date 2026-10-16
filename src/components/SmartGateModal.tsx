@@ -677,85 +677,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       // Offline fallback: continue to local check only if server is unreachable
     }
 
-    // 0. Check Developer Account (Ilham Fazril)
-    const devAcc = adminAccounts.find((a) => a.role === 'developer' && (a.username || '').toLowerCase() === 'ilhamfazril');
-    if (uLower === 'ilhamfazril') {
-      const isDevValid = comparePassword(pInput, devAcc?.passwordHash || devAcc?.passwordPolos);
-      if (isDevValid) {
-        handleLoginSuccess(
-          'developer',
-          devAcc?.namaAdmin || 'Ilham Fazril',
-          'Pusat Developer Jabar',
-          devAcc?.username || 'ilhamfazril',
-          devAcc?.id
-        );
-        return;
-      } else {
-        triggerFailedAttempt();
-        return;
-      }
-    }
-
-    // 1. Check Superadmin Account (Superadmin Jabar)
-    const superAcc = adminAccounts.find((a) => a.role === 'superadmin' && (a.username || '').toLowerCase() === 'superadmin jabar');
-    if (uLower === 'superadmin jabar' || uLower === 'superadmin') {
-      const isSuperValid = comparePassword(pInput, superAcc?.passwordHash || superAcc?.passwordPolos);
-      if (isSuperValid) {
-        handleLoginSuccess(
-          'superadmin',
-          'Superadmin jabar',
-          'PROVINSI JAWA BARAT',
-          superAcc?.username || 'superadmin jabar',
-          superAcc?.id
-        );
-        return;
-      } else {
-        triggerFailedAttempt();
-        return;
-      }
-    }
-
-    // 2. Check Universal Registered Accounts (User, Admin Wilayah, etc.)
+    // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash)
     let matchedAccount = adminAccounts.find(
       (a) => (a.username || '').toLowerCase().trim() === uLower
     );
 
     if (matchedAccount) {
-      // Verifikasi status pembekuan secara langsung ke server jika terindikasi dibekukan
-      if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN') {
-        try {
-          let remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.id);
-          if (!remoteDoc.exists && matchedAccount.username) {
-            remoteDoc = await getFirestoreDoc('admin_accounts', matchedAccount.username);
-          }
-          if (remoteDoc.exists && remoteDoc.data) {
-            const remote = remoteDoc.data;
-            if (!remote.isFrozen && remote.statusAkun !== 'DIBEKUKAN') {
-              // Akun telah dibuka status pembekuannya di Firestore!
-              matchedAccount = {
-                ...matchedAccount,
-                ...remote,
-                isFrozen: false,
-                statusAkun: 'AKTIF',
-              };
-              if (onUpdateAccountLocal) {
-                onUpdateAccountLocal(matchedAccount);
-              }
-            } else {
-              setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
-              return;
-            }
-          } else {
-            setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
-            return;
-          }
-        } catch {
-          setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak. Silakan hubungi Superadmin atau Developer.');
-          return;
-        }
+      if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN' || matchedAccount.statusActive === 'FROZEN') {
+        setErrorMessage('❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan/dibekukan oleh Administrator. Akses masuk ditolak.');
+        return;
       }
 
-      const isValid = comparePassword(pInput, matchedAccount.passwordHash || matchedAccount.passwordPolos) || (matchedAccount.passwordPolos && pInput === matchedAccount.passwordPolos);
+      const isValid = comparePassword(pInput, matchedAccount.passwordHash);
       if (isValid) {
         // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
         if (matchedAccount.role === 'user') {

