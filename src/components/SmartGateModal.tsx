@@ -935,38 +935,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       type="button"
                       id="btn-jalur-daftar-akun-baru"
                       onClick={handleDaftarAkunBaruClick}
-                      className="w-full group text-left p-2.5 sm:p-3 min-h-[70px] sm:min-h-[76px] rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
                         <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate">
-                            Daftar Akun Baru
-                          </span>
-                          <span className={`text-[7.5px] sm:text-[8.5px] font-black px-2 py-0.5 rounded-full uppercase whitespace-nowrap shrink-0 ml-auto tracking-normal ${
-                            !clientRegisteredAccount
-                              ? 'bg-blue-200 text-blue-900'
-                              : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
-                              ? 'bg-emerald-200 text-emerald-950'
-                              : clientRegisteredAccount.statusVerval === 'DITOLAK'
-                              ? 'bg-rose-200 text-rose-950'
-                              : 'bg-amber-200 text-amber-950'
-                          }`}>
-                            {!clientRegisteredAccount ? (
-                              <>
-                                <span className="hidden sm:inline">1 Akun / Perangkat (Tersedia)</span>
-                                <span className="sm:hidden">1 Akun / Perangkat</span>
-                              </>
-                            ) : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
-                              ? 'Terverifikasi (1/1)'
-                              : clientRegisteredAccount.statusVerval === 'DITOLAK'
-                              ? 'Ditolak (Daftar Ulang)'
-                              : 'Menunggu Verval (1/1)'}
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] sm:text-[11px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
+                      <div className="flex-1 min-w-0 pr-22 sm:pr-26 flex flex-col justify-center">
+                        <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate block">
+                          Daftar Akun Baru
+                        </span>
+                        <p className="text-[9px] sm:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
                           {!clientRegisteredAccount
                             ? 'Registrasi mandiri 1 akun per perangkat untuk warga & personil potensi sosial Jabar.'
                             : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
@@ -976,6 +954,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             : `Pengajuan "${clientRegisteredAccount.username}" sedang ditinjau Superadmin.`}
                         </p>
                       </div>
+                      {/* Pinned Corner Badge */}
+                      <span className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-tight ${
+                        !clientRegisteredAccount
+                          ? 'bg-blue-200 text-blue-900 border border-blue-300/50'
+                          : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
+                          ? 'bg-emerald-200 text-emerald-950 border border-emerald-300'
+                          : clientRegisteredAccount.statusVerval === 'DITOLAK'
+                          ? 'bg-rose-200 text-rose-950 border border-rose-300'
+                          : 'bg-amber-200 text-amber-950 border border-amber-300'
+                      }`}>
+                        {!clientRegisteredAccount ? '1 Akun / Perangkat' : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR' ? 'Terverifikasi' : clientRegisteredAccount.statusVerval === 'DITOLAK' ? 'Ditolak' : 'Menunggu Verval'}
+                      </span>
                     </button>
 
                     {/* JALUR 2: TOMBOL MASUK KE AKUN */}
@@ -985,24 +975,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('login_choice');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 min-h-[70px] sm:min-h-[76px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white truncate">
-                            Masuk ke Akun
-                          </span>
-                          <span className="text-[8px] sm:text-[8.5px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase shrink-0 ml-auto tracking-normal">
-                            Login
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] sm:text-[11px] text-blue-100 font-medium leading-tight mt-0.5 line-clamp-2">
+                      <div className="flex-1 min-w-0 pr-16 sm:pr-20 flex flex-col justify-center">
+                        <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white truncate block">
+                          Masuk ke Akun
+                        </span>
+                        <p className="text-[9px] sm:text-[10.5px] text-blue-100 font-medium leading-tight mt-0.5 line-clamp-2">
                           Login/Masuk ke akun yang sudah terdaftar
                         </p>
                       </div>
+                      {/* Pinned Corner Badge */}
+                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-normal">
+                        Login
+                      </span>
                     </button>
 
                     {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
@@ -1021,24 +1010,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('guest');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 min-h-[70px] sm:min-h-[76px] rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
                         <Globe2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] truncate">
-                            Lanjutkan Sebagai Tamu
-                          </span>
-                          <span className="text-[8px] sm:text-[8.5px] font-black bg-amber-200/90 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase border border-amber-300 shrink-0 ml-auto tracking-normal">
-                            Tanpa Login
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] sm:text-[11px] text-slate-700 font-medium leading-tight mt-0.5 line-clamp-2">
+                      <div className="flex-1 min-w-0 pr-20 sm:pr-24 flex flex-col justify-center">
+                        <span className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] truncate block">
+                          Lanjutkan Sebagai Tamu
+                        </span>
+                        <p className="text-[9px] sm:text-[10.5px] text-slate-700 font-medium leading-tight mt-0.5 line-clamp-2">
                           Akses publik instan untuk membaca grafik & data PSKS tanpa password.
                         </p>
                       </div>
+                      {/* Pinned Corner Badge */}
+                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-amber-200/90 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase border border-amber-300 whitespace-nowrap shadow-xs tracking-normal">
+                        Tanpa Login
+                      </span>
                     </button>
 
                   </div>
@@ -1563,24 +1551,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('login_manual');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 min-h-[70px] sm:min-h-[76px] rounded-xl sm:rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-600/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-blue-50 hover:bg-blue-100 border-2 border-blue-600/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#0f2b5c] text-[#d4af37] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#0f2b5c] text-[#d4af37] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <Key className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs sm:text-sm font-black text-[#0f2b5c] truncate">
-                            Masuk Ke Akun Anda
-                          </span>
-                          <span className="text-[8px] sm:text-[8.5px] font-black bg-blue-200 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase shrink-0 ml-auto tracking-normal whitespace-nowrap">
-                            User & Admin
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] sm:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
+                      <div className="flex-1 min-w-0 pr-20 sm:pr-24 flex flex-col justify-center">
+                        <span className="text-xs sm:text-sm font-black text-[#0f2b5c] truncate block">
+                          Masuk Ke Akun Anda
+                        </span>
+                        <p className="text-[9px] sm:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
                           Login manual dengan Username, Password, dan Verifikasi Cloudflare.
                         </p>
                       </div>
+                      {/* Pinned Corner Badge */}
+                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-blue-200 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-normal">
+                        User & Admin
+                      </span>
                     </button>
 
                     {/* PILIHAN B: MASUK MENGGUNAKAN SMART CARD */}
@@ -1590,25 +1577,24 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('login_smart_card');
                       }}
-                      className="w-full group text-left p-2.5 sm:p-3 min-h-[70px] sm:min-h-[76px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-[#0f2b5c] hover:from-black hover:to-slate-900 text-white border-2 border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
                         <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white flex items-center gap-1 truncate">
-                            <span>Smart Card</span>
-                            <Sparkles className="w-3 h-3 text-[#d4af37] shrink-0" />
-                          </span>
-                          <span className="text-[8px] sm:text-[8.5px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase shrink-0 ml-auto tracking-normal whitespace-nowrap">
-                            Superadmin
-                          </span>
-                        </div>
-                        <p className="text-[9.5px] sm:text-[10.5px] text-slate-300 font-medium leading-tight mt-0.5 line-clamp-2">
+                      <div className="flex-1 min-w-0 pr-20 sm:pr-24 flex flex-col justify-center">
+                        <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white flex items-center gap-1 truncate block">
+                          <span>Smart Card</span>
+                          <Sparkles className="w-3 h-3 text-[#d4af37] inline shrink-0" />
+                        </span>
+                        <p className="text-[9px] sm:text-[10.5px] text-slate-300 font-medium leading-tight mt-0.5 line-clamp-2">
                           Scan Kode QR / Tap Kartu Akses Khusus
                         </p>
                       </div>
+                      {/* Pinned Corner Badge */}
+                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-normal">
+                        Superadmin
+                      </span>
                     </button>
 
                     {/* Tombol Kembali ke Menu Utama */}
