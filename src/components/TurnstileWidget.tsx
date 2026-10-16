@@ -8,7 +8,11 @@ interface TurnstileWidgetProps {
   isVerified?: boolean;
 }
 
-export const CLOUDFLARE_SITE_KEY = '1x00000000000000000000AA';
+// Official Live Cloudflare Turnstile Site Key (Production-grade bot protection)
+export const CLOUDFLARE_SITE_KEY = '0x4AAAAAAFYHSeNPeQmA14PB';
+
+// Session-level memory cache for verified tokens (valid up to 4 minutes)
+let cachedTurnstileToken: { token: string; timestamp: number } | null = null;
 
 declare global {
   interface Window {
@@ -101,10 +105,17 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
   const [isRendered, setIsRendered] = useState(false);
 
   useEffect(() => {
+    // If we already verified in this session within 4 minutes, pass immediately without delay!
+    if (cachedTurnstileToken && (Date.now() - cachedTurnstileToken.timestamp < 240000)) {
+      onVerify(cachedTurnstileToken.token);
+      setIsRendered(true);
+      return;
+    }
+
     let isMounted = true;
     let pollInterval: any = null;
     let attempts = 0;
-    const maxAttempts = 120; // Up to 3 seconds with ultra-fast 25ms polling
+    const maxAttempts = 120; // 3 seconds polling
 
     const renderWidgetInstantly = () => {
       if (!isMounted || !containerRef.current) return false;
@@ -125,11 +136,13 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
             appearance: 'always',
             execution: 'render',
             callback: (token: string) => {
+              cachedTurnstileToken = { token, timestamp: Date.now() };
               if (isMounted) {
                 onVerify(token);
               }
             },
             'expired-callback': () => {
+              cachedTurnstileToken = null;
               if (isMounted && onExpire) {
                 onExpire();
               }
@@ -152,9 +165,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       return false;
     };
 
-    // If already preloaded into memory from index.html, render in 0ms!
     if (!renderWidgetInstantly()) {
-      // Ultra-rapid 25ms check to render the instant the preloaded script finishes
       pollInterval = setInterval(() => {
         attempts++;
         if (renderWidgetInstantly() || attempts >= maxAttempts) {
