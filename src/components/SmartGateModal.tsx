@@ -772,34 +772,34 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         <div className="relative w-full h-full max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:rounded-none max-md:border-0 sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
           
           {/* ================= LEFT COLUMN: DISTINCT ROYAL BLUE BRANDING (DESKTOP / LAPTOP) ================= */}
-          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#1d63d2] via-[#1a53b5] to-[#113a84] text-white p-4 lg:p-6 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/30 shadow-lg">
+          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#123e8c] via-[#0d2d68] to-[#07193d] text-white p-5 lg:p-7 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/20 shadow-lg">
             
-            {/* Organic Curved Decorative Accents with clean contrast */}
-            <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-white/10 blur-[1px] pointer-events-none" />
-            <div className="absolute top-1/2 -left-20 w-40 h-40 rounded-full bg-blue-300/20 pointer-events-none" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
+            {/* Subtle Atmospheric Geometric Depth (Non-distracting, pure CSS) */}
+            <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full bg-blue-500/10 blur-[50px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
+            <div className="absolute top-1/3 -left-20 w-56 h-56 rounded-full bg-indigo-500/10 blur-[40px] pointer-events-none" />
+            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-sky-400/10 blur-[40px] pointer-events-none" />
 
-            {/* Top Brand Logo & Title */}
+            {/* Top Brand Logo & Title (Anti-AI Slop: Clean, Authoritative, Zero Pills) */}
             <div className="relative z-10 flex flex-col items-center text-center">
-              <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-12 h-12 mb-1.5 drop-shadow-md" />
-              <span className="text-xs font-black tracking-widest text-white uppercase drop-shadow-xs">
+              <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 mb-2 drop-shadow-md" />
+              <span className="text-sm font-black tracking-widest text-white uppercase drop-shadow-xs">
                 PSKS JABAR
               </span>
-              <span className="text-[9.5px] text-blue-100 font-semibold">
-                Pilar Sosial Jawa Barat
+              <span className="text-[10px] text-blue-200/90 font-medium tracking-wide mt-0.5">
+                Dinas Sosial Provinsi Jawa Barat
               </span>
             </div>
 
             {/* Middle Welcome Statement */}
-            <div className="relative z-10 my-auto py-1 text-center flex flex-col items-center">
-              <h2 className="text-lg lg:text-xl font-black text-white tracking-tight leading-tight mb-1 drop-shadow-xs">
+            <div className="relative z-10 my-auto py-2 text-center flex flex-col items-center">
+              <h2 className="text-xl lg:text-2xl font-black text-white tracking-tight leading-tight mb-2 drop-shadow-xs">
                 Welcome Back!
               </h2>
-              <p className="text-[10.5px] lg:text-[11px] text-blue-50 font-medium leading-relaxed max-w-xs mx-auto mb-3">
-                Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat.
+              <p className="text-[11px] lg:text-[12px] text-blue-100 font-medium leading-relaxed max-w-xs mx-auto mb-4">
+                Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat
               </p>
 
-              {/* Dynamic Left Action Button */}
+              {/* Dynamic Left Action Button (Architectural rounded-xl, Zero-Pill) */}
               {view === 'main' ? (
                 <button
                   type="button"
@@ -807,7 +807,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     setErrorMessage('');
                     setView('register');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-white/60 hover:border-white bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
+                  className="inline-flex items-center justify-center gap-2 border border-white/40 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all duration-200 shadow-sm cursor-pointer backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <UserPlus className="w-3.5 h-3.5 text-[#ffd700]" />
                   <span>Daftar Akun Baru</span>
@@ -819,7 +819,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     setErrorMessage('');
                     setView('main');
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 border border-white/60 hover:border-white bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] px-4 py-2 rounded-full transition-all duration-200 shadow-md cursor-pointer backdrop-blur-sm hover:scale-[1.03] active:scale-[0.97]"
+                  className="inline-flex items-center justify-center gap-2 border border-white/40 hover:border-white bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all duration-200 shadow-sm cursor-pointer backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 text-blue-100" />
                   <span>Menu Utama</span>
@@ -828,8 +828,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Sub-Links */}
-            <div className="relative z-10 pt-1.5 border-t border-white/20 text-center">
-              <p className="text-[8.5px] text-blue-100/90 font-bold tracking-wider uppercase">
+            <div className="relative z-10 pt-2 border-t border-white/15 text-center">
+              <p className="text-[8.5px] text-blue-200/80 font-bold tracking-widest uppercase">
                 DINAS SOSIAL PROVINSI JAWA BARAT
               </p>
             </div>
@@ -847,30 +847,28 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             {/* ========================================================================= */}
             {showMobileIntro && view === 'main' && (
               <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center pt-2 pb-1 px-1 animate-fadeIn text-white h-full">
-                {/* Bagian Atas: Logo Resmi & Badge Provinsi Jawa Barat */}
-                <div className="flex flex-col items-center pt-1">
-                  <div className="p-1.5 rounded-2xl bg-white/10 border border-white/20 shadow-md backdrop-blur-xs mb-1">
-                    <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-13 h-13 sm:w-16 sm:h-16" />
-                  </div>
-                  <span className="text-[8.5px] font-black uppercase tracking-widest text-[#f3d978] bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-                    PEMERINTAH PROVINSI JAWA BARAT
+                {/* Bagian Atas: Logo Resmi & Identitas Bersih (Anti-AI Slop, Zero Pill) */}
+                <div className="flex flex-col items-center pt-2">
+                  <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 mb-2 drop-shadow-lg" />
+                  <span className="text-sm font-black tracking-widest text-white uppercase drop-shadow-xs">
+                    PSKS JABAR
                   </span>
-                  <span className="text-[7.5px] font-bold text-blue-200 uppercase tracking-wider mt-0.5">
+                  <span className="text-[10px] font-semibold text-blue-200/90 tracking-wide mt-0.5">
                     Dinas Sosial Provinsi Jawa Barat
                   </span>
                 </div>
 
-                {/* Bagian Tengah: Teks Sambutan & Identitas Sistem */}
-                <div className="my-auto py-2 flex flex-col items-center">
-                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
+                {/* Bagian Tengah: Teks Sambutan & Identitas Sistem Bersih */}
+                <div className="my-auto py-3 flex flex-col items-center">
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-tight mb-1.5">
                     Selamat Datang
                   </h2>
-                  <p className="text-[11px] sm:text-xs font-bold text-blue-100 leading-snug mt-1 max-w-xs px-2">
-                    Sistem Informasi Manajemen Potensi & Sumber Kesejahteraan Sosial (PSKS)
+                  <p className="text-xs font-medium text-blue-100 leading-relaxed max-w-[280px] px-2 mb-2">
+                    Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat
                   </p>
-                  <div className="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3d978] text-[9.5px] sm:text-[10px] font-bold mt-2 shadow-2xs max-w-xs text-center leading-relaxed">
-                    <span>Layanan integrasi satu data, registrasi mandiri, dan verifikasi pilar sosial se-Jawa Barat.</span>
-                  </div>
+                  <p className="text-[10px] text-blue-200/80 font-medium tracking-wide">
+                    Integrasi Satu Data & Verifikasi Pilar Sosial Se-Jawa Barat
+                  </p>
                 </div>
 
                 {/* Bagian Bawah: Button MULAI & Copyright Lapisan 1 (Satu-Satunya) */}
