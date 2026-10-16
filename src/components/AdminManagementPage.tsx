@@ -208,7 +208,13 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
     setEditingAccount(account);
     setEditAdminUser(account.username);
     setEditAdminPassword(account.passwordPolos || '');
-    setEditAdminWilayah(account.wilayahTugas);
+    const initialWilayah =
+      account.id === 'adm-super' || (account.username || '').toLowerCase().includes('superadmin')
+        ? 'PROVINSI JAWA BARAT'
+        : account.id === 'adm-dev' || (account.username || '').toLowerCase() === 'ilhamfazril'
+        ? 'Pusat Developer Jabar'
+        : account.wilayahTugas;
+    setEditAdminWilayah(initialWilayah);
   };
 
   const handleSaveEditAdmin = (e: React.FormEvent) => {
@@ -243,13 +249,28 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
       return;
     }
 
+    // Role protection: Developer and Superadmin roles can NEVER be downgraded to regular admin
+    const lockedRole: 'developer' | 'superadmin' | 'admin' | 'user' =
+      editingAccount.id === 'adm-dev' || editingAccount.username.toLowerCase() === 'ilhamfazril' || userNew === 'ilhamfazril'
+        ? 'developer'
+        : editingAccount.id === 'adm-super' || editingAccount.username.toLowerCase().includes('superadmin') || userNew.includes('superadmin')
+        ? 'superadmin'
+        : editingAccount.role || 'admin';
+
+    // Wilayah protection: Ensure superadmin always retains provincial authority
+    let normalizedWilayah = wilayahNew;
+    if (lockedRole === 'superadmin' && (wilayahNew === 'Provinsi Jabar' || wilayahNew === 'PROVINSI JAWA BARAT')) {
+      normalizedWilayah = 'PROVINSI JAWA BARAT';
+    }
+
     if (onUpdateAdminAccount) {
       onUpdateAdminAccount(
         {
           ...editingAccount,
           username: userNew,
           namaAdmin: userNew,
-          wilayahTugas: wilayahNew,
+          role: lockedRole,
+          wilayahTugas: normalizedWilayah,
           passwordPolos: sandiNew,
           passwordHash: hashPassword(sandiNew),
           lastUpdatedTimestamp: Date.now(),
@@ -694,6 +715,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                         {k}
                       </option>
                     ))}
+                    <option value="PROVINSI JAWA BARAT">Provinsi Jawa Barat (Pusat Superadmin)</option>
                     <option value="Provinsi Jabar">Provinsi Jabar (Pusat Superadmin)</option>
                     <option value="Pusat Developer Jabar">Pusat Developer Jabar</option>
                   </select>
