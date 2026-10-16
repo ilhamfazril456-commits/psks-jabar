@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { ShieldCheck, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface TurnstileWidgetProps {
@@ -8,7 +8,6 @@ interface TurnstileWidgetProps {
   isVerified?: boolean;
 }
 
-// Kang Ilham's Official Cloudflare Turnstile Site Key
 export const CLOUDFLARE_SITE_KEY = '0x4AAAAAAFYHSeNPeQmA14PB';
 
 declare global {
@@ -31,7 +30,46 @@ declare global {
   }
 }
 
-export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
+// Internal Error Boundary to prevent any Cloudflare script error from ever blanking the app
+class TurnstileErrorBoundary extends Component<{ children: ReactNode; onFallback: () => void }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; onFallback: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('[Cloudflare Turnstile Boundary caught error]:', error, errorInfo);
+    this.props.onFallback();
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full p-2.5 text-center bg-emerald-50/90 border border-emerald-300 rounded-xl space-y-1">
+          <div className="text-[11px] font-bold text-emerald-900 flex items-center justify-center gap-1">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Verifikasi Keamanan Mandiri Aktif</span>
+          </div>
+          <button
+            type="button"
+            onClick={this.props.onFallback}
+            className="px-3.5 py-1.5 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg shadow-sm hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Klik di Sini: Saya Bukan Bot</span>
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
   onVerify,
   onExpire,
   onError,
@@ -43,12 +81,36 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
   const [isRendered, setIsRendered] = useState(false);
 
   useEffect(() => {
-    let checkInterval: any = null;
+    let isMounted = true;
+    let pollInterval: any = null;
     let attempts = 0;
-    const maxAttempts = 25; // 5 seconds polling
+    const maxAttempts = 20;
 
-    const tryRender = () => {
-      if (typeof window !== 'undefined' && window.turnstile && containerRef.current) {
+    // Dynamically inject Cloudflare Turnstile script safely only when widget is mounted
+    const ensureScriptLoaded = () => {
+      if (typeof window === 'undefined') return;
+      if (window.turnstile) return;
+
+      const existingScript = document.getElementById('cf-turnstile-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'cf-turnstile-script';
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => {
+          if (isMounted) setLoadError(true);
+        };
+        document.body.appendChild(script);
+      }
+    };
+
+    ensureScriptLoaded();
+
+    const tryRenderWidget = () => {
+      if (!isMounted || !containerRef.current) return false;
+
+      if (window.turnstile && typeof window.turnstile.render === 'function') {
         if (widgetIdRef.current) {
           try {
             window.turnstile.remove(widgetIdRef.current);
@@ -62,40 +124,48 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
             theme: 'light',
             size: 'flexible',
             callback: (token: string) => {
-              onVerify(token);
+              if (isMounted) {
+                onVerify(token);
+              }
             },
             'expired-callback': () => {
-              if (onExpire) onExpire();
+              if (isMounted && onExpire) {
+                onExpire();
+              }
             },
             'error-callback': () => {
-              if (onError) onError();
+              if (isMounted) {
+                if (onError) onError();
+                setLoadError(true);
+              }
             },
           });
           widgetIdRef.current = id;
           setIsRendered(true);
           setLoadError(false);
           return true;
-        } catch (e) {
-          console.warn('[Turnstile Render Warning]:', e);
+        } catch (err) {
+          console.warn('[Turnstile Widget render notice]:', err);
         }
       }
       return false;
     };
 
-    if (!tryRender()) {
-      checkInterval = setInterval(() => {
+    if (!tryRenderWidget()) {
+      pollInterval = setInterval(() => {
         attempts++;
-        if (tryRender() || attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          if (attempts >= maxAttempts && !widgetIdRef.current) {
+        if (tryRenderWidget() || attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          if (attempts >= maxAttempts && !widgetIdRef.current && isMounted) {
             setLoadError(true);
           }
         }
-      }, 200);
+      }, 250);
     }
 
     return () => {
-      if (checkInterval) clearInterval(checkInterval);
+      isMounted = false;
+      if (pollInterval) clearInterval(pollInterval);
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
@@ -105,10 +175,8 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     };
   }, [onVerify, onExpire, onError]);
 
-  // Fallback handler if Cloudflare CDN is blocked by strict client adblocker
-  const handleManualFallbackVerify = () => {
-    const dummyToken = `manual_turnstile_${Date.now()}`;
-    onVerify(dummyToken);
+  const handleFallbackClick = () => {
+    onVerify(`manual_turnstile_${Date.now()}`);
   };
 
   return (
@@ -126,19 +194,19 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
       </div>
 
       {/* Cloudflare Turnstile Render Area */}
-      <div className="min-h-[68px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-white border border-slate-200/80 py-1 px-0.5">
+      <div className="min-h-[68px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-white border border-slate-200/80 py-1 px-1">
         {/* The Turnstile iframe renders here with smooth responsive centering */}
         <div ref={containerRef} className="w-full flex justify-center items-center max-w-full overflow-hidden" />
 
         {/* Loading state before Turnstile iframe initializes */}
         {!isRendered && !loadError && (
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 py-3 animate-pulse">
-            <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-            <span>Memuat verifikasi keamanan...</span>
+            <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+            <span>Memuat Cloudflare Turnstile...</span>
           </div>
         )}
 
-        {/* Fallback Box if script blocked by Adblocker/Offline */}
+        {/* Fallback Box if script is blocked by Adblocker or Network Sandbox */}
         {loadError && !isVerified && (
           <div className="w-full p-2 text-center space-y-1.5">
             <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-800">
@@ -147,8 +215,8 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
             </div>
             <button
               type="button"
-              onClick={handleManualFallbackVerify}
-              className="px-3 py-1.5 bg-[#0f2b5c] text-white text-xs font-bold rounded-xl hover:bg-[#143b7d] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
+              onClick={handleFallbackClick}
+              className="px-3.5 py-1.5 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg hover:scale-[1.01] active:scale-[0.99] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <span>Klik di Sini: Saya Bukan Bot</span>
@@ -163,3 +231,13 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     </div>
   );
 };
+
+export const TurnstileWidget: React.FC<TurnstileWidgetProps> = (props) => {
+  return (
+    <TurnstileErrorBoundary onFallback={() => props.onVerify(`manual_turnstile_${Date.now()}`)}>
+      <TurnstileInner {...props} />
+    </TurnstileErrorBoundary>
+  );
+};
+
+export default TurnstileWidget;

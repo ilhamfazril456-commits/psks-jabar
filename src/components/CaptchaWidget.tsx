@@ -58,3 +58,5 @@ export const CaptchaWidget: React.FC<CaptchaWidgetProps> = ({
     </div>
   );
 };
+
+export default CaptchaWidget;
