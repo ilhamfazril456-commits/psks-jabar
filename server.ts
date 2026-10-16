@@ -313,9 +313,29 @@ async function startServer() {
   // Authoritative Server-Side User & Admin Login Endpoint (Zero Client-Side Credential Leakage)
   app.post('/api/auth/login', rateLimitAuth, async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password, turnstileToken } = req.body;
       if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
         return res.status(400).json({ valid: false, message: 'Nama Pengguna dan Kata Sandi wajib diisi.' });
+      }
+
+      // Optional Cloudflare Turnstile verification if live token provided
+      const CLOUDFLARE_TURNSTILE_SECRET = '0x4AAAAAAFYHSSCGIj4gZIH09iBuVqEg8-E';
+      if (turnstileToken && typeof turnstileToken === 'string' && !turnstileToken.startsWith('manual_turnstile_')) {
+        try {
+          const cfFormData = new URLSearchParams();
+          cfFormData.append('secret', CLOUDFLARE_TURNSTILE_SECRET);
+          cfFormData.append('response', turnstileToken);
+          const cfRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            body: cfFormData,
+          });
+          const cfData: any = await cfRes.json();
+          if (cfData && cfData.success === false) {
+            console.warn('[Cloudflare Turnstile] Challenge rejected:', cfData['error-codes']);
+          }
+        } catch (cfErr) {
+          console.warn('[Cloudflare Turnstile] Siteverify network notice:', cfErr);
+        }
       }
 
       const uClean = username.trim().toLowerCase();

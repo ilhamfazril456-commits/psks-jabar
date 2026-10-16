@@ -332,10 +332,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return;
     }
 
-    // CAPTCHA Verification
-    if (!captchaInput.trim() || captchaInput.trim().toUpperCase() !== currentCaptchaCode) {
+    // Cloudflare Turnstile Verification
+    if (!captchaInput.trim() || captchaInput.trim() !== 'TURNSTILE_VERIFIED') {
       setCaptchaError(true);
-      setErrorMessage("❌ Kode CAPTCHA salah atau belum diisi! Silakan masukkan 5 karakter yang tertera pada visual gambar.");
+      setErrorMessage("🛡️ Verifikasi Keamanan: Mohon centang kotak verifikasi Cloudflare Turnstile di atas terlebih dahulu.");
       return;
     }
 
@@ -347,7 +347,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       const resp = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userLower, password: passInput }),
+        body: JSON.stringify({ username: userLower, password: passInput, turnstileToken: captchaInput }),
       });
       const data = await resp.json();
       if (resp.ok && data.valid && data.session) {

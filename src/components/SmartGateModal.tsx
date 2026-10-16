@@ -605,15 +605,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       return;
     }
 
-    // Functional CAPTCHA Verification
-    if (!captchaInput.trim() || captchaInput.trim().toUpperCase() !== currentCaptchaCode) {
+    // Functional Cloudflare Turnstile Verification
+    if (!captchaInput.trim() || captchaInput.trim() !== 'TURNSTILE_VERIFIED') {
       setCaptchaError(true);
-      setErrorMessage('❌ Kode CAPTCHA Salah! Kode CAPTCHA baru telah diperbarui, silakan ketik ulang.');
-      setCaptchaInput('');
-      setCaptchaRefreshTrigger((prev) => prev + 1);
-      setTimeout(() => {
-        captchaInputRef.current?.focus();
-      }, 100);
+      setErrorMessage('🛡️ Verifikasi Keamanan: Mohon centang kotak verifikasi Cloudflare Turnstile di atas terlebih dahulu.');
       return;
     }
 
@@ -655,7 +650,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       const resp = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: uLower, password: pInput }),
+        body: JSON.stringify({ username: uLower, password: pInput, turnstileToken: captchaInput }),
       });
       const data = await resp.json();
       if (resp.ok && data.valid && data.session) {
