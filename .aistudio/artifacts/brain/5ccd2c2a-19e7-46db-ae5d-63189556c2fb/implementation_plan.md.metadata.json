@@ -1,0 +1,6 @@
+{
+  "summary": "Rencana arsitektur perbaikan total autentikasi kata sandi murni dinamis dari Supabase tanpa toleransi sandi lama, pembersihan total fallback statis, dan peniadaan kata sandi ganda.",
+  "updatedAt": "2026-10-16T02:32:52.896110829Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
