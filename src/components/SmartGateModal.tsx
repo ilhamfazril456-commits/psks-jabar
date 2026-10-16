@@ -35,7 +35,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-const CaptchaWidget = React.lazy(() => import('./CaptchaWidget').then(m => ({ default: m.CaptchaWidget })));
+import { CaptchaWidget } from './CaptchaWidget';
 const PrivacyTermsModal = React.lazy(() => import('./PrivacyTermsModal').then(m => ({ default: m.PrivacyTermsModal })));
 const RegisterSuccessModal = React.lazy(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
 const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
@@ -1861,20 +1861,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                     {/* Input 3: Visual CAPTCHA Widget */}
                     <div>
-                      <React.Suspense fallback={<div className="h-10 bg-blue-50/60 rounded-xl animate-pulse" />}>
-                        <CaptchaWidget
-                          userInput={captchaInput}
-                          setUserInput={(val) => {
-                            setCaptchaInput(val);
-                            setCaptchaError(false);
-                            setErrorMessage('');
-                          }}
-                          onCaptchaCodeChange={(code) => setCurrentCaptchaCode(code)}
-                          isError={captchaError}
-                          refreshTrigger={captchaRefreshTrigger}
-                          inputRef={captchaInputRef}
-                        />
-                      </React.Suspense>
+                      <CaptchaWidget
+                        userInput={captchaInput}
+                        setUserInput={(val) => {
+                          setCaptchaInput(val);
+                          setCaptchaError(false);
+                          setErrorMessage('');
+                        }}
+                        onCaptchaCodeChange={(code) => setCurrentCaptchaCode(code)}
+                        isError={captchaError}
+                        refreshTrigger={captchaRefreshTrigger}
+                        inputRef={captchaInputRef}
+                      />
                     </div>
 
                     {/* Action Buttons */}

@@ -30,6 +30,26 @@ declare global {
   }
 }
 
+// Preload Cloudflare Turnstile script into browser memory immediately in the background
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const initScriptPreload = () => {
+    if (!document.getElementById('cf-turnstile-script')) {
+      const script = document.createElement('script');
+      script.id = 'cf-turnstile-script';
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initScriptPreload);
+  } else {
+    initScriptPreload();
+  }
+}
+
 // Internal Error Boundary to prevent any Cloudflare script error from ever blanking the app
 class TurnstileErrorBoundary extends Component<{ children: ReactNode; onFallback: () => void }, { hasError: boolean }> {
   constructor(props: { children: ReactNode; onFallback: () => void }) {
@@ -84,30 +104,9 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
     let isMounted = true;
     let pollInterval: any = null;
     let attempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 120; // Up to 3 seconds with ultra-fast 25ms polling
 
-    // Dynamically inject Cloudflare Turnstile script safely only when widget is mounted
-    const ensureScriptLoaded = () => {
-      if (typeof window === 'undefined') return;
-      if (window.turnstile) return;
-
-      const existingScript = document.getElementById('cf-turnstile-script');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.id = 'cf-turnstile-script';
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => {
-          if (isMounted) setLoadError(true);
-        };
-        document.body.appendChild(script);
-      }
-    };
-
-    ensureScriptLoaded();
-
-    const tryRenderWidget = () => {
+    const renderWidgetInstantly = () => {
       if (!isMounted || !containerRef.current) return false;
 
       if (window.turnstile && typeof window.turnstile.render === 'function') {
@@ -123,6 +122,8 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
             sitekey: CLOUDFLARE_SITE_KEY,
             theme: 'light',
             size: 'flexible',
+            appearance: 'always',
+            execution: 'render',
             callback: (token: string) => {
               if (isMounted) {
                 onVerify(token);
@@ -151,16 +152,18 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       return false;
     };
 
-    if (!tryRenderWidget()) {
+    // If already preloaded into memory from index.html, render in 0ms!
+    if (!renderWidgetInstantly()) {
+      // Ultra-rapid 25ms check to render the instant the preloaded script finishes
       pollInterval = setInterval(() => {
         attempts++;
-        if (tryRenderWidget() || attempts >= maxAttempts) {
+        if (renderWidgetInstantly() || attempts >= maxAttempts) {
           clearInterval(pollInterval);
           if (attempts >= maxAttempts && !widgetIdRef.current && isMounted) {
             setLoadError(true);
           }
         }
-      }, 250);
+      }, 25);
     }
 
     return () => {
@@ -202,7 +205,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
         {!isRendered && !loadError && (
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 py-3 animate-pulse">
             <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-            <span>Memuat Cloudflare Turnstile...</span>
+            <span>Memverifikasi Cloudflare...</span>
           </div>
         )}
 
