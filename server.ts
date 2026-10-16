@@ -375,22 +375,8 @@ async function startServer() {
         });
       }
 
-      // 4. Validate password strictly against the stored bcrypt hash from database (with case-insensitivity tolerance)
-      let isValid = comparePassword(pClean, matchedAccount.passwordHash);
-      if (!isValid) {
-        if (
-          (matchedAccount.id === 'adm-super' || uClean.includes('superadmin')) &&
-          (pClean === 'Super12345jabar' || pClean === 'super12345jabar')
-        ) {
-          isValid = true;
-        } else if (
-          (matchedAccount.id === 'adm-dev' || uClean === 'ilhamfazril') &&
-          (pClean === 'IlhamSangDeveloper' || pClean === 'IlhamSangDeveloper123')
-        ) {
-          isValid = true;
-        }
-      }
-
+      // 4. Validate password strictly and exclusively against the stored bcrypt hash from database
+      const isValid = comparePassword(pClean, matchedAccount.passwordHash);
       if (!isValid) {
         return res.status(401).json({ valid: false, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });
       }

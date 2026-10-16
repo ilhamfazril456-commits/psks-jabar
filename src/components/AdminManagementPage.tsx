@@ -577,7 +577,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                             <span>
                               {isPasswordMasked
                                 ? '••••••••'
-                                : (item.passwordPolos || (item.role === 'developer' ? 'IlhamSangDeveloper' : item.role === 'superadmin' ? 'super12345jabar' : `${item.username}123`))}
+                                : (item.passwordPolos || 'Tersimpan Terenkripsi')}
                             </span>
                             <span className="text-[9px] font-sans font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded w-max flex items-center gap-1">
                               <ShieldCheck className="w-2.5 h-2.5 text-emerald-600 inline" />

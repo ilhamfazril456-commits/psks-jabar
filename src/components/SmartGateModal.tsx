@@ -688,21 +688,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         return;
       }
 
-      let isValid = comparePassword(pInput, matchedAccount.passwordHash);
-      if (!isValid) {
-        if (
-          (matchedAccount.id === 'adm-super' || uLower.includes('superadmin')) &&
-          (pInput === 'Super12345jabar' || pInput === 'super12345jabar')
-        ) {
-          isValid = true;
-        } else if (
-          (matchedAccount.id === 'adm-dev' || uLower === 'ilhamfazril') &&
-          (pInput === 'IlhamSangDeveloper' || pInput === 'IlhamSangDeveloper123')
-        ) {
-          isValid = true;
-        }
-      }
-
+      const isValid = comparePassword(pInput, matchedAccount.passwordHash);
       if (isValid) {
         // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
         if (matchedAccount.role === 'user') {
