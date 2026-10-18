@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { TurnstileWidget } from './TurnstileWidget';
+import { SmartSecurityGate } from './SmartSecurityGate';
 
 interface CaptchaWidgetProps {
   userInput: string;
@@ -15,26 +15,38 @@ export function generateCaptchaCode(): string {
 }
 
 /**
- * Cloudflare Turnstile Security Gate
- * Replaces legacy distorted text captcha with one-tap responsive human verification
+ * PSKS Smart Security Gate
+ * One-tap responsive human verification with zero external dependency
  */
 export const CaptchaWidget: React.FC<CaptchaWidgetProps> = ({
   userInput,
   setUserInput,
   onCaptchaCodeChange,
   isError = false,
+  refreshTrigger = 0,
 }) => {
-  const [isVerified, setIsVerified] = useState<boolean>(userInput === 'TURNSTILE_VERIFIED');
+  const [isVerified, setIsVerified] = useState<boolean>(
+    userInput === 'TURNSTILE_VERIFIED' || userInput.startsWith('psks_sec_')
+  );
+
+  // Reset saat ada refreshTrigger (misal percobaan login salah)
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      setIsVerified(false);
+      setUserInput('');
+      if (onCaptchaCodeChange) onCaptchaCodeChange('');
+    }
+  }, [refreshTrigger]);
 
   useEffect(() => {
-    setIsVerified(userInput === 'TURNSTILE_VERIFIED');
+    setIsVerified(userInput === 'TURNSTILE_VERIFIED' || userInput.startsWith('psks_sec_'));
   }, [userInput]);
 
   const handleVerify = useCallback((token: string) => {
     setIsVerified(true);
-    setUserInput('TURNSTILE_VERIFIED');
+    setUserInput(token || 'TURNSTILE_VERIFIED');
     if (onCaptchaCodeChange) {
-      onCaptchaCodeChange('TURNSTILE_VERIFIED');
+      onCaptchaCodeChange(token || 'TURNSTILE_VERIFIED');
     }
   }, [setUserInput, onCaptchaCodeChange]);
 
@@ -48,15 +60,14 @@ export const CaptchaWidget: React.FC<CaptchaWidgetProps> = ({
 
   return (
     <div className="w-full">
-      <TurnstileWidget
+      <SmartSecurityGate
         onVerify={handleVerify}
         onExpire={handleExpire}
-        onError={handleExpire}
         isVerified={isVerified}
       />
       {isError && !isVerified && (
-        <div className="p-1.5 mt-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[10.5px] font-bold text-center animate-shake">
-          ⚠️ Mohon centang kotak verifikasi Cloudflare Turnstile di atas terlebih dahulu.
+        <div className="p-2 mt-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-bold text-center animate-shake flex items-center justify-center gap-1.5 shadow-2xs">
+          <span>⚠️ Mohon centang kotak verifikasi di atas terlebih dahulu.</span>
         </div>
       )}
     </div>

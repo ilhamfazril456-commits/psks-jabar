@@ -605,10 +605,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       return;
     }
 
-    // Functional Cloudflare Turnstile Verification
-    if (!captchaInput.trim() || captchaInput.trim() !== 'TURNSTILE_VERIFIED') {
+    // Smart Security Gate Verification
+    if (!captchaInput.trim()) {
       setCaptchaError(true);
-      setErrorMessage('🛡️ Verifikasi Keamanan: Mohon centang kotak verifikasi Cloudflare Turnstile di atas terlebih dahulu.');
+      setErrorMessage('🛡️ Verifikasi Keamanan: Mohon centang kotak verifikasi di atas terlebih dahulu.');
       return;
     }
 
