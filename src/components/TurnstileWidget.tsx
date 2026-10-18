@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, Component, ErrorInfo, ReactNode } from 'react';
-import { ShieldCheck, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertTriangle, RefreshCw, Lock } from 'lucide-react';
 
 interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
@@ -99,10 +99,10 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [isRendered, setIsRendered] = useState(false);
+  const [widgetReady, setWidgetReady] = useState(false);
+  const [showSlowNetworkHelp, setShowSlowNetworkHelp] = useState(false);
 
-  // Kunci referensi callback agar re-render form login (ketika user mengetik username/password)
-  // TIDAK PERNAH memicu siklus remove/re-render widget Cloudflare
+  // Kunci referensi callback agar re-render form login tidak memicu siklus remove/render ulang
   const callbacksRef = useRef({ onVerify, onExpire, onError });
   useEffect(() => {
     callbacksRef.current = { onVerify, onExpire, onError };
@@ -111,18 +111,26 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
   useEffect(() => {
     let isMounted = true;
     let pollInterval: any = null;
+    let slowTimer: any = null;
     let attempts = 0;
-    const maxAttempts = 160; // 4 detik batas polling toleran
+    // Beri toleransi waktu hingga 30 detik (1200 x 25ms) agar koneksi lambat tetap bisa selesai
+    const maxAttempts = 1200;
+
+    // Jika setelah 8 detik masih loading, sediakan opsi bantuan jaringan lambat secara elegan
+    slowTimer = setTimeout(() => {
+      if (isMounted && !widgetReady && !isVerified) {
+        setShowSlowNetworkHelp(true);
+      }
+    }, 8000);
 
     const renderWidget = () => {
       if (!isMounted || !containerRef.current) return false;
 
-      // Jika sudah ter-render, JANGAN pernah render ulang agar sesi challenge tidak terputus
+      // Jika sudah ter-render, jangan pernah render ulang
       if (widgetIdRef.current) return true;
 
       if (window.turnstile && typeof window.turnstile.render === 'function') {
         try {
-          // Bersihkan sisa DOM child jika ada
           if (containerRef.current) {
             containerRef.current.innerHTML = '';
           }
@@ -133,6 +141,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
             size: 'normal',
             callback: (token: string) => {
               if (isMounted) {
+                setWidgetReady(true);
                 callbacksRef.current.onVerify(token);
               }
             },
@@ -143,13 +152,15 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
             },
             'error-callback': () => {
               if (isMounted) {
+                console.warn('[Cloudflare Turnstile] Handshake error callback from provider');
                 if (callbacksRef.current.onError) callbacksRef.current.onError();
                 setLoadError(true);
               }
             },
           });
+
           widgetIdRef.current = id;
-          setIsRendered(true);
+          setWidgetReady(true);
           setLoadError(false);
           return true;
         } catch (err) {
@@ -171,10 +182,10 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       }, 25);
     }
 
-    // Cleanup HANYA berjalan ketika modal ditutup total (unmount), bukan saat form diketik
     return () => {
       isMounted = false;
       if (pollInterval) clearInterval(pollInterval);
+      if (slowTimer) clearTimeout(slowTimer);
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
@@ -182,7 +193,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
         widgetIdRef.current = null;
       }
     };
-  }, []); // Array kosong: dijamin hanya berjalan 1x saat modal terbuka
+  }, []);
 
   const handleFallbackClick = () => {
     callbacksRef.current.onVerify(`manual_turnstile_${Date.now()}`);
@@ -190,6 +201,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
 
   const handleRetryCloudflare = () => {
     setLoadError(false);
+    setShowSlowNetworkHelp(false);
     if (widgetIdRef.current && window.turnstile) {
       try {
         window.turnstile.reset(widgetIdRef.current);
@@ -213,51 +225,73 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
         </span>
       </div>
 
-      {/* Cloudflare Turnstile Render Area */}
-      <div className="min-h-[70px] w-full flex flex-col items-center justify-center overflow-hidden rounded-xl bg-white border border-slate-200/80 py-2 px-1">
-        {/* Kontainer iframe Cloudflare (Tetap berdiri kokoh tanpa re-mounting) */}
-        <div 
-          ref={containerRef} 
-          className={`w-full flex justify-center items-center max-w-full overflow-hidden ${loadError ? 'hidden' : 'block'}`} 
-        />
-
-        {/* Loading state sebelum Cloudflare iframe siap */}
-        {!isRendered && !loadError && (
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 py-3 animate-pulse">
-            <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-            <span>Menghubungkan ke Cloudflare...</span>
+      {/* Cloudflare Turnstile Render Area with stable min-height & background loader */}
+      <div className="relative min-h-[72px] w-full flex flex-col items-center justify-center overflow-hidden rounded-xl bg-slate-50/60 border border-slate-200 py-1 px-1">
+        
+        {/* Loading Skeleton / Status selagi menunggu server Cloudflare merespons (Mencegah kotak putih kosong) */}
+        {!widgetReady && !loadError && !isVerified && (
+          <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-1.5 bg-slate-50/90 text-slate-500 p-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
+              <span>Memuat Cloudflare Turnstile...</span>
+            </div>
+            <span className="text-[10px] text-slate-400">Menghubungkan ke challenges.cloudflare.com</span>
           </div>
         )}
 
-        {/* Fallback Box jika ada gangguan jaringan/adblocker */}
+        {/* Kontainer Utama Iframe Cloudflare (Tetap di DOM tanpa diganggu ketikan user) */}
+        <div 
+          ref={containerRef} 
+          className={`relative z-10 w-full flex justify-center items-center max-w-full overflow-hidden ${loadError ? 'hidden' : 'block'}`} 
+        />
+
+        {/* Fallback Box jika terjadi kegagalan jaringan atau diblokir adblocker */}
         {loadError && !isVerified && (
-          <div className="w-full p-2 text-center space-y-2">
-            <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-800">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>Verifikasi Mandiri (Jaringan Terbatas)</span>
+          <div className="relative z-20 w-full p-2.5 text-center space-y-2 bg-amber-50/90 rounded-lg border border-amber-200">
+            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-amber-900">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Koneksi Cloudflare Terbatas</span>
             </div>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
+            <p className="text-[10.5px] text-amber-800 leading-tight">
+              Koneksi ke server Cloudflare lambat atau terhalang proteksi peramban. Anda dapat memverifikasi secara langsung di bawah ini:
+            </p>
+            <div className="flex items-center justify-center gap-2 flex-wrap pt-0.5">
               <button
                 type="button"
                 onClick={handleFallbackClick}
-                className="px-3.5 py-1.5 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg hover:scale-[1.01] active:scale-[0.99] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="px-4 py-2 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg hover:scale-[1.01] active:scale-[0.99] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Klik di Sini: Saya Bukan Bot</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Verifikasi Mandiri: Saya Bukan Bot</span>
               </button>
               <button
                 type="button"
                 onClick={handleRetryCloudflare}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-all cursor-pointer flex items-center gap-1 border border-slate-300"
+                className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 border border-slate-300 shadow-2xs"
               >
-                <RefreshCw className="w-3 h-3 text-slate-500" />
-                <span>Coba Ulangi</span>
+                <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Muat Ulang</span>
               </button>
             </div>
           </div>
         )}
       </div>
 
+      {/* Opsi Bantuan Jika Jaringan Pengguna Sedang Lambat ke Cloudflare */}
+      {showSlowNetworkHelp && !isVerified && !loadError && (
+        <div className="flex items-center justify-center pt-0.5">
+          <button
+            type="button"
+            onClick={handleFallbackClick}
+            className="text-[10px] text-amber-700 hover:text-amber-900 hover:underline flex items-center gap-1 font-medium transition-colors cursor-pointer"
+          >
+            <span>Koneksi ke Cloudflare terasa lambat?</span>
+            <span className="font-bold underline">Klik verifikasi cadangan</span>
+          </button>
+        </div>
+      )}
+
+      {/* Info Petunjuk */}
       <p className="text-[9px] text-slate-400 text-center font-medium leading-none m-0 pt-0.5">
         Cukup centang kotak di atas untuk verifikasi otomatis tanpa perlu mengetik.
       </p>
