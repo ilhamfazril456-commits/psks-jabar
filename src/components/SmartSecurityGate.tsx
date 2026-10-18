@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ShieldCheck, CheckCircle2, Lock, Sparkles, RefreshCw } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Lock, RefreshCw } from 'lucide-react';
 
 interface SmartSecurityGateProps {
   onVerify: (token: string) => void;
@@ -107,7 +107,7 @@ export const SmartSecurityGate: React.FC<SmartSecurityGateProps> = ({
         </span>
         <span className="text-[9px] bg-emerald-100/90 text-emerald-900 border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          Smart Shield Mandiri
+          Anti BOT
         </span>
       </div>
 
@@ -175,7 +175,7 @@ export const SmartSecurityGate: React.FC<SmartSecurityGateProps> = ({
                   Saya bukan robot
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium leading-tight pt-0.5">
-                  Klik atau sentuh kotak untuk verifikasi cepat
+                  Klik / sentuh kotak untuk verifikasi bahwa anda bukan robot
                 </div>
               </>
             )}
@@ -195,12 +195,8 @@ export const SmartSecurityGate: React.FC<SmartSecurityGateProps> = ({
       </div>
 
       {/* Bottom Subtle Note */}
-      <div className="flex items-center justify-between text-[9px] text-slate-400 font-medium px-0.5 pt-0.5 leading-none">
-        <span>Sistem Keamanan Mandiri Pilar Sosial</span>
-        <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-          <Sparkles className="w-2.5 h-2.5" />
-          Instan 0 Detik
-        </span>
+      <div className="flex items-center text-[9px] text-slate-400 font-medium px-0.5 pt-0.5 leading-none">
+        <span>Sistem Keamanan Mandiri PSKS Jabar</span>
       </div>
     </div>
   );
