@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { TurnstileWidget } from './TurnstileWidget';
 
 interface CaptchaWidgetProps {
@@ -26,21 +26,25 @@ export const CaptchaWidget: React.FC<CaptchaWidgetProps> = ({
 }) => {
   const [isVerified, setIsVerified] = useState<boolean>(userInput === 'TURNSTILE_VERIFIED');
 
-  const handleVerify = (token: string) => {
+  useEffect(() => {
+    setIsVerified(userInput === 'TURNSTILE_VERIFIED');
+  }, [userInput]);
+
+  const handleVerify = useCallback((token: string) => {
     setIsVerified(true);
     setUserInput('TURNSTILE_VERIFIED');
     if (onCaptchaCodeChange) {
       onCaptchaCodeChange('TURNSTILE_VERIFIED');
     }
-  };
+  }, [setUserInput, onCaptchaCodeChange]);
 
-  const handleExpire = () => {
+  const handleExpire = useCallback(() => {
     setIsVerified(false);
     setUserInput('');
     if (onCaptchaCodeChange) {
       onCaptchaCodeChange('');
     }
-  };
+  }, [setUserInput, onCaptchaCodeChange]);
 
   return (
     <div className="w-full">

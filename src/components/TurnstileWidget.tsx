@@ -101,42 +101,49 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
   const [loadError, setLoadError] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
 
+  // Kunci referensi callback agar re-render form login (ketika user mengetik username/password)
+  // TIDAK PERNAH memicu siklus remove/re-render widget Cloudflare
+  const callbacksRef = useRef({ onVerify, onExpire, onError });
+  useEffect(() => {
+    callbacksRef.current = { onVerify, onExpire, onError };
+  });
+
   useEffect(() => {
     let isMounted = true;
     let pollInterval: any = null;
     let attempts = 0;
-    const maxAttempts = 120; // Up to 3 seconds with ultra-fast 25ms polling
+    const maxAttempts = 160; // 4 detik batas polling toleran
 
-    const renderWidgetInstantly = () => {
+    const renderWidget = () => {
       if (!isMounted || !containerRef.current) return false;
 
-      if (window.turnstile && typeof window.turnstile.render === 'function') {
-        if (widgetIdRef.current) {
-          try {
-            window.turnstile.remove(widgetIdRef.current);
-          } catch {}
-          widgetIdRef.current = null;
-        }
+      // Jika sudah ter-render, JANGAN pernah render ulang agar sesi challenge tidak terputus
+      if (widgetIdRef.current) return true;
 
+      if (window.turnstile && typeof window.turnstile.render === 'function') {
         try {
+          // Bersihkan sisa DOM child jika ada
+          if (containerRef.current) {
+            containerRef.current.innerHTML = '';
+          }
+
           const id = window.turnstile.render(containerRef.current, {
             sitekey: CLOUDFLARE_SITE_KEY,
             theme: 'light',
-            size: 'flexible',
-            appearance: 'always',
+            size: 'normal',
             callback: (token: string) => {
               if (isMounted) {
-                onVerify(token);
+                callbacksRef.current.onVerify(token);
               }
             },
             'expired-callback': () => {
-              if (isMounted && onExpire) {
-                onExpire();
+              if (isMounted) {
+                if (callbacksRef.current.onExpire) callbacksRef.current.onExpire();
               }
             },
             'error-callback': () => {
               if (isMounted) {
-                if (onError) onError();
+                if (callbacksRef.current.onError) callbacksRef.current.onError();
                 setLoadError(true);
               }
             },
@@ -152,11 +159,10 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       return false;
     };
 
-    // If already preloaded into memory from index.html, render immediately
-    if (!renderWidgetInstantly()) {
+    if (!renderWidget()) {
       pollInterval = setInterval(() => {
         attempts++;
-        if (renderWidgetInstantly() || attempts >= maxAttempts) {
+        if (renderWidget() || attempts >= maxAttempts) {
           clearInterval(pollInterval);
           if (attempts >= maxAttempts && !widgetIdRef.current && isMounted) {
             setLoadError(true);
@@ -165,6 +171,7 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       }, 25);
     }
 
+    // Cleanup HANYA berjalan ketika modal ditutup total (unmount), bukan saat form diketik
     return () => {
       isMounted = false;
       if (pollInterval) clearInterval(pollInterval);
@@ -175,10 +182,21 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
         widgetIdRef.current = null;
       }
     };
-  }, [onVerify, onExpire, onError]);
+  }, []); // Array kosong: dijamin hanya berjalan 1x saat modal terbuka
 
   const handleFallbackClick = () => {
-    onVerify(`manual_turnstile_${Date.now()}`);
+    callbacksRef.current.onVerify(`manual_turnstile_${Date.now()}`);
+  };
+
+  const handleRetryCloudflare = () => {
+    setLoadError(false);
+    if (widgetIdRef.current && window.turnstile) {
+      try {
+        window.turnstile.reset(widgetIdRef.current);
+      } catch {
+        widgetIdRef.current = null;
+      }
+    }
   };
 
   return (
@@ -196,33 +214,46 @@ const TurnstileInner: React.FC<TurnstileWidgetProps> = ({
       </div>
 
       {/* Cloudflare Turnstile Render Area */}
-      <div className="min-h-[68px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-white border border-slate-200/80 py-1 px-1">
-        {/* The Turnstile iframe renders here with smooth responsive centering */}
-        <div ref={containerRef} className="w-full flex justify-center items-center max-w-full overflow-hidden" />
+      <div className="min-h-[70px] w-full flex flex-col items-center justify-center overflow-hidden rounded-xl bg-white border border-slate-200/80 py-2 px-1">
+        {/* Kontainer iframe Cloudflare (Tetap berdiri kokoh tanpa re-mounting) */}
+        <div 
+          ref={containerRef} 
+          className={`w-full flex justify-center items-center max-w-full overflow-hidden ${loadError ? 'hidden' : 'block'}`} 
+        />
 
-        {/* Loading state before Turnstile iframe initializes */}
+        {/* Loading state sebelum Cloudflare iframe siap */}
         {!isRendered && !loadError && (
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 py-3 animate-pulse">
             <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-            <span>Memverifikasi Cloudflare...</span>
+            <span>Menghubungkan ke Cloudflare...</span>
           </div>
         )}
 
-        {/* Fallback Box if script is blocked by Adblocker, Network, or Domain whitelist */}
+        {/* Fallback Box jika ada gangguan jaringan/adblocker */}
         {loadError && !isVerified && (
-          <div className="w-full p-2 text-center space-y-1.5">
+          <div className="w-full p-2 text-center space-y-2">
             <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-800">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span>Verifikasi Mandiri (Jaringan Terbatas)</span>
             </div>
-            <button
-              type="button"
-              onClick={handleFallbackClick}
-              className="px-3.5 py-1.5 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg hover:scale-[1.01] active:scale-[0.99] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Klik di Sini: Saya Bukan Bot</span>
-            </button>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleFallbackClick}
+                className="px-3.5 py-1.5 bg-[#043e2e] text-[#f3e5ab] text-xs font-bold rounded-lg hover:scale-[1.01] active:scale-[0.99] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Klik di Sini: Saya Bukan Bot</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleRetryCloudflare}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-all cursor-pointer flex items-center gap-1 border border-slate-300"
+              >
+                <RefreshCw className="w-3 h-3 text-slate-500" />
+                <span>Coba Ulangi</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
