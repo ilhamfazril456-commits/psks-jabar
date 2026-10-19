@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserSession, AdminAccount, PillarRegistrationSubmission, AppSettings } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
-import { Shield, User, Key, LogOut, LogIn, UserPlus, RefreshCw, CheckCircle2, ShieldCheck, Lock, AlertTriangle, X, Code2, QrCode, CreditCard, ArrowLeft, Camera, Sparkles, Clock, Wifi } from 'lucide-react';
+import { Shield, User, Key, LogOut, LogIn, UserPlus, RefreshCw, CheckCircle2, ShieldCheck, Lock, AlertTriangle, X, Code2, QrCode, CreditCard, ArrowLeft, Camera, Sparkles, Clock, Wifi, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
 import { CaptchaWidget } from './CaptchaWidget';
 import { QRCardScannerModal } from './QRCardScannerModal';
@@ -15,6 +15,7 @@ interface AccountPageProps {
   adminAccounts: AdminAccount[];
   submissions?: PillarRegistrationSubmission[];
   appSettings?: AppSettings;
+  onSaveAppSettings?: (newSettings: AppSettings) => Promise<void> | void;
   onLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', username: string, wilayah: string) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
@@ -33,6 +34,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   adminAccounts,
   submissions = [],
   appSettings,
+  onSaveAppSettings,
   onLogin,
   onLogout,
   onAddAdminAccount,
@@ -253,6 +255,51 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     wilayah: string;
     role?: string;
   } | null>(null);
+
+  // Superadmin PIN Management State (Dedicated Self-Service PIN Change)
+  const [superadminPinInput, setSuperadminPinInput] = useState(() => appSettings?.superadminPin || '123456');
+  const [showSuperadminPin, setShowSuperadminPin] = useState(false);
+  const [isSavingSuperadminPin, setIsSavingSuperadminPin] = useState(false);
+  const [superadminPinSuccess, setSuperadminPinSuccess] = useState<string | null>(null);
+  const [superadminPinError, setSuperadminPinError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (appSettings?.superadminPin) {
+      setSuperadminPinInput(appSettings.superadminPin);
+    }
+  }, [appSettings?.superadminPin]);
+
+  const handleRandomizeSuperadminPin = () => {
+    const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
+    setSuperadminPinInput(randomPin);
+    setSuperadminPinError(null);
+  };
+
+  const handleSaveSuperadminPin = async () => {
+    setSuperadminPinError(null);
+    setSuperadminPinSuccess(null);
+    const cleanPin = superadminPinInput.trim().replace(/[^0-9]/g, '');
+    if (cleanPin.length !== 6) {
+      setSuperadminPinError('PIN Smart Access Card harus tepat 6 digit angka.');
+      return;
+    }
+    setIsSavingSuperadminPin(true);
+    try {
+      if (onSaveAppSettings && appSettings) {
+        await onSaveAppSettings({
+          ...appSettings,
+          superadminPin: cleanPin,
+          pinSecurityUpdatedAt: Date.now(),
+        });
+      }
+      setSuperadminPinSuccess('✅ PIN Smart Access Card Superadmin berhasil diperbarui dan aktif realtime di database!');
+      setTimeout(() => setSuperadminPinSuccess(null), 5000);
+    } catch (err: any) {
+      setSuperadminPinError('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));
+    } finally {
+      setIsSavingSuperadminPin(false);
+    }
+  };
 
   const isCurrentUserDeveloper = session.role === 'developer';
 
@@ -850,6 +897,149 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODUL KHUSUS SUPERADMIN: PENGATURAN & UBAH PIN SMART ACCESS CARD MANDIRI */}
+        {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'superadmin' && (
+          <div
+            id="keamanan-pin-superadmin"
+            className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-indigo-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
+          >
+            {/* Top Indigo Gradient Stripe */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-700 via-[#0f2b5c] to-[#d4af37] absolute top-0 left-0" />
+
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 pt-1">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-900 via-[#0f2b5c] to-indigo-950 text-indigo-200 rounded-2xl flex items-center justify-center text-xl shadow-md border border-indigo-400/40 shrink-0">
+                  <KeyRound className="w-6 h-6 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-indigo-100 text-indigo-950 font-black text-[9px] px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-indigo-300">
+                      PIN KEAMANAN PRIBADI
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-950 font-bold text-[9px] px-2.5 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Tersambung Realtime Database
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    Ubah PIN Smart Access Card Superadmin
+                  </h3>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Ubah 6 digit PIN otentikasi Smart Card Anda secara mandiri. Perubahan langsung tersimpan ke database dan otomatis terupdate ke konsol Pusat Keamanan PIN milik Developer.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Success / Error Alerts */}
+            {superadminPinSuccess && (
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-400 text-emerald-950 text-xs font-bold flex items-center gap-2 shadow-xs animate-scaleUp">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{superadminPinSuccess}</span>
+              </div>
+            )}
+
+            {superadminPinError && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-400 text-rose-950 text-xs font-bold flex items-center gap-2 shadow-xs animate-scaleUp">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{superadminPinError}</span>
+              </div>
+            )}
+
+            {/* PIN Inputs & Controls Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-center bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
+              {/* Kolom Kiri: Input PIN Baru */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-indigo-700" />
+                    <span>6 Digit PIN Baru Superadmin:</span>
+                  </label>
+                  <span className={`text-[10px] font-bold ${superadminPinInput.length === 6 ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {superadminPinInput.length === 6 ? '✓ 6 Digit Lengkap' : `${superadminPinInput.length}/6 Digit`}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showSuperadminPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={superadminPinInput}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/[^0-9]/g, '');
+                      setSuperadminPinInput(clean);
+                      setSuperadminPinError(null);
+                    }}
+                    placeholder="Contoh: 123456"
+                    className="w-full pl-4 pr-20 py-2.5 rounded-xl border-2 border-indigo-300 focus:border-indigo-600 font-mono text-base font-black text-slate-900 bg-white shadow-xs focus:outline-none transition-all tracking-widest"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowSuperadminPin(!showSuperadminPin)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title={showSuperadminPin ? 'Sembunyikan PIN' : 'Lihat PIN'}
+                    >
+                      {showSuperadminPin ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-500 font-medium">
+                  *Gunakan 6 digit angka yang aman dan mudah diingat saat memindai Smart Card.
+                </p>
+              </div>
+
+              {/* Kolom Kanan: Tombol Tindakan */}
+              <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleRandomizeSuperadminPin}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 border-indigo-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/60 text-indigo-900 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Acak PIN Otomatis</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSavingSuperadminPin || superadminPinInput.length !== 6}
+                  onClick={handleSaveSuperadminPin}
+                  className={`flex-1 px-5 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isSavingSuperadminPin || superadminPinInput.length !== 6
+                      ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-indigo-800 to-[#0f2b5c] hover:from-indigo-900 hover:to-[#143973] hover:scale-[1.01] active:scale-98 border border-indigo-400/40'
+                  }`}
+                >
+                  {isSavingSuperadminPin ? (
+                    <span>Menyimpan ke DB...</span>
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Simpan PIN Superadmin</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Telemetry info notice */}
+            <div className="p-3 bg-indigo-50/70 rounded-2xl border border-indigo-200 text-[11px] text-indigo-950 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-700 shrink-0" />
+                <span>
+                  <strong>Sinkronisasi Instan:</strong> Pembaruan PIN ini langsung berlaku detik ini juga pada sistem otentikasi Smart Card seluruh Jawa Barat.
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-white px-2 py-0.5 rounded border border-indigo-200 shrink-0 hidden sm:inline-block">
+                v3.0 Realtime
+              </span>
             </div>
           </div>
         )}

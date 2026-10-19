@@ -25,6 +25,7 @@ import {
   Share2,
   Search,
   ExternalLink,
+  KeyRound,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -120,7 +121,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     setActiveDropdown(null);
     setMobileMenuOpen(false);
     onNavigate(tab, subView);
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (elementId) {
+      setTimeout(() => {
+        const el = document.getElementById(elementId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+      }, 150);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
   };
 
   const handleMouseEnter = (menu: 'profil' | 'contact' | 'akun') => {
@@ -207,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
     }
 
-    return [
+    const list = [
       {
         id: 'profil_akun',
         title: 'Detail Profil Akun',
@@ -236,6 +248,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         },
       },
     ];
+
+    if (session.statusActive === 'SAH_TERDAFTAR' && session.role === 'superadmin') {
+      list.push({
+        id: 'ubah_pin_superadmin',
+        title: 'Ubah PIN Smart Card',
+        desc: 'Pengaturan 6 Digit PIN Akses Superadmin',
+        icon: KeyRound,
+        onClick: () => {
+          navigateAndScroll('akun', 'keamanan-pin-superadmin');
+        },
+      });
+    }
+
+    return list;
   };
 
   const akunSubMenus = getPusatAkunSubMenus();

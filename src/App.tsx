@@ -4444,6 +4444,7 @@ export default function App() {
               adminAccounts={adminAccounts}
               submissions={submissions}
               appSettings={appSettings}
+              onSaveAppSettings={handleSaveAppSettings}
               onLogin={(role, nama, wilayah) => {
                 handleLogin(role, nama, wilayah);
                 setOpenLoginModalOnAkun(false);
