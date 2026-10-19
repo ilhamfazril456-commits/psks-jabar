@@ -228,7 +228,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         icon: UserCheck,
         onClick: () => navigateAndScroll('akun'),
       },
-      {
+    ];
+
+    // Khusus Akun Superadmin saja : Hapus SubMenu "Cek Status Registrasi" yang berada navigasi pusat akun agar tidak ganda
+    if (session.role !== 'superadmin') {
+      list.push({
         id: 'cek_status',
         title: 'Cek Status Registrasi',
         desc: 'Pelacakan Resi & Status Verifikasi Berkas',
@@ -247,8 +251,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             }
           }
         },
-      },
-    ];
+      });
+    }
 
     if (session.statusActive === 'SAH_TERDAFTAR' && session.role === 'superadmin') {
       list.push({

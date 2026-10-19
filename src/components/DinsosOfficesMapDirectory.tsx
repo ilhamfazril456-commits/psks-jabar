@@ -223,7 +223,7 @@ export const DinsosOfficesMapDirectory: React.FC<DinsosOfficesMapDirectoryProps>
                 }}
                 className="w-full appearance-none bg-slate-50 hover:bg-slate-100 border-2 border-emerald-600/60 focus:border-emerald-700 rounded-2xl py-3 pl-4 pr-10 text-xs sm:text-sm font-black text-slate-900 shadow-xs focus:outline-none transition-all cursor-pointer"
               >
-                <optgroup label="⭐ KANTOR PUSAT">
+                <optgroup label="⭐ KANTOR PROVINSI">
                   <option value={provinsiOffice.id}>
                     ⭐ {provinsiOffice.namaDinas} ({provinsiOffice.kabKota})
                   </option>
@@ -334,7 +334,7 @@ export const DinsosOfficesMapDirectory: React.FC<DinsosOfficesMapDirectoryProps>
                         : 'bg-white/20 text-white'
                     }`}
                   >
-                    {activeOffice.isProvinsi ? '⭐ KANTOR PUSAT PROVINSI' : activeOffice.type}
+                    {activeOffice.isProvinsi ? '⭐ KANTOR PROVINSI' : activeOffice.type}
                   </span>
                   <span className="text-[10.5px] text-white/80 font-bold">
                     {activeOffice.wilayahRayon}
@@ -549,7 +549,7 @@ export const DinsosOfficesMapDirectory: React.FC<DinsosOfficesMapDirectoryProps>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">
-                      {activeOffice.isProvinsi ? '⭐ KANTOR PUSAT PROVINSI' : activeOffice.type}
+                      {activeOffice.isProvinsi ? '⭐ KANTOR PROVINSI' : activeOffice.type}
                     </span>
                     <span className="text-[11px] text-white/80 font-bold">
                       {activeOffice.wilayahRayon}

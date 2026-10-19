@@ -2558,7 +2558,9 @@ export default function App() {
       (a) =>
         (resolvedUserId && a.id === resolvedUserId) ||
         (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim() ||
-        (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim()
+        (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim() ||
+        (role === 'developer' && a.role === 'developer') ||
+        (role === 'superadmin' && a.role === 'superadmin')
     );
 
     const loginAccountPayload = {
@@ -2744,10 +2746,10 @@ export default function App() {
         const aUname = (a.username || '').toLowerCase().trim();
         const aId = (a.id || '').toLowerCase().trim();
         if (session.role === 'developer') {
-          return a.role === 'developer';
+          return a.role === 'developer' || (userUname && aUname === userUname) || (sessionUserId && aId === sessionUserId);
         }
         if (session.role === 'superadmin') {
-          return a.role === 'superadmin' || aUname.includes('superadmin');
+          return a.role === 'superadmin' || aUname.includes('superadmin') || (userUname && aUname === userUname) || (sessionUserId && aId === sessionUserId);
         }
         // STRICT IDENTIFIER MATCHING: Only match exact username or exact account ID
         if (sessionUserId && aId === sessionUserId) return true;

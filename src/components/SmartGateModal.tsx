@@ -1798,7 +1798,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           Masuk Ke Akun Anda
                         </span>
                         <p className="text-[9px] sm:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
-                          Login manual dengan Username, Password, dan Verifikasi Cloudflare.
+                          Login manual dengan username, password, dan verifikasi captcha
                         </p>
                       </div>
                       {/* Pinned Corner Badge */}
