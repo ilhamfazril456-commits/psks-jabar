@@ -32,7 +32,10 @@ import {
   Radio,
   Copy,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  Phone,
+  HelpCircle,
+  KeyRound
 } from 'lucide-react';
 
 import { CaptchaWidget } from './CaptchaWidget';
@@ -84,7 +87,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // 'login_manual' -> Jalur 2: Pilihan A (Login Manual Form)
   // 'login_smart_card' -> Jalur 2: Pilihan B (Layar Transisi & Animasi Smart Card)
   // 'guest' -> Jalur 3 (Akses Tamu Publik & Pilih Wilayah)
-  const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest'>('main');
+  // 'forgot_password' -> Formulir Lupa Kata Sandi (Pemulihan Akun via NIK & WA)
+  // 'forgot_password_status' -> Pantau Status Tiket Pemulihan Akun Realtime
+  const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest' | 'forgot_password' | 'forgot_password_status'>('main');
 
   // Khusus Tampilan Layar HP: Lapisan Pertama (Intro Selamat Datang & Tombol MULAI)
   // Ketika tombol MULAI ditekan, berlanjut ke Lapisan Kedua (Pilihan Login yang sudah ada)
@@ -98,11 +103,28 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regNik, setRegNik] = useState('');
+  const [regNoWhatsapp, setRegNoWhatsapp] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [regSuccess, setRegSuccess] = useState(false);
   const [registeredUserData, setRegisteredUserData] = useState<{ username: string; wilayah: string } | null>(null);
+
+  // Forgot Password / Pemulihan Akun States (Tahap 3)
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [forgotNik, setForgotNik] = useState('');
+  const [forgotNoWhatsapp, setForgotNoWhatsapp] = useState('');
+  const [isSubmittingForgot, setIsSubmittingForgot] = useState(false);
+  const [forgotTicketCopied, setForgotTicketCopied] = useState(false);
+  const [activeForgotAccount, setActiveForgotAccount] = useState<AdminAccount | null>(null);
+  const [savedForgotSession, setSavedForgotSession] = useState<{ username: string; requestedAt: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('psks_active_reset_ticket');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
 
   // Registration Ticket & Realtime Verval Status Tracking
   const [registrationTicket, setRegistrationTicket] = useState<{
@@ -111,6 +133,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     waktuPendaftaran: string;
     noRegistrasi: string;
     passwordPolos?: string;
+    nik?: string;
+    noWhatsapp?: string;
   } | null>(() => {
     try {
       const saved = localStorage.getItem('psks_latest_user_registration_ticket');
@@ -445,6 +469,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     const uTrim = regUsername.trim();
     const pTrim = regPassword.trim();
     const cTrim = regConfirmPassword.trim();
+    const nikTrim = regNik.trim();
+    const waTrim = regNoWhatsapp.trim().replace(/[\s-]/g, '');
 
     if (!uTrim) {
       setErrorMessage('❌ Mohon isi Username pendaftaran!');
@@ -454,6 +480,33 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
     if (uTrim.length < 3) {
       setErrorMessage('❌ Username minimal harus terdiri dari 3 karakter!');
+      return;
+    }
+
+    if (!nikTrim) {
+      setErrorMessage('❌ Mohon isi NIK Kependudukan (16 digit angka)!');
+      return;
+    }
+
+    if (!/^[0-9]{16}$/.test(nikTrim)) {
+      setErrorMessage('❌ NIK Kependudukan wajib tepat 16 digit angka!');
+      return;
+    }
+
+    // Check duplicate NIK in existing database accounts
+    const isNikDuplicate = adminAccounts.some((acc) => acc.nik && acc.nik.trim() === nikTrim);
+    if (isNikDuplicate) {
+      setErrorMessage(`❌ NIK "${nikTrim}" sudah terdaftar pada sistem! 1 NIK hanya berlaku untuk 1 akun pengguna.`);
+      return;
+    }
+
+    if (!waTrim) {
+      setErrorMessage('❌ Mohon isi Nomor WhatsApp aktif!');
+      return;
+    }
+
+    if (!/^(08|628|\+628)[0-9]{8,12}$/.test(waTrim)) {
+      setErrorMessage('❌ Nomor WhatsApp tidak valid! Gunakan format nomor aktif (Contoh: 081234567890).');
       return;
     }
 
@@ -518,6 +571,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         namaAdmin: uTrim,
         wilayahTugas: selectedRegisterRegion,
         role: 'user',
+        nik: nikTrim,
+        noWhatsapp: waTrim,
         passwordPolos: pTrim,
         passwordHash: hashPassword(pTrim),
         terakhirLogin: 'Baru mendaftar',
@@ -561,6 +616,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         waktuPendaftaran: formattedDate,
         noRegistrasi: ticketNumber,
         passwordPolos: pTrim,
+        nik: nikTrim,
+        noWhatsapp: waTrim,
       };
       setRegistrationTicket(ticketData);
       try {
@@ -577,6 +634,99 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     } catch (err) {
       setIsRegistering(false);
       setErrorMessage('❌ Gagal menyimpan pendaftaran akun ke server. Silakan coba kembali.');
+    }
+  };
+
+  // --- TAHAP 3: ALUR PENGAJUAN RESET KATA SANDI (LUPA KATA SANDI) ---
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    const uTrim = forgotUsername.trim().toLowerCase();
+    const nikTrim = forgotNik.trim();
+    const waTrim = forgotNoWhatsapp.trim().replace(/[\s-]/g, '');
+
+    if (!uTrim) {
+      setErrorMessage('❌ Mohon isi Username akun yang ingin dipulihkan!');
+      return;
+    }
+    if (!nikTrim || !/^[0-9]{16}$/.test(nikTrim)) {
+      setErrorMessage('❌ NIK Kependudukan wajib tepat 16 digit angka!');
+      return;
+    }
+    if (!waTrim || !/^(08|628|\+628)[0-9]{8,12}$/.test(waTrim)) {
+      setErrorMessage('❌ Nomor WhatsApp tidak valid! Gunakan format nomor aktif (Contoh: 081234567890).');
+      return;
+    }
+
+    setIsSubmittingForgot(true);
+
+    try {
+      // Find matching user account in registered accounts
+      const targetAccount = adminAccounts.find((acc) => (acc.username || '').toLowerCase().trim() === uTrim);
+
+      if (!targetAccount) {
+        setErrorMessage(`❌ Akun dengan username "${forgotUsername.trim()}" tidak ditemukan dalam sistem!`);
+        setIsSubmittingForgot(false);
+        return;
+      }
+
+      // If account already has NIK, verify match
+      if (targetAccount.nik && targetAccount.nik.trim() !== nikTrim) {
+        setErrorMessage('❌ NIK yang Anda masukkan tidak cocok dengan data pendaftaran akun ini!');
+        setIsSubmittingForgot(false);
+        return;
+      }
+
+      // If account already has WhatsApp, verify match (normalize 08 vs 62)
+      if (targetAccount.noWhatsapp) {
+        const accWaClean = targetAccount.noWhatsapp.replace(/[\s-]/g, '').replace(/^\+/, '');
+        const inputWaClean = waTrim.replace(/^\+/, '');
+        const normAcc = accWaClean.startsWith('62') ? '0' + accWaClean.slice(2) : accWaClean;
+        const normInput = inputWaClean.startsWith('62') ? '0' + inputWaClean.slice(2) : inputWaClean;
+        if (normAcc !== normInput) {
+          setErrorMessage('❌ Nomor WhatsApp yang Anda masukkan tidak cocok dengan data terdaftar akun ini!');
+          setIsSubmittingForgot(false);
+          return;
+        }
+      }
+
+      // Create or update reset ticket on this account
+      const nowMs = Date.now();
+      const updatedAccount: AdminAccount = {
+        ...targetAccount,
+        nik: targetAccount.nik || nikTrim,
+        noWhatsapp: targetAccount.noWhatsapp || waTrim,
+        resetTicket: {
+          status: 'MENUNGGU_RESET',
+          requestedAt: nowMs,
+          nik: nikTrim,
+          noWhatsapp: waTrim,
+        },
+        lastUpdatedTimestamp: nowMs,
+      };
+
+      if (onUpdateAccountLocal) {
+        onUpdateAccountLocal(updatedAccount);
+      }
+
+      const resetSession = {
+        username: targetAccount.username,
+        requestedAt: nowMs,
+      };
+      setSavedForgotSession(resetSession);
+      setActiveForgotAccount(updatedAccount);
+      try {
+        localStorage.setItem('psks_active_reset_ticket', JSON.stringify(resetSession));
+      } catch {}
+
+      setSuccessMessage('Pengajuan reset sandi berhasil dikirim! Menunggu persetujuan Superadmin / Developer.');
+      setView('forgot_password_status');
+    } catch {
+      setErrorMessage('Terjadi kendala saat mengirim pengajuan. Silakan coba kembali.');
+    } finally {
+      setIsSubmittingForgot(false);
     }
   };
 
@@ -942,6 +1092,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 {view === 'login_manual' && 'Masuk Akun'}
                 {view === 'login_smart_card' && 'Smart Card Login'}
                 {view === 'guest' && 'Akses Tamu Publik'}
+                {view === 'forgot_password' && 'Lupa Kata Sandi'}
+                {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
               </h3>
               <p className="text-[9.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
                 {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
@@ -950,6 +1102,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 {view === 'login_manual' && 'Masukkan kredensial akun terdaftar Anda'}
                 {view === 'login_smart_card' && 'Otorisasi instan menggunakan Smart Card'}
                 {view === 'guest' && 'Pilih wilayah Jawa Barat untuk akses mode tamu'}
+                {view === 'forgot_password' && 'Verifikasi NIK dan WhatsApp resmi untuk reset sandi'}
+                {view === 'forgot_password_status' && 'Pantau persetujuan tiket reset sandi secara realtime'}
               </p>
             </div>
 
@@ -1147,6 +1301,56 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40 disabled:opacity-60"
                         />
                         <User className="w-3 h-3 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Input 1.2: NIK Kependudukan (16 Digit Wajib) */}
+                    <div>
+                      <label className="block text-[9.5px] font-black text-[#0f2b5c] uppercase mb-0.5 flex items-center justify-between">
+                        <span>NIK Kependudukan (16 Digit)</span>
+                        <span className={`text-[8px] font-bold ${regNik.length === 16 ? 'text-emerald-700' : 'text-blue-700'}`}>
+                          {regNik.length === 16 ? '✓ 16 Digit Lengkap' : `${regNik.length}/16 Digit`}
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={16}
+                          disabled={isDeviceQuotaFull || isRegistering}
+                          placeholder="Masukkan 16 digit NIK KTP Anda"
+                          value={regNik}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setRegNik(val);
+                            setErrorMessage('');
+                          }}
+                          className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40 disabled:opacity-60"
+                        />
+                        <CreditCard className="w-3 h-3 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Input 1.3: Nomor WhatsApp Aktif */}
+                    <div>
+                      <label className="block text-[9.5px] font-black text-[#0f2b5c] uppercase mb-0.5 flex items-center justify-between">
+                        <span>Nomor WhatsApp Aktif</span>
+                        <span className="text-[8px] text-blue-700 font-bold">Untuk konfirmasi & lupa sandi</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          disabled={isDeviceQuotaFull || isRegistering}
+                          placeholder="Contoh: 081234567890"
+                          value={regNoWhatsapp}
+                          onChange={(e) => {
+                            setRegNoWhatsapp(e.target.value);
+                            setErrorMessage('');
+                          }}
+                          className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40 disabled:opacity-60"
+                        />
+                        <Phone className="w-3 h-3 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     </div>
 
@@ -1912,6 +2116,24 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       />
                     </div>
 
+                    {/* Tombol Lupa Kata Sandi */}
+                    <div className="flex items-center justify-between px-1 text-[9.5px]">
+                      <span className="text-slate-500 font-medium">Lupa kredensial akun?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMessage('');
+                          setSuccessMessage('');
+                          setForgotUsername(usernameInput.trim());
+                          setView('forgot_password');
+                        }}
+                        className="font-black text-blue-700 hover:text-blue-950 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+                      >
+                        <HelpCircle className="w-3 h-3 text-blue-600" />
+                        <span>Lupa Kata Sandi?</span>
+                      </button>
+                    </div>
+
                     {/* Action Buttons */}
                     <div className="pt-0.5 space-y-1">
                       <button
@@ -1948,6 +2170,325 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
                   </form>
                 )}
+
+                {/* ========================================================================= */}
+                {/* JALUR LUPA KATA SANDI (FORGOT PASSWORD FORM) */}
+                {/* ========================================================================= */}
+                {view === 'forgot_password' && (
+                  <form
+                    key="view-forgot-password"
+                    onSubmit={handleForgotPasswordSubmit}
+                    className="space-y-2 sm:space-y-2.5 my-auto animate-scaleUp py-1 max-w-sm mx-auto w-full"
+                  >
+                    {/* Info Card */}
+                    <div className="p-2.5 rounded-2xl bg-blue-50/80 border border-blue-200 text-[#0f2b5c] text-[10px] font-medium leading-relaxed flex items-start gap-2 shadow-xs">
+                      <KeyRound className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="block font-black text-xs text-[#0f2b5c] mb-0.5">Pemulihan Kredensial Akun</strong>
+                        Masukkan Username, NIK (16 digit), dan No. WhatsApp resmi saat Anda mendaftar. Sistem akan mengirim tiket reset sandi ke Superadmin / Developer.
+                      </div>
+                    </div>
+
+                    {/* Alert Error / Success */}
+                    {errorMessage && (
+                      <div className="p-2 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-[10px] font-bold flex items-start gap-1.5 shadow-xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                        <span className="flex-1 leading-tight">{errorMessage}</span>
+                      </div>
+                    )}
+
+                    {/* Input 1: Username */}
+                    <div>
+                      <label className="block text-[9.5px] font-black text-[#0f2b5c] uppercase mb-0.5">
+                        Username Akun
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          disabled={isSubmittingForgot}
+                          placeholder="Ketik Username Anda"
+                          value={forgotUsername}
+                          onChange={(e) => {
+                            setForgotUsername(e.target.value);
+                            setErrorMessage('');
+                          }}
+                          className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40"
+                        />
+                        <User className="w-3.5 h-3.5 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Input 2: NIK Kependudukan */}
+                    <div>
+                      <label className="block text-[9.5px] font-black text-[#0f2b5c] uppercase mb-0.5 flex items-center justify-between">
+                        <span>NIK Kependudukan (16 Digit)</span>
+                        <span className={`text-[8px] font-bold ${forgotNik.length === 16 ? 'text-emerald-700' : 'text-blue-700'}`}>
+                          {forgotNik.length === 16 ? '✓ 16 Digit' : `${forgotNik.length}/16 Digit`}
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={16}
+                          disabled={isSubmittingForgot}
+                          placeholder="Masukkan 16 digit NIK terdaftar"
+                          value={forgotNik}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setForgotNik(val);
+                            setErrorMessage('');
+                          }}
+                          className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40"
+                        />
+                        <CreditCard className="w-3.5 h-3.5 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Input 3: Nomor WhatsApp */}
+                    <div>
+                      <label className="block text-[9.5px] font-black text-[#0f2b5c] uppercase mb-0.5">
+                        Nomor WhatsApp Terdaftar
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          disabled={isSubmittingForgot}
+                          placeholder="Contoh: 081234567890"
+                          value={forgotNoWhatsapp}
+                          onChange={(e) => {
+                            setForgotNoWhatsapp(e.target.value);
+                            setErrorMessage('');
+                          }}
+                          className="w-full bg-blue-50/60 focus:bg-white border border-blue-300/80 focus:border-[#0f2b5c] rounded-full px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none transition-all placeholder-blue-800/40"
+                        />
+                        <Phone className="w-3.5 h-3.5 text-blue-700/60 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-1 space-y-1.5">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingForgot}
+                        className="w-full py-2 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-black rounded-full text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
+                      >
+                        {isSubmittingForgot ? (
+                          <span>Mengirim Pengajuan...</span>
+                        ) : (
+                          <>
+                            <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Kirim Pengajuan Reset Sandi</span>
+                          </>
+                        )}
+                      </button>
+
+                      {savedForgotSession && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setErrorMessage('');
+                            setView('forgot_password_status');
+                          }}
+                          className="w-full py-1 text-purple-900 hover:text-purple-950 font-bold text-[10px] text-center cursor-pointer hover:underline block"
+                        >
+                          Sudah mengajukan reset sandi? Pantau status tiket Anda di sini →
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMessage('');
+                          setView('login_manual');
+                        }}
+                        className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10.5px] transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        <span>Kembali ke Halaman Masuk</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* ========================================================================= */}
+                {/* JALUR PANTAU STATUS RESET KATA SANDI (STATUS RESET REALTIME) */}
+                {/* ========================================================================= */}
+                {view === 'forgot_password_status' && (() => {
+                  const targetUname = (activeForgotAccount?.username || savedForgotSession?.username || forgotUsername || '').trim().toLowerCase();
+                  const liveAcc = adminAccounts.find((a) => (a.username || '').toLowerCase().trim() === targetUname) || activeForgotAccount;
+                  const ticket = liveAcc?.resetTicket;
+                  const status = ticket?.status || 'MENUNGGU_RESET';
+
+                  return (
+                    <div
+                      key="view-forgot-password-status"
+                      className="space-y-3 sm:space-y-3.5 my-auto animate-scaleUp py-1 max-w-sm mx-auto w-full"
+                    >
+                      {/* STATUS CARD MENUNGGU PERSETUJUAN */}
+                      {status === 'MENUNGGU_RESET' && (
+                        <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 shadow-sm space-y-2">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                              <Clock className="w-5 h-5 animate-spin" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs sm:text-sm font-black text-amber-950 leading-tight">
+                                  Menunggu Persetujuan
+                                </h4>
+                                <span className="bg-amber-200 text-amber-950 text-[8px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  DITINJAU
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-amber-900 font-medium leading-relaxed mt-1">
+                                Pengajuan reset sandi akun <strong className="text-amber-950 font-black">{liveAcc?.username || targetUname}</strong> telah masuk ke antrean Verval Akun Superadmin & Developer.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="p-2 rounded-xl bg-white/80 border border-amber-200 text-[10px] text-amber-950 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 font-bold">NIK Pemohon:</span>
+                              <span className="font-mono font-black">{ticket?.nik || forgotNik || '-'}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 font-bold">WhatsApp:</span>
+                              <span className="font-mono font-black text-emerald-700">{ticket?.noWhatsapp || forgotNoWhatsapp || '-'}</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[9.5px] text-amber-800 font-medium text-center">
+                            ⏳ Anda tidak perlu menunggu di halaman ini. Kapan pun Superadmin menyetujui, sandi sementara akan otomatis muncul di sini.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* STATUS CARD DISETUJUI & SANDI TERBIT */}
+                      {status === 'DISETUJUI' && (
+                        <div className="p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950 shadow-md space-y-2.5">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                              <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs sm:text-sm font-black text-emerald-950 leading-tight">
+                                  Sandi Sementara Diterbitkan!
+                                </h4>
+                                <span className="bg-emerald-200 text-emerald-950 text-[8px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  DISETUJUI
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-emerald-900 font-medium leading-relaxed mt-1">
+                                Superadmin/Developer telah memverifikasi identitas Anda dan menerbitkan sandi sementara berikut:
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* KOTAK SANDI SEMENTARA DENGAN TOMBOL SALIN */}
+                          <div className="p-3 rounded-xl bg-white border-2 border-emerald-300 shadow-inner flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[9px] font-black uppercase text-slate-400 block">Sandi Sementara Anda:</span>
+                              <code className="text-sm sm:text-base font-mono font-black text-emerald-900 tracking-wider">
+                                {ticket?.temporaryPassword || liveAcc?.passwordPolos || '••••••••'}
+                              </code>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const pass = ticket?.temporaryPassword || liveAcc?.passwordPolos || '';
+                                if (pass) {
+                                  navigator.clipboard.writeText(pass);
+                                  setForgotTicketCopied(true);
+                                  setTimeout(() => setForgotTicketCopied(false), 2000);
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-black text-xs flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                            >
+                              {forgotTicketCopied ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>Tersalin</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>Salin</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const pass = ticket?.temporaryPassword || liveAcc?.passwordPolos || '';
+                              setUsernameInput(liveAcc?.username || targetUname);
+                              setPasswordInput(pass);
+                              setErrorMessage('');
+                              setView('login_manual');
+                            }}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                          >
+                            <LogIn className="w-3.5 h-3.5" />
+                            <span>Gunakan Sandi Ini & Masuk Sekarang</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* STATUS CARD DITOLAK */}
+                      {status === 'DITOLAK' && (
+                        <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-500 text-rose-950 shadow-sm space-y-2">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                              <XCircle className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs sm:text-sm font-black text-rose-950 leading-tight">
+                                  Pengajuan Reset Ditolak
+                                </h4>
+                                <span className="bg-rose-200 text-rose-950 text-[8px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  DITOLAK
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-rose-900 font-medium leading-relaxed mt-1">
+                                Permintaan reset sandi akun <strong className="text-rose-950 font-black">{liveAcc?.username || targetUname}</strong> tidak dapat disetujui karena ketidaksesuaian data NIK atau WhatsApp.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErrorMessage('');
+                              setView('forgot_password');
+                            }}
+                            className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Ajukan Ulang dengan Data Sesuai</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Tombol Kembali */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMessage('');
+                          setView('main');
+                        }}
+                        className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10.5px] transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        <span>Kembali ke Menu Utama</span>
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {/* ========================================================================= */}
                 {/* JALUR 2 -> PILIHAN B: LAYAR PEMINDAIAN SMART CARD */}

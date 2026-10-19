@@ -4070,6 +4070,9 @@ export default function App() {
               } catch {}
               return next;
             });
+            if (acc.id) {
+              setFirestoreDoc('admin_accounts', acc.id, cleanFirestoreData(acc)).catch(() => {});
+            }
           }}
           appSettings={appSettings}
           logoUrl={appSettings?.logoUrl}

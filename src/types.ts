@@ -218,6 +218,19 @@ export interface AdminAccount {
   registeredIp?: string;
   deviceId?: string;
   lastLoginDeviceId?: string;
+  nik?: string;
+  noWhatsapp?: string;
+  resetTicket?: ResetPasswordTicket;
+}
+
+export interface ResetPasswordTicket {
+  status: 'MENUNGGU_RESET' | 'DISETUJUI' | 'DITOLAK';
+  requestedAt: number;
+  nik: string;
+  noWhatsapp: string;
+  temporaryPassword?: string;
+  resetAt?: number;
+  resetBy?: string;
 }
 
 export interface AdminMessage {

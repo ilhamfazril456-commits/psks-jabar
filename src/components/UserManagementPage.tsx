@@ -53,7 +53,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'FROZEN'>('ALL');
-  const [vervalFilter, setVervalFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [vervalFilter, setVervalFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'RESET_REQUESTS'>('ALL');
   const [wilayahFilter, setWilayahFilter] = useState<string>('ALL');
 
   // Password Visibility Toggle State by Account ID
@@ -65,6 +65,12 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Reset Password Request Modal State (Tahap 3 - Tiket Lupa Sandi)
+  const [resettingAccount, setResettingAccount] = useState<AdminAccount | null>(null);
+  const [tempPasswordInput, setTempPasswordInput] = useState<string>('');
+  const [showTempPassword, setShowTempPassword] = useState<boolean>(true);
+  const [rejectingResetAccount, setRejectingResetAccount] = useState<AdminAccount | null>(null);
 
   // Freeze/Unfreeze Modal State
   const [freezingAccount, setFreezingAccount] = useState<AdminAccount | null>(null);
@@ -82,7 +88,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
   // Dedicated Success Action Popup Modal State
   const [actionSuccessModal, setActionSuccessModal] = useState<{
-    type: 'PASSWORD' | 'FREEZE' | 'UNFREEZE' | 'DELETE' | 'VERVAL_APPROVE' | 'VERVAL_REJECT';
+    type: 'PASSWORD' | 'FREEZE' | 'UNFREEZE' | 'DELETE' | 'VERVAL_APPROVE' | 'VERVAL_REJECT' | 'RESET_PASSWORD' | 'RESET_REJECT';
     title: string;
     message: string;
     username: string;
@@ -145,17 +151,23 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
         (user.username || '').toLowerCase().includes(q) ||
         (user.namaAdmin || '').toLowerCase().includes(q) ||
         (user.wilayahTugas || '').toLowerCase().includes(q) ||
-        (user.noRegistrasi || '').toLowerCase().includes(q);
+        (user.noRegistrasi || '').toLowerCase().includes(q) ||
+        (user.nik || '').includes(q) ||
+        (user.noWhatsapp || '').includes(q) ||
+        (user.resetTicket?.nik || '').includes(q) ||
+        (user.resetTicket?.noWhatsapp || '').includes(q);
 
       // Status Verval Filter
       const isPending = user.statusVerval === 'MENUNGGU_VERIFIKASI' || user.statusActive === 'PENDING_VERIFIKASI';
       const isApproved = user.statusVerval === 'DISETUJUI' || (!user.statusVerval && user.statusActive === 'SAH_TERDAFTAR');
       const isRejected = user.statusVerval === 'DITOLAK' || user.statusActive === 'DITOLAK';
+      const isResetRequested = user.resetTicket?.status === 'MENUNGGU_RESET';
 
       let matchVerval = true;
       if (vervalFilter === 'PENDING') matchVerval = isPending;
       else if (vervalFilter === 'APPROVED') matchVerval = isApproved;
       else if (vervalFilter === 'REJECTED') matchVerval = isRejected;
+      else if (vervalFilter === 'RESET_REQUESTS') matchVerval = isResetRequested;
 
       // Status filter
       const isFrozen = user.isFrozen === true || user.statusAkun === 'DIBEKUKAN';
@@ -177,6 +189,9 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   const totalCount = userAccounts.length;
   const pendingVervalCount = userAccounts.filter(
     (u) => u.statusVerval === 'MENUNGGU_VERIFIKASI' || u.statusActive === 'PENDING_VERIFIKASI'
+  ).length;
+  const pendingResetCount = userAccounts.filter(
+    (u) => u.resetTicket?.status === 'MENUNGGU_RESET'
   ).length;
   const approvedCount = userAccounts.filter(
     (u) => u.statusVerval === 'DISETUJUI' || (!u.statusVerval && u.statusActive === 'SAH_TERDAFTAR')
@@ -374,6 +389,95 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
     });
   };
 
+  // 6. TAHAP 3: RESET KATA SANDI SEMENTARA (TIKET LUPA SANDI)
+  const generateRandomTempPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const nums = '23456789';
+    const specials = '@#!';
+    const p1 = chars.charAt(Math.floor(Math.random() * chars.length));
+    const p2 = chars.charAt(Math.floor(Math.random() * chars.length)).toLowerCase();
+    const p3 = chars.charAt(Math.floor(Math.random() * chars.length)).toLowerCase();
+    const p4 = nums.charAt(Math.floor(Math.random() * nums.length));
+    const p5 = nums.charAt(Math.floor(Math.random() * nums.length));
+    const p6 = specials.charAt(Math.floor(Math.random() * specials.length));
+    return `Jabar${p1}${p2}${p4}${p5}${p6}`;
+  };
+
+  const handleOpenResetModal = (account: AdminAccount) => {
+    setResettingAccount(account);
+    setTempPasswordInput(generateRandomTempPassword());
+    setShowTempPassword(true);
+  };
+
+  const handleConfirmResetPassword = () => {
+    if (!resettingAccount) return;
+    const tempPass = tempPasswordInput.trim();
+    if (tempPass.length < 8) {
+      alert('Sandi sementara minimal 8 karakter!');
+      return;
+    }
+
+    const updatedAccount: AdminAccount = {
+      ...resettingAccount,
+      passwordPolos: tempPass,
+      passwordHash: hashPassword(tempPass),
+      resetTicket: {
+        ...(resettingAccount.resetTicket || {
+          status: 'DISETUJUI',
+          requestedAt: Date.now(),
+          nik: resettingAccount.nik || '-',
+          noWhatsapp: resettingAccount.noWhatsapp || '-',
+        }),
+        status: 'DISETUJUI',
+        temporaryPassword: tempPass,
+        resetAt: Date.now(),
+        resetBy: session?.nama || session?.username || 'Superadmin Jabar',
+      },
+      lastUpdatedTimestamp: Date.now(),
+    };
+
+    onUpdateUserAccount(updatedAccount, 'PASSWORD_CHANGED');
+    const targetUname = resettingAccount.username;
+    setResettingAccount(null);
+
+    setActionSuccessModal({
+      type: 'RESET_PASSWORD',
+      title: 'Sandi Sementara Berhasil Diterbitkan!',
+      message: `Permintaan reset sandi untuk akun "${targetUname}" telah BERHASIL DISETUJUI. Sandi sementara "${tempPass}" telah tersimpan di akun dan seketika muncul realtime di layar perangkat pengguna saat memantau status pemulihan.`,
+      username: targetUname,
+    });
+  };
+
+  const handleConfirmRejectReset = () => {
+    if (!rejectingResetAccount) return;
+    const updatedAccount: AdminAccount = {
+      ...rejectingResetAccount,
+      resetTicket: {
+        ...(rejectingResetAccount.resetTicket || {
+          status: 'DITOLAK',
+          requestedAt: Date.now(),
+          nik: rejectingResetAccount.nik || '-',
+          noWhatsapp: rejectingResetAccount.noWhatsapp || '-',
+        }),
+        status: 'DITOLAK',
+        resetAt: Date.now(),
+        resetBy: session?.nama || session?.username || 'Superadmin Jabar',
+      },
+      lastUpdatedTimestamp: Date.now(),
+    };
+
+    onUpdateUserAccount(updatedAccount);
+    const targetUname = rejectingResetAccount.username;
+    setRejectingResetAccount(null);
+
+    setActionSuccessModal({
+      type: 'RESET_REJECT',
+      title: 'Permintaan Reset Sandi Ditolak',
+      message: `Tiket permintaan reset sandi akun "${targetUname}" telah DITOLAK. Pengguna terkait akan menerima pemberitahuan bahwa permohonan pemulihan tidak disetujui.`,
+      username: targetUname,
+    });
+  };
+
   return (
     <div id="user-management-page" className="min-h-[85vh] bg-slate-50 py-6 px-3 sm:px-6 lg:px-8 font-sans text-slate-800">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -408,8 +512,8 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
           </div>
         </div>
 
-        {/* 4 STATS OVERVIEW CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* 5 STATS OVERVIEW CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex items-center gap-3 sm:gap-4">
             <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-black shrink-0 border border-blue-200">
@@ -453,6 +557,41 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                 pendingVervalCount > 0 ? 'text-amber-700' : 'text-slate-700'
               }`}>
                 {pendingVervalCount} <span className="text-xs font-semibold text-slate-400">Pengajuan</span>
+              </h3>
+            </div>
+          </div>
+
+          {/* Tiket Lupa Sandi Card */}
+          <div
+            onClick={() => setVervalFilter('RESET_REQUESTS')}
+            className={`bg-white rounded-2xl border p-4 sm:p-5 shadow-xs flex items-center gap-3 sm:gap-4 transition-all cursor-pointer hover:shadow-md ${
+              pendingResetCount > 0 ? 'border-purple-400 bg-purple-50/40 ring-2 ring-purple-300/40' : 'border-slate-200'
+            }`}
+          >
+            <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-black shrink-0 border relative ${
+              pendingResetCount > 0 ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
+              <KeyRound className="w-6 h-6 text-purple-700" />
+              {pendingResetCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-600"></span>
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <span>Tiket Lupa Sandi</span>
+                {pendingResetCount > 0 && (
+                  <span className="text-[9px] bg-purple-200 text-purple-900 px-1.5 py-0.2 rounded-full font-black">
+                    PERLU RESET
+                  </span>
+                )}
+              </p>
+              <h3 className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                pendingResetCount > 0 ? 'text-purple-800' : 'text-slate-700'
+              }`}>
+                {pendingResetCount} <span className="text-xs font-semibold text-slate-400">Tiket</span>
               </h3>
             </div>
           </div>
@@ -544,6 +683,26 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                   vervalFilter === 'PENDING' ? 'bg-white/20 text-white' : 'bg-amber-300 text-amber-950'
                 }`}>
                   {pendingVervalCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVervalFilter('RESET_REQUESTS')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  vervalFilter === 'RESET_REQUESTS'
+                    ? 'bg-purple-700 text-white shadow-md'
+                    : pendingResetCount > 0
+                    ? 'bg-purple-100 text-purple-900 border border-purple-300 hover:bg-purple-200 animate-pulse'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5 shrink-0" />
+                <span>Tiket Lupa Sandi</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                  vervalFilter === 'RESET_REQUESTS' ? 'bg-white/20 text-white' : pendingResetCount > 0 ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {pendingResetCount}
                 </span>
               </button>
 
@@ -784,17 +943,34 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                                     Menunggu Verval
                                   </span>
                                 )}
+                                {user.resetTicket?.status === 'MENUNGGU_RESET' && (
+                                  <span className="text-[9px] font-black bg-purple-600 text-white px-2 py-0.5 rounded-full uppercase animate-pulse">
+                                    Lupa Sandi
+                                  </span>
+                                )}
                               </div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                  isPending
-                                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold'
-                                    : isApproved
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                    : 'bg-slate-100 text-slate-700 border-slate-200'
-                                }`}>
-                                  {user.noRegistrasi || (isPending ? 'Tiket: REG-USER' : 'USER TERDAFTAR')}
-                                </span>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                    isPending
+                                      ? 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold'
+                                      : isApproved
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}>
+                                    {user.noRegistrasi || (isPending ? 'Tiket: REG-USER' : 'USER TERDAFTAR')}
+                                  </span>
+                                </div>
+                                {(user.nik || user.resetTicket?.nik) && (
+                                  <span className="text-[9.5px] font-mono font-bold text-slate-600">
+                                    NIK: <span className="text-[#0f2b5c] font-black">{user.resetTicket?.nik || user.nik}</span>
+                                  </span>
+                                )}
+                                {(user.noWhatsapp || user.resetTicket?.noWhatsapp) && (
+                                  <span className="text-[9.5px] font-mono font-bold text-slate-600">
+                                    WA: <span className="text-emerald-700 font-black">{user.resetTicket?.noWhatsapp || user.noWhatsapp}</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -858,7 +1034,12 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
                         {/* Status Verval & Keaktifan */}
                         <td className="py-3.5 px-4 text-center">
-                          {isPending ? (
+                          {user.resetTicket?.status === 'MENUNGGU_RESET' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] font-black bg-purple-100 text-purple-900 border border-purple-400 shadow-xs animate-pulse">
+                              <KeyRound className="w-3.5 h-3.5 text-purple-700" />
+                              <span>Tiket Lupa Sandi</span>
+                            </span>
+                          ) : isPending ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-400 shadow-xs animate-pulse">
                               <Clock className="w-3.5 h-3.5 text-amber-700" />
                               <span>Menunggu Verval</span>
@@ -890,7 +1071,28 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
                         {/* Aksi Verval & Kontrol Akun */}
                         <td className="py-3.5 px-4 text-center">
-                          {isPending ? (
+                          {user.resetTicket?.status === 'MENUNGGU_RESET' ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenResetModal(user)}
+                                className="inline-flex items-center gap-1 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 text-white font-black px-3 py-1.5 rounded-xl text-xs shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 border border-purple-500 animate-pulse"
+                                title="Reset Kata Sandi Sementara"
+                              >
+                                <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                                <span>Reset Sandi</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRejectingResetAccount(user)}
+                                className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                                title="Tolak Pengajuan Reset"
+                              >
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Tolak</span>
+                              </button>
+                            </div>
+                          ) : isPending ? (
                             /* JALUR AKSI KHUSUS USER BARU MENDAFTAR: TOMBOL TERIMA & TOLAK SECARA REALTIME */
                             <div className="flex items-center justify-center gap-1.5">
                               {/* TOMBOL TERIMA (APPROVE) */}
@@ -1417,6 +1619,174 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       )}
 
       {/* ========================================================================= */}
+      {/* MODAL 6: RESET KATA SANDI SEMENTARA (TIKET LUPA SANDI) */}
+      {/* ========================================================================= */}
+      {resettingAccount && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-2 border-purple-600 max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+            
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-purple-100 text-purple-700 font-black shadow-xs">
+                  <KeyRound className="w-6 h-6 text-purple-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    Reset Sandi Sementara
+                  </h3>
+                  <p className="text-xs text-purple-800 font-bold">
+                    Tiket Lupa Sandi Akun: <strong>{resettingAccount.username}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResettingAccount(null)}
+                className="text-slate-400 hover:text-slate-700 font-black cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Identitas Pemohon */}
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Username:</span>
+                <span className="font-black text-slate-900">{resettingAccount.username}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">Wilayah:</span>
+                <span className="font-bold text-[#0f2b5c]">{resettingAccount.wilayahTugas}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">NIK Terverifikasi:</span>
+                <span className="font-mono font-black text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {resettingAccount.resetTicket?.nik || resettingAccount.nik || '-'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold uppercase text-[10px]">No. WhatsApp:</span>
+                <span className="font-mono font-black text-emerald-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {resettingAccount.resetTicket?.noWhatsapp || resettingAccount.noWhatsapp || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Input Sandi Sementara */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-800 uppercase">
+                  Sandi Sementara Baru:
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setTempPasswordInput(generateRandomTempPassword())}
+                  className="text-[10.5px] font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Acak Ulang Sandi</span>
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showTempPassword ? 'text' : 'password'}
+                  value={tempPasswordInput}
+                  onChange={(e) => setTempPasswordInput(e.target.value)}
+                  placeholder="Ketik atau gunakan sandi acak..."
+                  className="w-full px-3.5 py-2 rounded-xl border-2 border-purple-300 focus:border-purple-600 focus:outline-none font-mono text-sm font-black text-slate-900 pr-10 bg-purple-50/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowTempPassword(!showTempPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  {showTempPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 font-medium">
+                Sandi ini akan langsung tersimpan di akun dan ditampilkan otomatis ke layar perangkat pengguna yang mengajukan.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setResettingAccount(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetPassword}
+                className="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 border border-purple-900"
+              >
+                <CheckCircle2 className="w-4 h-4 text-amber-300" />
+                <span>Terbitkan Sandi & Sahkan Tiket</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 7: TOLAK PERMINTAAN RESET SANDI */}
+      {/* ========================================================================= */}
+      {rejectingResetAccount && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border-2 border-rose-500 max-w-md w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+            
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 font-black shadow-xs">
+                  <XCircle className="w-6 h-6 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    Tolak Permintaan Reset Sandi?
+                  </h3>
+                  <p className="text-xs text-rose-700 font-semibold">
+                    Akun: <strong>{rejectingResetAccount.username}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingResetAccount(null)}
+                className="text-slate-400 hover:text-slate-700 font-black cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Apakah Anda yakin ingin menolak permohonan reset kata sandi ini? Tindakan ini akan membatalkan tiket pengajuan pemulihan akun.
+            </p>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRejectingResetAccount(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectReset}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Ya, Tolak Permintaan</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL 4: POP UP BERHASIL (SUCCESS ACTION MODAL) */}
       {/* ========================================================================= */}
       {actionSuccessModal && (
@@ -1424,12 +1794,16 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
           <div className="bg-white rounded-3xl border-2 border-[#0f2b5c] max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-4 text-center animate-scaleUp">
             
             <div className={`w-16 h-16 mx-auto rounded-full border-2 flex items-center justify-center shadow-lg animate-bounce ${
-              actionSuccessModal.type === 'VERVAL_REJECT' || actionSuccessModal.type === 'FREEZE' || actionSuccessModal.type === 'DELETE'
+              actionSuccessModal.type === 'VERVAL_REJECT' || actionSuccessModal.type === 'FREEZE' || actionSuccessModal.type === 'DELETE' || actionSuccessModal.type === 'RESET_REJECT'
                 ? 'bg-rose-100 border-rose-500 text-rose-700'
+                : actionSuccessModal.type === 'RESET_PASSWORD'
+                ? 'bg-purple-100 border-purple-500 text-purple-700'
                 : 'bg-emerald-100 border-emerald-500 text-emerald-700'
             }`}>
-              {actionSuccessModal.type === 'VERVAL_REJECT' ? (
+              {actionSuccessModal.type === 'VERVAL_REJECT' || actionSuccessModal.type === 'RESET_REJECT' ? (
                 <XCircle className="w-9 h-9" />
+              ) : actionSuccessModal.type === 'RESET_PASSWORD' ? (
+                <KeyRound className="w-9 h-9" />
               ) : (
                 <CheckCircle2 className="w-9 h-9" />
               )}
@@ -1447,8 +1821,10 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
             <div className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 ${
               actionSuccessModal.type === 'VERVAL_APPROVE'
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                : actionSuccessModal.type === 'VERVAL_REJECT'
+                : actionSuccessModal.type === 'VERVAL_REJECT' || actionSuccessModal.type === 'RESET_REJECT'
                 ? 'bg-rose-50 border-rose-200 text-rose-950'
+                : actionSuccessModal.type === 'RESET_PASSWORD'
+                ? 'bg-purple-50 border-purple-200 text-purple-950'
                 : 'bg-blue-50 border-blue-200 text-blue-950'
             }`}>
               <Sparkles className="w-4 h-4 shrink-0" />
@@ -1457,6 +1833,10 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                   ? `Akun [${actionSuccessModal.username}] telah SAH dan dapat langsung login.`
                   : actionSuccessModal.type === 'VERVAL_REJECT'
                   ? `Status penolakan [${actionSuccessModal.username}] terkirim realtime ke user.`
+                  : actionSuccessModal.type === 'RESET_PASSWORD'
+                  ? `Sandi sementara [${actionSuccessModal.username}] terbit realtime ke pengguna.`
+                  : actionSuccessModal.type === 'RESET_REJECT'
+                  ? `Status tiket penolakan [${actionSuccessModal.username}] diperbarui.`
                   : `Target Sesi: [${actionSuccessModal.username}] diperbarui secara realtime.`}
               </span>
             </div>
