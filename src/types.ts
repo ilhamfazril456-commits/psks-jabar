@@ -75,6 +75,9 @@ export interface AppSettings {
   profileGreeting?: string;
   profileBody?: string;
   profileClosing?: string;
+  superadminPin?: string;
+  developerPin?: string;
+  pinSecurityUpdatedAt?: number;
 }
 
 export type PillarId =

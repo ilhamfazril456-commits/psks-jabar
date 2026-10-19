@@ -64,4 +64,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
 
 Semoga Upaya Kami Dalam Hal Ini Bisa Terus Ditingkatkan Guna Memenuhi Kebutuhan Informasi Masyarakat Luas Untuk Mendapatkan Pelayanan Dari Kami.`,
   profileClosing: 'Wassalamualaikum Wr. Wb.',
+  superadminPin: '123456',
+  developerPin: '992211',
+  pinSecurityUpdatedAt: Date.now(),
 };

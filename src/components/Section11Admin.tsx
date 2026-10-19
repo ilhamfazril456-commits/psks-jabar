@@ -29,6 +29,7 @@ import {
   Image as ImageIcon,
   Info,
   Building2,
+  Key,
 } from 'lucide-react';
 
 interface Section11AdminProps {
@@ -48,6 +49,7 @@ interface Section11AdminProps {
   onOpenProfileKadinasConsole?: () => void;
   onOpenSocialMediaConsole?: () => void;
   onOpenRegionalLogoConsole?: () => void;
+  onOpenPinSecurityConsole?: () => void;
   onOpenWebsiteInfoConsole?: () => void;
   submissions?: PillarRegistrationSubmission[];
   pendingCount?: number;
@@ -70,6 +72,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   onOpenProfileKadinasConsole,
   onOpenSocialMediaConsole,
   onOpenRegionalLogoConsole,
+  onOpenPinSecurityConsole,
   onOpenWebsiteInfoConsole,
   submissions = [],
   pendingCount,
@@ -128,8 +131,8 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
           </span>
         </div>
 
-        {/* 10 FITUR KENDALI SUPERADMIN & DEVELOPER (5 ATAS, 5 BAWAH DI LAPTOP; 2 PER BARIS DI HP) */}
-        <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-2 sm:gap-3.5 lg:gap-4 max-w-7xl w-full mx-auto">
+        {/* 16 FITUR KENDALI SUPERADMIN & DEVELOPER (4 PER BARIS DI LAPTOP, 2 PER BARIS DI HP) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-3.5 lg:gap-4 max-w-7xl w-full mx-auto">
           
           {/* FITUR 1: MANAJEMEN AKUN ADMIN WILAYAH (Theme: Deep Emerald & Gold) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-amber-50/20 rounded-xl sm:rounded-2xl border border-amber-200/90 hover:border-amber-400/90 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
@@ -797,7 +800,49 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             </button>
           </div>
 
-          {/* FITUR 15: INFORMASI WEBSITE (Theme: Deep Emerald & Gold) */}
+          {/* FITUR 15: PUSAT KEAMANAN PIN (Theme: Deep Indigo & Royal Navy) */}
+          <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-indigo-50/30 rounded-xl sm:rounded-2xl border border-indigo-300 hover:border-indigo-500 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+            <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-indigo-800 via-indigo-500 to-[#0f2b5c] absolute top-0 left-0" />
+
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-indigo-900 to-[#0f2b5c] text-indigo-200 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-indigo-400/30 shrink-0">
+                  <Key className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300" />
+                </div>
+                <span className="bg-indigo-100 text-indigo-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-indigo-300 shadow-2xs leading-none">
+                  FITUR 15
+                </span>
+              </div>
+
+              <h4 className="text-[11px] sm:text-base font-black text-slate-900 mb-1 sm:mb-2 group-hover:text-indigo-950 transition-colors leading-snug">
+                Pusat Keamanan PIN
+              </h4>
+              <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                Kelola & pantau 6 digit PIN Smart Access Card Superadmin & Developer realtime ke database.
+              </p>
+
+              <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-600 shrink-0" />
+                  <span>PIN Superadmin & Dev</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0 hidden sm:block" />
+                  <span>Proteksi Anti-Tebak</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenPinSecurityConsole}
+              className="w-full bg-gradient-to-r from-indigo-900 to-[#0f2b5c] hover:from-indigo-950 hover:to-[#143973] text-indigo-200 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-indigo-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-indigo-400/40"
+            >
+              <span className="truncate">Pusat Keamanan PIN</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-200 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+            </button>
+          </div>
+
+          {/* FITUR 16: INFORMASI WEBSITE (Theme: Deep Emerald & Gold) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-emerald-50/30 rounded-xl sm:rounded-2xl border border-emerald-300 hover:border-emerald-500 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-[#043e2e] via-[#d4af37] to-teal-700 absolute top-0 left-0" />
 
@@ -807,7 +852,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Info className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
                 </div>
                 <span className="bg-emerald-100 text-emerald-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300 shadow-2xs leading-none">
-                  FITUR 15
+                  FITUR 16
                 </span>
               </div>
 

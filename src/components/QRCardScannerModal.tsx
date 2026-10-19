@@ -19,9 +19,11 @@ import {
   ArrowLeft,
   Smartphone,
   Scan,
+  Key,
 } from 'lucide-react';
 import { validateQRCardPayload, validateQRCardPayloadAsync } from '../utils/qrAuth';
 import { SmartCardGraphic } from './SmartCardGraphic';
+import { AppSettings } from '../types';
 
 interface QRCardScannerModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ interface QRCardScannerModalProps {
   onOpenPrintCards?: () => void;
   mode?: 'login' | 'check';
   defaultTab?: 'qr' | 'nfc';
+  appSettings?: AppSettings;
 }
 
 export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
@@ -38,6 +41,7 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
   onSuccessLogin,
   mode = 'login',
   defaultTab = 'qr',
+  appSettings,
 }) => {
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -49,6 +53,18 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
     message: string;
     method?: 'qr' | 'nfc';
   } | null>(null);
+
+  // Smart Card 6-Digit PIN Security State
+  const [pendingCardAuth, setPendingCardAuth] = useState<{
+    role: 'superadmin' | 'developer';
+    nama: string;
+    wilayah: string;
+    method: 'qr' | 'nfc';
+  } | null>(null);
+  const [pinInput, setPinInput] = useState<string>('');
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [failedPinAttempts, setFailedPinAttempts] = useState<number>(0);
+  const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
   const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [hasTorchSupport, setHasTorchSupport] = useState(false);
@@ -156,19 +172,24 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         stopCamera();
         stopNfcScanning();
 
-        setScanSuccessResult({
-          nama: result.nama || 'Akses Resmi',
-          role: result.role === 'developer' ? 'DEVELOPER UTAMA' : 'SUPERADMIN PROVINSI',
-          wilayah: result.wilayah || 'PROVINSI JAWA BARAT',
-          message: result.message || (method === 'nfc' ? 'Otorisasi Tap SmartCard Berhasil!' : 'Otorisasi Kartu Berhasil!'),
-          method,
-        });
-
-        if (mode === 'login' && onSuccessLogin) {
-          setTimeout(() => {
-            onSuccessLogin(result.role!, result.nama!, result.wilayah!);
-            onClose();
-          }, 600);
+        if (mode === 'login') {
+          // Pause and require 6-digit PIN verification before granting login
+          setPendingCardAuth({
+            role: result.role,
+            nama: result.nama || (result.role === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar'),
+            wilayah: result.wilayah || 'PROVINSI JAWA BARAT',
+            method,
+          });
+          setPinInput('');
+          setPinError(null);
+        } else {
+          setScanSuccessResult({
+            nama: result.nama || 'Akses Resmi',
+            role: result.role === 'developer' ? 'DEVELOPER UTAMA' : 'SUPERADMIN PROVINSI',
+            wilayah: result.wilayah || 'PROVINSI JAWA BARAT',
+            message: result.message || (method === 'nfc' ? 'Otorisasi Tap SmartCard Berhasil!' : 'Otorisasi Kartu Berhasil!'),
+            method,
+          });
         }
       } else {
         if (method === 'qr') {
@@ -178,8 +199,128 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         }
       }
     },
-    [mode, onSuccessLogin, onClose, stopCamera]
+    [mode, onSuccessLogin, onClose, stopCamera, appSettings]
   );
+
+  // Lockout countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (lockoutRemaining > 0) {
+      timer = setInterval(() => {
+        setLockoutRemaining((prev) => {
+          if (prev <= 1) {
+            setPinError(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [lockoutRemaining]);
+
+  const handleCancelPin = useCallback(() => {
+    setPendingCardAuth(null);
+    setPinInput('');
+    setPinError(null);
+    isHandlingScanRef.current = false;
+    if (defaultTab === 'qr') {
+      startCamera();
+    } else {
+      startNfcScanning();
+    }
+  }, [defaultTab]);
+
+  const handleVerifyPin = useCallback(() => {
+    if (lockoutRemaining > 0 || !pendingCardAuth) return;
+    if (pinInput.trim().length !== 6) {
+      setPinError('Mohon masukkan 6 digit PIN lengkap.');
+      return;
+    }
+
+    let expectedPin = '123456';
+    if (pendingCardAuth.role === 'developer') {
+      expectedPin = (appSettings?.developerPin || '992211').trim();
+    } else {
+      expectedPin = (appSettings?.superadminPin || '123456').trim();
+    }
+
+    if (!appSettings?.superadminPin && !appSettings?.developerPin) {
+      try {
+        const raw = localStorage.getItem('dinsos_app_settings');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (pendingCardAuth.role === 'developer' && parsed.developerPin) {
+            expectedPin = parsed.developerPin.trim();
+          } else if (pendingCardAuth.role === 'superadmin' && parsed.superadminPin) {
+            expectedPin = parsed.superadminPin.trim();
+          }
+        }
+      } catch {}
+    }
+
+    if (pinInput.trim() === expectedPin) {
+      setFailedPinAttempts(0);
+      setLockoutRemaining(0);
+      setPinError(null);
+      triggerSuccessFeedback();
+
+      const successData = {
+        nama: pendingCardAuth.nama,
+        role: pendingCardAuth.role === 'developer' ? 'DEVELOPER UTAMA' : 'SUPERADMIN PROVINSI',
+        wilayah: pendingCardAuth.wilayah,
+        message: pendingCardAuth.method === 'nfc' ? 'Otorisasi PIN & Tap SmartCard Berhasil!' : 'Otorisasi PIN & Kartu QR Berhasil!',
+        method: pendingCardAuth.method,
+      };
+      setScanSuccessResult(successData);
+
+      if (onSuccessLogin) {
+        setTimeout(() => {
+          onSuccessLogin(pendingCardAuth.role, pendingCardAuth.nama, pendingCardAuth.wilayah);
+          onClose();
+        }, 650);
+      }
+    } else {
+      const nextAttempts = failedPinAttempts + 1;
+      setFailedPinAttempts(nextAttempts);
+      setPinInput('');
+
+      // Rule: 3 kali salah dibekukan 15 detik. Setiap salah selanjutnya dibekukan 30 detik per salah.
+      if (nextAttempts === 3) {
+        setLockoutRemaining(15);
+        setPinError('⚠️ 3 kali salah memasukkan PIN! Akses dibekukan sementara selama 15 detik.');
+      } else if (nextAttempts > 3) {
+        setLockoutRemaining(30);
+        setPinError('⚠️ Akses dibekukan 30 detik per kesalahan. Silakan tunggu.');
+      } else {
+        setPinError(`❌ PIN Salah! Sisa kesempatan: ${3 - nextAttempts} kali sebelum dibekukan.`);
+      }
+    }
+  }, [lockoutRemaining, pendingCardAuth, pinInput, appSettings, failedPinAttempts, onSuccessLogin, onClose]);
+
+  // Physical keyboard listener for PIN input
+  useEffect(() => {
+    if (!pendingCardAuth || scanSuccessResult) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lockoutRemaining > 0) return;
+
+      if (e.key >= '0' && e.key <= '9') {
+        setPinInput((prev) => (prev.length < 6 ? prev + e.key : prev));
+      } else if (e.key === 'Backspace') {
+        setPinInput((prev) => prev.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        handleVerifyPin();
+      } else if (e.key === 'Escape') {
+        handleCancelPin();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pendingCardAuth, lockoutRemaining, pinInput, scanSuccessResult, handleVerifyPin, handleCancelPin]);
 
   // Multi-engine high-accuracy BarcodeDetector & jsQR continuous frame scanner loop
   const startHardwareEngineLoop = () => {
@@ -694,6 +835,143 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
                 >
                   <CheckCircle2 className="w-4 h-4 text-slate-950" />
                   <span>Selesai & Masuk</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : pendingCardAuth ? (
+          /* ========================================================================= */
+          /* SMART CARD 6-DIGIT PIN AUTHENTICATION VIEWPORT                            */
+          /* ========================================================================= */
+          <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="w-full max-w-sm sm:max-w-md bg-gradient-to-b from-[#06152d] via-[#091f42] to-[#040e1f] text-white rounded-3xl p-5 sm:p-7 text-center space-y-4 sm:space-y-5 border-2 border-indigo-400/50 shadow-[0_25px_60px_rgba(79,70,229,0.35)] relative overflow-hidden animate-scaleUp">
+              <div className="absolute -top-12 -right-12 w-36 h-36 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Detected Card Header */}
+              <div className="space-y-1.5">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-[#0f2b5c] border border-indigo-400/40 flex items-center justify-center text-amber-300 shadow-md">
+                  <Key className="w-6 h-6 text-amber-300" />
+                </div>
+                <div className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                  <span>KARTU FISIK TERDETEKSI</span>
+                  <span>•</span>
+                  <span>{pendingCardAuth.method === 'nfc' ? 'NFC' : 'QR CODE'}</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                  {pendingCardAuth.role === 'developer' ? 'DEVELOPER UTAMA' : 'SUPERADMIN PROVINSI'}
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">
+                  {pendingCardAuth.nama} ({pendingCardAuth.wilayah})
+                </p>
+              </div>
+
+              {/* Instruction */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                <p className="text-xs text-amber-200/90 font-bold m-0">
+                  Masukkan 6 Digit PIN Otorisasi Smart Access Card:
+                </p>
+              </div>
+
+              {/* 6 Digit PIN Dots Display */}
+              <div className="flex items-center justify-center gap-2.5 sm:gap-3 py-1">
+                {[0, 1, 2, 3, 4, 5].map((idx) => {
+                  const isFilled = pinInput.length > idx;
+                  const isActive = pinInput.length === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`w-10 h-12 sm:w-12 sm:h-14 rounded-xl border-2 flex items-center justify-center text-xl font-black transition-all ${
+                        isFilled
+                          ? 'border-indigo-400 bg-indigo-950/80 text-amber-300 shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105'
+                          : isActive
+                          ? 'border-amber-400 bg-slate-900 text-white animate-pulse'
+                          : 'border-slate-700 bg-slate-900/60 text-slate-600'
+                      }`}
+                    >
+                      {isFilled ? '•' : ''}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Lockout or Error Feedback Banner */}
+              {lockoutRemaining > 0 ? (
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500 text-rose-200 text-xs font-bold space-y-1">
+                  <div className="text-amber-300 uppercase tracking-wider text-[10px] font-black">
+                    ⏱️ AKSI DIBEKUKAN SEMENTARA
+                  </div>
+                  <div>Silakan tunggu {lockoutRemaining} detik sebelum mencoba kembali...</div>
+                </div>
+              ) : pinError ? (
+                <div className="p-2.5 rounded-xl bg-rose-900/60 border border-rose-500/70 text-rose-200 text-xs font-semibold">
+                  {pinError}
+                </div>
+              ) : null}
+
+              {/* Interactive On-Screen Keypad for Touch / Mouse */}
+              <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto pt-1">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                  <button
+                    key={digit}
+                    type="button"
+                    disabled={lockoutRemaining > 0}
+                    onClick={() => {
+                      if (lockoutRemaining > 0) return;
+                      setPinInput((prev) => (prev.length < 6 ? prev + digit : prev));
+                    }}
+                    className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-600 text-white font-mono font-black text-lg transition-all border border-slate-700/60 hover:border-indigo-400/60 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {digit}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={lockoutRemaining > 0 || pinInput.length === 0}
+                  onClick={() => setPinInput('')}
+                  className="h-11 sm:h-12 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all border border-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Hapus
+                </button>
+                <button
+                  type="button"
+                  disabled={lockoutRemaining > 0}
+                  onClick={() => {
+                    if (lockoutRemaining > 0) return;
+                    setPinInput((prev) => (prev.length < 6 ? prev + '0' : prev));
+                  }}
+                  className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-indigo-600 text-white font-mono font-black text-lg transition-all border border-slate-700/60 hover:border-indigo-400/60 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  disabled={lockoutRemaining > 0 || pinInput.length === 0}
+                  onClick={() => setPinInput((prev) => prev.slice(0, -1))}
+                  className="h-11 sm:h-12 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center transition-all border border-slate-800 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ⌫
+                </button>
+              </div>
+
+              {/* Action Buttons: Verifikasi PIN & Batal */}
+              <div className="pt-2 space-y-2">
+                <button
+                  type="button"
+                  disabled={pinInput.length !== 6 || lockoutRemaining > 0}
+                  onClick={handleVerifyPin}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm rounded-xl transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-200" />
+                  <span>Verifikasi PIN Otorisasi</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelPin}
+                  className="w-full py-2.5 px-4 bg-transparent hover:bg-slate-800/60 text-slate-400 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-700"
+                >
+                  Batal / Pindai Ulang
                 </button>
               </div>
             </div>

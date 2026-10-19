@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserSession, AdminAccount, PillarRegistrationSubmission } from '../types';
+import { UserSession, AdminAccount, PillarRegistrationSubmission, AppSettings } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
 import { Shield, User, Key, LogOut, LogIn, UserPlus, RefreshCw, CheckCircle2, ShieldCheck, Lock, AlertTriangle, X, Code2, QrCode, CreditCard, ArrowLeft, Camera, Sparkles, Clock, Wifi } from 'lucide-react';
 import { comparePassword, hashPassword } from '../utils/crypto';
@@ -14,6 +14,7 @@ interface AccountPageProps {
   session: UserSession;
   adminAccounts: AdminAccount[];
   submissions?: PillarRegistrationSubmission[];
+  appSettings?: AppSettings;
   onLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', username: string, wilayah: string) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
@@ -31,6 +32,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   session,
   adminAccounts,
   submissions = [],
+  appSettings,
   onLogin,
   onLogout,
   onAddAdminAccount,
@@ -1234,6 +1236,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           isOpen={isQrScannerOpen}
           mode={scannerMode}
           defaultTab={scannerDefaultTab}
+          appSettings={appSettings}
           onClose={() => setIsQrScannerOpen(false)}
           onSuccessLogin={(role, nama, wilayah) => {
             setIsLoginModalOpen(false);

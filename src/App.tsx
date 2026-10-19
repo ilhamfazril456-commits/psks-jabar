@@ -75,6 +75,7 @@ const BackgroundLogoManagementPage = React.lazy(() => import('./components/Backg
 const ProfileKadinasManagementPage = React.lazy(() => import('./components/ProfileKadinasManagementPage').then(m => ({ default: m.ProfileKadinasManagementPage })));
 const SocialMediaManagementPage = React.lazy(() => import('./components/SocialMediaManagementPage').then(m => ({ default: m.SocialMediaManagementPage })));
 const RegionalLogoManagementPage = React.lazy(() => import('./components/RegionalLogoManagementPage').then(m => ({ default: m.RegionalLogoManagementPage })));
+const PinSecurityManagementPage = React.lazy(() => import('./components/PinSecurityManagementPage').then(m => ({ default: m.PinSecurityManagementPage })));
 const WebsiteInfoManagementPage = React.lazy(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
 import { subscribeToRegionalLogos, getLocalCachedRegionalLogos } from './services/regionalLogoService';
 import { PortalFaqItem, DocumentRepoItem } from './types';
@@ -2276,6 +2277,7 @@ export default function App() {
       'profile_kadinas_manage',
       'social_media_manage',
       'regional_logo_manage',
+      'pin_security_manage',
       'website_info_manage',
     ];
 
@@ -2401,6 +2403,10 @@ export default function App() {
 
   const handleOpenRegionalLogoConsole = () => {
     navigateToTab('regional_logo_manage');
+  };
+
+  const handleOpenPinSecurityConsole = () => {
+    navigateToTab('pin_security_manage');
   };
 
   const handleOpenWebsiteInfoConsole = () => {
@@ -4265,6 +4271,7 @@ export default function App() {
                   onOpenProfileKadinasConsole={handleOpenProfileKadinasConsole}
                   onOpenSocialMediaConsole={handleOpenSocialMediaConsole}
                   onOpenRegionalLogoConsole={handleOpenRegionalLogoConsole}
+                  onOpenPinSecurityConsole={handleOpenPinSecurityConsole}
                   onOpenWebsiteInfoConsole={handleOpenWebsiteInfoConsole}
                 />
               </React.Suspense>
@@ -4399,6 +4406,7 @@ export default function App() {
               session={session}
               adminAccounts={adminAccounts}
               submissions={submissions}
+              appSettings={appSettings}
               onLogin={(role, nama, wilayah) => {
                 handleLogin(role, nama, wilayah);
                 setOpenLoginModalOnAkun(false);
@@ -4568,6 +4576,15 @@ export default function App() {
           <RegionalLogoManagementPage
             session={session}
             regionalLogos={regionalLogos}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
+        {currentTab === 'pin_security_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'developer' || session.isDeveloper === true) && (
+          <PinSecurityManagementPage
+            session={session}
+            appSettings={appSettings}
+            onSaveSettings={handleSaveAppSettings}
             onBackToHome={handleBackToHome}
           />
         )}

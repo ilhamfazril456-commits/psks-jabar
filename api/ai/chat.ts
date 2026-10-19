@@ -92,7 +92,7 @@ export default async function handler(req: any, res: any) {
         });
       }
       return res.status(200).json({
-        reply: `Sampurasun / Halo **${userContext?.name || (isDev ? 'Kang Ilham Fazril' : 'Superadmin')}**! Pangkalan data (*database*) sistem **PSKS JABAR** disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan skema relasional modern, keamanan *Row Level Security* (RLS), sinkronisasi cepat, serta enkripsi data yang aman untuk seluruh data 10 Pilar PSKS, audit logs, dan konfigurasi sistem.`,
+        reply: `Sampurasun / Halo **${userContext?.nama || (isDev ? 'Kang Ilham Fazril' : 'Superadmin')}**! Pangkalan data (*database*) sistem **PSKS JABAR** disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan skema relasional modern, keamanan *Row Level Security* (RLS), sinkronisasi cepat, serta enkripsi data yang aman untuk seluruh data 10 Pilar PSKS, audit logs, dan konfigurasi sistem.`,
         source: 'db_guard_authorized',
       });
     }

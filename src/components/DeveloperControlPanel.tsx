@@ -627,7 +627,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
           return {
             title: 'Informasi Website',
             desc: 'Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa pemrograman, pustaka, database Supabase, AI, dan pengembang.',
-            badge: 'FITUR 15 • KONTROL PUSAT',
+            badge: 'FITUR 16 • KONTROL PUSAT',
           };
         }
         return {

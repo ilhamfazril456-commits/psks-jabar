@@ -2178,6 +2178,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           <QRCardScannerModal
             isOpen={isQrScannerOpen}
             defaultTab={scannerDefaultTab}
+            appSettings={appSettings}
             onClose={() => setIsQrScannerOpen(false)}
             onSuccessLogin={(role, nama, wilayah) => {
               onClose();
