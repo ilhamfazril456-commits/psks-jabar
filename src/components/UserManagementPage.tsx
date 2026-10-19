@@ -38,7 +38,7 @@ import {
 interface UserManagementPageProps {
   session?: UserSession;
   adminAccounts: AdminAccount[];
-  onUpdateUserAccount: (updated: AdminAccount, securitySignal?: 'PASSWORD_CHANGED' | 'FROZEN' | 'UNFROZEN' | 'DELETED') => void;
+  onUpdateUserAccount: (updated: AdminAccount, securitySignal?: 'PASSWORD_CHANGED' | 'FROZEN' | 'UNFROZEN' | 'DELETED' | 'VERVAL_APPROVED' | 'VERVAL_REJECTED' | string) => void;
   onDeleteUserAccount: (id: string, targetUsername?: string) => void;
   onBackToHome: () => void;
 }
@@ -342,7 +342,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       lastUpdatedTimestamp: Date.now(),
     };
 
-    onUpdateUserAccount(updatedAccount);
+    onUpdateUserAccount(updatedAccount, 'VERVAL_APPROVED');
     setApprovingAccount(null);
 
     setActionSuccessModal({
@@ -378,7 +378,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
     };
 
     const targetUname = rejectingAccount.username;
-    onUpdateUserAccount(updatedAccount);
+    onUpdateUserAccount(updatedAccount, 'VERVAL_REJECTED');
     setRejectingAccount(null);
 
     setActionSuccessModal({

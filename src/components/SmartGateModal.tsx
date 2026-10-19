@@ -850,16 +850,27 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         );
         return;
       }
-      if (resp.status === 401 || resp.status === 403 || resp.status === 429) {
-        setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+      if (resp.status === 403 || resp.status === 429) {
+        setErrorMessage(data.message || 'Akses masuk ditolak.');
         triggerFailedAttempt();
         return;
+      }
+      if (resp.status === 401) {
+        const localMatched = adminAccounts.find(
+          (a) => (a.username || '').toLowerCase().trim() === uLower
+        );
+        if (!localMatched) {
+          setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+          triggerFailedAttempt();
+          return;
+        }
+        // Proceed to Step 1 below to validate against real-time local/Firestore account!
       }
     } catch {
       // Offline fallback: continue to local check only if server is unreachable
     }
 
-    // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash)
+    // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash or plain password)
     let matchedAccount = adminAccounts.find(
       (a) => (a.username || '').toLowerCase().trim() === uLower
     );
@@ -870,7 +881,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         return;
       }
 
-      const isValid = comparePassword(pInput, matchedAccount.passwordHash);
+      const isValid =
+        comparePassword(pInput, matchedAccount.passwordHash) ||
+        (Boolean(matchedAccount.passwordPolos) && pInput === matchedAccount.passwordPolos);
       if (isValid) {
         // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
         if (matchedAccount.role === 'user') {

@@ -1390,8 +1390,8 @@ export default function App() {
               (def) => def.id === docId || (def.username || '').toLowerCase().trim() === uname
             );
 
-            // For 27 regional admin accounts, enforce new 12+ character semantic password
-            let plainPass = accData.passwordPolos || defaultMatch?.passwordPolos || (accData.username ? `${accData.username}123` : '123456');
+            // For admin accounts and user accounts, preserve real password
+            let plainPass = accData.passwordPolos || defaultMatch?.passwordPolos || '';
             let passHash = accData.passwordHash || defaultMatch?.passwordHash || '';
 
             if (defaultMatch && defaultMatch.role === 'admin' && defaultMatch.passwordPolos) {
@@ -2601,6 +2601,39 @@ export default function App() {
       setFirestoreDoc('admin_accounts', resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
     }
 
+    // DISPATCH KICK SESI LAMA: Berlaku untuk SEMUA ROLE (user terdaftar, admin wilayah, superadmin, developer)
+    // 1. Cross-tab instant kick via BroadcastChannel
+    try {
+      const channel = new BroadcastChannel('psks_auth_channel');
+      channel.postMessage({
+        type: 'CONCURRENT_LOGIN_KICK',
+        targetUsername: resolvedUsername || (matched ? matched.username : ''),
+        targetId: resolvedUserId || (matched ? matched.id : ''),
+        targetRole: role,
+        newSessionToken: sessionToken,
+        timestamp: Date.now(),
+      });
+      setTimeout(() => {
+        try {
+          channel.close();
+        } catch {}
+      }, 500);
+    } catch {}
+
+    // 2. Cross-device instant kick via Firestore security_signals
+    try {
+      setFirestoreDoc('security_signals', 'live', {
+        action: 'MULTIPLE_LOGIN',
+        targetUsername: resolvedUsername || (matched ? matched.username : ''),
+        targetId: resolvedUserId || (matched ? matched.id : ''),
+        targetRole: role,
+        newSessionToken: sessionToken,
+        timestamp: Date.now(),
+        by: resolvedUsername || nama,
+        byRole: role,
+      }).catch(() => {});
+    } catch {}
+
     // Bersihkan ID/username akun ini dari deletedAdminIds di state & localStorage agar tidak ada cache penendangan palsu
     const cleanUname = (resolvedUsername || '').toLowerCase().trim();
     const cleanUid = (resolvedUserId || '').toLowerCase().trim();
@@ -2746,10 +2779,10 @@ export default function App() {
         const aUname = (a.username || '').toLowerCase().trim();
         const aId = (a.id || '').toLowerCase().trim();
         if (session.role === 'developer') {
-          return a.role === 'developer' || (userUname && aUname === userUname) || (sessionUserId && aId === sessionUserId);
+          return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname) || a.role === 'developer';
         }
         if (session.role === 'superadmin') {
-          return a.role === 'superadmin' || aUname.includes('superadmin') || (userUname && aUname === userUname) || (sessionUserId && aId === sessionUserId);
+          return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname) || a.role === 'superadmin';
         }
         // STRICT IDENTIFIER MATCHING: Only match exact username or exact account ID
         if (sessionUserId && aId === sessionUserId) return true;
@@ -2854,9 +2887,44 @@ export default function App() {
   ]);
 
   // Real-time Instant Security Kickout Listener (Targeted directly from Superadmin/Developer actions)
+  // Realtime Cross-tab Single Session Enforcer via BroadcastChannel (Semua Role: user, admin, superadmin, developer)
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
-    if (session.role === 'developer') return; // Developer is 100% immune to security kickouts
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('psks_auth_channel');
+      channel.onmessage = (event) => {
+        const data = event.data;
+        if (!data || data.type !== 'CONCURRENT_LOGIN_KICK') return;
+        const localToken = session.sessionToken || sessionStorage.getItem('session_token');
+        if (!data.newSessionToken || data.newSessionToken === localToken) return;
+
+        const myUname = (session.username || session.nama || '').toLowerCase().trim();
+        const myUserId = (session.userId || '').toLowerCase().trim();
+        const targetUname = (data.targetUsername || '').toLowerCase().trim();
+        const targetId = (data.targetId || '').toLowerCase().trim();
+
+        const isSameAccount = Boolean(
+          (targetId && myUserId && targetId === myUserId) ||
+          (targetUname && myUname && targetUname === myUname) ||
+          (session.role === data.targetRole && (session.role === 'superadmin' || session.role === 'developer'))
+        );
+
+        if (isSameAccount) {
+          setShowMultipleSessionModal(true);
+        }
+      };
+    } catch {}
+    return () => {
+      try {
+        channel?.close();
+      } catch {}
+    };
+  }, [session]);
+
+  // Realtime Cross-Device Single Session Enforcer & Remote Security Signals
+  useEffect(() => {
+    if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
     const unsubscribe = subscribeToDoc(
       'security_signals',
@@ -2867,15 +2935,36 @@ export default function App() {
         // 1. Drop stale signals older than 60 seconds
         if (Date.now() - data.timestamp > 60000) return;
 
+        const userUname = (session.username || session.nama || '').toLowerCase().trim();
+        const sessionUserId = (session.userId || '').toLowerCase().trim();
+        const localToken = session.sessionToken || sessionStorage.getItem('session_token');
+        const targetUname = (data.targetUsername || '').toLowerCase().trim();
+        const targetId = (data.targetId || '').toLowerCase().trim();
+
+        // SINGLE SESSION ENFORCEMENT (KICK SESI LAMA): Berlaku untuk SEMUA ROLE (user, admin, superadmin, developer)
+        if (data.action === 'MULTIPLE_LOGIN' || data.action === 'SESSION_KICK') {
+          const isTargetMatch = Boolean(
+            (targetId && sessionUserId && targetId === sessionUserId) ||
+            (targetUname && userUname && targetUname === userUname) ||
+            (session.role === data.targetRole && (session.role === 'superadmin' || session.role === 'developer'))
+          );
+
+          if (isTargetMatch && data.newSessionToken && localToken && data.newSessionToken !== localToken) {
+            setShowMultipleSessionModal(true);
+            return;
+          }
+        }
+
+        // Developer is immune to admin/freeze/delete signals, but NOT to concurrent same-account takeover
+        if (session.role === 'developer') return;
+
         // 2. Only respond to signals sent strictly after login (+1s buffer)
         const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
         if (loginTime > 0 && data.timestamp <= loginTime + 1000) return;
 
         // 3. If the signal was triggered by the current user themselves, ignore
         const actorName = (data.by || '').toLowerCase().trim();
-        const userUname = (session.username || session.nama || '').toLowerCase().trim();
         const userNama = (session.nama || '').toLowerCase().trim();
-        const sessionUserId = (session.userId || '').toLowerCase().trim();
         if (actorName && (actorName === userUname || actorName === userNama)) return;
 
         // 4. Superadmin is ONLY kickable/editable/freezable by Developer
@@ -2887,9 +2976,6 @@ export default function App() {
             data.byRole === 'Developer';
           if (!isDevActor) return;
         }
-
-        const targetUname = (data.targetUsername || '').toLowerCase().trim();
-        const targetId = (data.targetId || '').toLowerCase().trim();
 
         // STRICT TARGET MATCH: Must match this exact account's unique userId or exact username (NEVER loose display name)
         const isMatch = Boolean(

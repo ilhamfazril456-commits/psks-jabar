@@ -87,6 +87,7 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
       statusActive: row.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
       wilayahTugas: row.wilayahTugas || restData.wilayahTugas || '',
       passwordHash: row.passwordHash || restData.passwordHash || '',
+      passwordPolos: row.passwordPolos || restData.passwordPolos || '',
       sessionToken: row.sessionToken || restData.sessionToken || '',
     };
   }
@@ -165,7 +166,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   }
 
   if (collectionName === 'admin_accounts') {
-    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos: _pp, ...rest } = cleaned;
+    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos, ...rest } = cleaned;
 
     // Strict protection for master accounts: prevent accidental downgrade or ID-as-username overwrite
     const safeRole =
@@ -189,6 +190,8 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
         ? 'Pusat Developer Jabar'
         : wilayahTugas || '';
 
+    const preservedPasswordPolos = passwordPolos || rest.passwordPolos || cleaned.passwordPolos || '';
+
     return {
       id: docId,
       username: safeUsername,
@@ -197,8 +200,12 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       statusActive: statusActive || 'SAH_TERDAFTAR',
       wilayahTugas: safeWilayah,
       passwordHash: passwordHash || '',
+      passwordPolos: preservedPasswordPolos,
       sessionToken: sessionToken || '',
-      data: rest,
+      data: {
+        ...rest,
+        passwordPolos: preservedPasswordPolos,
+      },
     };
   }
 
@@ -503,6 +510,8 @@ export function subscribeToCollection(
 ): () => void {
   let isCancelled = false;
   let debounceTimer: any = null;
+  let pollInterval: any = null;
+  let unsubFirestore: (() => void) | null = null;
 
   const refreshCollection = () => {
     if (isCancelled) return;
@@ -523,7 +532,46 @@ export function subscribeToCollection(
   // 1. Initial bulk fetch
   refreshCollection();
 
-  // 2. Realtime listener with debounce protection & WebSocket safe guard
+  // 2. Realtime listener via Firestore native onSnapshot (Sub-second reactive updates)
+  getFirestoreModule()
+    .then(({ firestore, db }) => {
+      if (isCancelled) return;
+      try {
+        const colRef = firestore.collection(db, collectionName);
+        unsubFirestore = firestore.onSnapshot(
+          colRef,
+          (snapshot) => {
+            if (isCancelled) return;
+            if (!snapshot.empty) {
+              const fsDocs = snapshot.docs.map((d) => ({
+                id: d.id,
+                data: d.data(),
+              }));
+              onNext(fsDocs);
+            }
+          },
+          (fsErr) => {
+            console.warn(`[Firestore Realtime onSnapshot ${collectionName} notice]:`, fsErr?.message || fsErr);
+          }
+        );
+      } catch {}
+    })
+    .catch(() => {});
+
+  // 3. Fast high-frequency polling safety fallback for critical auth & verval collections (1.5s interval)
+  if (
+    collectionName === 'admin_accounts' ||
+    collectionName === 'security_signals' ||
+    collectionName === 'registration_submissions'
+  ) {
+    pollInterval = setInterval(() => {
+      if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
+        refreshCollection();
+      }
+    }, 1500);
+  }
+
+  // 4. Supabase Realtime channel listener with debounce protection
   const channelName = `sub_col_${collectionName}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -539,7 +587,7 @@ export function subscribeToCollection(
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           refreshCollection();
-        }, 1200);
+        }, 800);
       }
     );
 
@@ -548,6 +596,12 @@ export function subscribeToCollection(
   return () => {
     isCancelled = true;
     if (debounceTimer) clearTimeout(debounceTimer);
+    if (pollInterval) clearInterval(pollInterval);
+    if (unsubFirestore) {
+      try {
+        unsubFirestore();
+      } catch {}
+    }
     unsubChannel();
   };
 }
@@ -797,14 +851,17 @@ export async function setFirestoreDoc(
         partialUpdate.passwordHash = data.passwordHash;
       }
       if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
+      if (data.passwordPolos !== undefined && data.passwordPolos !== '') {
+        partialUpdate.passwordPolos = data.passwordPolos;
+      }
 
       // Extract non-column fields to store in JSONB data
-      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, ...rest } = data;
+      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, ...rest } = data;
       if (Object.keys(rest).length > 0) {
         try {
           const existing = await supabase.from('admin_accounts').select('data').eq('id', docId).maybeSingle();
           const existingData = existing.data?.data && typeof existing.data.data === 'object' ? existing.data.data : {};
-          partialUpdate.data = { ...existingData, ...rest };
+          partialUpdate.data = { ...existingData, ...rest, ...(data.passwordPolos ? { passwordPolos: data.passwordPolos } : {}) };
         } catch {}
       }
 
