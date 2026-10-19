@@ -2611,27 +2611,13 @@ export default function App() {
         targetId: resolvedUserId || (matched ? matched.id : ''),
         targetRole: role,
         newSessionToken: sessionToken,
-        timestamp: Date.now(),
+        timestamp: loginTimestamp,
       });
       setTimeout(() => {
         try {
           channel.close();
         } catch {}
       }, 500);
-    } catch {}
-
-    // 2. Cross-device instant kick via Firestore security_signals
-    try {
-      setFirestoreDoc('security_signals', 'live', {
-        action: 'MULTIPLE_LOGIN',
-        targetUsername: resolvedUsername || (matched ? matched.username : ''),
-        targetId: resolvedUserId || (matched ? matched.id : ''),
-        targetRole: role,
-        newSessionToken: sessionToken,
-        timestamp: Date.now(),
-        by: resolvedUsername || nama,
-        byRole: role,
-      }).catch(() => {});
     } catch {}
 
     // Bersihkan ID/username akun ini dari deletedAdminIds di state & localStorage agar tidak ada cache penendangan palsu
@@ -2775,16 +2761,10 @@ export default function App() {
     }
 
     if (adminAccounts.length > 0) {
+      // STRICT IDENTIFIER MATCHING: HANYA cocokkan berdasarkan ID Akun persis atau Username persis milik akun yang sedang login
       const matched = adminAccounts.find((a) => {
         const aUname = (a.username || '').toLowerCase().trim();
         const aId = (a.id || '').toLowerCase().trim();
-        if (session.role === 'developer') {
-          return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname) || a.role === 'developer';
-        }
-        if (session.role === 'superadmin') {
-          return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname) || a.role === 'superadmin';
-        }
-        // STRICT IDENTIFIER MATCHING: Only match exact username or exact account ID
         if (sessionUserId && aId === sessionUserId) return true;
         if (userUname && aUname === userUname) return true;
         return false;
@@ -2823,13 +2803,34 @@ export default function App() {
         }
 
         // 5. Check Multiple Session Active / Login on another device (Single Session Kick)
-        // Berlaku untuk SEMUA ROLE tanpa terkecuali: user terdaftar, admin wilayah, superadmin, developer
+        // Berlaku untuk SEMUA ROLE: user terdaftar, admin wilayah, superadmin, developer
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
-        if (
+        const now = Date.now();
+
+        // Ambil timestamp login dari data Supabase
+        const remoteLoginTime =
+          typeof (matched as any).loginTimestamp === 'number'
+            ? (matched as any).loginTimestamp
+            : typeof (matched as any).data?.loginTimestamp === 'number'
+            ? (matched as any).data.loginTimestamp
+            : 0;
+
+        // SYARAT MUTLAK PENENDANGAN (Mencegah salah tendang / false positive):
+        // 1. Wajib sudah melewati masa tenggang 5 detik pertama sejak login di perangkat ini
+        const isPastGracePeriod = loginTime > 0 && now - loginTime > 5000;
+
+        // 2. Data di Supabase HARUS memiliki waktu login yang LEBIH BARU (+1.5 detik) daripada waktu login perangkat ini
+        // (menandakan ada perangkat/orang lain yang menekan tombol login SETELAH kita masuk)
+        const isNewerLoginFromAnotherDevice = remoteLoginTime > loginTime + 1500;
+
+        // 3. Token di database Supabase berbeda dengan token sesi lokal kita
+        const isTokenDifferent = Boolean(
           matched.sessionToken &&
           localToken &&
           matched.sessionToken !== localToken
-        ) {
+        );
+
+        if (isPastGracePeriod && isNewerLoginFromAnotherDevice && isTokenDifferent) {
           if (!showMultipleSessionModal) {
             setShowMultipleSessionModal(true);
           }
@@ -2904,13 +2905,15 @@ export default function App() {
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
 
+        const myLoginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+        const incomingLoginTime = Number(data.timestamp) || 0;
+
         const isSameAccount = Boolean(
           (targetId && myUserId && targetId === myUserId) ||
-          (targetUname && myUname && targetUname === myUname) ||
-          (session.role === data.targetRole && (session.role === 'superadmin' || session.role === 'developer'))
+          (targetUname && myUname && targetUname === myUname)
         );
 
-        if (isSameAccount) {
+        if (isSameAccount && incomingLoginTime > myLoginTime + 1000) {
           setShowMultipleSessionModal(true);
         }
       };
@@ -2922,7 +2925,7 @@ export default function App() {
     };
   }, [session]);
 
-  // Realtime Cross-Device Single Session Enforcer & Remote Security Signals
+  // Realtime Remote Security Signals (Freeze, Delete, Password Changed from Admin Console)
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
@@ -2937,25 +2940,10 @@ export default function App() {
 
         const userUname = (session.username || session.nama || '').toLowerCase().trim();
         const sessionUserId = (session.userId || '').toLowerCase().trim();
-        const localToken = session.sessionToken || sessionStorage.getItem('session_token');
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
 
-        // SINGLE SESSION ENFORCEMENT (KICK SESI LAMA): Berlaku untuk SEMUA ROLE (user, admin, superadmin, developer)
-        if (data.action === 'MULTIPLE_LOGIN' || data.action === 'SESSION_KICK') {
-          const isTargetMatch = Boolean(
-            (targetId && sessionUserId && targetId === sessionUserId) ||
-            (targetUname && userUname && targetUname === userUname) ||
-            (session.role === data.targetRole && (session.role === 'superadmin' || session.role === 'developer'))
-          );
-
-          if (isTargetMatch && data.newSessionToken && localToken && data.newSessionToken !== localToken) {
-            setShowMultipleSessionModal(true);
-            return;
-          }
-        }
-
-        // Developer is immune to admin/freeze/delete signals, but NOT to concurrent same-account takeover
+        // Developer is immune to admin/freeze/delete signals
         if (session.role === 'developer') return;
 
         // 2. Only respond to signals sent strictly after login (+1s buffer)

@@ -195,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     {
       id: 'medsos',
       title: 'Media Sosial Resmi',
-      desc: 'YouTube TV, Instagram, TikTok & X',
+      desc: 'Media Sosial Resmi Dinsos Jabar',
       icon: Share2,
       onClick: () => navigateAndScroll('contact', undefined, 'medsos'),
     },

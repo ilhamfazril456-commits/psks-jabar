@@ -89,6 +89,7 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
       passwordHash: row.passwordHash || restData.passwordHash || '',
       passwordPolos: row.passwordPolos || restData.passwordPolos || '',
       sessionToken: row.sessionToken || restData.sessionToken || '',
+      loginTimestamp: typeof row.loginTimestamp === 'number' ? row.loginTimestamp : (typeof restData.loginTimestamp === 'number' ? restData.loginTimestamp : 0),
     };
   }
 
@@ -205,6 +206,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       data: {
         ...rest,
         passwordPolos: preservedPasswordPolos,
+        loginTimestamp: cleaned.loginTimestamp || rest.loginTimestamp || 0,
       },
     };
   }
@@ -529,49 +531,23 @@ export function subscribeToCollection(
       });
   };
 
-  // 1. Initial bulk fetch
+  // 1. Initial bulk fetch from Supabase
   refreshCollection();
 
-  // 2. Realtime listener via Firestore native onSnapshot (Sub-second reactive updates)
-  getFirestoreModule()
-    .then(({ firestore, db }) => {
-      if (isCancelled) return;
-      try {
-        const colRef = firestore.collection(db, collectionName);
-        unsubFirestore = firestore.onSnapshot(
-          colRef,
-          (snapshot) => {
-            if (isCancelled) return;
-            if (!snapshot.empty) {
-              const fsDocs = snapshot.docs.map((d) => ({
-                id: d.id,
-                data: d.data(),
-              }));
-              onNext(fsDocs);
-            }
-          },
-          (fsErr) => {
-            console.warn(`[Firestore Realtime onSnapshot ${collectionName} notice]:`, fsErr?.message || fsErr);
-          }
-        );
-      } catch {}
-    })
-    .catch(() => {});
-
-  // 3. Fast high-frequency polling safety fallback for critical auth & verval collections (1.5s interval)
+  // 2. High-frequency polling safety sync for critical Supabase collections (2s interval)
   if (
     collectionName === 'admin_accounts' ||
-    collectionName === 'security_signals' ||
-    collectionName === 'registration_submissions'
+    collectionName === 'registration_submissions' ||
+    collectionName === 'app_settings'
   ) {
     pollInterval = setInterval(() => {
       if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
         refreshCollection();
       }
-    }, 1500);
+    }, 2000);
   }
 
-  // 4. Supabase Realtime channel listener with debounce protection
+  // 3. Supabase Realtime channel listener with debounce protection
   const channelName = `sub_col_${collectionName}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -587,7 +563,7 @@ export function subscribeToCollection(
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           refreshCollection();
-        }, 800);
+        }, 600);
       }
     );
 
@@ -597,11 +573,6 @@ export function subscribeToCollection(
     isCancelled = true;
     if (debounceTimer) clearTimeout(debounceTimer);
     if (pollInterval) clearInterval(pollInterval);
-    if (unsubFirestore) {
-      try {
-        unsubFirestore();
-      } catch {}
-    }
     unsubChannel();
   };
 }
