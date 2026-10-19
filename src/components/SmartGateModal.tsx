@@ -624,9 +624,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(ticketData));
       } catch {}
 
-      // Auto populate login form for easy entry once approved
+      // Auto populate username only; leave password empty for manual entry
       setUsernameInput(uTrim);
-      setPasswordInput(pTrim);
+      setPasswordInput('');
       setIsRegistering(false);
 
       // LANGSUNG ARAHKAN KE HALAMAN INFORMASI PENDAFTARAN AKUN (STATUS VERVAL REALTIME)
@@ -1643,9 +1643,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             onClick={() => {
                               setErrorMessage('');
                               setUsernameInput(uname);
-                              if (registrationTicket?.passwordPolos || liveRegisteredAccount?.passwordPolos) {
-                                setPasswordInput(registrationTicket?.passwordPolos || liveRegisteredAccount?.passwordPolos || '');
-                              }
+                              setPasswordInput('');
                               setView('login_manual');
                             }}
                             className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"

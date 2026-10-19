@@ -301,6 +301,97 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
   };
 
+  // Ubah Kata Sandi Mandiri (Khusus User Terdaftar & Admin Wilayah)
+  const [oldPasswordInput, setOldPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState<string | null>(null);
+  const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  const handleSaveNewPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPasswordChangeSuccess(null);
+    setPasswordChangeError(null);
+
+    const oldTrim = oldPasswordInput.trim();
+    const newTrim = newPasswordInput.trim();
+    const confirmTrim = confirmPasswordInput.trim();
+
+    if (!oldTrim) {
+      setPasswordChangeError('❌ Silakan masukkan kata sandi saat ini.');
+      return;
+    }
+    if (!newTrim) {
+      setPasswordChangeError('❌ Silakan masukkan kata sandi baru yang diinginkan.');
+      return;
+    }
+    if (newTrim.length < 6) {
+      setPasswordChangeError('❌ Kata sandi baru minimal 6 karakter demi keamanan akun!');
+      return;
+    }
+    if (newTrim === oldTrim) {
+      setPasswordChangeError('❌ Kata sandi baru tidak boleh sama dengan kata sandi lama!');
+      return;
+    }
+    if (newTrim !== confirmTrim) {
+      setPasswordChangeError('❌ Konfirmasi kata sandi baru tidak cocok. Periksa kembali!');
+      return;
+    }
+
+    // Cari akun aktif di adminAccounts
+    const targetAccount = adminAccounts.find(
+      (a) =>
+        (session.userId && a.id === session.userId) ||
+        (session.username && (a.username || '').toLowerCase().trim() === session.username.toLowerCase().trim()) ||
+        (session.nama && (a.namaAdmin || '').toLowerCase().trim() === session.nama.toLowerCase().trim())
+    );
+
+    if (!targetAccount) {
+      setPasswordChangeError('❌ Data akun Anda tidak ditemukan di sistem.');
+      return;
+    }
+
+    // Verifikasi kata sandi lama
+    const matchesOld =
+      (targetAccount.passwordPolos && targetAccount.passwordPolos === oldTrim) ||
+      (targetAccount.passwordHash && comparePassword(oldTrim, targetAccount.passwordHash));
+
+    if (!matchesOld) {
+      setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      const newHash = hashPassword(newTrim);
+      const nowMs = Date.now();
+      const updatedAccount: AdminAccount = {
+        ...targetAccount,
+        passwordPolos: newTrim,
+        passwordHash: newHash,
+        lastUpdatedTimestamp: nowMs,
+      };
+
+      if (onUpdateAdminAccount) {
+        await onUpdateAdminAccount(updatedAccount);
+      }
+
+      setPasswordChangeSuccess('✅ Kata sandi berhasil diperbarui dan tersimpan langsung ke database!');
+      setOldPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setTimeout(() => setPasswordChangeSuccess(null), 5000);
+    } catch (err: any) {
+      setPasswordChangeError('❌ Gagal memperbarui kata sandi: ' + (err?.message || 'Terjadi kesalahan sistem'));
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
   const isCurrentUserDeveloper = session.role === 'developer';
 
   // Filter & order accounts according to authorization rules
@@ -1039,6 +1130,186 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               </div>
               <span className="text-[10px] font-mono font-bold bg-white px-2 py-0.5 rounded border border-indigo-200 shrink-0 hidden sm:inline-block">
                 v3.0 Realtime
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* MODUL KHUSUS USER TERDAFTAR & ADMIN WILAYAH: UBAH KATA SANDI MANDIRI */}
+        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && (
+          <div
+            id="ubah-password-section"
+            className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
+          >
+            {/* Top Emerald Gradient Stripe */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 via-[#0f2b5c] to-teal-500 absolute top-0 left-0" />
+
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 pt-1">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-800 via-[#043e2e] to-teal-900 text-emerald-200 rounded-2xl flex items-center justify-center text-xl shadow-md border border-emerald-400/40 shrink-0">
+                  <Lock className="w-6 h-6 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-emerald-100 text-emerald-950 font-black text-[9px] px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300">
+                      KEAMANAN AKSES PRIBADI
+                    </span>
+                    <span className="bg-emerald-50 text-emerald-900 font-bold text-[9px] px-2.5 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Tersambung Realtime Database
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    Ubah Kata Sandi Akun
+                  </h3>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Perbarui kata sandi akun {session.role === 'admin' ? `Admin Wilayah (${session.wilayah})` : 'User Terdaftar'} Anda secara mandiri untuk menjaga keamanan data. Perubahan langsung tersimpan ke sistem.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Success / Error Alerts */}
+            {passwordChangeSuccess && (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-400 text-emerald-950 text-xs font-bold flex items-center gap-2 shadow-xs animate-scaleUp">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{passwordChangeSuccess}</span>
+              </div>
+            )}
+
+            {passwordChangeError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-400 text-rose-950 text-xs font-bold flex items-center gap-2 shadow-xs animate-scaleUp">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{passwordChangeError}</span>
+              </div>
+            )}
+
+            {/* Form Inputs Grid */}
+            <form onSubmit={handleSaveNewPassword} className="space-y-4 bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Kata Sandi Saat Ini */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
+                    <Key className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Kata Sandi Saat Ini:</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showOldPassword ? 'text' : 'password'}
+                      value={oldPasswordInput}
+                      onChange={(e) => {
+                        setOldPasswordInput(e.target.value);
+                        setPasswordChangeError(null);
+                      }}
+                      placeholder="Masukkan sandi lama"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border-2 border-slate-300 focus:border-emerald-600 font-medium text-xs sm:text-sm text-slate-900 bg-white shadow-xs focus:outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title={showOldPassword ? 'Sembunyikan' : 'Lihat'}
+                    >
+                      {showOldPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Kata Sandi Baru */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Kata Sandi Baru:</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPasswordInput}
+                      onChange={(e) => {
+                        setNewPasswordInput(e.target.value);
+                        setPasswordChangeError(null);
+                      }}
+                      placeholder="Minimal 6 karakter"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border-2 border-emerald-300 focus:border-emerald-600 font-medium text-xs sm:text-sm text-slate-900 bg-white shadow-xs focus:outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title={showNewPassword ? 'Sembunyikan' : 'Lihat'}
+                    >
+                      {showNewPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Konfirmasi Kata Sandi Baru */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-700" />
+                    <span>Ulangi Sandi Baru:</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPasswordInput}
+                      onChange={(e) => {
+                        setConfirmPasswordInput(e.target.value);
+                        setPasswordChangeError(null);
+                      }}
+                      placeholder="Ketik ulang sandi baru"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border-2 border-teal-300 focus:border-emerald-600 font-medium text-xs sm:text-sm text-slate-900 bg-white shadow-xs focus:outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title={showConfirmPassword ? 'Sembunyikan' : 'Lihat'}
+                    >
+                      {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200">
+                <span className="text-[10px] text-slate-500 font-medium">
+                  *Kata sandi baru akan otomatis tersinkronisasi dan digunakan untuk otentikasi berikutnya.
+                </span>
+
+                <button
+                  type="submit"
+                  disabled={isSavingPassword || !oldPasswordInput || !newPasswordInput || !confirmPasswordInput}
+                  className={`px-6 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    isSavingPassword || !oldPasswordInput || !newPasswordInput || !confirmPasswordInput
+                      ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-emerald-700 to-[#043e2e] hover:from-emerald-800 hover:to-[#065e44] hover:scale-[1.01] active:scale-98 border border-emerald-500/40'
+                  }`}
+                >
+                  {isSavingPassword ? (
+                    <span>Menyimpan ke Database...</span>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Simpan Kata Sandi Baru</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Info notice */}
+            <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-[11px] text-emerald-950 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span>
+                  <strong>Keamanan Terenkripsi:</strong> Kata sandi baru Anda langsung diamankan dengan algoritma hash kriptografi dan terhubung secara realtime ke database.
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold bg-white px-2 py-0.5 rounded border border-emerald-200 shrink-0 hidden sm:inline-block">
+                Enkripsi Aktif
               </span>
             </div>
           </div>

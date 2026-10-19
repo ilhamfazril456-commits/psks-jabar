@@ -26,6 +26,7 @@ import {
   Search,
   ExternalLink,
   KeyRound,
+  Lock,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -257,6 +258,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         icon: KeyRound,
         onClick: () => {
           navigateAndScroll('akun', 'keamanan-pin-superadmin');
+        },
+      });
+    }
+
+    if (session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin')) {
+      list.push({
+        id: 'ubah_password_user_admin',
+        title: 'Ubah Kata Sandi',
+        desc: 'Pengaturan Kata Sandi Akun & Keamanan Akses',
+        icon: Lock,
+        onClick: () => {
+          navigateAndScroll('akun', 'ubah-password-section');
         },
       });
     }

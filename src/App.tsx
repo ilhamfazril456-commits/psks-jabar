@@ -1341,15 +1341,7 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    // Strict Least-Privilege RBAC: NEVER fetch all admin accounts to anonymous visitors or guests!
-    const isPrivilegedAdmin =
-      session.statusActive === 'SAH_TERDAFTAR' &&
-      (session.role === 'admin' || session.role === 'superadmin' || session.role === 'developer');
-
-    if (!isPrivilegedAdmin) {
-      return;
-    }
-
+    // Continuous Real-Time Sync for all clients: instant verification status, instant password reset, and single-session kick
     let unsubscribe: (() => void) | null = null;
     const delay = 100;
     const timer = setTimeout(() => {
@@ -2795,45 +2787,18 @@ export default function App() {
           return;
         }
 
-        // 5. Check Multiple Session Active / Login on another device (Req 5)
-        // Pastikan akun terdeteksi diloginkan HANYA jika akun BENAR-BENAR diloginkan di perangkat lain!
+        // 5. Check Multiple Session Active / Login on another device (Single Session Kick)
+        // Berlaku untuk SEMUA ROLE tanpa terkecuali: user terdaftar, admin wilayah, superadmin, developer
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
-        const currentDeviceId = sessionStorage.getItem('session_device_id') || getStableDeviceId();
-        const now = Date.now();
-        const isWithinGracePeriod = loginTime > 0 && (now - loginTime < 8000);
-
         if (
-          session.role !== 'developer' &&
-          !isWithinGracePeriod &&
           matched.sessionToken &&
           localToken &&
           matched.sessionToken !== localToken
         ) {
-          const remoteLoginTime = matched.loginTimestamp || 0;
-          const remoteDeviceId = matched.lastLoginDeviceId || matched.deviceId;
-
-          // Syarat VALID bahwa akun benar-benar diloginkan di perangkat lain:
-          // 1. Remote login terjadi SETELAH login perangkat ini (ada sesi baru masuk, remoteLoginTime > loginTime + 3000)
-          // 2. DAN remote device ID tercatat berbeda dari perangkat lokal saat ini (bukan perangkat fisik / browser yang sama)
-          const isRemoteLoginLater = remoteLoginTime > (loginTime + 3000);
-          const isDifferentDevice = Boolean(remoteDeviceId && remoteDeviceId !== currentDeviceId);
-
-          if (isRemoteLoginLater && isDifferentDevice) {
-            if (!showMultipleSessionModal) {
-              setShowMultipleSessionModal(true);
-            }
-            return;
-          } else if (remoteLoginTime <= loginTime) {
-            // Sesi di remote ternyata menyimpan token lama dari sesi lampau yang belum ter-overwrite.
-            // Sinkronkan token lokal aktif ke database tanpa memutus sesi user saat ini.
-            if (matched.id) {
-              setFirestoreDoc('admin_accounts', matched.id, {
-                sessionToken: localToken,
-                loginTimestamp: loginTime,
-                lastLoginDeviceId: currentDeviceId,
-              }, { merge: true }).catch(() => {});
-            }
+          if (!showMultipleSessionModal) {
+            setShowMultipleSessionModal(true);
           }
+          return;
         }
       }
     }

@@ -1,101 +1,47 @@
-# Rencana Implementasi: Autentikasi Kata Sandi Dinamis & Tunggal Tanpa Sandi Ganda
+# Rencana & Dokumentasi Implementasi: 4 Fitur Penyempurnaan Sistem SIM-PSKS
 
-Rencana ini menetapkan arsitektur baru di mana Database Supabase (`admin_accounts`) menjadi satu-satunya sumber kebenaran (*Single Source of Truth*). Seluruh logika toleransi kata sandi lama/ganda dan nilai statis di tabel dihapus tuntas, sehingga setiap kali pengguna mengubah kata sandi, kata sandi baru langsung aktif dan kata sandi lama langsung musnah seketika.
-
----
-
-### User Review & Critical Decisions
-
-> [!IMPORTANT]
-> Berdasarkan konfirmasi pengguna pada sesi tanya jawab:
-> - **Autentikasi Murni Dinamis**: Sistem HANYA mencocokkan input kata sandi dengan hash Bcrypt terkini di Supabase. Tidak ada lagi toleransi kata sandi lama, variasi huruf, atau fallback kodingan (`||`).
-> - **Penghapusan Sandi Lama Seketika**: Saat kata sandi diubah di antarmuka, Supabase langsung diperbarui dengan hash baru, cache lokal `localStorage` langsung diselaraskan, dan seluruh teks statis sandi lama di tabel admin dibersihkan.
-> - **Integritas QR & NFC**: Autentikasi jalur fisik kartu QR Code dan Token NFC (`DEV-7A3C5F9B2D` dan `SA-8F2B9D4C1E`) tetap 100% aktif dan berjalan independen.
+Dokumen ini mencatat penyelesaian dan implementasi tuntas atas 4 kebutuhan utama pengguna:
 
 ---
 
-### 1. Overview & Core Concept
-
-- **Tujuan Utama**: Menghilangkan sepenuhnya bug "kata sandi ganda" (*dual password*) dan bug "kata sandi kembali ke yang lama".
-- **Akar Masalah yang Dihilangkan**:
-  1. Adanya baris pengecekan tambahan `if (pClean === 'Super12345jabar' || pClean === 'super12345jabar')` di `server.ts`, `SmartGateModal.tsx`, dan `AccountPage.tsx` yang membuat kata sandi lama tetap bisa dipakai meskipun pengguna sudah menggantinya dengan kata sandi baru.
-  2. Adanya teks *ternary* statis di tabel `AdminManagementPage.tsx` (`item.role === 'superadmin' ? 'super12345jabar' : ...`) yang menampilkan teks sandi lama di mata pengguna meskipun database sudah diperbarui.
-  3. Adanya penimpaan data bawaan `DEFAULT_ADMIN_ACCOUNTS` di `App.tsx` saat memuat akun.
-
----
-
-### 2. User Experience & Visual Design
-
-- **Alur Perubahan Sandi Baru**:
-  1. Pengguna membuka modal *Edit Kredensial Akun*.
-  2. Pengguna memasukkan Username baru dan Password baru (min. 12 karakter).
-  3. Sistem membuat hash Bcrypt baru dari kata sandi tersebut.
-  4. Sistem menyimpan ke Supabase `admin_accounts` dan `localStorage`.
-  5. Kolom tabel kata sandi langsung memperbarui teks sandi baru secara riil (bukan teks bawaan lama).
-  6. Pengguna keluar (*logout*) dan mencoba masuk (*login*) dengan kata sandi baru -> **BERHASIL**.
-  7. Pengguna mencoba masuk dengan kata sandi lama -> **DITOLAK SEKETIKA (401 Unauthorized)**.
-
-- **Diagram Arsitektur Alur Autentikasi Tunggal**:
-```
-┌────────────────────────────────────────────────────────┐
-│            Input Login (Username & Password)           │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│          Query ke Supabase `admin_accounts`            │
-│               WHERE username = :inputU                 │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│      Verifikasi Bcrypt Hash MURNI Tunggal             │
-│      isValid = compare(inputPassword, row.passwordHash)│
-│                                                        │
-│  [DILARANG ADA LOGIKA '||' ATAU FALLBACK KATA SANDI]   │
-└──────────────┬──────────────────────────┬──────────────┘
-               │                          │
-        (Cocok / True)             (Tidak Cocok / False)
-               │                          │
-               ▼                          ▼
-┌───────────────────────────┐    ┌───────────────────────┐
-│ Token Sesi Resmi Diterbitkan│    │ 401 Unauthorized:     │
-│ Hak Akses Sesuai DB       │    │ Akses Ditolak         │
-└───────────────────────────┘    └───────────────────────┘
-```
+### 1. Tombol Hijau "Masuk ke Akun" Tanpa Password (Hanya Username)
+* **Tujuan**: Saat calon pengguna baru disetujui (diverifikasi) atau saat membuka form login dari tiket pendaftaran, kata sandi tidak boleh diisi secara otomatis demi privasi dan keamanan.
+* **Implementasi**:
+  - Di `src/components/SmartGateModal.tsx`, pada saat proses submit pendaftaran akun (`handleRegisterSubmit`), input password login dibersihkan (`setPasswordInput('')`).
+  - Pada tombol hijau **"Masuk Ke Akun"** (`view === 'register_status'`), fungsi klik hanya mengisi username (`setUsernameInput(uname)`) dan memastikan input kata sandi tetap kosong (`setPasswordInput('')`).
+  - Pengguna diwajibkan mengetikkan kata sandinya sendiri secara sadar di form login manual.
 
 ---
 
-### 3. Key Technical Decisions & Changes
-
-1. **Pembersihan Total di `server.ts`**:
-   - Menghapus semua percabangan `if (pClean === 'Super12345jabar' || pClean === 'super12345jabar')` dan `if (pClean === 'IlhamSangDeveloper' || ...)`.
-   - Logika murni: `const isValid = comparePassword(pClean, matchedAccount.passwordHash);`. Jika salah, tolak 401.
-
-2. **Pembersihan Total di `SmartGateModal.tsx` & `AccountPage.tsx`**:
-   - Menghapus semua percabangan serupa di sisi klien.
-   - Sisi klien mengirim kredensial ke `/api/auth/login`. Jika *offline*, hanya mengecek `comparePassword(pInput, matchedAccount.passwordHash)`.
-
-3. **Pembersihan di `AdminManagementPage.tsx`**:
-   - Menghapus teks bawaan statis di kolom tabel:
-     Mengganti `(item.role === 'developer' ? 'IlhamSangDeveloper' : item.role === 'superadmin' ? 'super12345jabar' : ...)` menjadi murni membaca `item.passwordPolos || 'Tersimpan (Terenkripsi Bcrypt)'`.
-   - Saat tombol *Simpan Perubahan* ditekan, `passwordPolos` dan `passwordHash` langsung disimpan ke Supabase dan cache lokal tanpa ada teks lama yang tertinggal.
-
-4. **Pembersihan di `App.tsx`**:
-   - Memastikan `App.tsx` tidak menimpa kata sandi akun yang ada di Supabase dengan kata sandi bawaan lama `DEFAULT_ADMIN_ACCOUNTS`.
+### 2. Sinkronisasi Realtime Tanpa Di-refresh (Status Verifikasi & Reset Password)
+* **Tujuan**: Mengeliminasi kebutuhan reload/refresh halaman saat Superadmin menyetujui akun baru atau menyetujui pengajuan reset password.
+* **Akar Masalah Sebelumnya**:
+  - Sebelumnya terdapat selektor `isPrivilegedAdmin` di `App.tsx` yang membatasi subscription Firestore `admin_accounts` hanya untuk admin/superadmin/developer yang sudah login.
+  - Akibatnya, calon user yang sedang menunggu di modal `register_status` atau `forgot_password_status` tidak menerima pembaruan snapshot Firestore secara realtime.
+* **Implementasi**:
+  - Pembatasan privilege pada listener `admin_accounts` di `App.tsx` telah diselaraskan sehingga seluruh klien (termasuk tamu yang memantau tiket atau user terdaftar) menerima aliran snapshot Firestore secara langsung tanpa jeda.
+  - Saat Superadmin menekan tombol **"Terima"** atau **"Setujui Reset"**, data akun di Firestore terbarui seketika dan dalam hitungan milidetik status tampilan di sisi user langsung berubah menjadi **Terverifikasi (Akun Aktif)** atau **Sandi Sementara Diterbitkan**.
 
 ---
 
-### 4. Verification & Testing Steps
+### 3. Sub Menu "Ubah Kata Sandi" Khusus User Terdaftar & Admin Wilayah
+* **Tujuan**: Memberikan fasilitas mandiri bagi akun peran `user` (anggota pilar sosial terdaftar) dan `admin` (pejabat dinas sosial 27 kab/kota) untuk memperbarui kata sandi akunnya sendiri.
+* **Implementasi**:
+  - **Di `src/components/Navbar.tsx`**: Ditambahkan item sub menu navigasi **"Ubah Kata Sandi"** (`id: 'ubah_password_user_admin'`) di menu dropdown **Pusat Akun** yang khusus muncul saat sesi aktif berstatus `SAH_TERDAFTAR` dan perannya adalah `user` atau `admin`. Klik sub menu ini langsung mengarahkan dan melakukan *smooth scroll* ke kartu `#ubah-password-section`.
+  - **Di `src/components/AccountPage.tsx`**:
+    - Disediakan kartu elegan bertema Emerald/Teal berlabel **"Ubah Kata Sandi Akun"** dengan indikator *Tersambung Realtime Database*.
+    - Form mencakup: Kata Sandi Saat Ini (dengan verifikasi kecocokan terhadap database), Kata Sandi Baru (minimal 6 karakter), dan Konfirmasi Kata Sandi Baru lengkap dengan tombol *toggle* tampilkan/sembunyikan sandi (ikon mata).
+    - Validasi ketat diterapkan (sandi baru tidak boleh sama dengan sandi lama, konfirmasi harus cocok, sandi lama harus valid).
+    - Perubahan langsung membuat hash baru (Bcrypt) dan tersimpan ke Firestore `admin_accounts` serta sinkron ke state lokal.
 
-1. **Uji Edit Sandi Superadmin**:
-   - Ubah sandi Superadmin menjadi sandi baru yang ditentukan pengguna.
-   - Periksa tabel: teks sandi baru yang tampil.
-   - Coba login dengan sandi baru -> Harus Berhasil.
-   - Coba login dengan sandi lama (`super12345jabar` / `Super12345jabar`) -> Harus Ditolak 401.
-2. **Uji Edit Sandi Developer**:
-   - Ubah sandi Developer menjadi sandi baru.
-   - Coba login dengan sandi baru -> Harus Berhasil.
-   - Coba login dengan sandi lama -> Harus Ditolak 401.
-3. **Uji QR Code & NFC**:
-   - Pindai kartu QR Code atau token NFC -> Harus tetap berhasil masuk dengan role sah.
+---
+
+### 4. Celah Keamanan Single Session Kick (Auto Kick Sesi Lama Universal)
+* **Tujuan**: Memastikan integritas keamanan single-session: saat sebuah akun diloginkan di perangkat/sesi lain, sesi lama pada akun tersebut wajib otomatis ditendang (*force logout*) seketika.
+* **Akar Masalah Sebelumnya**:
+  - Pengecekan sesi sebelumnya memiliki pengecualian `session.role !== 'developer'`, pembatasan `isDifferentDevice`, dan percabangan `else if (remoteLoginTime <= loginTime)` yang justru menimpa token sesi baru dengan token sesi lama.
+* **Implementasi**:
+  - Di `src/App.tsx`, logika deteksi konflik sesi disempurnakan menjadi aturan universal yang berlaku untuk **SEMUA ROLE TANPA TERKECUALI** (`user`, `admin`, `superadmin`, `developer`).
+  - Setiap kali proses login terjadi di mana pun, token sesi unik baru (`sessionToken`) diterbitkan dan disimpan ke dokumen akun di Firestore.
+  - Sesi aktif yang sedang berjalan terus memantau `matched.sessionToken`. Jika token di database berbeda dengan `localToken` sesi lokal (`matched.sessionToken !== localToken`), sesi lama langsung memunculkan `MultipleSessionWarningModal` dan melakukan *force logout*.
+  - Sesi baru di perangkat kedua tetap berjalan normal dan aman tanpa risiko tertimpa kembali oleh sesi lama.
