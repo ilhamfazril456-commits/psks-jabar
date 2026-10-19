@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { OfficialPsksLogo } from './OfficialPsksLogo';
 import { KAB_KOTA_ONLY } from '../data/initialData';
 import { AdminAccount, AppSettings } from '../types';
@@ -40,6 +40,7 @@ const PrivacyTermsModal = React.lazy(() => import('./PrivacyTermsModal').then(m 
 const RegisterSuccessModal = React.lazy(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
 const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
 const PrintableQRCardModal = React.lazy(() => import('./PrintableQRCardModal').then(m => ({ default: m.PrintableQRCardModal })));
+import { AuthorityPinVerificationModal } from './AuthorityPinVerificationModal';
 import {
   getStableDeviceId,
   detectClientIp,
@@ -142,6 +143,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const [lockoutRemaining, setLockoutRemaining] = useState(0);
   const [captchaRefreshTrigger, setCaptchaRefreshTrigger] = useState(0);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [pendingAuthorityLogin, setPendingAuthorityLogin] = useState<{
+    role: 'superadmin' | 'developer';
+    nama: string;
+    wilayah: string;
+    username?: string;
+    userId?: string;
+  } | null>(null);
 
   // Hardware Scanner & Print Modals
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
@@ -152,11 +160,47 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const [isPrivacyTermsOpen, setIsPrivacyTermsOpen] = useState(false);
   const [privacyTermsInitialTab, setPrivacyTermsInitialTab] = useState<'privacy' | 'terms'>('privacy');
 
+  // Privileged 6-Digit PIN Gate State (for Superadmin & Developer manual logins)
+  const [pendingPrivilegedAuth, setPendingPrivilegedAuth] = useState<{
+    role: 'superadmin' | 'developer';
+    nama: string;
+    wilayah: string;
+    username?: string;
+    userId?: string;
+  } | null>(null);
+
   // Input & Scroll Refs
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const captchaInputRef = useRef<HTMLInputElement>(null);
   const regUsernameRef = useRef<HTMLInputElement>(null);
+
+  const executeDirectLoginSuccess = useCallback((
+    role: 'user' | 'developer' | 'superadmin' | 'admin',
+    nama: string,
+    wilayah: string,
+    username?: string,
+    userId?: string
+  ) => {
+    setIsLoggingIn(true);
+    setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
+    setErrorMessage('');
+
+    onPerformLogin(role, nama, wilayah, username, userId);
+
+    setTimeout(() => {
+      setFailedAttempts(0);
+      setLockoutRemaining(0);
+      setUsernameInput('');
+      setPasswordInput('');
+      setCaptchaInput('');
+      setCaptchaError(false);
+      setIsLoggingIn(false);
+      setSuccessMessage('');
+      setView('main');
+      onClose();
+    }, 350);
+  }, [onPerformLogin, onClose]);
 
   // Bot Honeypot Traps & Request Throttling (Zero layout impact, eliminates automated bots)
   const [regHoneypot, setRegHoneypot] = useState('');
@@ -624,25 +668,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       username?: string,
       userId?: string
     ) => {
-      setIsLoggingIn(true);
-      setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
-      setErrorMessage('');
-
-      // Trigger login state update with explicit username and account ID
-      onPerformLogin(role, nama, wilayah, username, userId);
-
-      setTimeout(() => {
-        setFailedAttempts(0);
-        setLockoutRemaining(0);
-        setUsernameInput('');
-        setPasswordInput('');
-        setCaptchaInput('');
-        setCaptchaError(false);
-        setIsLoggingIn(false);
-        setSuccessMessage('');
-        setView('main');
-        onClose();
-      }, 350);
+      // Privileged Access Management: Superadmin and Developer MUST pass 6-digit PIN verification
+      if (role === 'superadmin' || role === 'developer') {
+        setPendingPrivilegedAuth({
+          role,
+          nama,
+          wilayah,
+          username,
+          userId,
+        });
+        return;
+      }
+      executeDirectLoginSuccess(role, nama, wilayah, username, userId);
     };
 
     // 0. Primary Secure Server-Side Login (Protects Passwords & Hashes from Client-Side Exposure)
@@ -2209,6 +2246,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             wilayah={registeredUserData?.wilayah || ''}
           />
         </React.Suspense>
+      )}
+
+      {/* Modal Otorisasi PIN 6 Digit Pure Putih untuk Superadmin & Developer */}
+      {pendingPrivilegedAuth && (
+        <AuthorityPinVerificationModal
+          role={pendingPrivilegedAuth.role}
+          nama={pendingPrivilegedAuth.nama}
+          wilayah={pendingPrivilegedAuth.wilayah}
+          method="manual"
+          appSettings={appSettings}
+          onSuccess={() => {
+            const auth = pendingPrivilegedAuth;
+            setPendingPrivilegedAuth(null);
+            executeDirectLoginSuccess(auth.role, auth.nama, auth.wilayah, auth.username, auth.userId);
+          }}
+          onCancel={() => {
+            setPendingPrivilegedAuth(null);
+          }}
+        />
       )}
 
     </div>

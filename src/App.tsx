@@ -115,6 +115,7 @@ import {
   isQuotaError,
 } from './services/firestoreDataService';
 import { validateQRCardPayload } from './utils/qrAuth';
+import { AuthorityPinVerificationModal } from './components/AuthorityPinVerificationModal';
 import { removeAccountFromQuota, getStableDeviceId } from './services/ipRegistrationService';
 import {
   getInitialRegionalSummary,
@@ -148,6 +149,13 @@ export default function App() {
     const deviceId = sessionStorage.getItem('session_device_id') || undefined;
     return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId };
   });
+
+  // Pending NFC SmartCard 6-Digit PIN Authority Gate State
+  const [pendingNfcPinAuth, setPendingNfcPinAuth] = useState<{
+    role: 'superadmin' | 'developer';
+    nama: string;
+    wilayah: string;
+  } | null>(null);
 
   // 1b. Global App Settings state with Firestore Real-time Sync & Permanent Persistence
   const [appSettings, setAppSettings] = useState<AppSettings>(() => {
@@ -683,20 +691,11 @@ export default function App() {
             }
           } catch (_) {}
 
-          handleLogin(authResult.role, authResult.nama || 'Superadmin Jabar', authResult.wilayah || 'PROVINSI JAWA BARAT');
-          recordSystemActivity({
-            session: {
-              role: authResult.role,
-              nama: authResult.nama || 'Superadmin Jabar',
-              wilayah: authResult.wilayah || 'PROVINSI JAWA BARAT',
-              statusActive: 'SAH_TERDAFTAR',
-              isDeveloper: authResult.role === 'developer',
-            },
-            category: 'SYSTEM',
-            actionType: 'UPDATE',
-            targetCollection: 'app_settings',
-            targetId: 'smart_card_nfc_auth',
-            details: `Akses Login Instan Terverifikasi via Smart Card NFC 13.56 MHz (${authResult.nama})`,
+          // Privileged 6-digit PIN verification before granting access
+          setPendingNfcPinAuth({
+            role: authResult.role,
+            nama: authResult.nama || (authResult.role === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar'),
+            wilayah: authResult.wilayah || 'PROVINSI JAWA BARAT',
           });
 
           // Clean URL params seamlessly
@@ -4014,6 +4013,41 @@ export default function App() {
     }
   };
 
+  // Privileged NFC 6-Digit PIN Authority Gate Modal
+  if (pendingNfcPinAuth) {
+    return (
+      <AuthorityPinVerificationModal
+        role={pendingNfcPinAuth.role}
+        nama={pendingNfcPinAuth.nama}
+        wilayah={pendingNfcPinAuth.wilayah}
+        method="nfc"
+        appSettings={appSettings}
+        onSuccess={() => {
+          const auth = pendingNfcPinAuth;
+          setPendingNfcPinAuth(null);
+          handleLogin(auth.role, auth.nama, auth.wilayah);
+          recordSystemActivity({
+            session: {
+              role: auth.role,
+              nama: auth.nama,
+              wilayah: auth.wilayah,
+              statusActive: 'SAH_TERDAFTAR',
+              isDeveloper: auth.role === 'developer',
+            },
+            category: 'SYSTEM',
+            actionType: 'UPDATE',
+            targetCollection: 'app_settings',
+            targetId: 'smart_card_nfc_auth',
+            details: `Akses Login Instan Terverifikasi via Smart Card NFC 13.56 MHz & PIN (${auth.nama})`,
+          });
+        }}
+        onCancel={() => {
+          setPendingNfcPinAuth(null);
+        }}
+      />
+    );
+  }
+
   // Strict User Flow: When gateModalOpen is true (new visitor or logging in),
   // render ONLY SmartGateModal so zero main content, hero, navbar, or background flashes
   if (gateModalOpen) {
@@ -4815,6 +4849,39 @@ export default function App() {
             }}
           />
         </React.Suspense>
+      )}
+
+      {/* Modal Otorisasi PIN 6 Digit Pure Putih untuk Tap SmartCard NFC */}
+      {pendingNfcPinAuth && (
+        <AuthorityPinVerificationModal
+          role={pendingNfcPinAuth.role}
+          nama={pendingNfcPinAuth.nama}
+          wilayah={pendingNfcPinAuth.wilayah}
+          method="nfc"
+          appSettings={appSettings}
+          onSuccess={() => {
+            const auth = pendingNfcPinAuth;
+            setPendingNfcPinAuth(null);
+            handleLogin(auth.role, auth.nama, auth.wilayah);
+            recordSystemActivity({
+              session: {
+                role: auth.role,
+                nama: auth.nama,
+                wilayah: auth.wilayah,
+                statusActive: 'SAH_TERDAFTAR',
+                isDeveloper: auth.role === 'developer',
+              },
+              category: 'SYSTEM',
+              actionType: 'UPDATE',
+              targetCollection: 'app_settings',
+              targetId: 'smart_card_nfc_auth',
+              details: `Akses Login Instan Terverifikasi via Smart Card NFC & PIN 6 Digit (${auth.nama})`,
+            });
+          }}
+          onCancel={() => {
+            setPendingNfcPinAuth(null);
+          }}
+        />
       )}
 
       {/* Footer is placed strictly inside the beranda container to prevent any footer flash on feature transitions */}
