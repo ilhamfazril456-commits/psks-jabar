@@ -275,6 +275,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
       onUpdateAdminAccount(
         {
           ...editingAccount,
+          _previousUsername: editingAccount.username,
           username: userNew,
           namaAdmin: userNew,
           role: lockedRole,
@@ -282,7 +283,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
           passwordPolos: sandiNew,
           passwordHash: hashPassword(sandiNew),
           lastUpdatedTimestamp: Date.now(),
-        },
+        } as any,
         'PASSWORD_CHANGED'
       );
     }

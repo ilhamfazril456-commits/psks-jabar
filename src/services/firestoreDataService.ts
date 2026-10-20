@@ -201,7 +201,6 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       statusActive: statusActive || 'SAH_TERDAFTAR',
       wilayahTugas: safeWilayah,
       passwordHash: passwordHash || '',
-      passwordPolos: preservedPasswordPolos,
       sessionToken: sessionToken || '',
       data: {
         ...rest,
@@ -825,7 +824,7 @@ export async function setFirestoreDoc(
     if (isMerge && collectionName === 'admin_accounts') {
       // PARTIAL UPDATE for admin_accounts: NEVER wipe omitted columns (like username, role, passwordHash)!
       const partialUpdate: Record<string, any> = {};
-      if (data.username !== undefined && data.username !== '' && data.username !== docId) {
+      if (data.username !== undefined && data.username !== '') {
         partialUpdate.username = data.username;
       }
       if (data.namaAdmin !== undefined && data.namaAdmin !== '') {
@@ -852,30 +851,36 @@ export async function setFirestoreDoc(
         partialUpdate.passwordHash = data.passwordHash;
       }
       if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
-      if (data.passwordPolos !== undefined && data.passwordPolos !== '') {
-        partialUpdate.passwordPolos = data.passwordPolos;
-      }
 
-      // Extract non-column fields to store in JSONB data
+      // Extract non-column fields to store in JSONB data (passwordPolos strictly lives in data JSONB)
       const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, ...rest } = data;
-      if (Object.keys(rest).length > 0 || data.passwordPolos !== undefined || data.passwordHash !== undefined) {
-        try {
-          const existing = await supabase.from('admin_accounts').select('data').eq('id', docId).maybeSingle();
+      try {
+        const existing = await supabase.from('admin_accounts').select('id, data').eq('id', docId).maybeSingle();
+        if (!existing.data) {
+          // Row does not exist yet in Supabase, perform complete upsert
+          const row = mapDocToSupabaseRow(collectionName, docId, data);
+          const { error } = await supabase.from('admin_accounts').upsert(row);
+          if (!error) supabaseOk = true;
+          else supabaseError = error;
+        } else {
           const existingData = existing.data?.data && typeof existing.data.data === 'object' ? existing.data.data : {};
           partialUpdate.data = {
             ...existingData,
             ...rest,
-            ...(data.passwordPolos ? { passwordPolos: data.passwordPolos } : {}),
-            ...(data.passwordHash ? { passwordHash: data.passwordHash } : {}),
+            ...(data.passwordPolos !== undefined ? { passwordPolos: data.passwordPolos } : {}),
+            ...(data.passwordHash !== undefined ? { passwordHash: data.passwordHash } : {}),
+            ...(data.lastUpdatedTimestamp ? { lastUpdatedTimestamp: data.lastUpdatedTimestamp } : {}),
           };
-        } catch {}
-      }
 
-      const { error } = await supabase.from('admin_accounts').update(partialUpdate).eq('id', docId);
-      if (!error) {
-        supabaseOk = true;
-      } else {
-        supabaseError = error;
+          const { error } = await supabase.from('admin_accounts').update(partialUpdate).eq('id', docId);
+          if (!error) {
+            supabaseOk = true;
+          } else {
+            supabaseError = error;
+          }
+        }
+      } catch (checkErr) {
+        supabaseError = checkErr;
       }
     } else {
       const row = mapDocToSupabaseRow(collectionName, docId, data);

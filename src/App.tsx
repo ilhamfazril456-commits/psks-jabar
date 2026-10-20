@@ -1391,8 +1391,9 @@ export default function App() {
             );
 
             // For admin accounts and user accounts, preserve real updated password
-            let plainPass = accData.passwordPolos || defaultMatch?.passwordPolos || '';
-            let passHash = accData.passwordHash || defaultMatch?.passwordHash || '';
+            const accDataObj = accData as any;
+            let plainPass = accData.passwordPolos || accDataObj.data?.passwordPolos || defaultMatch?.passwordPolos || '';
+            let passHash = accData.passwordHash || accDataObj.data?.passwordHash || defaultMatch?.passwordHash || '';
 
             const safeRole =
               docId === 'adm-dev' || uname === 'ilhamfazril'
@@ -1453,30 +1454,18 @@ export default function App() {
             } else {
               const existingName = existing.namaAdmin || '';
               const hasPersonalName = /aep|dedi|rina|saepulloh|herdiana|setyowati/i.test(existingName);
-              const needsBcryptHash = !existing.passwordHash || !/^\$2[aby]\$\d{2}\$/.test(existing.passwordHash);
-              const isOldRegionalPass = def.role === 'admin' && (
-                !existing.passwordPolos ||
-                existing.passwordPolos === 'bandung123' ||
-                existing.passwordPolos.includes('Secure99')
-              );
+              const needsPassword = !existing.passwordPolos;
+              const needsHash = !existing.passwordHash;
 
-              if (hasPersonalName || needsBcryptHash || isOldRegionalPass || !existing.namaAdmin || !existing.username || !existing.wilayahTugas) {
-                const updatedHash = isOldRegionalPass
-                  ? (def.passwordHash || '')
-                  : (existing.passwordHash && /^\$2[aby]\$\d{2}\$/.test(existing.passwordHash)
-                    ? existing.passwordHash
-                    : (def.passwordHash || ''));
-
-                const updatedPolos = isOldRegionalPass ? def.passwordPolos : (existing.passwordPolos || def.passwordPolos);
-
+              if (hasPersonalName || needsPassword || needsHash || !existing.namaAdmin || !existing.username || !existing.wilayahTugas) {
                 const sanitized: AdminAccount = {
                   ...existing,
                   username: existing.username || def.username || '',
                   namaAdmin: (hasPersonalName || !existing.namaAdmin) ? def.namaAdmin : existing.namaAdmin,
                   wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
                   role: existing.role || def.role || 'admin',
-                  passwordPolos: updatedPolos,
-                  passwordHash: updatedHash,
+                  passwordPolos: existing.passwordPolos || def.passwordPolos,
+                  passwordHash: existing.passwordHash || def.passwordHash || '',
                 };
                 loadedMap.set(existing.id, sanitized);
               }
@@ -2888,19 +2877,51 @@ export default function App() {
 
         const myUname = (session.username || '').toLowerCase().trim();
         const myUserId = (session.userId || '').toLowerCase().trim();
-        const targetUname = (data.targetUsername || '').toLowerCase().trim();
-        const targetId = (data.targetId || '').toLowerCase().trim();
+        if (data.type === 'CONCURRENT_LOGIN_KICK') {
+          const localToken = session.sessionToken || sessionStorage.getItem('session_token');
+          if (!data.newSessionToken || data.newSessionToken === localToken) return;
 
-        const myLoginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-        const incomingLoginTime = Number(data.timestamp) || 0;
+          const myUname = (session.username || '').toLowerCase().trim();
+          const myUserId = (session.userId || '').toLowerCase().trim();
+          const targetUname = (data.targetUsername || '').toLowerCase().trim();
+          const targetId = (data.targetId || '').toLowerCase().trim();
 
-        const isSameAccount = Boolean(
-          (targetId && myUserId && targetId === myUserId) ||
-          (targetUname && myUname && targetUname === myUname)
-        );
+          const myLoginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+          const incomingLoginTime = Number(data.timestamp) || 0;
 
-        if (isSameAccount && incomingLoginTime > myLoginTime + 1000) {
-          setShowMultipleSessionModal(true);
+          const isSameAccount = Boolean(
+            (targetId && myUserId && targetId === myUserId) ||
+            (targetUname && myUname && targetUname === myUname)
+          );
+
+          if (isSameAccount && incomingLoginTime > myLoginTime + 1000) {
+            setShowMultipleSessionModal(true);
+          }
+        } else if (data.type === 'SECURITY_SIGNAL') {
+          // Developer is immune
+          if (session.role === 'developer') return;
+
+          const myUname = (session.username || session.nama || '').toLowerCase().trim();
+          const myUserId = (session.userId || '').toLowerCase().trim();
+          const targetUname = (data.targetUsername || '').toLowerCase().trim();
+          const prevUname = (data.previousUsername || '').toLowerCase().trim();
+          const targetId = (data.targetId || '').toLowerCase().trim();
+
+          const isSameAccount = Boolean(
+            (targetId && myUserId && targetId === myUserId) ||
+            (targetUname && myUname && targetUname === myUname) ||
+            (prevUname && myUname && prevUname === myUname)
+          );
+
+          if (isSameAccount) {
+            if (data.action === 'FREEZE') {
+              setShowAccountFrozenModal(true);
+            } else if (data.action === 'DELETE') {
+              setShowAccountDeletedModal(true);
+            } else if (data.action === 'PASSWORD' || data.action === 'UPDATE') {
+              setShowAccountEditedModal(true);
+            }
+          }
         }
       };
     } catch {}
@@ -2927,6 +2948,7 @@ export default function App() {
         const userUname = (session.username || session.nama || '').toLowerCase().trim();
         const sessionUserId = (session.userId || '').toLowerCase().trim();
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
+        const prevUname = (data.previousUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
 
         // Developer is immune to admin/freeze/delete signals
@@ -2954,7 +2976,8 @@ export default function App() {
         // STRICT TARGET MATCH: Must match this exact account's unique userId or exact username (NEVER loose display name)
         const isMatch = Boolean(
           (targetId && sessionUserId && targetId === sessionUserId) ||
-          (targetUname && userUname && targetUname === userUname)
+          (targetUname && userUname && targetUname === userUname) ||
+          (prevUname && userUname && prevUname === userUname)
         );
 
         if (isMatch) {
@@ -3855,13 +3878,14 @@ export default function App() {
 
     const targetId = (sanitizedAdmin.id || '').toLowerCase().trim();
     const targetUname = (sanitizedAdmin.username || '').toLowerCase().trim();
+    const prevUname = ((updatedAdmin as any)._previousUsername || '').toLowerCase().trim();
 
     setAdminAccounts((prev) => {
       let matched = false;
       const next = prev.map((a) => {
         const aId = (a.id || '').toLowerCase().trim();
         const aUname = (a.username || '').toLowerCase().trim();
-        if ((targetId && aId === targetId) || (targetUname && aUname === targetUname)) {
+        if ((targetId && aId === targetId) || (targetUname && aUname === targetUname) || (prevUname && aUname === prevUname)) {
           matched = true;
           return sanitizedAdmin;
         }
@@ -3881,7 +3905,8 @@ export default function App() {
       if (rawTicket) {
         const parsed = JSON.parse(rawTicket);
         const ticketUname = (parsed?.username || '').toLowerCase().trim();
-        if (ticketUname && (ticketUname === targetUname || (targetId && ticketUname === targetId))) {
+        if (ticketUname && (ticketUname === targetUname || (prevUname && ticketUname === prevUname) || (targetId && ticketUname === targetId))) {
+          parsed.username = sanitizedAdmin.username || parsed.username;
           parsed.passwordPolos = sanitizedAdmin.passwordPolos || parsed.passwordPolos;
           parsed.statusActive = sanitizedAdmin.statusActive || parsed.statusActive;
           parsed.statusVerval = sanitizedAdmin.statusVerval || parsed.statusVerval;
@@ -3904,16 +3929,30 @@ export default function App() {
     }
 
     if (derivedSignal) {
+      const sigPayload = {
+        action: derivedSignal,
+        targetUsername: sanitizedAdmin.username,
+        previousUsername: prevUname,
+        targetId: sanitizedAdmin.id,
+        targetWilayah: sanitizedAdmin.wilayahTugas,
+        timestamp: Date.now(),
+        by: session.username || session.nama,
+        byRole: session.role,
+      };
+
       try {
-        setFirestoreDoc('security_signals', 'live', {
-          action: derivedSignal,
-          targetUsername: sanitizedAdmin.username,
-          targetId: sanitizedAdmin.id,
-          targetWilayah: sanitizedAdmin.wilayahTugas,
-          timestamp: Date.now(),
-          by: session.username || session.nama,
-          byRole: session.role,
-        }).catch(() => {});
+        const authChannel = new BroadcastChannel('psks_auth_channel');
+        authChannel.postMessage({
+          type: 'SECURITY_SIGNAL',
+          ...sigPayload,
+        });
+        setTimeout(() => {
+          try { authChannel.close(); } catch {}
+        }, 500);
+      } catch {}
+
+      try {
+        setFirestoreDoc('security_signals', 'live', sigPayload).catch(() => {});
       } catch {}
     }
 
@@ -3954,6 +3993,22 @@ export default function App() {
     const targetUname = (targetUsername || target?.username || id).toLowerCase().trim();
 
     // Broadcast remote deletion signal so victim client gets booted instantly with alert
+    try {
+      const authChannel = new BroadcastChannel('psks_auth_channel');
+      authChannel.postMessage({
+        type: 'SECURITY_SIGNAL',
+        action: 'DELETE',
+        targetUsername: targetUname,
+        targetId: targetId,
+        timestamp: Date.now(),
+        by: session.username || session.nama,
+        byRole: session.role,
+      });
+      setTimeout(() => {
+        try { authChannel.close(); } catch {}
+      }, 500);
+    } catch {}
+
     try {
       setFirestoreDoc('security_signals', 'live', {
         action: 'DELETE',

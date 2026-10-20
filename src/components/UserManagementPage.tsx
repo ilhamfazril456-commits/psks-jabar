@@ -276,6 +276,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
         if ((parsed?.username || '').toLowerCase().trim() === targetUname.toLowerCase().trim()) {
           parsed.passwordPolos = pTrim;
           localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(parsed));
+          window.dispatchEvent(new Event('psks_registration_ticket_updated'));
         }
       }
     } catch {}
