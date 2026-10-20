@@ -347,27 +347,32 @@ async function startServer() {
       const uClean = username.trim().toLowerCase();
       const pClean = password.trim();
 
-      // 1. Look up account from Supabase
+      // 1. Look up account from Supabase (Primary Source of Truth)
       let matchedAccount: any = null;
       try {
         const { data, error } = await supabase
           .from('admin_accounts')
-          .select('id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, data')
-          .ilike('username', uClean)
+          .select('*')
+          .or(`username.ilike.${uClean},id.eq.${uClean}`)
           .maybeSingle();
 
         if (!error && data) {
+          const restData = data.data && typeof data.data === 'object' ? data.data : {};
           matchedAccount = {
             id: data.id,
-            username: data.username,
-            namaAdmin: data.namaAdmin || data.username,
-            role: data.role || 'admin',
-            statusActive: data.statusActive || 'SAH_TERDAFTAR',
-            wilayahTugas: data.wilayahTugas || '',
-            passwordHash: data.passwordHash || (data.data && data.data.passwordHash) || '',
-            passwordPolos: (data.data && data.data.passwordPolos) || (data as any).passwordPolos || '',
-            isFrozen: data.data?.isFrozen || false,
-            statusAkun: data.data?.statusAkun,
+            username: data.username || restData.username || data.id,
+            namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
+            role: data.role || restData.role || 'admin',
+            statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+            wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
+            passwordHash: data.passwordHash || restData.passwordHash || '',
+            passwordPolos: data.passwordPolos || restData.passwordPolos || '',
+            statusVerval: data.statusVerval || restData.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+            alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
+            noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
+            isFrozen: data.isFrozen === true || restData.isFrozen === true,
+            statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
+            resetTicket: data.resetTicket || restData.resetTicket || null,
           };
         }
       } catch (sbErr) {
@@ -376,7 +381,9 @@ async function startServer() {
 
       // 2. Fallback to default verified accounts if not found in custom table
       if (!matchedAccount) {
-        const def = DEFAULT_ADMIN_ACCOUNTS.find((a) => (a.username || '').toLowerCase() === uClean);
+        const def = DEFAULT_ADMIN_ACCOUNTS.find(
+          (a) => (a.username || '').toLowerCase().trim() === uClean || a.id.toLowerCase().trim() === uClean
+        );
         if (def) {
           matchedAccount = {
             id: def.id,
@@ -387,6 +394,7 @@ async function startServer() {
             wilayahTugas: def.wilayahTugas,
             passwordHash: def.passwordHash,
             passwordPolos: def.passwordPolos || '',
+            statusAkun: 'AKTIF',
           };
         }
       }
@@ -403,12 +411,44 @@ async function startServer() {
         });
       }
 
-      // 4. Validate password strictly and exclusively against the stored bcrypt hash from database
+      // 4. Validate password against bcrypt hash, plain text, or approved reset ticket
+      const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
       const isValid =
         comparePassword(pClean, matchedAccount.passwordHash) ||
-        (Boolean(matchedAccount.passwordPolos) && pClean === matchedAccount.passwordPolos);
+        (Boolean(matchedAccount.passwordPolos) && pClean === matchedAccount.passwordPolos) ||
+        (Boolean(tempResetPass) && pClean === tempResetPass);
+
       if (!isValid) {
         return res.status(401).json({ valid: false, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });
+      }
+
+      // 5. Check Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum diizinkan login)
+      if (matchedAccount.role === 'user') {
+        const isPending = matchedAccount.statusVerval === 'MENUNGGU_VERIFIKASI' || matchedAccount.statusActive === 'PENDING_VERIFIKASI';
+        const isRejected = matchedAccount.statusVerval === 'DITOLAK' || matchedAccount.statusActive === 'DITOLAK';
+
+        if (isPending) {
+          return res.status(403).json({
+            valid: false,
+            isPending: true,
+            message: '⏳ AKUN MENUNGGU VERIFIKASI: Pendaftaran akun Anda sedang dalam proses verifikasi oleh Superadmin Dinas Sosial Provinsi Jawa Barat.',
+            ticket: {
+              username: matchedAccount.username,
+              wilayah: matchedAccount.wilayahTugas,
+              noRegistrasi: matchedAccount.noRegistrasi || `REG-PSKS-${(matchedAccount.id || '').slice(-6)}`,
+              passwordPolos: matchedAccount.passwordPolos || pClean,
+            },
+          });
+        }
+
+        if (isRejected) {
+          const reason = matchedAccount.alasanPenolakan || 'Data yang diajukan belum memenuhi persyaratan.';
+          return res.status(403).json({
+            valid: false,
+            isRejected: true,
+            message: `❌ PENDAFTARAN DITOLAK: Pengajuan akun Anda ditolak oleh Superadmin (${reason}). Silakan lakukan pendaftaran ulang.`,
+          });
+        }
       }
 
       // Guaranteed authority protection: Superadmin & Developer can NEVER be downgraded to regular admin

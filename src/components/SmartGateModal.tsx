@@ -851,29 +851,65 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         return;
       }
       if (resp.status === 403 || resp.status === 429) {
+        if (data.isPending && data.ticket) {
+          setRegistrationTicket(data.ticket);
+          try {
+            localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(data.ticket));
+          } catch {}
+          setErrorMessage(data.message || '⏳ Akun sedang dalam proses verifikasi.');
+          setView('register_status');
+          return;
+        }
         setErrorMessage(data.message || 'Akses masuk ditolak.');
         triggerFailedAttempt();
         return;
       }
       if (resp.status === 401) {
-        const localMatched = adminAccounts.find(
-          (a) => (a.username || '').toLowerCase().trim() === uLower
-        );
-        if (!localMatched) {
-          setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
-          triggerFailedAttempt();
-          return;
-        }
-        // Proceed to Step 1 below to validate against real-time local/Firestore account!
+        // Proceed to fallback check below to validate against real-time local/Supabase/Firestore account
       }
     } catch {
       // Offline fallback: continue to local check only if server is unreachable
     }
 
-    // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash or plain password)
+    // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash, plain password, or reset ticket)
     let matchedAccount = adminAccounts.find(
-      (a) => (a.username || '').toLowerCase().trim() === uLower
+      (a) =>
+        (a.username || '').toLowerCase().trim() === uLower ||
+        (a.id || '').toLowerCase().trim() === uLower ||
+        (a.noRegistrasi || '').toLowerCase().trim() === uLower
     );
+
+    // If not found in memory state yet, do immediate direct lookup from Supabase / Firestore
+    if (!matchedAccount) {
+      try {
+        const { supabase } = await import('../services/supabaseClient');
+        const { data: sbUser } = await supabase
+          .from('admin_accounts')
+          .select('*')
+          .or(`username.ilike.${uLower},id.eq.${uLower}`)
+          .maybeSingle();
+
+        if (sbUser) {
+          const restData = sbUser.data && typeof sbUser.data === 'object' ? sbUser.data : {};
+          matchedAccount = {
+            id: sbUser.id,
+            username: sbUser.username || restData.username || sbUser.id,
+            namaAdmin: sbUser.namaAdmin || restData.namaAdmin || sbUser.username,
+            role: sbUser.role || restData.role || 'user',
+            statusActive: sbUser.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+            wilayahTugas: sbUser.wilayahTugas || restData.wilayahTugas || '',
+            passwordHash: sbUser.passwordHash || restData.passwordHash || '',
+            passwordPolos: sbUser.passwordPolos || restData.passwordPolos || '',
+            statusVerval: sbUser.statusVerval || restData.statusVerval || '',
+            alasanPenolakan: sbUser.alasanPenolakan || restData.alasanPenolakan || '',
+            noRegistrasi: sbUser.noRegistrasi || restData.noRegistrasi || '',
+            isFrozen: sbUser.isFrozen === true || restData.isFrozen === true,
+            statusAkun: sbUser.statusAkun || restData.statusAkun || 'AKTIF',
+            resetTicket: sbUser.resetTicket || restData.resetTicket || null,
+          } as AdminAccount;
+        }
+      } catch {}
+    }
 
     if (matchedAccount) {
       if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN' || matchedAccount.statusActive === 'FROZEN') {
@@ -881,9 +917,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         return;
       }
 
+      const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
       const isValid =
         comparePassword(pInput, matchedAccount.passwordHash) ||
-        (Boolean(matchedAccount.passwordPolos) && pInput === matchedAccount.passwordPolos);
+        (Boolean(matchedAccount.passwordPolos) && pInput === matchedAccount.passwordPolos) ||
+        (Boolean(tempResetPass) && pInput === tempResetPass);
       if (isValid) {
         // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
         if (matchedAccount.role === 'user') {

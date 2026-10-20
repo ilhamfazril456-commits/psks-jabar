@@ -2554,13 +2554,13 @@ export default function App() {
 
     // Mark matching account as online & record session token, status, and login timestamp in state & database
     const currentAccounts = adminAccountsRef.current.length > 0 ? adminAccountsRef.current : adminAccounts;
+    const cleanResolvedUname = (resolvedUsername || '').toLowerCase().trim();
+    const cleanResolvedId = (resolvedUserId || '').toLowerCase().trim();
+
     const matched = currentAccounts.find(
       (a) =>
-        (resolvedUserId && a.id === resolvedUserId) ||
-        (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim() ||
-        (a.namaAdmin || '').toLowerCase().trim() === (nama || '').toLowerCase().trim() ||
-        (role === 'developer' && a.role === 'developer') ||
-        (role === 'superadmin' && a.role === 'superadmin')
+        (cleanResolvedId && (a.id || '').toLowerCase().trim() === cleanResolvedId) ||
+        (cleanResolvedUname && (a.username || '').toLowerCase().trim() === cleanResolvedUname)
     );
 
     const loginAccountPayload = {
@@ -2787,14 +2787,12 @@ export default function App() {
           return;
         }
 
-        // 4. Check Account Edited (Req 4) - only when edited by admin while user is actively logged in
-        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+        // 4. Check Account Role / Permission Change (only if role was explicitly modified while user is active)
         if (
           session.role !== 'developer' &&
           session.role !== 'superadmin' &&
-          matched.lastUpdatedTimestamp &&
-          loginTime > 0 &&
-          matched.lastUpdatedTimestamp > loginTime + 4000
+          matched.role &&
+          matched.role !== session.role
         ) {
           if (!showAccountEditedModal) {
             setShowAccountEditedModal(true);
@@ -2900,7 +2898,7 @@ export default function App() {
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
         if (!data.newSessionToken || data.newSessionToken === localToken) return;
 
-        const myUname = (session.username || session.nama || '').toLowerCase().trim();
+        const myUname = (session.username || '').toLowerCase().trim();
         const myUserId = (session.userId || '').toLowerCase().trim();
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
@@ -3915,7 +3913,7 @@ export default function App() {
     });
 
     try {
-      await setFirestoreDoc('admin_accounts', sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin));
+      await setFirestoreDoc('admin_accounts', sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin), { merge: true });
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;

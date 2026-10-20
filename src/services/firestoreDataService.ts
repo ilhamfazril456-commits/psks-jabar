@@ -534,7 +534,7 @@ export function subscribeToCollection(
   // 1. Initial bulk fetch from Supabase
   refreshCollection();
 
-  // 2. High-frequency polling safety sync for critical Supabase collections (2s interval)
+  // 2. High-frequency polling safety sync for critical Supabase collections (1.2s interval)
   if (
     collectionName === 'admin_accounts' ||
     collectionName === 'registration_submissions' ||
@@ -544,10 +544,35 @@ export function subscribeToCollection(
       if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
         refreshCollection();
       }
-    }, 2000);
+    }, 1200);
   }
 
-  // 3. Supabase Realtime channel listener with debounce protection
+  // 3. Concurrent Real-time Firestore onSnapshot listener for instant sub-second trigger
+  if (
+    collectionName === 'admin_accounts' ||
+    collectionName === 'registration_submissions' ||
+    collectionName === 'security_signals'
+  ) {
+    getFirestoreModule()
+      .then(({ firestore, db }) => {
+        if (isCancelled) return;
+        const colRef = firestore.collection(db, collectionName);
+        unsubFirestore = firestore.onSnapshot(
+          colRef,
+          () => {
+            if (isCancelled) return;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              refreshCollection();
+            }, 300);
+          },
+          () => {}
+        );
+      })
+      .catch(() => {});
+  }
+
+  // 4. Supabase Realtime channel listener with debounce protection
   const channelName = `sub_col_${collectionName}_${Date.now()}`;
   const channel = supabase
     .channel(channelName)
@@ -563,7 +588,7 @@ export function subscribeToCollection(
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           refreshCollection();
-        }, 600);
+        }, 400);
       }
     );
 
@@ -573,6 +598,11 @@ export function subscribeToCollection(
     isCancelled = true;
     if (debounceTimer) clearTimeout(debounceTimer);
     if (pollInterval) clearInterval(pollInterval);
+    if (unsubFirestore) {
+      try {
+        unsubFirestore();
+      } catch {}
+    }
     unsubChannel();
   };
 }

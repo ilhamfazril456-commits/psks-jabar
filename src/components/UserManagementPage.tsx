@@ -331,8 +331,13 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   const handleConfirmApprove = () => {
     if (!approvingAccount) return;
     const account = approvingAccount;
+    const preservedPassPolos = account.passwordPolos || (account as any).data?.passwordPolos || '';
+    const preservedPassHash = account.passwordHash || (account as any).data?.passwordHash || '';
+
     const updatedAccount: AdminAccount = {
       ...account,
+      passwordPolos: preservedPassPolos,
+      passwordHash: preservedPassHash,
       statusVerval: 'DISETUJUI',
       statusActive: 'SAH_TERDAFTAR',
       statusAkun: 'AKTIF',
@@ -901,7 +906,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                     const isApproved = user.statusVerval === 'DISETUJUI' || (!user.statusVerval && user.statusActive === 'SAH_TERDAFTAR');
                     const isFrozen = user.isFrozen === true || user.statusAkun === 'DIBEKUKAN';
                     const isPassVisible = visiblePasswords[user.id] || false;
-                    const plainPass = user.passwordPolos || '********';
+                    const plainPass = user.passwordPolos || user.resetTicket?.temporaryPassword || (user as any).data?.passwordPolos || '********';
 
                     return (
                       <tr
