@@ -858,11 +858,16 @@ export async function setFirestoreDoc(
 
       // Extract non-column fields to store in JSONB data
       const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, ...rest } = data;
-      if (Object.keys(rest).length > 0) {
+      if (Object.keys(rest).length > 0 || data.passwordPolos !== undefined || data.passwordHash !== undefined) {
         try {
           const existing = await supabase.from('admin_accounts').select('data').eq('id', docId).maybeSingle();
           const existingData = existing.data?.data && typeof existing.data.data === 'object' ? existing.data.data : {};
-          partialUpdate.data = { ...existingData, ...rest, ...(data.passwordPolos ? { passwordPolos: data.passwordPolos } : {}) };
+          partialUpdate.data = {
+            ...existingData,
+            ...rest,
+            ...(data.passwordPolos ? { passwordPolos: data.passwordPolos } : {}),
+            ...(data.passwordHash ? { passwordHash: data.passwordHash } : {}),
+          };
         } catch {}
       }
 

@@ -261,6 +261,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       ...editingAccount,
       passwordPolos: pTrim,
       passwordHash: hashPassword(pTrim),
+      resetTicket: null as any,
       lastUpdatedTimestamp: Date.now(),
     };
 

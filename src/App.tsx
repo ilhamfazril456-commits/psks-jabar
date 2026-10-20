@@ -1390,20 +1390,9 @@ export default function App() {
               (def) => def.id === docId || (def.username || '').toLowerCase().trim() === uname
             );
 
-            // For admin accounts and user accounts, preserve real password
+            // For admin accounts and user accounts, preserve real updated password
             let plainPass = accData.passwordPolos || defaultMatch?.passwordPolos || '';
             let passHash = accData.passwordHash || defaultMatch?.passwordHash || '';
-
-            if (defaultMatch && defaultMatch.role === 'admin' && defaultMatch.passwordPolos) {
-              const isOldPass = !accData.passwordPolos ||
-                accData.passwordPolos === 'bandung123' ||
-                accData.passwordPolos.includes('Secure99') ||
-                accData.passwordPolos !== defaultMatch.passwordPolos;
-              if (isOldPass) {
-                plainPass = defaultMatch.passwordPolos;
-                passHash = defaultMatch.passwordHash || '';
-              }
-            }
 
             const safeRole =
               docId === 'adm-dev' || uname === 'ilhamfazril'

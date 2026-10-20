@@ -129,7 +129,18 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
       );
     }
 
-    // 3. Superadmin & Admin Wilayah Session: Khusus superadmin dan admin wilayah
+    // 3. Superadmin & Admin Wilayah Session: Khusus superadmin dan 27 admin wilayah (DEVELOPER HARAM TAMPIL)
+    if (
+      r === 'developer' ||
+      acc.isDeveloper === true ||
+      acc.id === 'adm-dev' ||
+      u === 'ilhamfazril' ||
+      u === 'adm-dev' ||
+      n.includes('developer')
+    ) {
+      return false;
+    }
+
     return (
       r === 'superadmin' ||
       r === 'admin' ||

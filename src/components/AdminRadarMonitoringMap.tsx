@@ -78,7 +78,7 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
     };
   }, []);
 
-  // 1. FILTER KHUSUS ADMIN & SUPERADMIN SAJA
+  // 1. FILTER KHUSUS ADMIN & SUPERADMIN SAJA (DEVELOPER HARAM TAMPIL UNTUK SUPERADMIN)
   const strictlyFilteredAdminAccounts = useMemo(() => {
     return adminAccounts.filter((acc) => {
       const r = (acc.role || '').toLowerCase().trim();
@@ -101,11 +101,25 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
         return false;
       }
 
-      return r === 'superadmin' || r === 'admin' || r === 'developer' || acc.isDeveloper === true;
-    });
-  }, [adminAccounts]);
+      // STRICT PRIVACY RULE: Akun Developer HARAM ditampilkan jika pengguna yang sedang login bukan Developer!
+      if (session?.role !== 'developer') {
+        if (
+          r === 'developer' ||
+          acc.isDeveloper === true ||
+          acc.id === 'adm-dev' ||
+          u === 'ilhamfazril' ||
+          u === 'adm-dev' ||
+          n.includes('developer')
+        ) {
+          return false;
+        }
+      }
 
-  // 2. Evaluasi status presence (ONLINE = Hijau Neon Menyala, BACKGROUND = Kuning Menyala, OFFLINE = Redup)
+      return r === 'superadmin' || r === 'admin' || (session?.role === 'developer' && (r === 'developer' || acc.isDeveloper === true));
+    });
+  }, [adminAccounts, session?.role]);
+
+  // 2. Evaluasi status presence (SINKRON 100% DENGAN GRID INFORMASI BAWAH)
   const computeAccountPresence = (acc: AdminAccount): AdminPresenceStatus => {
     // A. Cek jika akun ini adalah sesi pengguna yang sedang login saat ini di tab ini
     const isCurrentSessionUser =
@@ -124,30 +138,36 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
       return 'ONLINE';
     }
 
-    // B. Cek status realtime akun lain (Heartbeat Firestore & Signal Live)
-    const activeTime = acc.lastHeartbeat || acc.lastActive;
-    if (!activeTime) return 'OFFLINE';
-
-    const timeDiff = Date.now() - new Date(activeTime).getTime();
-    if (isNaN(timeDiff) || timeDiff > 120 * 1000) {
-      return 'OFFLINE';
+    // B. Cek status realtime akun lain (SINKRON DENGAN getAccountScreenStatus pada Grid Bawah)
+    // 1. Cek explicit status flag terlebih dahulu
+    if (
+      acc.statusLayar === 'AKTIF_LAYAR' ||
+      acc.statusKoneksi === 'ONLINE' ||
+      acc.isOnline === true ||
+      acc.isScreenActive === true
+    ) {
+      return 'ONLINE';
     }
 
-    if (acc.statusLayar === 'OFFLINE' || acc.statusKoneksi === 'OFFLINE') {
-      if (timeDiff > 15 * 1000) return 'OFFLINE';
-    }
-
-    if (acc.statusLayar === 'LATAR_BELAKANG' || acc.statusKoneksi === 'IDLE' || acc.statusLayar === 'AFK_IDLE') {
+    if (
+      acc.statusLayar === 'LATAR_BELAKANG' ||
+      acc.statusKoneksi === 'IDLE' ||
+      acc.statusLayar === 'AFK_IDLE'
+    ) {
       return 'BACKGROUND';
     }
 
-    if (acc.statusLayar === 'AKTIF_LAYAR' || acc.statusKoneksi === 'ONLINE' || acc.isOnline === true || acc.isScreenActive === true) {
-      return 'ONLINE';
+    if (acc.statusLayar === 'OFFLINE' || acc.statusKoneksi === 'OFFLINE') {
+      return 'OFFLINE';
     }
 
-    // Jika memiliki heartbeat terbaru dalam 90 detik terakhir
-    if (timeDiff <= 90 * 1000) {
-      return 'ONLINE';
+    // 2. Cek Heartbeat timestamp (dalam batas 90 detik)
+    const activeTime = acc.lastHeartbeat || acc.lastActive;
+    if (activeTime) {
+      const timeDiff = Date.now() - new Date(activeTime).getTime();
+      if (!isNaN(timeDiff) && timeDiff <= 90 * 1000) {
+        return 'ONLINE';
+      }
     }
 
     return 'OFFLINE';
@@ -162,6 +182,14 @@ export const AdminRadarMonitoringMap: React.FC<AdminRadarMonitoringMapProps> = (
           const r = (acc.role || '').toLowerCase();
           const w = (acc.wilayahTugas || '').toLowerCase();
           const u = (acc.username || '').toLowerCase();
+          if (session?.role !== 'developer') {
+            return (
+              r === 'superadmin' ||
+              w.includes('provinsi') ||
+              w.includes('jawa barat') ||
+              u.includes('superadmin')
+            );
+          }
           return (
             r === 'superadmin' ||
             r === 'developer' ||
