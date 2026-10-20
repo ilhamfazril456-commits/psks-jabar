@@ -882,7 +882,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     // If not found in memory state yet, do immediate direct lookup from Supabase / Firestore
     if (!matchedAccount) {
       try {
-        const { supabase } = await import('../services/supabaseClient');
+        const { supabase } = await import('../lib/supabase');
         const { data: sbUser } = await supabase
           .from('admin_accounts')
           .select('*')

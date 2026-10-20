@@ -2802,6 +2802,7 @@ export default function App() {
 
         // 5. Check Multiple Session Active / Login on another device (Single Session Kick)
         // Berlaku untuk SEMUA ROLE: user terdaftar, admin wilayah, superadmin, developer
+        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
         const localToken = session.sessionToken || sessionStorage.getItem('session_token');
         const now = Date.now();
 
