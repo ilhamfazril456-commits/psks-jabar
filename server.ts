@@ -372,11 +372,63 @@ async function startServer() {
             noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
             isFrozen: data.isFrozen === true || restData.isFrozen === true,
             statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
-            resetTicket: data.resetTicket || restData.resetTicket || null,
           };
         }
       } catch (sbErr) {
         console.warn('[Auth Server] Supabase lookup notice:', sbErr);
+      }
+
+      // 1.5. Look up account from Firestore (Authoritative Primary Firestore Database)
+      if (!matchedAccount) {
+        try {
+          const { collection, getDocs, query, where, doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('./src/lib/firebase');
+          const directDoc = await getDoc(doc(db, 'admin_accounts', uClean));
+          if (directDoc.exists()) {
+            const data = directDoc.data();
+            matchedAccount = {
+              id: directDoc.id,
+              username: data.username || directDoc.id,
+              namaAdmin: data.namaAdmin || data.username || directDoc.id,
+              role: data.role || 'user',
+              statusActive: data.statusActive || 'SAH_TERDAFTAR',
+              wilayahTugas: data.wilayahTugas || '',
+              passwordHash: data.passwordHash || '',
+              passwordPolos: data.passwordPolos || '',
+              statusVerval: data.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+              alasanPenolakan: data.alasanPenolakan || '',
+              noRegistrasi: data.noRegistrasi || '',
+              isFrozen: data.isFrozen === true,
+              statusAkun: data.statusAkun || 'AKTIF',
+              resetTicket: data.resetTicket || null,
+            };
+          } else {
+            const q = query(collection(db, 'admin_accounts'), where('username', '==', uClean));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const d = snap.docs[0];
+              const data = d.data();
+              matchedAccount = {
+                id: d.id,
+                username: data.username || d.id,
+                namaAdmin: data.namaAdmin || data.username || d.id,
+                role: data.role || 'user',
+                statusActive: data.statusActive || 'SAH_TERDAFTAR',
+                wilayahTugas: data.wilayahTugas || '',
+                passwordHash: data.passwordHash || '',
+                passwordPolos: data.passwordPolos || '',
+                statusVerval: data.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+                alasanPenolakan: data.alasanPenolakan || '',
+                noRegistrasi: data.noRegistrasi || '',
+                isFrozen: data.isFrozen === true,
+                statusAkun: data.statusAkun || 'AKTIF',
+                resetTicket: data.resetTicket || null,
+              };
+            }
+          }
+        } catch (fsErr) {
+          console.warn('[Auth Server] Firestore lookup notice:', fsErr);
+        }
       }
 
       // 2. Fallback to default verified accounts if not found in custom table
@@ -411,12 +463,27 @@ async function startServer() {
         });
       }
 
-      // 4. Validate password against bcrypt hash, plain text, or approved reset ticket
+      // 4. Validate password against plain text (authoritative current password), approved reset ticket, or bcrypt hash fallback
       const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
-      const isValid =
-        comparePassword(pClean, matchedAccount.passwordHash) ||
-        (Boolean(matchedAccount.passwordPolos) && pClean === matchedAccount.passwordPolos) ||
-        (Boolean(tempResetPass) && pClean === tempResetPass);
+      let isValid = false;
+
+      if (tempResetPass && pClean === tempResetPass) {
+        isValid = true;
+      } else if (matchedAccount.passwordPolos) {
+        // Jika akun memiliki passwordPolos aktif yang sah, input WAJIB cocok dengan passwordPolos aktif ini
+        isValid = (pClean === matchedAccount.passwordPolos);
+        // Sinkronkan hash jika hash lama belum sesuai dengan password baru
+        if (isValid && matchedAccount.passwordHash && !comparePassword(pClean, matchedAccount.passwordHash)) {
+          matchedAccount.passwordHash = hashPassword(pClean);
+          try {
+            const { doc, setDoc } = await import('firebase/firestore');
+            const { db } = await import('./src/lib/firebase');
+            await setDoc(doc(db, 'admin_accounts', matchedAccount.id), { passwordHash: matchedAccount.passwordHash }, { merge: true });
+          } catch {}
+        }
+      } else if (matchedAccount.passwordHash) {
+        isValid = comparePassword(pClean, matchedAccount.passwordHash);
+      }
 
       if (!isValid) {
         return res.status(401).json({ valid: false, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });

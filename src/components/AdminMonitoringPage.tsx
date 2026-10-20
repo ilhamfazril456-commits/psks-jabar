@@ -39,6 +39,59 @@ interface AdminMonitoringPageProps {
   onNavigateToMaintenance?: () => void;
 }
 
+// Determine screen activity status for an account:
+// 'AKTIF_LAYAR' = Online & actively viewing screen (tab visible, focused, active heartbeat within 35s)
+// 'AFK_IDLE' = Online but idle on screen
+// 'LATAR_BELAKANG' = Tab running in background or lost window focus
+// 'OFFLINE' = Offline / Tab closed
+export const getAccountScreenStatus = (
+  acc: AdminAccount,
+  currSession?: UserSession
+): 'AKTIF_LAYAR' | 'AFK_IDLE' | 'LATAR_BELAKANG' | 'OFFLINE' => {
+  // 1. Check if this account is the local session user
+  const sess = currSession;
+  const isCurrentSessionUser =
+    sess?.statusActive === 'SAH_TERDAFTAR' &&
+    (((sess.isDeveloper || sess.role === 'developer') && acc.role === 'developer') ||
+      (sess.role === 'superadmin' && acc.role === 'superadmin') ||
+      (acc.role === sess.role && (acc.wilayahTugas || '').toLowerCase().trim() === (sess.wilayah || '').toLowerCase().trim()) ||
+      (acc.username || '').toLowerCase().trim() === (sess.nama || '').toLowerCase().trim() ||
+      (acc.namaAdmin || '').toLowerCase().trim() === (sess.nama || '').toLowerCase().trim() ||
+      (acc.id || '').toLowerCase().trim() === (sess.nama || '').toLowerCase().trim());
+
+  if (isCurrentSessionUser) {
+    const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
+    if (!isVisible) return 'LATAR_BELAKANG';
+    return 'AKTIF_LAYAR';
+  }
+
+  // 2. Check Firestore heartbeat timestamp (must be within last 90 seconds)
+  const activeTime = acc.lastHeartbeat || acc.lastActive;
+  if (!activeTime) return 'OFFLINE';
+
+  const timeDiff = Date.now() - new Date(activeTime).getTime();
+  if (isNaN(timeDiff) || timeDiff > 90 * 1000) {
+    return 'OFFLINE';
+  }
+
+  // 3. Check explicit statusLayar or statusKoneksi flags
+  if (acc.statusLayar === 'OFFLINE' || acc.statusKoneksi === 'OFFLINE') {
+    if (timeDiff > 15 * 1000) return 'OFFLINE';
+  }
+
+  if (acc.statusLayar === 'AKTIF_LAYAR') return 'AKTIF_LAYAR';
+  if (acc.statusLayar === 'AFK_IDLE') return 'AFK_IDLE';
+  if (acc.statusLayar === 'LATAR_BELAKANG') return 'LATAR_BELAKANG';
+
+  if (acc.isScreenActive === true || acc.statusKoneksi === 'ONLINE' || acc.isOnline === true) {
+    return 'AKTIF_LAYAR';
+  }
+
+  if (acc.statusKoneksi === 'IDLE') return 'AFK_IDLE';
+
+  return 'OFFLINE';
+};
+
 export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
   session,
   adminAccounts,
@@ -136,6 +189,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
       acc.id === 'adm-dev' ||
       u === 'ilhamfazril' ||
       u === 'adm-dev' ||
+      u.includes('developer') ||
       n.includes('developer')
     ) {
       return false;
@@ -149,64 +203,16 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
     );
   });
 
-  // Determine screen activity status for an account:
-  // 'AKTIF_LAYAR' = Online & actively viewing screen (tab visible, focused, active heartbeat within 35s)
-  // 'AFK_IDLE' = Online but idle on screen
-  // 'LATAR_BELAKANG' = Tab running in background or lost window focus
-  // 'OFFLINE' = Offline / Tab closed
-  const getAccountScreenStatus = (acc: AdminAccount): 'AKTIF_LAYAR' | 'AFK_IDLE' | 'LATAR_BELAKANG' | 'OFFLINE' => {
-    // 1. Check if this account is the local session user
-    const isCurrentSessionUser =
-      session?.statusActive === 'SAH_TERDAFTAR' &&
-      (((session.isDeveloper || session.role === 'developer') && acc.role === 'developer') ||
-        (session.role === 'superadmin' && acc.role === 'superadmin') ||
-        (acc.role === session.role && (acc.wilayahTugas || '').toLowerCase().trim() === (session.wilayah || '').toLowerCase().trim()) ||
-        (acc.username || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-        (acc.namaAdmin || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-        (acc.id || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim());
 
-    if (isCurrentSessionUser) {
-      const isVisible = document.visibilityState === 'visible';
-      if (!isVisible) return 'LATAR_BELAKANG';
-      return 'AKTIF_LAYAR';
-    }
-
-    // 2. Check Firestore heartbeat timestamp (must be within last 90 seconds)
-    const activeTime = acc.lastHeartbeat || acc.lastActive;
-    if (!activeTime) return 'OFFLINE';
-
-    const timeDiff = Date.now() - new Date(activeTime).getTime();
-    if (isNaN(timeDiff) || timeDiff > 90 * 1000) {
-      return 'OFFLINE';
-    }
-
-    // 3. Check explicit statusLayar or statusKoneksi flags
-    if (acc.statusLayar === 'OFFLINE' || acc.statusKoneksi === 'OFFLINE') {
-      // If marked offline on unload, double check timeDiff
-      if (timeDiff > 15 * 1000) return 'OFFLINE';
-    }
-
-    if (acc.statusLayar === 'AKTIF_LAYAR') return 'AKTIF_LAYAR';
-    if (acc.statusLayar === 'AFK_IDLE') return 'AFK_IDLE';
-    if (acc.statusLayar === 'LATAR_BELAKANG') return 'LATAR_BELAKANG';
-
-    if (acc.isScreenActive === true || acc.statusKoneksi === 'ONLINE' || acc.isOnline === true) {
-      return 'AKTIF_LAYAR';
-    }
-
-    if (acc.statusKoneksi === 'IDLE') return 'AFK_IDLE';
-
-    return 'OFFLINE';
-  };
 
   const isAccountOnline = (acc: AdminAccount) => {
-    const status = getAccountScreenStatus(acc);
+    const status = getAccountScreenStatus(acc, session);
     return status === 'AKTIF_LAYAR' || status === 'AFK_IDLE' || status === 'LATAR_BELAKANG';
   };
 
   // Activity status text formatting
   const getActivityTime = (acc: AdminAccount) => {
-    const screenStatus = getAccountScreenStatus(acc);
+    const screenStatus = getAccountScreenStatus(acc, session);
     if (screenStatus === 'AKTIF_LAYAR') {
       return `Sedang Aktif Membuka Layar • ${currentTimeStr || '19:25 WIB'}`;
     }
@@ -298,7 +304,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
 
         {/* PETA RADAR PEMANTAUAN ADMIN 28 TITIK PRESISI (LIVE SENSOR HIJAU/KUNING/OFFLINE) */}
         <AdminRadarMonitoringMap
-          adminAccounts={adminAccounts}
+          adminAccounts={relevantAccounts}
           session={session}
           onOpenMessageModal={handleOpenPesanModal}
         />
@@ -312,7 +318,7 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
             </div>
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider m-0">
-                {isDeveloperUser ? 'Target Developer (28 Akun)' : 'Admin Wilayah (27 Kab/Kota)'}
+                {isDeveloperUser ? 'Target Developer (29 Akun)' : 'Otoritas Wilayah Jabar (28 Akun)'}
               </p>
               <h3 className="text-2xl sm:text-3xl font-black text-[#0f2b5c] m-0">
                 {totalMonitored} <span className="text-xs font-extrabold text-slate-400">Akun</span>
@@ -448,11 +454,11 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
           <div className="text-xs text-slate-700 leading-relaxed">
             {isDeveloperUser ? (
               <span>
-                <strong>Mode Akses Developer:</strong> Menampilkan status pemantauan koneksi <strong>1 Superadmin Provinsi Jabar</strong> dan <strong>27 Admin Wilayah Kabupaten/Kota</strong> (Total 28 Akun).
+                <strong>Mode Akses Developer:</strong> Menampilkan status pemantauan koneksi <strong>Pusat Developer Jabar</strong>, <strong>Superadmin Provinsi Jabar</strong>, dan <strong>27 Admin Wilayah Kab/Kota</strong> (Total 29 Akun).
               </span>
             ) : (
               <span>
-                <strong>Mode Akses Superadmin:</strong> Menampilkan status pemantauan koneksi <strong>27 Admin Wilayah Kabupaten/Kota</strong> se-Jawa Barat.
+                <strong>Mode Akses Superadmin:</strong> Menampilkan status pemantauan koneksi <strong>1 Superadmin Provinsi Jabar</strong> dan <strong>27 Admin Wilayah Kabupaten/Kota</strong> se-Jawa Barat (Total 28 Akun Otoritas). Informasi Developer dijaga ketat dan dirahasiakan dari publik/superadmin.
               </span>
             )}
           </div>

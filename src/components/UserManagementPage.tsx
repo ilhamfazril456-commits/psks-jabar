@@ -267,6 +267,19 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
     const targetUname = editingAccount.username;
     onUpdateUserAccount(updatedAccount, 'PASSWORD_CHANGED');
+
+    // Synchronize local registration ticket if matching target user
+    try {
+      const rawTicket = localStorage.getItem('psks_latest_user_registration_ticket');
+      if (rawTicket) {
+        const parsed = JSON.parse(rawTicket);
+        if ((parsed?.username || '').toLowerCase().trim() === targetUname.toLowerCase().trim()) {
+          parsed.passwordPolos = pTrim;
+          localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(parsed));
+        }
+      }
+    } catch {}
+
     setEditingAccount(null);
 
     setActionSuccessModal({

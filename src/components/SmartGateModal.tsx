@@ -304,6 +304,40 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
   }, [adminAccounts, registrationTicket]);
 
+  // Live synchronizer: keep local registration ticket aligned with latest password and verification status
+  useEffect(() => {
+    if (liveRegisteredAccount && registrationTicket) {
+      const livePass = liveRegisteredAccount.passwordPolos;
+      if (livePass && livePass !== registrationTicket.passwordPolos) {
+        const updatedTicket = {
+          ...registrationTicket,
+          passwordPolos: livePass,
+          wilayah: liveRegisteredAccount.wilayahTugas || registrationTicket.wilayah,
+        };
+        setRegistrationTicket(updatedTicket);
+        try {
+          localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(updatedTicket));
+        } catch {}
+      }
+    }
+  }, [liveRegisteredAccount, registrationTicket]);
+
+  // Synchronize when custom ticket updated event fires
+  useEffect(() => {
+    const handleTicketEvent = () => {
+      try {
+        const raw = localStorage.getItem('psks_latest_user_registration_ticket');
+        if (raw) {
+          setRegistrationTicket(JSON.parse(raw));
+        }
+      } catch {}
+    };
+    window.addEventListener('psks_registration_ticket_updated', handleTicketEvent);
+    return () => {
+      window.removeEventListener('psks_registration_ticket_updated', handleTicketEvent);
+    };
+  }, []);
+
   // Detect IP dynamically whenever gate modal is open
   useEffect(() => {
     if (!isOpen) return;
@@ -918,10 +952,17 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       }
 
       const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
-      const isValid =
-        comparePassword(pInput, matchedAccount.passwordHash) ||
-        (Boolean(matchedAccount.passwordPolos) && pInput === matchedAccount.passwordPolos) ||
-        (Boolean(tempResetPass) && pInput === tempResetPass);
+      let isValid = false;
+
+      if (tempResetPass && pInput === tempResetPass) {
+        isValid = true;
+      } else if (matchedAccount.passwordPolos) {
+        // Hanya passwordPolos aktif yang sah yang diterima
+        isValid = (pInput === matchedAccount.passwordPolos);
+      } else if (matchedAccount.passwordHash) {
+        isValid = comparePassword(pInput, matchedAccount.passwordHash);
+      }
+
       if (isValid) {
         // Cek Status Verval Khusus Akun User (Wajib disetujui Superadmin sebelum boleh login)
         if (matchedAccount.role === 'user') {

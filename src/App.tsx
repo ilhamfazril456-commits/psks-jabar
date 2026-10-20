@@ -1457,8 +1457,7 @@ export default function App() {
               const isOldRegionalPass = def.role === 'admin' && (
                 !existing.passwordPolos ||
                 existing.passwordPolos === 'bandung123' ||
-                existing.passwordPolos.includes('Secure99') ||
-                existing.passwordPolos !== def.passwordPolos
+                existing.passwordPolos.includes('Secure99')
               );
 
               if (hasPersonalName || needsBcryptHash || isOldRegionalPass || !existing.namaAdmin || !existing.username || !existing.wilayahTugas) {
@@ -1501,8 +1500,7 @@ export default function App() {
           const finalList = Array.from(dedupedMap.values());
           setAdminAccounts(finalList);
           try {
-            const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }: any) => rest);
-            localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
+            localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
           } catch {}
         }
       },
@@ -3855,13 +3853,43 @@ export default function App() {
       lastUpdatedTimestamp: updatedAdmin.lastUpdatedTimestamp || Date.now(),
     };
 
+    const targetId = (sanitizedAdmin.id || '').toLowerCase().trim();
+    const targetUname = (sanitizedAdmin.username || '').toLowerCase().trim();
+
     setAdminAccounts((prev) => {
-      const next = prev.map((a) => (a.id === sanitizedAdmin.id ? sanitizedAdmin : a));
+      let matched = false;
+      const next = prev.map((a) => {
+        const aId = (a.id || '').toLowerCase().trim();
+        const aUname = (a.username || '').toLowerCase().trim();
+        if ((targetId && aId === targetId) || (targetUname && aUname === targetUname)) {
+          matched = true;
+          return sanitizedAdmin;
+        }
+        return a;
+      });
+      const finalList = matched ? next : [...next, sanitizedAdmin];
+      adminAccountsRef.current = finalList;
       try {
-        localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+        localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
       } catch {}
-      return next;
+      return finalList;
     });
+
+    // Synchronize local registration ticket if matching target user
+    try {
+      const rawTicket = localStorage.getItem('psks_latest_user_registration_ticket');
+      if (rawTicket) {
+        const parsed = JSON.parse(rawTicket);
+        const ticketUname = (parsed?.username || '').toLowerCase().trim();
+        if (ticketUname && (ticketUname === targetUname || (targetId && ticketUname === targetId))) {
+          parsed.passwordPolos = sanitizedAdmin.passwordPolos || parsed.passwordPolos;
+          parsed.statusActive = sanitizedAdmin.statusActive || parsed.statusActive;
+          parsed.statusVerval = sanitizedAdmin.statusVerval || parsed.statusVerval;
+          localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(parsed));
+          window.dispatchEvent(new Event('psks_registration_ticket_updated'));
+        }
+      }
+    } catch {}
 
     // Send instant remote security signal to victim client in real-time (ONLY if an explicit security action occurred)
     let derivedSignal = '';
