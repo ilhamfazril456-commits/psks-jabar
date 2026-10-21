@@ -14,6 +14,7 @@ import {
   Smartphone,
   ShieldAlert,
   Lock,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface LoginSuccessModalProps {
@@ -831,10 +832,15 @@ export const AccountDeletedRemoteModal: React.FC<AccountDeletedRemoteModalProps>
   isOpen,
   onClose,
 }) => {
-  useEffect(() => {
-    if (!isOpen) return;
+  const [timeLeft, setTimeLeft] = useState(8);
 
-    // Trigger intense sensory vibration + radar audio "tut-tut-tut"
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeLeft(8);
+      return;
+    }
+
+    // Trigger sensory alarm + vibration
     playRadarWarningSound();
     try {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -842,11 +848,18 @@ export const AccountDeletedRemoteModal: React.FC<AccountDeletedRemoteModalProps>
       }
     } catch {}
 
-    const timer = setTimeout(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && timeLeft === 0) {
       onClose();
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [isOpen, onClose]);
+    }
+  }, [isOpen, timeLeft, onClose]);
 
   if (!isOpen) return null;
 
@@ -859,6 +872,14 @@ export const AccountDeletedRemoteModal: React.FC<AccountDeletedRemoteModalProps>
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-red-500 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(239,68,68,0.5)] transition-all transform scale-100"
       >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 p-2 rounded-full transition-colors cursor-pointer"
+          title="Kembali ke Halaman Login"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         <div className="relative mx-auto w-20 h-20 mb-4 flex items-center justify-center">
           <div className="absolute inset-0 bg-red-500/30 rounded-full animate-ping opacity-75" />
           <div className="relative w-16 h-16 bg-slate-950 border-2 border-red-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.6)]">
@@ -875,12 +896,34 @@ export const AccountDeletedRemoteModal: React.FC<AccountDeletedRemoteModalProps>
           Akun Telah Dihapus!
         </h3>
 
-        <p className="text-xs text-slate-300 mb-5 leading-relaxed font-medium">
-          Akun Anda telah dihapus dari Fitur Pengelola Pusat Akun. Sesi otorisasi diakhiri dan ditendang keluar secara realtime.
+        <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">
+          Akun Anda telah dihapus oleh pengelola pusat. Sesi otorisasi diakhiri dan ditendang keluar secara realtime. Anda otomatis dikeluarkan dalam <strong>{timeLeft} detik</strong>, atau klik tombol <strong>"Kembali"</strong> di bawah untuk langsung kembali ke halaman login awal.
         </p>
 
-        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-gradient-to-r from-red-600 via-red-500 to-amber-500 h-full w-full animate-[progress_2.5s_linear]" />
+        {/* 8s Progress Bar */}
+        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
+          <div
+            className="bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 h-full transition-all duration-1000 ease-linear"
+            style={{ width: `${(timeLeft / 8) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2.5 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:brightness-110 text-white font-extrabold text-xs uppercase tracking-wider py-3.5 px-6 rounded-xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Kembali ke Halaman Login ({timeLeft}s)</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
+            <span>Kembali</span>
+          </button>
         </div>
       </div>
     </div>
@@ -896,10 +939,15 @@ export const AccountEditedRemoteModal: React.FC<AccountEditedRemoteModalProps> =
   isOpen,
   onClose,
 }) => {
-  useEffect(() => {
-    if (!isOpen) return;
+  const [timeLeft, setTimeLeft] = useState(8);
 
-    // Trigger sensory feedback (vibration + sound)
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeLeft(8);
+      return;
+    }
+
+    // Trigger sensory alarm + vibration
     playRadarWarningSound();
     try {
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -907,11 +955,18 @@ export const AccountEditedRemoteModal: React.FC<AccountEditedRemoteModalProps> =
       }
     } catch {}
 
-    const timer = setTimeout(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && timeLeft === 0) {
       onClose();
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [isOpen, onClose]);
+    }
+  }, [isOpen, timeLeft, onClose]);
 
   if (!isOpen) return null;
 
@@ -924,6 +979,14 @@ export const AccountEditedRemoteModal: React.FC<AccountEditedRemoteModalProps> =
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(245,158,11,0.5)] transition-all transform scale-100"
       >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 p-2 rounded-full transition-colors cursor-pointer"
+          title="Kembali ke Halaman Login"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         <div className="relative mx-auto w-20 h-20 mb-4 flex items-center justify-center">
           <div className="absolute inset-0 bg-amber-500/30 rounded-full animate-ping opacity-75" />
           <div className="relative w-16 h-16 bg-slate-950 border-2 border-amber-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.6)]">
@@ -940,12 +1003,34 @@ export const AccountEditedRemoteModal: React.FC<AccountEditedRemoteModalProps> =
           Akun Telah Diedit!
         </h3>
 
-        <p className="text-xs text-slate-300 mb-5 leading-relaxed font-medium">
-          Password atau rincian akun Anda telah diubah oleh Superadmin/Developer. Sesi ditendang keluar secara realtime demi keamanan. Silakan login kembali dengan kredensial baru.
+        <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">
+          Password atau rincian akun Anda telah diubah oleh pengelola pusat. Sesi ditendang keluar secara realtime demi keamanan kredensial. Anda otomatis dikeluarkan dalam <strong>{timeLeft} detik</strong>, atau klik tombol <strong>"Kembali"</strong> di bawah untuk langsung kembali ke halaman login awal.
         </p>
 
-        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-500 h-full w-full animate-[progress_2.5s_linear]" />
+        {/* 8s Progress Bar */}
+        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
+          <div
+            className="bg-gradient-to-r from-amber-600 via-yellow-400 to-amber-500 h-full transition-all duration-1000 ease-linear"
+            style={{ width: `${(timeLeft / 8) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2.5 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:brightness-110 text-white font-extrabold text-xs uppercase tracking-wider py-3.5 px-6 rounded-xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Kembali ke Halaman Login ({timeLeft}s)</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
+            <span>Kembali</span>
+          </button>
         </div>
       </div>
     </div>
@@ -961,8 +1046,13 @@ export const AccountFrozenRemoteModal: React.FC<AccountFrozenRemoteModalProps> =
   isOpen,
   onClose,
 }) => {
+  const [timeLeft, setTimeLeft] = useState(8);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setTimeLeft(8);
+      return;
+    }
 
     // Play radar alarm + vibrate
     playRadarWarningSound();
@@ -972,11 +1062,18 @@ export const AccountFrozenRemoteModal: React.FC<AccountFrozenRemoteModalProps> =
       }
     } catch {}
 
-    const timer = setTimeout(() => {
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && timeLeft === 0) {
       onClose();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [isOpen, onClose]);
+    }
+  }, [isOpen, timeLeft, onClose]);
 
   if (!isOpen) return null;
 
@@ -989,6 +1086,14 @@ export const AccountFrozenRemoteModal: React.FC<AccountFrozenRemoteModalProps> =
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md bg-gradient-to-b from-slate-900 via-cyan-950 to-slate-950 border-2 border-cyan-500 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(6,182,212,0.5)] transition-all transform scale-100"
       >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 p-2 rounded-full transition-colors cursor-pointer"
+          title="Kembali ke Halaman Login"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         <div className="relative mx-auto w-20 h-20 mb-4 flex items-center justify-center">
           <div className="absolute inset-0 bg-cyan-500/30 rounded-full animate-ping opacity-75" />
           <div className="relative w-16 h-16 bg-slate-950 border-2 border-cyan-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.6)]">
@@ -1005,12 +1110,34 @@ export const AccountFrozenRemoteModal: React.FC<AccountFrozenRemoteModalProps> =
           Akses Akun Dibekukan!
         </h3>
 
-        <p className="text-xs text-slate-300 mb-5 leading-relaxed font-medium">
-          Akses akun Anda telah dibekukan sementara oleh Superadmin/Developer. Anda telah ditendang keluar secara realtime. Silakan hubungi pengelola pusat untuk pembukaan blokir.
+        <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">
+          Akses akun Anda telah dibekukan sementara oleh pengelola pusat. Sesi otorisasi ditendang keluar secara realtime. Anda otomatis dikeluarkan dalam <strong>{timeLeft} detik</strong>, atau klik tombol <strong>"Kembali"</strong> di bawah untuk langsung kembali ke halaman login awal.
         </p>
 
-        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-gradient-to-r from-cyan-600 via-sky-400 to-indigo-500 h-full w-full animate-[progress_3s_linear]" />
+        {/* 8s Progress Bar */}
+        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
+          <div
+            className="bg-gradient-to-r from-cyan-600 via-sky-400 to-indigo-500 h-full transition-all duration-1000 ease-linear"
+            style={{ width: `${(timeLeft / 8) * 100}%` }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2.5 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-cyan-600 via-sky-500 to-indigo-600 hover:brightness-110 text-white font-extrabold text-xs uppercase tracking-wider py-3.5 px-6 rounded-xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Kembali ke Halaman Login ({timeLeft}s)</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
+            <span>Kembali</span>
+          </button>
         </div>
       </div>
     </div>

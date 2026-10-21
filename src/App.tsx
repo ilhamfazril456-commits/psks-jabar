@@ -147,7 +147,9 @@ export default function App() {
     const username = sessionStorage.getItem('session_user_username') || undefined;
     const userId = sessionStorage.getItem('session_user_id') || undefined;
     const deviceId = sessionStorage.getItem('session_device_id') || undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId };
+    const passwordHash = sessionStorage.getItem('session_user_password_hash') || undefined;
+    const passwordPolos = sessionStorage.getItem('session_user_password_polos') || undefined;
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash, passwordPolos };
   });
 
   // Pending NFC SmartCard 6-Digit PIN Authority Gate State
@@ -1452,23 +1454,17 @@ export default function App() {
               };
               loadedMap.set(def.id, enriched);
             } else {
-              const existingName = existing.namaAdmin || '';
-              const hasPersonalName = /aep|dedi|rina|saepulloh|herdiana|setyowati/i.test(existingName);
-              const needsPassword = !existing.passwordPolos;
-              const needsHash = !existing.passwordHash;
-
-              if (hasPersonalName || needsPassword || needsHash || !existing.namaAdmin || !existing.username || !existing.wilayahTugas) {
-                const sanitized: AdminAccount = {
-                  ...existing,
-                  username: existing.username || def.username || '',
-                  namaAdmin: (hasPersonalName || !existing.namaAdmin) ? def.namaAdmin : existing.namaAdmin,
-                  wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
-                  role: existing.role || def.role || 'admin',
-                  passwordPolos: existing.passwordPolos || def.passwordPolos,
-                  passwordHash: existing.passwordHash || def.passwordHash || '',
-                };
-                loadedMap.set(existing.id, sanitized);
-              }
+              // Only enrich missing essential fields, NEVER overwrite user-edited or custom-updated credentials
+              const sanitized: AdminAccount = {
+                ...existing,
+                username: existing.username || def.username || '',
+                namaAdmin: existing.namaAdmin || def.namaAdmin || '',
+                wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
+                role: existing.role || def.role || 'admin',
+                passwordPolos: existing.passwordPolos || def.passwordPolos,
+                passwordHash: existing.passwordHash || def.passwordHash || '',
+              };
+              loadedMap.set(existing.id, sanitized);
             }
           }
 
@@ -1477,12 +1473,15 @@ export default function App() {
             return u !== 'admin_ilham';
           });
 
-          // Deduplicate by unique Username or ID
+          // Deduplicate by unique Username or ID; newest lastUpdatedTimestamp ALWAYS wins
           const dedupedMap = new Map<string, AdminAccount>();
           rawList.forEach((acc) => {
             const key = (acc.username || acc.id || '').toLowerCase().trim();
-            if (key && !dedupedMap.has(key)) {
-              dedupedMap.set(key, acc);
+            if (key) {
+              const prev = dedupedMap.get(key);
+              if (!prev || (acc.lastUpdatedTimestamp || 0) >= (prev.lastUpdatedTimestamp || 0)) {
+                dedupedMap.set(key, acc);
+              }
             }
           });
 
@@ -2499,6 +2498,21 @@ export default function App() {
     const loginTimestamp = Date.now();
     const currentDeviceId = getStableDeviceId();
 
+    // Mark matching account as online & record session token, status, and login timestamp in state & database
+    const currentAccounts = adminAccountsRef.current.length > 0 ? adminAccountsRef.current : adminAccounts;
+    const cleanResolvedUname = (resolvedUsername || '').toLowerCase().trim();
+    const cleanResolvedId = (resolvedUserId || '').toLowerCase().trim();
+
+    const matched = currentAccounts.find(
+      (a) =>
+        (cleanResolvedId && (a.id || '').toLowerCase().trim() === cleanResolvedId) ||
+        (cleanResolvedUname && (a.username || '').toLowerCase().trim() === cleanResolvedUname)
+    );
+
+    const initialPasswordHash = matched?.passwordHash || '';
+    const initialPasswordPolos = matched?.passwordPolos || '';
+    const initialLastUpdated = matched?.lastUpdatedTimestamp || loginTimestamp;
+
     const newSession: UserSession = { 
       role, 
       nama, 
@@ -2510,6 +2524,9 @@ export default function App() {
       sessionToken, 
       loginTimestamp,
       deviceId: currentDeviceId,
+      passwordHash: initialPasswordHash,
+      passwordPolos: initialPasswordPolos,
+      lastUpdatedTimestamp: initialLastUpdated,
     };
     setSession(newSession);
     sessionStorage.setItem('has_entered_gate', 'true');
@@ -2522,22 +2539,12 @@ export default function App() {
     sessionStorage.setItem('session_token', sessionToken);
     sessionStorage.setItem('login_timestamp', String(loginTimestamp));
     sessionStorage.setItem('session_device_id', currentDeviceId);
+    if (initialPasswordHash) sessionStorage.setItem('session_user_password_hash', initialPasswordHash);
+    if (initialPasswordPolos) sessionStorage.setItem('session_user_password_polos', initialPasswordPolos);
     setGateModalOpen(false);
 
-    // Format current login timestamp
     const now = new Date();
     const formattedLogin = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`;
-
-    // Mark matching account as online & record session token, status, and login timestamp in state & database
-    const currentAccounts = adminAccountsRef.current.length > 0 ? adminAccountsRef.current : adminAccounts;
-    const cleanResolvedUname = (resolvedUsername || '').toLowerCase().trim();
-    const cleanResolvedId = (resolvedUserId || '').toLowerCase().trim();
-
-    const matched = currentAccounts.find(
-      (a) =>
-        (cleanResolvedId && (a.id || '').toLowerCase().trim() === cleanResolvedId) ||
-        (cleanResolvedUname && (a.username || '').toLowerCase().trim() === cleanResolvedUname)
-    );
 
     const loginAccountPayload = {
       isFrozen: false,
@@ -2680,6 +2687,10 @@ export default function App() {
       wilayah: '',
       statusActive: 'GUEST',
     };
+    setShowAccountDeletedModal(false);
+    setShowAccountEditedModal(false);
+    setShowAccountFrozenModal(false);
+    setShowMultipleSessionModal(false);
     setSession(reset);
     setSubmissions([]); // Clear submissions immediately on logout
     try {
@@ -2696,6 +2707,8 @@ export default function App() {
     sessionStorage.removeItem('session_user_username');
     sessionStorage.removeItem('session_user_id');
     sessionStorage.removeItem('session_device_id');
+    sessionStorage.removeItem('session_user_password_hash');
+    sessionStorage.removeItem('session_user_password_polos');
     setIsFloatingAnnouncementOpen(false);
     hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
@@ -2722,14 +2735,13 @@ export default function App() {
       return (sessionUserId && aId === sessionUserId) || (userUname && aUname === userUname);
     });
 
-    // 1. Check deletion in deletedAdminIds list: HANYA jika akun tidak aktif di daftar akun, dan HANYA berdasarkan ID unik / username (tidak pernah nama)
+    // 1. Check deletion: If adminAccounts is loaded from database and current session account is not present, OR in deletedAdminIds list
     const isDeletedByIds = Boolean(
-      !isAccountCurrentlyActive &&
-      ((sessionUserId && deletedAdminIds.includes(sessionUserId)) ||
-       (userUname && deletedAdminIds.includes(userUname)))
+      (sessionUserId && deletedAdminIds.includes(sessionUserId)) ||
+      (userUname && deletedAdminIds.includes(userUname))
     );
 
-    if (isDeletedByIds) {
+    if ((adminAccounts.length > 0 && !isAccountCurrentlyActive) || isDeletedByIds) {
       if (!showAccountDeletedModal) {
         setShowAccountDeletedModal(true);
       }
@@ -2737,7 +2749,7 @@ export default function App() {
     }
 
     if (adminAccounts.length > 0) {
-      // STRICT IDENTIFIER MATCHING: HANYA cocokkan berdasarkan ID Akun persis atau Username persis milik akun yang sedang login
+      // STRICT IDENTIFIER MATCHING: Cocokkan berdasarkan ID Akun persis atau Username persis milik akun yang sedang login
       const matched = adminAccounts.find((a) => {
         const aUname = (a.username || '').toLowerCase().trim();
         const aId = (a.id || '').toLowerCase().trim();
@@ -2756,20 +2768,36 @@ export default function App() {
         }
 
         // 3. Check Account Frozen (Remote Freeze Trigger)
-        if (matched.isFrozen || matched.statusAkun === 'DIBEKUKAN') {
+        if (
+          matched.isFrozen === true ||
+          matched.statusAkun === 'DIBEKUKAN' ||
+          matched.statusActive === 'FROZEN' ||
+          (matched as any).status === 'FROZEN'
+        ) {
           if (!showAccountFrozenModal) {
             setShowAccountFrozenModal(true);
           }
           return;
         }
 
-        // 4. Check Account Role / Permission Change (only if role was explicitly modified while user is active)
-        if (
-          session.role !== 'developer' &&
-          session.role !== 'superadmin' &&
-          matched.role &&
-          matched.role !== session.role
-        ) {
+        // 4. Check Account Edited (Password, Username, Role, Status, or Updated Credentials)
+        const passwordChanged = Boolean(
+          (session.passwordHash && matched.passwordHash && session.passwordHash !== matched.passwordHash) ||
+          (session.passwordPolos && matched.passwordPolos && session.passwordPolos !== matched.passwordPolos)
+        );
+        const usernameChanged = Boolean(
+          session.username && matched.username && session.username.toLowerCase().trim() !== matched.username.toLowerCase().trim()
+        );
+        const roleChanged = Boolean(
+          session.role && matched.role && session.role !== matched.role
+        );
+        const dataEditedAfterLogin = Boolean(
+          matched.lastUpdatedTimestamp && session.loginTimestamp &&
+          matched.lastUpdatedTimestamp > session.loginTimestamp + 1500
+        );
+        const vervalRejected = Boolean((matched as any).statusVerval === 'REJECTED');
+
+        if (passwordChanged || usernameChanged || roleChanged || dataEditedAfterLogin || vervalRejected) {
           if (!showAccountEditedModal) {
             setShowAccountEditedModal(true);
           }
@@ -2871,12 +2899,8 @@ export default function App() {
       channel = new BroadcastChannel('psks_auth_channel');
       channel.onmessage = (event) => {
         const data = event.data;
-        if (!data || data.type !== 'CONCURRENT_LOGIN_KICK') return;
-        const localToken = session.sessionToken || sessionStorage.getItem('session_token');
-        if (!data.newSessionToken || data.newSessionToken === localToken) return;
+        if (!data) return;
 
-        const myUname = (session.username || '').toLowerCase().trim();
-        const myUserId = (session.userId || '').toLowerCase().trim();
         if (data.type === 'CONCURRENT_LOGIN_KICK') {
           const localToken = session.sessionToken || sessionStorage.getItem('session_token');
           if (!data.newSessionToken || data.newSessionToken === localToken) return;
@@ -2898,9 +2922,6 @@ export default function App() {
             setShowMultipleSessionModal(true);
           }
         } else if (data.type === 'SECURITY_SIGNAL') {
-          // Developer is immune
-          if (session.role === 'developer') return;
-
           const myUname = (session.username || session.nama || '').toLowerCase().trim();
           const myUserId = (session.userId || '').toLowerCase().trim();
           const targetUname = (data.targetUsername || '').toLowerCase().trim();
@@ -2918,7 +2939,7 @@ export default function App() {
               setShowAccountFrozenModal(true);
             } else if (data.action === 'DELETE') {
               setShowAccountDeletedModal(true);
-            } else if (data.action === 'PASSWORD' || data.action === 'UPDATE') {
+            } else if (data.action === 'PASSWORD' || data.action === 'UPDATE' || data.action === 'EDIT') {
               setShowAccountEditedModal(true);
             }
           }
@@ -2951,29 +2972,11 @@ export default function App() {
         const prevUname = (data.previousUsername || '').toLowerCase().trim();
         const targetId = (data.targetId || '').toLowerCase().trim();
 
-        // Developer is immune to admin/freeze/delete signals
-        if (session.role === 'developer') return;
-
-        // 2. Only respond to signals sent strictly after login (+1s buffer)
+        // 2. Only respond to signals sent strictly after login (+500ms buffer)
         const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-        if (loginTime > 0 && data.timestamp <= loginTime + 1000) return;
+        if (loginTime > 0 && data.timestamp <= loginTime + 500) return;
 
-        // 3. If the signal was triggered by the current user themselves, ignore
-        const actorName = (data.by || '').toLowerCase().trim();
-        const userNama = (session.nama || '').toLowerCase().trim();
-        if (actorName && (actorName === userUname || actorName === userNama)) return;
-
-        // 4. Superadmin is ONLY kickable/editable/freezable by Developer
-        if (session.role === 'superadmin') {
-          const isDevActor =
-            actorName === 'ilhamfazril' ||
-            actorName === 'admin_ilham' ||
-            data.byRole === 'developer' ||
-            data.byRole === 'Developer';
-          if (!isDevActor) return;
-        }
-
-        // STRICT TARGET MATCH: Must match this exact account's unique userId or exact username (NEVER loose display name)
+        // STRICT TARGET MATCH: Cocokkan ID Akun persis atau Username persis
         const isMatch = Boolean(
           (targetId && sessionUserId && targetId === sessionUserId) ||
           (targetUname && userUname && targetUname === userUname) ||
@@ -2985,7 +2988,7 @@ export default function App() {
             setShowAccountFrozenModal(true);
           } else if (data.action === 'DELETE') {
             setShowAccountDeletedModal(true);
-          } else if (data.action === 'PASSWORD' || data.action === 'UPDATE') {
+          } else if (data.action === 'PASSWORD' || data.action === 'UPDATE' || data.action === 'EDIT') {
             setShowAccountEditedModal(true);
           }
         }
@@ -3956,6 +3959,25 @@ export default function App() {
       } catch {}
     }
 
+    // Immediately trigger local modal if the modified account is the currently logged in session
+    const currentSessionId = (session.userId || '').toLowerCase().trim();
+    const currentSessionUname = (session.username || '').toLowerCase().trim();
+    const isTargetingCurrentSession = Boolean(
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      ((currentSessionId && targetId === currentSessionId) ||
+       (currentSessionUname && (targetUname === currentSessionUname || prevUname === currentSessionUname)))
+    );
+
+    if (isTargetingCurrentSession) {
+      if (sanitizedAdmin.isFrozen === true || sanitizedAdmin.statusAkun === 'DIBEKUKAN' || sanitizedAdmin.statusActive === 'FROZEN') {
+        setShowAccountFrozenModal(true);
+      } else if ((sanitizedAdmin.statusAkun as any) === 'DIHAPUS' || (sanitizedAdmin as any).isDeleted) {
+        setShowAccountDeletedModal(true);
+      } else {
+        setShowAccountEditedModal(true);
+      }
+    }
+
     // Record audit activity log (bypassed for developer)
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
     recordSystemActivity({
@@ -3991,6 +4013,19 @@ export default function App() {
 
     const targetId = target?.id || id;
     const targetUname = (targetUsername || target?.username || id).toLowerCase().trim();
+
+    // Immediately trigger local modal if deleted account is currently logged in
+    const currentSessionId = (session.userId || '').toLowerCase().trim();
+    const currentSessionUname = (session.username || '').toLowerCase().trim();
+    const isTargetingCurrentSession = Boolean(
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      ((currentSessionId && (targetId === currentSessionId || id.toLowerCase().trim() === currentSessionId)) ||
+       (currentSessionUname && (targetUname === currentSessionUname || id.toLowerCase().trim() === currentSessionUname)))
+    );
+
+    if (isTargetingCurrentSession) {
+      setShowAccountDeletedModal(true);
+    }
 
     // Broadcast remote deletion signal so victim client gets booted instantly with alert
     try {

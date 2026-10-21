@@ -15,6 +15,9 @@ export interface UserSession {
   noHp?: string;
   kecamatan?: string;
   pilarId?: string;
+  passwordHash?: string;
+  passwordPolos?: string;
+  lastUpdatedTimestamp?: number;
 }
 
 export interface SocialLinks {

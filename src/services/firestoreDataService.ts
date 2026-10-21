@@ -895,8 +895,19 @@ export async function setFirestoreDoc(
     supabaseError = sbErr;
   }
 
+  // Ensure critical collections (admin_accounts, security_signals) are immediately and synchronously written to Firestore as well
+  if (collectionName === 'admin_accounts' || collectionName === 'security_signals') {
+    try {
+      const { firestore, db } = await getFirestoreModule();
+      const docRef = firestore.doc(db, collectionName, docId);
+      await firestore.setDoc(docRef, cleanFirestoreData(data), { merge: true });
+    } catch (fsErr) {
+      console.warn(`Direct Firestore sync notice on ${collectionName}/${docId}:`, fsErr);
+    }
+  }
+
   // If Supabase write failed or table doesn't exist, fallback to Firestore write
-  if (!supabaseOk) {
+  if (!supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'security_signals') {
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, collectionName, docId);
@@ -905,8 +916,8 @@ export async function setFirestoreDoc(
       console.warn(`Write error on ${collectionName}/${docId}:`, supabaseError || err);
       throw err;
     }
-  } else {
-    // If Supabase was successful, do silent background backup to Firestore without throwing or blocking
+  } else if (supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'security_signals') {
+    // Silent background backup to Firestore without throwing or blocking
     passiveFirestoreBackup('set', collectionName, docId, data);
   }
 }

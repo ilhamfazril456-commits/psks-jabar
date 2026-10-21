@@ -29,7 +29,7 @@ import {
 } from './src/data/dinsosAddressDirectory';
 import { supabase } from './src/lib/supabase';
 import { DEFAULT_ADMIN_ACCOUNTS } from './src/data/initialData';
-import { comparePassword } from './src/utils/crypto';
+import { comparePassword, hashPassword } from './src/utils/crypto';
 
 dotenv.config();
 
