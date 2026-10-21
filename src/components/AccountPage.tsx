@@ -27,6 +27,8 @@ interface AccountPageProps {
   onOpenDeveloperPanel?: () => void;
   onNavigateToManagement?: () => void;
   onNavigateToMonitoring?: () => void;
+  subView?: 'profil' | 'ubah_password' | 'ubah_pin';
+  onSwitchSubView?: (v: 'profil' | 'ubah_password' | 'ubah_pin') => void;
 }
 
 export const AccountPage: React.FC<AccountPageProps> = ({
@@ -46,7 +48,23 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   onOpenDeveloperPanel,
   onNavigateToManagement,
   onNavigateToMonitoring,
+  subView = 'profil',
+  onSwitchSubView,
 }) => {
+  const [activeSubView, setActiveSubView] = useState<'profil' | 'ubah_password' | 'ubah_pin'>(() => subView || 'profil');
+
+  useEffect(() => {
+    if (subView) {
+      setActiveSubView(subView);
+    }
+  }, [subView]);
+
+  const switchSubView = (v: 'profil' | 'ubah_password' | 'ubah_pin') => {
+    setActiveSubView(v);
+    onSwitchSubView?.(v);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(openLoginOnMount);
   const [loginRole, setLoginRole] = useState<'user' | 'admin' | 'superadmin'>('admin');
   const [usernameInput, setUsernameInput] = useState('');
@@ -684,15 +702,30 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-500/10 via-blue-100/20 to-transparent blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA */}
-        {onBackToHome && (
-          <div id="account-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
-            <BackToHomeButton onClick={onBackToHome} id="btn-back-top-account" />
-            <div className="text-xs font-bold text-slate-500 bg-white/80 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs">
-              <span>PSKS JABAR Provinsi Jawa Barat</span>
-            </div>
+        {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA ATAU KEMBALI KE DETAIL PROFIL */}
+        <div id="account-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
+          {activeSubView !== 'profil' ? (
+            <button
+              type="button"
+              onClick={() => switchSubView('profil')}
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-[#0f2b5c] font-black text-xs sm:text-sm px-4 py-2.5 rounded-2xl border-2 border-slate-200 shadow-sm transition-all cursor-pointer hover:border-blue-400 active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4 text-blue-600" />
+              <span>Kembali ke Detail Profil Akun</span>
+            </button>
+          ) : (
+            onBackToHome && <BackToHomeButton onClick={onBackToHome} id="btn-back-top-account" />
+          )}
+          <div className="text-xs font-bold text-slate-500 bg-white/80 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs">
+            <span>
+              {activeSubView === 'ubah_password'
+                ? 'Submenu: Ubah Kata Sandi Akun'
+                : activeSubView === 'ubah_pin'
+                ? 'Submenu: Ubah PIN Otoritas'
+                : 'Submenu: Detail Profil Akun'}
+            </span>
           </div>
-        )}
+        </div>
 
         {/* Header Title Section - Clean Biru Jabar & Gold Accent */}
         <div id="account-header-card" className="bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] border-l-4 border-[#d4af37] p-6 sm:p-8 rounded-3xl shadow-xl border border-[#d4af37]/30">
@@ -700,25 +733,44 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-[#d4af37] via-amber-200 to-[#f3e5ab] text-slate-950 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
-                <span>PUSAT OTORITAS PSKS JABAR</span>
+                <span>
+                  {activeSubView === 'ubah_password'
+                    ? 'KEAMANAN KATA SANDI'
+                    : activeSubView === 'ubah_pin'
+                    ? 'KEAMANAN PIN OTORITAS'
+                    : 'DETAIL PROFIL AKUN'}
+                </span>
               </span>
               <span className="bg-blue-950/80 text-blue-200 font-bold text-[10px] px-2.5 py-1 rounded-full border border-blue-600/40">
                 PROVINSI JAWA BARAT
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white m-0 tracking-tight">
-              Pusat Otoritas & Akses Pengguna
+              {activeSubView === 'ubah_password'
+                ? 'Ubah Kata Sandi Akun'
+                : activeSubView === 'ubah_pin'
+                ? 'Ubah PIN Otoritas'
+                : 'Detail Profil Akun & Otoritas'}
             </h2>
             <p className="text-blue-100/90 text-xs sm:text-sm mt-1.5 m-0 font-medium max-w-2xl leading-relaxed">
-              {(session.role === 'superadmin' || session.isDeveloper || (session.role as string) === 'developer')
-                ? 'Manajemen kredensial terpadu, tingkat hak otorisasi dinas, proteksi pendaftaran admin, dan akses cepat berbasis Smart Card Kode QR.'
-                : 'Rincian data profil, status otorisasi akun terdaftar, dan informasi wilayah tugas dinas.'}
+              {activeSubView === 'ubah_password'
+                ? 'Perbarui kata sandi akun Anda secara mandiri untuk menjaga keamanan otentikasi SIM-PSKS Jawa Barat. Perubahan langsung tersimpan ke sistem.'
+                : activeSubView === 'ubah_pin'
+                ? 'Kelola 6 digit PIN otentikasi otoritas Smart Card akun Superadmin & Developer secara mandiri dengan sinkronisasi realtime.'
+                : (session.role === 'superadmin' || session.isDeveloper || (session.role as string) === 'developer')
+                ? 'Manajemen kredensial terpadu, tingkat hak otorisasi dinas, proteksi pendaftaran admin, dan rincian profil akun se-Jawa Barat.'
+                : 'Rincian data profil, status otorisasi akun terdaftar, KTA Digital resmi, dan informasi wilayah tugas dinas.'}
             </p>
           </div>
         </div>
 
-        {/* SEKSI CARD PROFIL MEWAH UPGRADE MAKSIMAL - Bright Clean Biru Jabar & Gold */}
-        <div id="informasi-akun-section" className="bg-white rounded-3xl shadow-xl border-2 border-slate-200 overflow-hidden relative">
+        {/* ========================================================================= */}
+        {/* SUBVIEW 1: KHUSUS DETAIL PROFIL AKUN (TERPISAH MUTLAK DARI UBAH SANDI/PIN) */}
+        {/* ========================================================================= */}
+        {activeSubView === 'profil' && (
+          <>
+            {/* SEKSI CARD PROFIL MEWAH UPGRADE MAKSIMAL - Bright Clean Biru Jabar & Gold */}
+            <div id="informasi-akun-section" className="bg-white rounded-3xl shadow-xl border-2 border-slate-200 overflow-hidden relative">
           <div className="bg-gradient-to-r from-[#0f2b5c] via-[#143b7d] to-[#0f2b5c] p-6 sm:p-10 border-b-2 border-[#d4af37] text-white flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 relative overflow-hidden">
             {/* Top Right Metallic Overlay */}
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#d4af37]/15 rounded-full blur-2xl pointer-events-none" />
@@ -917,6 +969,28 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 <span>Kembali ke Beranda Utama</span>
               </button>
 
+              {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && (
+                <button
+                  type="button"
+                  onClick={() => switchSubView('ubah_password')}
+                  className="w-full sm:w-auto flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs active:scale-98"
+                >
+                  <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700" />
+                  <span>Ubah Kata Sandi</span>
+                </button>
+              )}
+
+              {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && (
+                <button
+                  type="button"
+                  onClick={() => switchSubView('ubah_pin')}
+                  className="w-full sm:w-auto flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 font-extrabold py-2.5 sm:py-3 px-3.5 sm:px-6 rounded-xl sm:rounded-2xl transition-all cursor-pointer text-[11px] sm:text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs active:scale-98"
+                >
+                  <KeyRound className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-700" />
+                  <span>Ubah PIN</span>
+                </button>
+              )}
+
               {session.statusActive === 'SAH_TERDAFTAR' ? (
                 <button
                   onClick={onLogout}
@@ -991,9 +1065,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             </div>
           </div>
         )}
+      </>
+    )}
 
-        {/* MODUL KHUSUS SUPERADMIN & DEVELOPER: PENGATURAN & UBAH PIN MANDIRI */}
-        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && (
+        {/* ========================================================================= */}
+        {/* SUBVIEW 2: KHUSUS UBAH PIN (SUPERADMIN & DEVELOPER - TERPISAH MUTLAK)     */}
+        {/* ========================================================================= */}
+        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && activeSubView === 'ubah_pin' && (
           <div
             id="keamanan-pin-superadmin"
             className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-indigo-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
@@ -1135,8 +1213,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         )}
 
-        {/* MODUL KHUSUS USER TERDAFTAR & ADMIN WILAYAH: UBAH KATA SANDI MANDIRI */}
-        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && (
+        {/* ========================================================================= */}
+        {/* SUBVIEW 3: KHUSUS UBAH KATA SANDI (USER TERDAFTAR & ADMIN WILAYAH)       */}
+        {/* ========================================================================= */}
+        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && activeSubView === 'ubah_password' && (
           <div
             id="ubah-password-section"
             className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
@@ -1315,15 +1395,31 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         )}
 
-        {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA */}
-        {onBackToHome && (
-          <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
-            <BackToHomeButton onClick={onBackToHome} id="btn-back-bottom-account" />
-            <div className="text-xs text-slate-500 font-semibold">
-              <span>PSKS JABAR Provinsi Jawa Barat • Halaman Profil & Otoritas</span>
-            </div>
+        {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI */}
+        <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+          {activeSubView !== 'profil' ? (
+            <button
+              type="button"
+              onClick={() => switchSubView('profil')}
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-[#0f2b5c] font-black text-xs sm:text-sm px-4 py-2.5 rounded-2xl border-2 border-slate-200 shadow-sm transition-all cursor-pointer hover:border-blue-400 active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4 text-blue-600" />
+              <span>Kembali ke Detail Profil Akun</span>
+            </button>
+          ) : (
+            onBackToHome && <BackToHomeButton onClick={onBackToHome} id="btn-back-bottom-account" />
+          )}
+          <div className="text-xs text-slate-500 font-semibold">
+            <span>
+              PSKS JABAR Provinsi Jawa Barat •{' '}
+              {activeSubView === 'ubah_password'
+                ? 'Pengaturan Kata Sandi'
+                : activeSubView === 'ubah_pin'
+                ? 'Pengaturan PIN Otoritas'
+                : 'Halaman Profil & Otoritas'}
+            </span>
           </div>
-        )}
+        </div>
 
 
 

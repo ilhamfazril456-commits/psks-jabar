@@ -214,8 +214,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     desc: string;
     icon: any;
     onClick: () => void;
-    isSeparated?: boolean;
-    sectionLabel?: string;
   }
 
   const getPusatAkunSubMenus = (): AkunSubMenuItem[] => {
@@ -236,13 +234,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         title: 'Detail Profil Akun',
         desc: profilDesc,
         icon: UserCheck,
-        onClick: () => navigateAndScroll('akun'),
+        onClick: () => navigateAndScroll('akun', undefined, 'profil'),
       },
     ];
 
     // 1. KHUSUS AKUN USER TERDAFTAR:
-    // Submenu "Ubah kata sandi" dipindahkan ke tengah yaitu baris ke-2.
-    // Dibuat terpisah/tidak tercampur dengan submenu "Detail profil akun".
+    // Submenu "Ubah Kata Sandi" di baris ke-2 (tengah), isinya terpisah dari Detail Profil Akun.
     // Disusul "Cek Status Registrasi" di baris ke-3.
     if (session.statusActive === 'SAH_TERDAFTAR' && session.role === 'user') {
       list.push({
@@ -250,10 +247,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         title: 'Ubah Kata Sandi',
         desc: 'Pengaturan Kata Sandi Akun & Keamanan Akses',
         icon: Lock,
-        isSeparated: true,
-        sectionLabel: 'Keamanan Akun',
         onClick: () => {
-          navigateAndScroll('akun', 'ubah-password-section');
+          navigateAndScroll('akun', undefined, 'ubah_password');
         },
       });
 
@@ -262,8 +257,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         title: 'Cek Status Registrasi',
         desc: 'Pelacakan Resi & Status Verifikasi Berkas',
         icon: Search,
-        isSeparated: true,
-        sectionLabel: 'Pelacakan Berkas',
         onClick: () => {
           setActiveDropdown(null);
           setMobileMenuOpen(false);
@@ -274,34 +267,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     // 2. KHUSUS AKUN ADMIN WILAYAH:
     // Submenu "Cek Status Registrasi" dihapus agar tidak ganda.
-    // Submenu "Ubah Kata Sandi" dibuat terpisah/tidak tercampur dengan "Detail profil akun".
+    // Submenu "Ubah Kata Sandi" isinya terpisah dari Detail Profil Akun.
     else if (session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin') {
       list.push({
         id: 'ubah_password_admin',
         title: 'Ubah Kata Sandi',
         desc: 'Pengaturan Kata Sandi Akun & Keamanan Akses',
         icon: Lock,
-        isSeparated: true,
-        sectionLabel: 'Keamanan Akses',
         onClick: () => {
-          navigateAndScroll('akun', 'ubah-password-section');
+          navigateAndScroll('akun', undefined, 'ubah_password');
         },
       });
     }
 
     // 3. KHUSUS AKUN SUPERADMIN & DEVELOPER:
-    // Submenu berjudul "Ubah PIN SmartCard" diubah namanya menjadi "Ubah PIN".
-    // Dibuat terpisah/tidak tercampur dengan bagian "Detail profil akun".
+    // Submenu "Ubah PIN" (diubah dari "Ubah PIN SmartCard"), isinya terpisah dari Detail Profil Akun.
     else if (session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer')) {
       list.push({
         id: 'ubah_pin_authority',
         title: 'Ubah PIN',
         desc: session.role === 'developer' ? 'Pengaturan 6 Digit PIN Akses Developer' : 'Pengaturan 6 Digit PIN Akses Superadmin',
         icon: KeyRound,
-        isSeparated: true,
-        sectionLabel: 'Keamanan PIN Otoritas',
         onClick: () => {
-          navigateAndScroll('akun', 'keamanan-pin-superadmin');
+          navigateAndScroll('akun', undefined, 'ubah_pin');
         },
       });
     }
@@ -313,8 +301,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         title: 'Cek Status Registrasi',
         desc: 'Pelacakan Resi & Status Verifikasi Berkas',
         icon: Search,
-        isSeparated: true,
-        sectionLabel: 'Pelacakan Berkas',
         onClick: () => {
           setActiveDropdown(null);
           setMobileMenuOpen(false);
@@ -531,39 +517,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {akunSubMenus.map((item) => {
                     const IconComp = item.icon;
                     return (
-                      <React.Fragment key={item.id}>
-                        {item.isSeparated && (
-                          <div className="pt-2 pb-1 px-1">
-                            <div className="flex items-center gap-2">
-                              <div className="h-px flex-1 bg-gradient-to-r from-amber-400/35 via-amber-400/20 to-transparent" />
-                              {item.sectionLabel && (
-                                <span className="text-[9.5px] font-extrabold uppercase tracking-widest text-amber-300/90 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25">
-                                  {item.sectionLabel}
-                                </span>
-                              )}
-                              <div className="h-px flex-1 bg-gradient-to-l from-amber-400/35 via-amber-400/20 to-transparent" />
-                            </div>
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={item.onClick}
+                        className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.08] border border-transparent hover:border-amber-400/25 transition-all text-left group/sub cursor-pointer"
+                      >
+                        <div className="p-2 rounded-xl bg-amber-400/10 text-amber-300 border border-amber-400/20 group-hover/sub:bg-amber-400 group-hover/sub:text-[#081b3a] group-hover/sub:border-amber-400 transition-colors shrink-0 shadow-sm">
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs lg:text-sm font-bold text-white group-hover/sub:text-amber-300 transition-colors truncate">
+                            {item.title}
                           </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={item.onClick}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.08] border border-transparent hover:border-amber-400/25 transition-all text-left group/sub cursor-pointer"
-                        >
-                          <div className="p-2 rounded-xl bg-amber-400/10 text-amber-300 border border-amber-400/20 group-hover/sub:bg-amber-400 group-hover/sub:text-[#081b3a] group-hover/sub:border-amber-400 transition-colors shrink-0 shadow-sm">
-                            <IconComp className="w-4 h-4" />
+                          <div className="text-[10.5px] lg:text-[11px] text-slate-300 font-normal truncate mt-0.5">
+                            {item.desc}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs lg:text-sm font-bold text-white group-hover/sub:text-amber-300 transition-colors truncate">
-                              {item.title}
-                            </div>
-                            <div className="text-[10.5px] lg:text-[11px] text-slate-300 font-normal truncate mt-0.5">
-                              {item.desc}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/sub:text-amber-300 group-hover/sub:translate-x-0.5 transition-all shrink-0" />
-                        </button>
-                      </React.Fragment>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/sub:text-amber-300 group-hover/sub:translate-x-0.5 transition-all shrink-0" />
+                      </button>
                     );
                   })}
                 </div>
@@ -858,39 +830,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {akunSubMenus.map((sub) => {
                     const SubIcon = sub.icon;
                     return (
-                      <React.Fragment key={sub.id}>
-                        {sub.isSeparated && (
-                          <div className="pt-2 pb-1 px-1">
-                            <div className="flex items-center gap-2">
-                              <div className="h-px flex-1 bg-white/15" />
-                              {sub.sectionLabel && (
-                                <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-300/90 px-1.5 py-0.5 bg-white/10 rounded-full border border-white/10">
-                                  {sub.sectionLabel}
-                                </span>
-                              )}
-                              <div className="h-px flex-1 bg-white/15" />
-                            </div>
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={sub.onClick}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/10 text-left transition-all cursor-pointer group"
+                      >
+                        <div className="p-1.5 rounded-lg bg-amber-400/10 text-amber-300 border border-amber-400/20 shrink-0">
+                          <SubIcon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-white group-hover:text-amber-300 truncate">
+                            {sub.title}
                           </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={sub.onClick}
-                          className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/10 text-left transition-all cursor-pointer group"
-                        >
-                          <div className="p-1.5 rounded-lg bg-amber-400/10 text-amber-300 border border-amber-400/20 shrink-0">
-                            <SubIcon className="w-3.5 h-3.5" />
+                          <div className="text-[10px] text-slate-300 truncate">
+                            {sub.desc}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold text-white group-hover:text-amber-300 truncate">
-                              {sub.title}
-                            </div>
-                            <div className="text-[10px] text-slate-300 truncate">
-                              {sub.desc}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-300 shrink-0" />
-                        </button>
-                      </React.Fragment>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-300 shrink-0" />
+                      </button>
                     );
                   })}
                 </div>

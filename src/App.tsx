@@ -2100,6 +2100,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<string>('beranda');
   const [profileSubView, setProfileSubView] = useState<'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi'>('kadinas');
   const [contactSubView, setContactSubView] = useState<'medsos' | 'lokasi'>('medsos');
+  const [accountSubView, setAccountSubView] = useState<'profil' | 'ubah_password' | 'ubah_pin'>('profil');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
   const dashboardScrollYRef = useRef<number>(0);
   const shouldRestoreDashboardScrollRef = useRef<boolean>(false);
@@ -2300,6 +2301,14 @@ export default function App() {
     if (tab === 'contact') {
       if (options?.subView) {
         setContactSubView(options.subView as any);
+      }
+    }
+
+    if (tab === 'akun') {
+      if (options?.subView) {
+        setAccountSubView(options.subView as any);
+      } else {
+        setAccountSubView('profil');
       }
     }
 
@@ -4592,6 +4601,8 @@ export default function App() {
               submissions={submissions}
               appSettings={appSettings}
               onSaveAppSettings={handleSaveAppSettings}
+              subView={accountSubView}
+              onSwitchSubView={(v) => setAccountSubView(v)}
               onLogin={(role, nama, wilayah) => {
                 handleLogin(role, nama, wilayah);
                 setOpenLoginModalOnAkun(false);
