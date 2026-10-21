@@ -600,62 +600,62 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
   return (
     <div className="fixed inset-0 z-[10000] w-full h-full bg-black flex flex-col select-none overflow-hidden animate-fadeIn">
       {/* ========================================================================= */}
-      {/* TOP LUXURY APPBAR (FULL WIDTH HEADER WITH BACK BUTTON) */}
+      {/* TOP LUXURY APPBAR (FULL WIDTH BLUE HEADER WITH RESPONSIVE LAYOUT) */}
       {/* ========================================================================= */}
-      <div className="w-full bg-gradient-to-r from-[#022319] via-[#043e2e] to-[#01140f] text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-b-2 border-[#d4af37] shrink-0 z-30 shadow-2xl">
+      <div className="w-full bg-gradient-to-r from-[#0a2351] via-[#0f367a] to-[#081b3a] text-white px-3 py-2.5 sm:px-6 sm:py-3.5 flex items-center justify-between border-b-2 border-blue-400/50 shrink-0 z-30 shadow-2xl">
         {/* Tombol Kembali ke Tampilan Sebelumnya */}
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-2 bg-black/40 hover:bg-black/70 text-amber-200 hover:text-white px-3.5 py-2 rounded-xl border border-[#d4af37]/40 hover:border-[#d4af37] transition-all cursor-pointer shadow-md group"
+          className="flex items-center gap-1.5 sm:gap-2 bg-white/10 hover:bg-white/20 text-white hover:text-amber-200 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-white/20 hover:border-amber-400/50 transition-all cursor-pointer shadow-md group shrink-0 active:scale-95"
           title="Kembali ke Pilihan Smart Card"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-0.5 transition-transform text-[#d4af37]" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-0.5 transition-transform text-amber-300" />
           <span className="font-black text-xs sm:text-sm tracking-wide">Kembali</span>
         </button>
 
-        {/* Center Title & Badge */}
-        <div className="text-center">
-          <div className="inline-flex items-center gap-1.5 bg-[#d4af37] text-[#043e2e] text-[9px] sm:text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-            {defaultTab === 'qr' ? <QrCode className="w-3 h-3" /> : <Wifi className="w-3 h-3 rotate-90" />}
-            <span>{defaultTab === 'qr' ? 'PEMINDAI KODE QR TINGKAT TINGGI' : 'SENSOR TAP SMARTCARD'}</span>
+        {/* Center Title & Badge (Responsive & Center-Balanced on all devices) */}
+        <div className="text-center min-w-0 flex-1 px-1.5 sm:px-3">
+          <div className="inline-flex items-center gap-1 sm:gap-1.5 bg-[#d4af37] text-[#0a2351] text-[8.5px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm max-w-full">
+            {defaultTab === 'qr' ? <QrCode className="w-3 h-3 shrink-0" /> : <Wifi className="w-3 h-3 rotate-90 shrink-0" />}
+            <span className="truncate">{defaultTab === 'qr' ? 'PEMINDAI KODE QR TINGKAT TINGGI' : 'SENSOR TAP SMARTCARD'}</span>
           </div>
-          <h2 className="text-sm sm:text-lg font-black text-white m-0 tracking-tight flex items-center justify-center gap-1.5 mt-0.5">
-            <CreditCard className="w-4 h-4 text-[#d4af37]" />
-            <span>Smart Card PSKS JABAR</span>
+          <h2 className="text-xs sm:text-base lg:text-lg font-black text-white m-0 tracking-tight flex items-center justify-center gap-1 sm:gap-1.5 mt-0.5">
+            <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+            <span className="truncate">Smart Card PSKS JABAR</span>
           </h2>
         </div>
 
         {/* Right Action: Close or Flash/Zoom Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {defaultTab === 'qr' && (
             <>
               {hasTorchSupport && (
                 <button
                   type="button"
                   onClick={toggleTorch}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer shadow-md ${
+                  className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer shadow-md ${
                     torchEnabled
                       ? 'bg-amber-400 text-slate-950 border-white'
-                      : 'bg-black/40 text-amber-200 border-white/20 hover:bg-black/60'
+                      : 'bg-white/10 text-amber-200 border-white/20 hover:bg-white/20'
                   }`}
                   title={torchEnabled ? 'Matikan Flash' : 'Nyalakan Flash'}
                 >
-                  <Sun className="w-4 h-4" />
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={toggleZoom}
-                className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-black transition-all cursor-pointer shadow-md flex items-center gap-1 ${
+                className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-[10px] sm:text-[11px] font-black transition-all cursor-pointer shadow-md flex items-center gap-1 ${
                   zoomLevel > 1
                     ? 'bg-[#d4af37] text-slate-950 border-white'
-                    : 'bg-black/40 text-amber-200 border-white/20 hover:bg-black/60'
+                    : 'bg-white/10 text-amber-200 border-white/20 hover:bg-white/20'
                 }`}
                 title="Zoom 2x"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
+                <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span>{zoomLevel > 1 ? '2x' : '1x'}</span>
               </button>
             </>
@@ -664,7 +664,7 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white bg-black/40 hover:bg-black/70 p-2 rounded-xl border border-white/20 transition-all cursor-pointer"
+            className="text-white hover:text-amber-200 bg-white/10 hover:bg-white/20 p-1.5 sm:p-2 rounded-xl border border-white/20 transition-all cursor-pointer active:scale-95"
             title="Tutup"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -679,15 +679,15 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         {/* SUCCESS STATE POPUP OVERLAY */}
         {scanSuccessResult ? (
           <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-gradient-to-b from-[#022319] via-[#043e2e] to-[#01140f] text-white rounded-3xl p-6 sm:p-8 text-center space-y-5 border-2 border-[#d4af37] shadow-[0_25px_60px_rgba(212,175,55,0.4)] relative overflow-hidden animate-scaleUp">
-              <div className="absolute -top-12 -right-12 w-40 h-40 bg-[#d4af37]/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="w-full max-w-md bg-gradient-to-b from-[#081b3a] via-[#0d2d68] to-[#051329] text-white rounded-3xl p-6 sm:p-8 text-center space-y-5 border-2 border-blue-400 shadow-[0_25px_60px_rgba(13,45,104,0.5)] relative overflow-hidden animate-scaleUp">
+              <div className="absolute -top-12 -right-12 w-40 h-40 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
 
               <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
                 <div className="absolute inset-0 bg-[#d4af37]/20 rounded-full animate-ping pointer-events-none" />
                 <div className="absolute -inset-2 bg-gradient-to-r from-[#b8901c] via-[#d4af37] to-[#f3e5ab] rounded-full blur-md opacity-75" />
                 <div className="relative w-20 h-20 bg-gradient-to-br from-[#b8901c] via-[#d4af37] to-[#f3e5ab] text-slate-950 rounded-full flex items-center justify-center shadow-2xl border-2 border-amber-100 animate-bounce">
-                  <CheckCircle2 className="w-12 h-12 text-[#043e2e] stroke-[2.5]" />
+                  <CheckCircle2 className="w-12 h-12 text-[#081b3a] stroke-[2.5]" />
                 </div>
               </div>
 
@@ -700,31 +700,31 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
                 <h3 className="text-2xl font-black text-amber-200 tracking-tight pt-1 m-0">
                   {scanSuccessResult.nama}
                 </h3>
-                <p className="text-xs font-bold text-emerald-300 uppercase tracking-widest m-0">
+                <p className="text-xs font-bold text-blue-200 uppercase tracking-widest m-0">
                   {scanSuccessResult.role}
                 </p>
               </div>
 
-              <div className="bg-[#01140f]/90 border border-[#065e44] rounded-2xl p-4 text-left space-y-2.5 text-xs text-emerald-100 shadow-inner">
-                <div className="flex justify-between items-center border-b border-[#065e44] pb-2">
-                  <span className="text-emerald-300/70 font-semibold">Status Kartu:</span>
+              <div className="bg-[#051329]/90 border border-blue-500/30 rounded-2xl p-4 text-left space-y-2.5 text-xs text-blue-100 shadow-inner">
+                <div className="flex justify-between items-center border-b border-blue-400/20 pb-2">
+                  <span className="text-blue-200/70 font-semibold">Status Kartu:</span>
                   <span className="bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 font-black text-[10px] px-2.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     AKTIF & TEROTORISASI
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-b border-[#065e44] pb-2">
-                  <span className="text-emerald-300/70 font-semibold">Metode Masuk:</span>
+                <div className="flex justify-between items-center border-b border-blue-400/20 pb-2">
+                  <span className="text-blue-200/70 font-semibold">Metode Masuk:</span>
                   <span className="font-bold text-amber-200">
                     {scanSuccessResult.method === 'nfc' ? '📡 Sensor NFC Contactless' : '📷 Pemindai Kamera QR Code'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center border-b border-[#065e44] pb-2">
-                  <span className="text-emerald-300/70 font-semibold">Wilayah Tugas:</span>
+                <div className="flex justify-between items-center border-b border-blue-400/20 pb-2">
+                  <span className="text-blue-200/70 font-semibold">Wilayah Tugas:</span>
                   <span className="font-bold text-white">{scanSuccessResult.wilayah || 'PROVINSI JAWA BARAT'}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-emerald-300/70 font-semibold">Keamanan:</span>
+                  <span className="text-blue-200/70 font-semibold">Keamanan:</span>
                   <span className="font-bold text-amber-300 flex items-center gap-1 text-[11px]">
                     <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
                     Enkripsi Key Bcrypt Valid
@@ -880,59 +880,59 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
           </div>
         ) : (
           /* ========================================================================= */
-          /* FULL-SCREEN TAP SMARTCARD (NFC CONTACTLESS SENSOR)                        */
+          /* FULL-SCREEN TAP SMARTCARD (NFC CONTACTLESS SENSOR - WHITE BACKGROUND)     */
           /* ========================================================================= */
-          <div className="relative w-full h-full flex flex-col items-center justify-between p-3 sm:p-5 md:p-6 bg-gradient-to-b from-[#022319] via-[#043e2e] to-[#01140f] text-white overflow-y-auto">
-            {/* Ambient Background Glow & Radar Pulse */}
+          <div className="relative w-full h-full flex flex-col items-center justify-between p-3.5 sm:p-6 md:p-8 bg-white text-slate-800 overflow-y-auto">
+            {/* Ambient Background Glow & Radar Pulse (Clean & Elegant on White) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-              <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border border-emerald-400/20 animate-ping opacity-30" />
-              <div className="w-80 h-80 sm:w-[420px] sm:h-[420px] rounded-full border border-[#d4af37]/20 animate-pulse opacity-25 absolute" />
-              <div className="w-48 h-48 sm:w-60 sm:h-60 rounded-full bg-emerald-500/10 blur-3xl absolute" />
+              <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border-2 border-blue-200/50 animate-ping opacity-35" />
+              <div className="w-80 h-80 sm:w-[420px] sm:h-[420px] rounded-full border border-amber-300/40 animate-pulse opacity-40 absolute" />
+              <div className="w-48 h-48 sm:w-60 sm:h-60 rounded-full bg-blue-100/40 blur-3xl absolute" />
             </div>
 
             {/* Top NFC Status & Critical Notice */}
-            <div className="relative z-10 text-center space-y-1.5 shrink-0 my-1 max-w-lg mx-auto w-full px-2">
-              <div className="inline-flex items-center gap-2 bg-[#022319]/90 backdrop-blur-md text-[#d4af37] border border-[#d4af37]/50 px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-black shadow-lg">
-                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <div className="relative z-10 text-center space-y-2 shrink-0 my-1 max-w-lg mx-auto w-full px-2">
+              <div className="inline-flex items-center gap-2 bg-blue-50 text-[#0a2351] border border-blue-200 px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-black shadow-xs">
+                <Radio className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                 <span>SENSOR NFC 13.56 MHz AKTIF</span>
               </div>
               
-              <p className="text-xs sm:text-sm text-slate-200 font-medium m-0">
+              <p className="text-xs sm:text-sm text-slate-600 font-medium m-0">
                 Menunggu deteksi fisik kartu Smart Card pada sensor perangkat
               </p>
 
               {/* Explicit Mandatory Requirement Notice: NFC Feature & Active State */}
-              <div className="bg-[#032d20]/90 border border-[#d4af37]/60 rounded-xl px-3 py-1.5 shadow-md flex items-center justify-center gap-2 text-amber-200 text-[11px] sm:text-xs font-bold">
-                <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
+              <div className="bg-blue-50/90 border border-blue-200 rounded-xl px-3.5 py-2 shadow-xs flex items-center justify-center gap-2 text-[#0a2351] text-[11px] sm:text-xs font-bold text-center">
+                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>Pastikan perangkat Anda memiliki fitur NFC dan dalam kondisi Aktif</span>
               </div>
             </div>
 
             {/* Center Animated Smart Card Graphic */}
-            <div className="relative z-10 my-auto flex flex-col items-center justify-center w-full max-w-md px-2 py-1">
+            <div className="relative z-10 my-auto flex flex-col items-center justify-center w-full max-w-md px-2 py-2">
               {/* Radio Contactless Waves */}
-              <div className="flex items-center justify-center mb-1.5">
+              <div className="flex items-center justify-center mb-2">
                 <div className="relative">
-                  <Wifi className="w-7 h-7 sm:w-9 sm:h-9 text-cyan-300 rotate-90 animate-pulse drop-shadow-[0_0_12px_#22d3ee]" />
-                  <div className="absolute -inset-1.5 rounded-full bg-cyan-400/20 blur-md animate-ping" />
+                  <Wifi className="w-7 h-7 sm:w-9 sm:h-9 text-blue-600 rotate-90 animate-pulse drop-shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+                  <div className="absolute -inset-1.5 rounded-full bg-blue-400/20 blur-md animate-ping" />
                 </div>
               </div>
 
               {/* Physical Smart Card Representation matching official design with controlled height */}
-              <div className="w-full flex justify-center transform transition-transform hover:scale-[1.02]">
+              <div className="w-full flex justify-center transform transition-transform hover:scale-[1.02] drop-shadow-xl">
                 <SmartCardGraphic 
                   role="SUPERADMIN ACCOUNT" 
                   isInteractive={false} 
-                  className="!max-w-[290px] sm:!max-w-[340px] md:!max-w-[360px]"
+                  className="!max-w-[280px] sm:!max-w-[340px] md:!max-w-[360px]"
                 />
               </div>
 
               {/* Guide Note with compact, elegant layout */}
-              <div className="mt-2.5 sm:mt-3 space-y-0.5 text-center max-w-sm mx-auto px-2">
-                <p className="text-xs sm:text-sm font-black text-cyan-200 m-0">
+              <div className="mt-3 sm:mt-4 space-y-1 text-center max-w-sm mx-auto px-2">
+                <p className="text-sm sm:text-base font-black text-slate-900 m-0">
                   Tempelkan Kartu ke Sensor NFC
                 </p>
-                <p className="text-[11px] sm:text-xs text-slate-300 font-medium m-0 leading-relaxed">
+                <p className="text-xs sm:text-[13px] text-slate-600 font-medium m-0 leading-relaxed">
                   Dekatkan kartu Smart Card ke area sensor NFC smartphone atau alat card reader NFC eksternal laptop Anda.
                 </p>
               </div>
@@ -940,11 +940,11 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
 
             {/* Error or Unsupported Notice */}
             {isNfcSupported === false && (
-              <div className="relative z-10 w-full max-w-md bg-amber-950/90 border border-amber-400/70 rounded-2xl p-2.5 sm:p-3 text-xs text-amber-200 flex items-start gap-2 shadow-xl backdrop-blur-md my-1 shrink-0">
-                <Smartphone className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0 mt-0.5" />
+              <div className="relative z-10 w-full max-w-md bg-amber-50 border border-amber-300 rounded-2xl p-3 text-xs text-amber-950 flex items-start gap-2.5 shadow-xs my-1 shrink-0">
+                <Smartphone className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-white text-[11.5px] sm:text-xs m-0">Sensor NFC Browser Tidak Terdeteksi Otomatis</p>
-                  <p className="text-[10.5px] sm:text-[11px] text-amber-200/90 mt-0.5 m-0 leading-relaxed">
+                  <p className="font-bold text-slate-900 text-xs sm:text-[13px] m-0">Sensor NFC Browser Tidak Terdeteksi Otomatis</p>
+                  <p className="text-[11px] sm:text-xs text-slate-700 mt-0.5 m-0 leading-relaxed">
                     Fitur Web NFC aktif pada Android Chrome atau card reader NFC terhubung. Pada laptop tanpa NFC, gunakan <strong>Pemindai Kamera QR</strong>.
                   </p>
                 </div>
@@ -952,20 +952,20 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
             )}
 
             {nfcError && (
-              <div className="relative z-10 w-full max-w-md bg-red-950/90 border border-red-400 rounded-xl p-2.5 text-xs text-red-200 flex items-center gap-2 my-1 shrink-0">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                <span className="text-[11px] sm:text-xs">{nfcError}</span>
+              <div className="relative z-10 w-full max-w-md bg-rose-50 border border-rose-300 rounded-xl p-2.5 sm:p-3 text-xs text-rose-950 flex items-center gap-2 my-1 shrink-0 shadow-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="text-[11px] sm:text-xs font-semibold">{nfcError}</span>
               </div>
             )}
 
             {/* Bottom Action Bar */}
-            <div className="relative z-10 w-full max-w-md flex items-center justify-center gap-3 shrink-0 my-1">
+            <div className="relative z-10 w-full max-w-md flex items-center justify-center gap-3 shrink-0 my-1 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2.5 sm:py-3 bg-slate-900/90 hover:bg-slate-800 text-white font-black text-xs sm:text-sm rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-xl border border-white/20 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                className="w-full py-2.5 sm:py-3.5 bg-gradient-to-r from-[#0a2351] via-[#0f367a] to-[#081b3a] hover:from-[#0d2d68] hover:to-[#123e8c] text-white font-black text-xs sm:text-sm rounded-xl sm:rounded-2xl transition-all cursor-pointer shadow-lg hover:shadow-xl border border-blue-400/30 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
               >
-                <ArrowLeft className="w-4 h-4 text-[#d4af37]" />
+                <ArrowLeft className="w-4 h-4 text-amber-300" />
                 <span>Kembali ke Pilihan Smart Card</span>
               </button>
             </div>
