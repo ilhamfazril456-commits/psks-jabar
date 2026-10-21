@@ -992,8 +992,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         )}
 
-        {/* MODUL KHUSUS SUPERADMIN: PENGATURAN & UBAH PIN SMART ACCESS CARD MANDIRI */}
-        {session.statusActive === 'SAH_TERDAFTAR' && session.role === 'superadmin' && (
+        {/* MODUL KHUSUS SUPERADMIN & DEVELOPER: PENGATURAN & UBAH PIN MANDIRI */}
+        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer') && (
           <div
             id="keamanan-pin-superadmin"
             className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-indigo-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
@@ -1010,7 +1010,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="bg-indigo-100 text-indigo-950 font-black text-[9px] px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-indigo-300">
-                      PIN KEAMANAN PRIBADI
+                      PIN KEAMANAN OTORITAS
                     </span>
                     <span className="bg-emerald-100 text-emerald-950 font-bold text-[9px] px-2.5 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1018,10 +1018,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     </span>
                   </div>
                   <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
-                    Ubah PIN Smart Access Card Superadmin
+                    Ubah PIN
                   </h3>
                   <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    Ubah 6 digit PIN otentikasi Smart Card Anda secara mandiri. Perubahan langsung tersimpan ke database dan otomatis terupdate ke konsol Pusat Keamanan PIN milik Developer.
+                    Ubah 6 digit PIN otentikasi otoritas akun Anda secara mandiri. Perubahan langsung tersimpan ke database dan berlaku secara realtime.
                   </p>
                 </div>
               </div>
@@ -1113,7 +1113,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   ) : (
                     <>
                       <KeyRound className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Simpan PIN Superadmin</span>
+                      <span>Simpan PIN</span>
                     </>
                   )}
                 </button>
