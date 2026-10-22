@@ -263,6 +263,8 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       passwordHash: hashPassword(pTrim),
       resetTicket: null as any,
       lastUpdatedTimestamp: Date.now(),
+      lastEditedBy: session?.username || session?.nama,
+      lastEditedByRole: session?.role,
     };
 
     const targetUname = editingAccount.username;
@@ -306,6 +308,8 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       isFrozen: nextFrozen,
       statusAkun: nextFrozen ? 'DIBEKUKAN' : 'AKTIF',
       lastUpdatedTimestamp: Date.now(),
+      lastEditedBy: session?.username || session?.nama,
+      lastEditedByRole: session?.role,
     };
 
     const targetUname = freezingAccount.username;
@@ -454,6 +458,8 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
         resetBy: session?.nama || session?.username || 'Superadmin Jabar',
       },
       lastUpdatedTimestamp: Date.now(),
+      lastEditedBy: session?.nama || session?.username || 'Superadmin Jabar',
+      lastEditedByRole: session?.role || 'superadmin',
     };
 
     onUpdateUserAccount(updatedAccount, 'PASSWORD_CHANGED');

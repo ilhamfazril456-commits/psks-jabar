@@ -283,6 +283,8 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
           passwordPolos: sandiNew,
           passwordHash: hashPassword(sandiNew),
           lastUpdatedTimestamp: Date.now(),
+          lastEditedBy: session?.username || session?.nama,
+          lastEditedByRole: session?.role,
         } as any,
         'PASSWORD_CHANGED'
       );

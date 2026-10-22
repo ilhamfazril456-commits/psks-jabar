@@ -19,7 +19,7 @@ interface AccountPageProps {
   onLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', username: string, wilayah: string) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
-  onUpdateAdminAccount?: (updated: AdminAccount) => void;
+  onUpdateAdminAccount?: (updated: AdminAccount, securitySignal?: string) => void | Promise<void>;
   onDeleteAdminAccount?: (id: string) => void;
   openLoginOnMount?: boolean;
   onBackToHome?: () => void;
@@ -392,10 +392,26 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         passwordPolos: newTrim,
         passwordHash: newHash,
         lastUpdatedTimestamp: nowMs,
+        lastEditedBy: session.username || session.nama,
+        lastEditedByRole: session.role,
+        isSelfUpdate: true,
       };
 
+      // Perbarui data sesi lokal instan agar tetap sinkron dan tidak salah ditendang keluar
+      try {
+        const storedSession = sessionStorage.getItem('psks_active_session');
+        if (storedSession) {
+          const parsed = JSON.parse(storedSession);
+          parsed.passwordPolos = newTrim;
+          parsed.passwordHash = newHash;
+          parsed.lastUpdatedTimestamp = nowMs;
+          sessionStorage.setItem('psks_active_session', JSON.stringify(parsed));
+          localStorage.setItem('psks_active_session', JSON.stringify(parsed));
+        }
+      } catch {}
+
       if (onUpdateAdminAccount) {
-        await onUpdateAdminAccount(updatedAccount);
+        await onUpdateAdminAccount(updatedAccount, 'SELF_PASSWORD_CHANGE');
       }
 
       setPasswordChangeSuccess('✅ Kata sandi berhasil diperbarui dan tersimpan langsung ke database!');

@@ -2730,6 +2730,45 @@ export default function App() {
     handleForceLogout('Baru saja keluar');
   };
 
+  /**
+   * Memeriksa apakah aktor memiliki otoritas berkuasa atas sesi target yang sedang aktif:
+   * - Pengubahan akun secara MANDIRI DILARANG memicu modal penendangan keluar (selalu return false).
+   * - Developer berkuasa atas: Superadmin, Admin, User.
+   * - Superadmin berkuasa atas: Admin, User.
+   * - Admin dan User tidak memiliki otoritas atas akun lain.
+   */
+  const checkIsAuthoritativeOverSession = (
+    actorRole?: string,
+    actorUsername?: string,
+    targetRole?: string,
+    targetUsername?: string,
+    targetUserId?: string
+  ): boolean => {
+    if (!actorRole || !targetRole) return false;
+
+    const actorUnameClean = (actorUsername || '').toLowerCase().trim();
+    const targetUnameClean = (targetUsername || '').toLowerCase().trim();
+    const targetUserIdClean = (targetUserId || '').toLowerCase().trim();
+
+    // 1. Jika aksi dilakukan sendiri (MANDIRI), DILARANG ditendang keluar!
+    if (actorUnameClean && (actorUnameClean === targetUnameClean || actorUnameClean === targetUserIdClean)) {
+      return false;
+    }
+
+    // 2. Developer berkuasa mengedit akun Superadmin, Admin, dan User
+    if (actorRole === 'developer') {
+      return targetRole === 'superadmin' || targetRole === 'admin' || targetRole === 'user' || targetRole === 'pilar_user';
+    }
+
+    // 3. Superadmin berkuasa mengedit akun Admin dan User
+    if (actorRole === 'superadmin') {
+      return targetRole === 'admin' || targetRole === 'user' || targetRole === 'pilar_user';
+    }
+
+    // Role lain tidak memiliki otoritas atas akun lain
+    return false;
+  };
+
   // 4. Session Timeout & Real-time Account State Listener (Deletion, Editing, & Multiple Sessions)
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
@@ -2789,7 +2828,8 @@ export default function App() {
           return;
         }
 
-        // 4. Check Account Edited (Password, Username, Role, Status, or Updated Credentials)
+        // 4. Check Account Edited remotely by an authoritative superior
+        // ATURAN MUTLAK: Perubahan password/kredensial secara MANDIRI DILARANG diberi pop-up dan DILARANG ditendang keluar!
         const passwordChanged = Boolean(
           (session.passwordHash && matched.passwordHash && session.passwordHash !== matched.passwordHash) ||
           (session.passwordPolos && matched.passwordPolos && session.passwordPolos !== matched.passwordPolos)
@@ -2800,17 +2840,38 @@ export default function App() {
         const roleChanged = Boolean(
           session.role && matched.role && session.role !== matched.role
         );
-        const dataEditedAfterLogin = Boolean(
-          matched.lastUpdatedTimestamp && session.loginTimestamp &&
-          matched.lastUpdatedTimestamp > session.loginTimestamp + 1500
-        );
         const vervalRejected = Boolean((matched as any).statusVerval === 'REJECTED');
 
-        if (passwordChanged || usernameChanged || roleChanged || dataEditedAfterLogin || vervalRejected) {
+        // Periksa apakah perubahan ini dilakukan oleh role yang berkuasa (Superadmin / Developer) atas akun ini
+        const isSuperiorEdit = checkIsAuthoritativeOverSession(
+          (matched as any).lastEditedByRole,
+          (matched as any).lastEditedBy,
+          session.role,
+          session.username || session.nama,
+          session.userId
+        );
+
+        if (
+          (usernameChanged && isSuperiorEdit) ||
+          (roleChanged && isSuperiorEdit) ||
+          vervalRejected ||
+          (passwordChanged && isSuperiorEdit)
+        ) {
           if (!showAccountEditedModal) {
             setShowAccountEditedModal(true);
           }
           return;
+        }
+
+        // Jika password di database diperbarui secara mandiri atau disinkronkan,
+        // perbarui sesi lokal secara diam-diam tanpa memunculkan pop-up atau penendangan keluar
+        if (passwordChanged && !isSuperiorEdit) {
+          setSession((prev) => ({
+            ...prev,
+            passwordPolos: matched.passwordPolos || prev.passwordPolos,
+            passwordHash: matched.passwordHash || prev.passwordHash,
+            lastUpdatedTimestamp: matched.lastUpdatedTimestamp || prev.lastUpdatedTimestamp,
+          }));
         }
 
         // 5. Check Multiple Session Active / Login on another device (Single Session Kick)
@@ -2944,6 +3005,26 @@ export default function App() {
           );
 
           if (isSameAccount) {
+            // Aksi mandiri DILARANG memicu modal penendangan keluar!
+            if (
+              data.isSelfUpdate === true ||
+              data.action === 'SELF_PASSWORD_CHANGE' ||
+              (data.by && (data.by.toLowerCase().trim() === myUname || data.by.toLowerCase().trim() === myUserId))
+            ) {
+              return;
+            }
+
+            // Hanya proses penendangan jika dilakukan oleh role yang berkuasa
+            const isAuthoritative = checkIsAuthoritativeOverSession(
+              data.byRole,
+              data.by,
+              session.role,
+              session.username || session.nama,
+              session.userId
+            );
+
+            if (!isAuthoritative) return;
+
             if (data.action === 'FREEZE') {
               setShowAccountFrozenModal(true);
             } else if (data.action === 'DELETE') {
@@ -2993,6 +3074,26 @@ export default function App() {
         );
 
         if (isMatch) {
+          // Aksi mandiri DILARANG memicu modal penendangan keluar!
+          if (
+            data.isSelfUpdate === true ||
+            data.action === 'SELF_PASSWORD_CHANGE' ||
+            (data.by && (data.by.toLowerCase().trim() === userUname || data.by.toLowerCase().trim() === sessionUserId))
+          ) {
+            return;
+          }
+
+          // Hanya proses penendangan jika dilakukan oleh role yang berkuasa
+          const isAuthoritative = checkIsAuthoritativeOverSession(
+            data.byRole,
+            data.by,
+            session.role,
+            session.username || session.nama,
+            session.userId
+          );
+
+          if (!isAuthoritative) return;
+
           if (data.action === 'FREEZE') {
             setShowAccountFrozenModal(true);
           } else if (data.action === 'DELETE') {
@@ -3940,35 +4041,6 @@ export default function App() {
       derivedSignal = securitySignal;
     }
 
-    if (derivedSignal) {
-      const sigPayload = {
-        action: derivedSignal,
-        targetUsername: sanitizedAdmin.username,
-        previousUsername: prevUname,
-        targetId: sanitizedAdmin.id,
-        targetWilayah: sanitizedAdmin.wilayahTugas,
-        timestamp: Date.now(),
-        by: session.username || session.nama,
-        byRole: session.role,
-      };
-
-      try {
-        const authChannel = new BroadcastChannel('psks_auth_channel');
-        authChannel.postMessage({
-          type: 'SECURITY_SIGNAL',
-          ...sigPayload,
-        });
-        setTimeout(() => {
-          try { authChannel.close(); } catch {}
-        }, 500);
-      } catch {}
-
-      try {
-        setFirestoreDoc('security_signals', 'live', sigPayload).catch(() => {});
-      } catch {}
-    }
-
-    // Immediately trigger local modal if the modified account is the currently logged in session
     const currentSessionId = (session.userId || '').toLowerCase().trim();
     const currentSessionUname = (session.username || '').toLowerCase().trim();
     const isTargetingCurrentSession = Boolean(
@@ -3977,13 +4049,87 @@ export default function App() {
        (currentSessionUname && (targetUname === currentSessionUname || prevUname === currentSessionUname)))
     );
 
-    if (isTargetingCurrentSession) {
-      if (sanitizedAdmin.isFrozen === true || sanitizedAdmin.statusAkun === 'DIBEKUKAN' || sanitizedAdmin.statusActive === 'FROZEN') {
-        setShowAccountFrozenModal(true);
-      } else if ((sanitizedAdmin.statusAkun as any) === 'DIHAPUS' || (sanitizedAdmin as any).isDeleted) {
-        setShowAccountDeletedModal(true);
-      } else {
-        setShowAccountEditedModal(true);
+    // Identifikasi apakah ini perubahan akun secara MANDIRI oleh pemilik akun sendiri:
+    const isSelfUpdate = Boolean(
+      securitySignal === 'SELF_PASSWORD_CHANGE' ||
+      securitySignal === 'SELF_UPDATE' ||
+      sanitizedAdmin.isSelfUpdate === true ||
+      (isTargetingCurrentSession && (
+        session.role === sanitizedAdmin.role ||
+        !securitySignal ||
+        securitySignal === 'SELF_PASSWORD_CHANGE'
+      ))
+    );
+
+    if (isSelfUpdate) {
+      // 1. SINKRONISASI SESI AKTIF PENGGUNA MANDIRI:
+      // Perbarui sesi aktif lokal dan storage secara instan agar kredensial baru aktif
+      setSession((prev) => {
+        const updated = {
+          ...prev,
+          passwordPolos: sanitizedAdmin.passwordPolos || prev.passwordPolos,
+          passwordHash: sanitizedAdmin.passwordHash || prev.passwordHash,
+          lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
+        };
+        try {
+          sessionStorage.setItem('psks_active_session', JSON.stringify(updated));
+          localStorage.setItem('psks_active_session', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // 2. Sesuai instruksi mutlak user:
+      // KETIKA USER MENGUBAH PASSWORD SECARA MANDIRI MAKA DILARANG UNTUK DIBERI POP-UP
+      // BAHWA AKUN TELAH DIEDIT DAN DILARANG DITENDANG KELUAR!
+      // Sesi tetap login normal tanpa pop-up dan tanpa penendangan keluar.
+    } else {
+      // BUKAN MANDIRI -> DIPERIKSA APAKAH AKTOR ADALAH ROLE YANG BERKUASA:
+      const isAuthoritative = checkIsAuthoritativeOverSession(
+        session.role,
+        session.username || session.nama,
+        sanitizedAdmin.role,
+        sanitizedAdmin.username,
+        sanitizedAdmin.id
+      );
+
+      // Hanya kirim sinyal remote kick-out jika dilakukan oleh role yang berkuasa
+      if (isAuthoritative && derivedSignal) {
+        const sigPayload = {
+          action: derivedSignal,
+          targetUsername: sanitizedAdmin.username,
+          previousUsername: prevUname,
+          targetId: sanitizedAdmin.id,
+          targetWilayah: sanitizedAdmin.wilayahTugas,
+          timestamp: Date.now(),
+          by: session.username || session.nama,
+          byRole: session.role,
+        };
+
+        try {
+          const authChannel = new BroadcastChannel('psks_auth_channel');
+          authChannel.postMessage({
+            type: 'SECURITY_SIGNAL',
+            ...sigPayload,
+          });
+          setTimeout(() => {
+            try { authChannel.close(); } catch {}
+          }, 500);
+        } catch {}
+
+        try {
+          setFirestoreDoc('security_signals', 'live', sigPayload).catch(() => {});
+        } catch {}
+      }
+
+      // Jika akun yang diedit adalah sesi di jendela ini (dan dilakukan oleh otoritas lain)
+      if (isTargetingCurrentSession) {
+        if (sanitizedAdmin.isFrozen === true || sanitizedAdmin.statusAkun === 'DIBEKUKAN' || sanitizedAdmin.statusActive === 'FROZEN') {
+          setShowAccountFrozenModal(true);
+        } else if ((sanitizedAdmin.statusAkun as any) === 'DIHAPUS' || (sanitizedAdmin as any).isDeleted) {
+          setShowAccountDeletedModal(true);
+        } else {
+          setShowAccountEditedModal(true);
+        }
       }
     }
 

@@ -224,6 +224,9 @@ export interface AdminAccount {
   nik?: string;
   noWhatsapp?: string;
   resetTicket?: ResetPasswordTicket;
+  lastEditedBy?: string;
+  lastEditedByRole?: string;
+  isSelfUpdate?: boolean;
 }
 
 export interface ResetPasswordTicket {
