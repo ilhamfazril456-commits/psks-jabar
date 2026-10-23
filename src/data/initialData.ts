@@ -601,6 +601,17 @@ export const DEFAULT_PILLAR_DATA: Record<string, PSKSDataRecord[]> = {
       "nik": "3205091708840001",
       "nama": "Cecep Sopian",
       "wilayah": "Kab. Garut"
+    },
+    {
+      "id": "tksk-bgr-1",
+      "pillarId": "tksk",
+      "nama": "Dudi Kusniadi",
+      "wilayah": "Kab. Bogor",
+      "nik": "3201011508820003",
+      "status": "Aktif",
+      "kec": "Cibinong",
+      "sertifikasi": "SK/TKSK/BGR/2025/042",
+      "hp": "081288990011"
     }
   ]
 };

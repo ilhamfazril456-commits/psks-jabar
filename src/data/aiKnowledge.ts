@@ -1,7 +1,7 @@
 import { UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { EXACT_QUESTION_ANSWERS } from './aiCatalogAnswers';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from './aiQuestions';
-import { PILLARS_CONFIG } from './initialData';
+import { PILLARS_CONFIG, JABAR_REGIONS, KAB_KOTA_ONLY } from './initialData';
 import {
   normalizeQueryWithComprehensiveVocabulary,
   searchKnowledgeBase,
@@ -35,6 +35,359 @@ export interface SmartAnswerResult {
   isAccurate: boolean;
   confidence: number;
   source: 'verified_exact' | 'state_grounded' | 'ai_model_verified' | 'knowledge_fallback';
+}
+
+/**
+ * Normalizes person name by stripping academic titles, honorifics, and punctuation
+ */
+export function normalizePersonName(name: string): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/,\s*(s\.pd|s\.sos|s\.e|s\.si|s\.t|s\.kom|s\.tr\.sos|s\.st|m\.si|m\.a|m\.ap|m\.pd|m\.ti|ph\.d|dr\.|dra\.|drs\.|ir\.|hj\.|h\.)/gi, '')
+    .replace(/\b(dr\.|dra\.|drs\.|ir\.|hj\.|h\.|bapak|ibu|pak|bu|kang|teh)\b/gi, '')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Normalizes wilayah name to match Jabar kab/kota without punctuation
+ */
+export function normalizeWilayahMatch(w: string): string {
+  if (!w) return '';
+  return w
+    .toLowerCase()
+    .replace(/^(kabupaten|kab\.|kab)\s+/i, 'kab ')
+    .replace(/^(kota|kta\.|kta)\s+/i, 'kota ')
+    .replace(/[^a-z0-9\s]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Detects specific Jabar region from user query, respecting Kab vs Kota distinction
+ */
+export function detectRegionInText(text: string, userWilayah?: string): string | null {
+  const norm = text.toLowerCase();
+
+  // 1. Specific checks distinguishing Kab vs Kota
+  if (norm.includes('kab. bogor') || norm.includes('kabupaten bogor') || norm.includes('kab bogor')) return 'Kab. Bogor';
+  if (norm.includes('kota bogor')) return 'Kota Bogor';
+
+  if (norm.includes('kab. bandung barat') || norm.includes('kabupaten bandung barat') || norm.includes('bandung barat') || norm.includes('kbb')) return 'Kab. Bandung Barat';
+  if (norm.includes('kab. bandung') || norm.includes('kabupaten bandung') || norm.includes('kab bandung')) return 'Kab. Bandung';
+  if (norm.includes('kota bandung')) return 'Kota Bandung';
+
+  if (norm.includes('kab. sukabumi') || norm.includes('kabupaten sukabumi') || norm.includes('kab sukabumi')) return 'Kab. Sukabumi';
+  if (norm.includes('kota sukabumi')) return 'Kota Sukabumi';
+
+  if (norm.includes('kab. cirebon') || norm.includes('kabupaten cirebon') || norm.includes('kab cirebon')) return 'Kab. Cirebon';
+  if (norm.includes('kota cirebon')) return 'Kota Cirebon';
+
+  if (norm.includes('kab. bekasi') || norm.includes('kabupaten bekasi') || norm.includes('kab bekasi')) return 'Kab. Bekasi';
+  if (norm.includes('kota bekasi')) return 'Kota Bekasi';
+
+  if (norm.includes('kab. tasikmalaya') || norm.includes('kabupaten tasikmalaya') || norm.includes('kab tasik')) return 'Kab. Tasikmalaya';
+  if (norm.includes('kota tasikmalaya') || norm.includes('kota tasik')) return 'Kota Tasikmalaya';
+
+  // 2. Unique Kab/Kota names
+  if (norm.includes('cianjur')) return 'Kab. Cianjur';
+  if (norm.includes('garut')) return 'Kab. Garut';
+  if (norm.includes('ciamis')) return 'Kab. Ciamis';
+  if (norm.includes('kuningan')) return 'Kab. Kuningan';
+  if (norm.includes('majalengka')) return 'Kab. Majalengka';
+  if (norm.includes('sumedang')) return 'Kab. Sumedang';
+  if (norm.includes('indramayu')) return 'Kab. Indramayu';
+  if (norm.includes('subang')) return 'Kab. Subang';
+  if (norm.includes('purwakarta')) return 'Kab. Purwakarta';
+  if (norm.includes('karawang')) return 'Kab. Karawang';
+  if (norm.includes('pangandaran')) return 'Kab. Pangandaran';
+  if (norm.includes('depok')) return 'Kota Depok';
+  if (norm.includes('cimahi')) return 'Kota Cimahi';
+  if (norm.includes('banjar')) return 'Kota Banjar';
+
+  // 3. Bare names without kab/kota prefix - resolve via userWilayah context
+  if (norm.includes('bogor')) {
+    if (userWilayah === 'Kota Bogor') return 'Kota Bogor';
+    return 'Kab. Bogor';
+  }
+  if (norm.includes('bandung')) {
+    if (userWilayah === 'Kab. Bandung') return 'Kab. Bandung';
+    if (userWilayah === 'Kab. Bandung Barat') return 'Kab. Bandung Barat';
+    return 'Kota Bandung';
+  }
+  if (norm.includes('sukabumi')) {
+    if (userWilayah === 'Kota Sukabumi') return 'Kota Sukabumi';
+    return 'Kab. Sukabumi';
+  }
+  if (norm.includes('cirebon')) {
+    if (userWilayah === 'Kota Cirebon') return 'Kota Cirebon';
+    return 'Kab. Cirebon';
+  }
+  if (norm.includes('bekasi')) {
+    if (userWilayah === 'Kota Bekasi') return 'Kota Bekasi';
+    return 'Kab. Bekasi';
+  }
+  if (norm.includes('tasikmalaya') || norm.includes('tasik')) {
+    if (userWilayah === 'Kota Tasikmalaya') return 'Kota Tasikmalaya';
+    return 'Kab. Tasikmalaya';
+  }
+
+  return null;
+}
+
+/**
+ * Detects pillar entity mentioned in text
+ */
+export function detectPillarInText(text: string): { pillarId: PillarId; pillarName: string } | null {
+  const norm = text.toLowerCase();
+  if (norm.includes('tksk') || norm.includes('tenaga kesejahteraan sosial kecamatan')) {
+    return { pillarId: 'tksk', pillarName: 'TKSK' };
+  }
+  if (norm.includes('tagana') || norm.includes('taruna siaga bencana')) {
+    return { pillarId: 'tagana', pillarName: 'TAGANA' };
+  }
+  if (norm.includes('psm') || norm.includes('pekerja sosial masyarakat')) {
+    return { pillarId: 'psm', pillarName: 'PSM' };
+  }
+  if (norm.includes('karang taruna') || norm.includes('karangtaruna') || norm.includes('katar')) {
+    return { pillarId: 'karangtaruna', pillarName: 'Karang Taruna' };
+  }
+  if (norm.includes('peksos') || norm.includes('pekerja sosial profesional') || norm.includes('pksp') || norm.includes('pekerja sosial')) {
+    return { pillarId: 'peksos', pillarName: 'PEKSOS' };
+  }
+  if (norm.includes('lks') || norm.includes('lembaga kesejahteraan sosial') || norm.includes('panti asuhan') || norm.includes('panti jompo')) {
+    return { pillarId: 'lks', pillarName: 'LKS' };
+  }
+  if (norm.includes('lk3') || norm.includes('lembaga konsultasi kesejahteraan keluarga')) {
+    return { pillarId: 'lk3', pillarName: 'LK3' };
+  }
+  if (norm.includes('pensos') || norm.includes('penyuluh sosial')) {
+    return { pillarId: 'pensos', pillarName: 'PENSOS' };
+  }
+  if (norm.includes('kube') || norm.includes('badan usaha') || norm.includes('kelompok usaha bersama')) {
+    return { pillarId: 'badanusaha', pillarName: 'KUBE / Badan Usaha' };
+  }
+  if (norm.includes('slrt') || norm.includes('puskesos')) {
+    return { pillarId: 'slrt_puskesos', pillarName: 'SLRT PUSKESOS' };
+  }
+  return null;
+}
+
+/**
+ * Filter for Sensitive Personal Data inquiries under UU PDP No. 27/2022
+ */
+export function resolveSensitivePrivacyQuery(query: string): string | null {
+  const q = query.toLowerCase();
+  const hasSensitiveTarget =
+    q.includes('nik') ||
+    q.includes('nomor induk kependudukan') ||
+    q.includes('password') ||
+    q.includes('kata sandi') ||
+    q.includes('pin') ||
+    q.includes('nomor hp') ||
+    q.includes('no hp') ||
+    q.includes('nomor wa') ||
+    q.includes('no wa') ||
+    q.includes('nomor telepon') ||
+    q.includes('kontak pribadi');
+
+  const hasInquiryIntent =
+    q.includes('berapa') ||
+    q.includes('minta') ||
+    q.includes('apa') ||
+    q.includes('apakah ada') ||
+    q.includes('lihat') ||
+    q.includes('tampilkan') ||
+    q.includes('bocorkan') ||
+    q.includes('sebutkan') ||
+    q.includes('kasih tau') ||
+    q.includes('berikan');
+
+  if (hasSensitiveTarget && hasInquiryIntent) {
+    return `Demi keamanan informasi dan kepatuhan terhadap amanat **Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP)**, Nomor Induk Kependudukan (NIK 16 digit), kata sandi, dan nomor kontak pribadi anggota bersifat rahasia (*zero-disclosure*) dan dilindungi secara ketat sehingga tidak dapat dipublikasikan melalui Asisten AI.\n\nSistem hanya diizinkan untuk memverifikasi status keabsahan pendaftaran resmi, nama lengkap, pilar sosial, dan wilayah penugasan anggota.`;
+  }
+
+  return null;
+}
+
+/**
+ * Real-time member verification lookup engine querying active allPillarData state directly
+ */
+export function resolveMemberVerificationQuery(
+  query: string,
+  allPillarData?: Record<string, PSKSDataRecord[]>,
+  userWilayah?: string
+): string | null {
+  if (!allPillarData) return null;
+  const q = query.toLowerCase().trim();
+
+  // 1. First check sensitive privacy requests
+  const privacyRefusal = resolveSensitivePrivacyQuery(q);
+  if (privacyRefusal) return privacyRefusal;
+
+  // 2. Check if inquiry is about registration / verification / status
+  const isVerificationInquiry =
+    q.includes('terdaftar') ||
+    q.includes('tercatat') ||
+    q.includes('terverifikasi') ||
+    q.includes('anggota') ||
+    q.includes('personil') ||
+    q.includes('nama') ||
+    q.includes('cek') ||
+    q.includes('status') ||
+    q.includes('apakah ada') ||
+    q.includes('apakah');
+
+  if (!isVerificationInquiry) return null;
+
+  const cleanQ = normalizePersonName(q);
+  const detectedPillar = detectPillarInText(q);
+
+  // Search through all records across all 10 pillars
+  let foundRecord: PSKSDataRecord | null = null;
+  let foundPillarId: string | null = null;
+
+  const pillarEntries = Object.entries(allPillarData);
+  for (const [pId, records] of pillarEntries) {
+    if (!Array.isArray(records)) continue;
+    for (const rec of records) {
+      if (!rec || !rec.nama) continue;
+      const cleanRecName = normalizePersonName(rec.nama);
+      if (cleanRecName.length < 3) continue;
+
+      const nameTokens = cleanRecName.split(' ').filter((t) => t.length > 2);
+      const isExactSubstring = cleanQ.includes(cleanRecName);
+      const hasAllTokens = nameTokens.length >= 2 && nameTokens.every((token) => cleanQ.includes(token));
+
+      if (isExactSubstring || hasAllTokens) {
+        foundRecord = rec;
+        foundPillarId = rec.pillarId || pId;
+        break;
+      }
+    }
+    if (foundRecord) break;
+  }
+
+  if (foundRecord && foundPillarId) {
+    const pInfo = PILLARS_CONFIG[foundPillarId];
+    const pTitle = pInfo?.title || foundPillarId.toUpperCase();
+    const pShort = pInfo?.shortName || pTitle;
+    const regionName = foundRecord.wilayah.startsWith('Kab.')
+      ? foundRecord.wilayah.replace('Kab.', 'Kabupaten')
+      : foundRecord.wilayah;
+
+    // Check if user specified a pillar that differs from the registered one
+    if (detectedPillar && detectedPillar.pillarId !== foundPillarId) {
+      return `Nama **${foundRecord.nama}** sudah terdaftar resmi di pangkalan data sistem PSKS JABAR, namun bukan sebagai anggota **${detectedPillar.pillarName}**, melainkan sebagai **${pTitle}** di wilayah **${regionName}**.\n\n**Rincian Data Anggota Terdaftar Resmi**:\n- **Nama Lengkap**: ${foundRecord.nama}\n- **Pilar Sosial**: ${pTitle} (${pShort})\n- **Wilayah Tugas**: ${foundRecord.wilayah}${foundRecord.kec ? ` (Kecamatan ${foundRecord.kec})` : ''}\n- **Status Keaktifan**: ${foundRecord.status || 'Aktif'}\n- **SK / Sertifikasi**: ${foundRecord.sertifikasi || 'Tercatat dalam SK Penugasan Resmi'}\n\n*Data diverifikasi secara langsung dan akurat dari pangkalan data sistem PSKS JABAR yang tersimpan di website.*`;
+    }
+
+    // Exact match format: "Ya, Dudi Kusniadi sudah terdaftar sebagai TKSK di wilayah Kabupaten Bogor"
+    return `Ya, **${foundRecord.nama}** sudah terdaftar sebagai **${pTitle}** di wilayah **${regionName}**.\n\n**Rincian Data Anggota Terdaftar Resmi**:\n- **Nama Lengkap**: ${foundRecord.nama}\n- **Pilar Sosial**: ${pTitle} (${pShort})\n- **Wilayah Tugas**: ${foundRecord.wilayah}${foundRecord.kec ? ` (Kecamatan ${foundRecord.kec})` : ''}\n- **Status Keaktifan**: ${foundRecord.status || 'Aktif'}\n- **SK / Sertifikasi**: ${foundRecord.sertifikasi || 'Tercatat dalam SK Penugasan Resmi'}\n\n*Data diverifikasi secara langsung dan akurat dari pangkalan data sistem PSKS JABAR yang tersimpan di website.*`;
+  }
+
+  // If no record found, but query explicitly asked "apakah nama X terdaftar...", extract candidate name and answer factually
+  const explicitNameMatch =
+    q.match(/(?:apakah\s+(?:nama|ada\s+nama|saudara)?|cek\s+(?:nama|status)?|adakah\s+(?:nama)?)\s+([a-zA-Z\s'.]+?)\s+(?:terdaftar|tercatat|masuk|ada)/i) ||
+    q.match(/(?:apakah|adakah)\s+([a-zA-Z\s'.]+?)\s+(?:terdaftar|tercatat)\s+(?:sebagai|di|pada)/i);
+
+  if (explicitNameMatch && explicitNameMatch[1]) {
+    const rawCandidate = explicitNameMatch[1].trim();
+    const cleanCandidate = normalizePersonName(rawCandidate);
+    const isPillarWord = detectPillarInText(cleanCandidate) !== null;
+    const isCommonWord = ['nama', 'dia', 'beliau', 'anda', 'kamu', 'orang', 'anggota', 'personil'].includes(cleanCandidate);
+
+    if (cleanCandidate.length >= 3 && !isPillarWord && !isCommonWord) {
+      const targetPillarTitle = detectedPillar ? detectedPillar.pillarName : 'pilar sosial';
+      const targetWilayah = userWilayah || 'Jawa Barat';
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR yang tersimpan saat ini, nama **${rawCandidate}** belum tercatat sebagai anggota **${targetPillarTitle}** di wilayah **${targetWilayah}**.\n\nSilakan pastikan penulisan ejaan nama sudah sesuai dengan KTP, atau hubungi Dinas Sosial / Admin Wilayah setempat jika yang bersangkutan merupakan personil baru yang masih dalam proses verifikasi berkas pendaftaran.`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Real-time regional pillar data inquiry engine (prevents theoretical formula hallucinations)
+ */
+export function resolveRegionalPillarDataQuery(
+  query: string,
+  allPillarData?: Record<string, PSKSDataRecord[]>,
+  userWilayah?: string
+): string | null {
+  if (!allPillarData) return null;
+  const q = query.toLowerCase().trim();
+
+  const detectedPillar = detectPillarInText(q);
+  const detectedRegion = detectRegionInText(q, userWilayah);
+
+  const hasRegionalInquiry =
+    q.includes('apakah ada') ||
+    q.includes('adakah') ||
+    q.includes('ada ga') ||
+    q.includes('ada tidak') ||
+    q.includes('ada personil') ||
+    q.includes('ada anggota') ||
+    q.includes('berapa') ||
+    q.includes('jumlah') ||
+    q.includes('siapa saja') ||
+    q.includes('daftar personil') ||
+    q.includes('data personil');
+
+  if (!hasRegionalInquiry) return null;
+  if (!detectedPillar && !detectedRegion) return null;
+
+  // Case 1: Both Pillar & Region detected (e.g. "apakah ada tksk di wilayah kab bogor?", "berapa tksk di kab bogor?")
+  if (detectedPillar && detectedRegion) {
+    const records = allPillarData[detectedPillar.pillarId] || [];
+    const normTargetRegion = normalizeWilayahMatch(detectedRegion);
+
+    const matchingRecords = records.filter((r) => {
+      if (!r || !r.wilayah) return false;
+      const normRecWilayah = normalizeWilayahMatch(r.wilayah);
+      return normRecWilayah === normTargetRegion || normRecWilayah.includes(normTargetRegion) || normTargetRegion.includes(normRecWilayah);
+    });
+
+    if (matchingRecords.length > 0) {
+      const list = matchingRecords
+        .map((r, i) => `${i + 1}. **${r.nama}** - Kecamatan ${r.kec || '-'} (Status: ${r.status || 'Aktif'}, SK: ${r.sertifikasi || '-'})`)
+        .join('\n');
+      return `Ya, di wilayah **${detectedRegion}** terdapat personil **${detectedPillar.pillarName}** yang telah terdaftar resmi dalam pangkalan data sistem PSKS JABAR saat ini sebanyak **${matchingRecords.length} personil**:\n\n${list}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis terbarui secara real-time saat ada penambahan, perubahan, atau mutasi data.*`;
+    } else {
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil **${detectedPillar.pillarName}** yang tercatat untuk wilayah **${detectedRegion}** (atau berkas pendaftaran masih dalam proses verifikasi administrasi di tingkat wilayah).\n\nUntuk mendaftarkan personil baru di wilayah ini, silakan klik menu pendaftaran mandiri di Beranda pada pilar ${detectedPillar.pillarName}.`;
+    }
+  }
+
+  // Case 2: Only Region detected with count/personil inquiry (e.g. "berapa jumlah personil di kab bogor?", "siapa saja anggota di kab bogor?")
+  if (detectedRegion && !detectedPillar && (q.includes('berapa') || q.includes('jumlah') || q.includes('personil') || q.includes('anggota'))) {
+    const normTargetRegion = normalizeWilayahMatch(detectedRegion);
+    let totalInRegion = 0;
+    const breakdown: string[] = [];
+
+    Object.entries(allPillarData).forEach(([pId, records]) => {
+      if (!Array.isArray(records)) return;
+      const inRegion = records.filter((r) => {
+        if (!r || !r.wilayah) return false;
+        const norm = normalizeWilayahMatch(r.wilayah);
+        return norm === normTargetRegion || norm.includes(normTargetRegion) || normTargetRegion.includes(norm);
+      });
+      if (inRegion.length > 0) {
+        const pInfo = PILLARS_CONFIG[pId];
+        const pTitle = pInfo?.title || pId.toUpperCase();
+        breakdown.push(`- **${pTitle}**: ${inRegion.length} personil/lembaga (${inRegion.map((r) => r.nama).slice(0, 3).join(', ')}${inRegion.length > 3 ? ', dsb.' : ''})`);
+        totalInRegion += inRegion.length;
+      }
+    });
+
+    if (totalInRegion > 0) {
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, total personil dan lembaga 10 Pilar PSKS yang tercatat di wilayah **${detectedRegion}** adalah sebanyak **${totalInRegion} personil/lembaga**:\n\n${breakdown.join('\n')}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis sinkron setiap saat.*`;
+    } else {
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil atau lembaga pilar sosial yang tercatat aktif di wilayah **${detectedRegion}**.\n\nPendaftaran personil baru dapat diajukan secara mandiri melalui menu Beranda.`;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -277,6 +630,24 @@ export function getComprehensiveSmartAnswer(
 
   if (isAskingAdminAccess) {
     return `Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
+  }
+
+  // 0.00 SENSITIVE PRIVACY PROTECTION (UU PDP NO. 27/2022)
+  const privacyCheck = resolveSensitivePrivacyQuery(rawQ || q);
+  if (privacyCheck) {
+    return privacyCheck;
+  }
+
+  // 0.00 REAL-TIME LIVE MEMBER VERIFICATION ENGINE (DYNAMIC DATABASE LOOKUP)
+  const memberCheck = resolveMemberVerificationQuery(rawQ || q, allPillarData, wilayah);
+  if (memberCheck) {
+    return memberCheck;
+  }
+
+  // 0.00 REAL-TIME LIVE REGIONAL PILLAR DATA ENGINE (NO THEORETICAL CALCULATIONS)
+  const regionalPillarCheck = resolveRegionalPillarDataQuery(rawQ || q, allPillarData, wilayah);
+  if (regionalPillarCheck) {
+    return regionalPillarCheck;
   }
 
   // 0.00 CONVERSATIONAL REACTION REGARDING FIREBASE / SUPABASE
@@ -3771,6 +4142,39 @@ export function verifyAndTrackAnswerAccuracy(
       isAccurate: true,
       confidence: 1.0,
       source: 'verified_exact',
+    };
+  }
+
+  // 1.05 Priority: Sensitive Personal Data Protection (UU PDP No. 27/2022)
+  const privacyRefusal = resolveSensitivePrivacyQuery(query);
+  if (privacyRefusal) {
+    return {
+      finalContent: privacyRefusal,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
+
+  // 1.06 Priority: Real-time Member Verification Grounding (Reads live state directly)
+  const memberVerified = resolveMemberVerificationQuery(query, allPillarData, userWilayah);
+  if (memberVerified) {
+    return {
+      finalContent: memberVerified,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'state_grounded',
+    };
+  }
+
+  // 1.07 Priority: Real-time Regional Pillar Data Grounding (Overrules any theoretical calculations)
+  const regionalVerified = resolveRegionalPillarDataQuery(query, allPillarData, userWilayah);
+  if (regionalVerified) {
+    return {
+      finalContent: regionalVerified,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'state_grounded',
     };
   }
 
