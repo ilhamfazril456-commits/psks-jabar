@@ -854,6 +854,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             statusActive: session?.statusActive || 'GUEST',
             currentTab,
             activePillar,
+            kadinasName: appSettings?.kadinasName,
             liveSummary: {
               totalRecords: liveMetrics.totalRecords,
               pillarCounts: liveMetrics.pillarCounts,

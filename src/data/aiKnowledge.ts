@@ -2447,9 +2447,12 @@ Sistem PSKS JABAR dilengkapi sistem pemeliharaan berkala untuk menjaga keandalan
   }
 
   // 11. HALAMAN PROFIL, KONTAK & PENGATURAN (Full Website-Wide Comprehensive Knowledge)
-  // 11.1 Halaman Profil
-  if (q.includes('profil') || q.includes('visi') || q.includes('misi') || q.includes('dasar hukum') || q.includes('kadinas') || q.includes('kepala dinas') || q.includes('sambutan')) {
+  // 11.1 Halaman Profil & Kepala Dinas
+  if (q.includes('profil') || q.includes('visi') || q.includes('misi') || q.includes('dasar hukum') || q.includes('kadinas') || q.includes('kepala dinas') || q.includes('sambutan') || q.includes('pimpinan')) {
     const kadinas = appSettings?.kadinasName || 'Noneng Komara Nengsih, S.E., M.A.P.';
+    if (q.includes('kadinas') || q.includes('kepala dinas') || q.includes('pimpinan') || q.includes('nama kadinas')) {
+      return `${opening}**Kepala Dinas Sosial Provinsi Jawa Barat** saat ini dijabat oleh **${kadinas}**.\n\nBeliau memimpin tata kelola pelayanan dan perlindungan sosial di Jawa Barat dengan visi *"Mewujudkan Jawa Barat Juara Lahir Batin dengan Inovasi dan Kolaborasi"*, memperkuat peran 10 Pilar PSKS dan modernisasi digital data sosial.`;
+    }
     return `${opening}**Halaman Profil Dinas Sosial Provinsi Jawa Barat**:
 - **Kepala Dinas Sosial**: ${kadinas}
 - **Visi & Misi**: Mewujudkan Jawa Barat Juara Lahir Batin dengan Inovasi dan Kolaborasi melalui penanganan PPKS terpadu, pemberdayaan 10 Pilar PSKS, perlindungan jaminan sosial (Linjamsos), dan tata kelola digital.
@@ -3773,27 +3776,40 @@ export function verifyAndTrackAnswerAccuracy(
 
   // 1.1 Priority for Dynamic Model / Firestore Engine Reply with Context Awareness
   if (rawReply && rawReply.trim().length > 0) {
-    const isModelRefusal = rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi');
+    const isModelRefusal =
+      rawReply.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') ||
+      rawReply.includes('Mohon maaf, terjadi kendala saat memproses respons') ||
+      rawReply.includes('Halo! Saya Asisten AI **PSKS JABAR**. Ada yang bisa saya bantu atau informasi apa yang ingin Anda diskusikan seputar 10 Pilar PSKS');
+
     if (isModelRefusal) {
-      // Check if local smart engine can provide a contextual, intelligent response (e.g. for compliments, acknowledgments, follow-up questions)
-      const smartAnswer = getComprehensiveSmartAnswer(
-        query,
-        userRole,
-        userName,
-        userWilayah,
-        currentTab,
-        activePillar,
-        allPillarData,
-        appSettings,
-        previousContext
-      );
-      if (smartAnswer && !smartAnswer.includes('Mohon maaf untuk saat ini masih belum memiliki informasi')) {
-        return {
-          finalContent: smartAnswer,
-          isAccurate: true,
-          confidence: 0.99,
-          source: 'verified_exact',
-        };
+      const cleanQ = query.toLowerCase().trim();
+      const isSimpleGreeting = /^(halo|hai|hi|hey|assalamualaikum|assalamu'alaikum|sampurasun|p|tes|test|pagi|siang|sore|malam)$/i.test(cleanQ);
+
+      // If user asked a substantive question, provide the authoritative, context-aware local smart answer
+      if (!isSimpleGreeting) {
+        const smartAnswer = getComprehensiveSmartAnswer(
+          query,
+          userRole,
+          userName,
+          userWilayah,
+          currentTab,
+          activePillar,
+          allPillarData,
+          appSettings,
+          previousContext
+        );
+        if (
+          smartAnswer &&
+          !smartAnswer.includes('Mohon maaf untuk saat ini masih belum memiliki informasi') &&
+          !smartAnswer.includes('Mohon maaf, terjadi kendala saat memproses respons')
+        ) {
+          return {
+            finalContent: smartAnswer,
+            isAccurate: true,
+            confidence: 0.99,
+            source: 'verified_exact',
+          };
+        }
       }
     }
 
