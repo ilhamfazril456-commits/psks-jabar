@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Target, Rocket, Users, BarChart3, ShieldCheck, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Target, Rocket, Users, BarChart3, ShieldCheck, Zap, Shield, Sparkles, Building2, Layers } from 'lucide-react';
 
 interface AnimatedCounterProps {
   end: number;
@@ -11,7 +11,7 @@ interface AnimatedCounterProps {
 
 const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   end,
-  duration = 1400,
+  duration = 1200,
   prefix = '',
   suffix = '',
   trigger,
@@ -19,7 +19,11 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (!trigger) return;
+    // If element is not intersecting / out of view, reset counter to 0 so it replays upon re-entry
+    if (!trigger) {
+      setCount(0);
+      return;
+    }
 
     let startTime: number | null = null;
     let animationFrameId: number;
@@ -27,14 +31,14 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
     const updateCounter = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      // Quad ease-out formula for fast initial start decelerating smoothly to end
-      const easedProgress = 1 - Math.pow(1 - progress, 2);
+      // Cubic ease-out: snappy acceleration at start, ultra-smooth deceleration into final value
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(easedProgress * end));
 
       if (progress < 1) {
         animationFrameId = requestAnimationFrame(updateCounter);
       } else {
-        setCount(end); // Ensure exact end value on finish
+        setCount(end); // Ensure exact end integer on finish
       }
     };
 
@@ -54,153 +58,305 @@ const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
 
 export const AboutSection: React.FC = () => {
   const [metricsVisible, setMetricsVisible] = useState(false);
+  const [textVisible, setTextVisible] = useState(false);
   const metricsRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    // Bidirectional Observer for 4 Metric Cards:
+    // Triggers counting animation EVERY time user scrolls into view (from top-down OR bottom-up)
+    const metricsObserver = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setMetricsVisible(true);
-        }
+        setMetricsVisible(entry.isIntersecting);
       },
       { threshold: 0.15 }
     );
 
-    if (metricsRef.current) {
-      observer.observe(metricsRef.current);
-    }
+    // Bidirectional Observer for Narrative Text:
+    const textObserver = new IntersectionObserver(
+      ([entry]) => {
+        setTextVisible(entry.isIntersecting);
+      },
+      { threshold: 0.12 }
+    );
 
-    return () => observer.disconnect();
+    if (metricsRef.current) metricsObserver.observe(metricsRef.current);
+    if (textRef.current) textObserver.observe(textRef.current);
+
+    return () => {
+      metricsObserver.disconnect();
+      textObserver.disconnect();
+    };
   }, []);
+
   return (
-    <section id="tentang-psks" className="py-10 sm:py-16 bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top Row: Narrative & Vision/Mission */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-center">
-          <div className="lg:col-span-7 space-y-3 sm:space-y-4 transition-all duration-700">
-            <span className="text-[#b8901c] font-bold text-[11px] sm:text-xs uppercase tracking-widest block">
-              Profil Resmi Dinas Sosial Provinsi Jawa Barat
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0f2b5c] leading-tight">
+    <section id="tentang-psks" className="py-10 sm:py-16 lg:py-20 bg-gradient-to-b from-white via-slate-50/50 to-white border-b border-slate-200 overflow-hidden relative">
+      {/* Subtle Atmospheric Grid & Ambient Depth (Zero AI-slop, pure executive aesthetic) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none overflow-hidden select-none">
+        <div className="absolute top-10 -left-20 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-40 -right-20 w-80 h-80 bg-[#d4af37]/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        
+        {/* ========================================================================= */}
+        {/* TOP ROW: NARRATIVE (DESKRIPSI WEBSITE) & VISI-MISI RESMI                   */}
+        {/* ========================================================================= */}
+        <div ref={textRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          
+          {/* LEFT COLUMN: DESKRIPSI WEBSITE DENGAN ANIMASI HALUS & BERKELAS */}
+          <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+            
+            {/* Kicker Tagline */}
+            <div
+              className={`flex items-center gap-2 transition-all duration-700 ease-out transform ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+              }`}
+            >
+              <span className="w-6 h-0.5 bg-gradient-to-r from-[#d4af37] to-amber-500 rounded-full" />
+              <span className="text-[#0f2b5c] font-black text-[11px] sm:text-xs uppercase tracking-widest">
+                Profil Resmi Dinas Sosial Provinsi Jawa Barat
+              </span>
+            </div>
+
+            {/* Main Heading */}
+            <h2
+              className={`text-2xl sm:text-4xl lg:text-[40px] font-black text-[#0f2b5c] leading-[1.18] tracking-tight transition-all duration-700 delay-100 ease-out transform ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
               Pilar Kekuatan Sosial <br />
-              <span className="text-slate-500 font-medium text-lg sm:text-2xl block mt-1">
+              <span className="bg-gradient-to-r from-[#0f2b5c] via-[#1a4a9c] to-[#0f2b5c] bg-clip-text text-transparent font-extrabold text-xl sm:text-3xl block mt-1.5">
                 Mewujudkan Jabar Juara Lahir Batin
               </span>
             </h2>
-            <p className="text-slate-700 leading-relaxed text-xs sm:text-base">
-              <strong>Potensi dan Sumber Kesejahteraan Sosial</strong> yang selanjutnya disebut <strong>PSKS</strong> adalah perseorangan, keluarga, kelompok, dan/atau masyarakat yang dapat berperan serta untuk menjaga, menciptakan, mendukung, dan memperkuat penyelenggaraan kesejahteraan sosial.
+
+            {/* Paragraph 1: Pengertian PSKS */}
+            <p
+              className={`text-slate-700 leading-relaxed text-xs sm:text-base font-normal transition-all duration-700 delay-200 ease-out transform ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
+              <strong className="text-[#0f2b5c] font-black">Potensi dan Sumber Kesejahteraan Sosial (PSKS)</strong> adalah perseorangan, keluarga, kelompok, dan/atau masyarakat yang berperan serta menjaga, menciptakan, mendukung, dan memperkuat penyelenggaraan kesejahteraan sosial di seluruh penjuru Tanah Pasundan.
             </p>
-            <p className="text-slate-600 leading-relaxed text-xs sm:text-base">
-              Melalui integrasi data satu pintu ini, Dinas Sosial Provinsi Jawa Barat berkomitmen merangkum seluruh potensi dan memperkuat kapasitas para pejuang sosial di 27 Kabupaten/Kota demi mewujudkan sistem pemulihan, perlindungan, dan pemberdayaan sosial yang adaptif serta tepat sasaran.
+
+            {/* Paragraph 2: Integrasi Satu Data Dinsos Jabar */}
+            <p
+              className={`text-slate-600 leading-relaxed text-xs sm:text-base font-normal transition-all duration-700 delay-300 ease-out transform ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
+              Melalui integrasi satu pintu ini, Dinas Sosial Provinsi Jawa Barat berkomitmen merangkum seluruh potensi dan memperkuat kapasitas para pejuang sosial di 27 Kabupaten/Kota demi terwujudnya sistem perlindungan, rehabilitasi, dan pemberdayaan sosial yang adaptif, transparan, serta tepat sasaran.
             </p>
+
+            {/* 3 Indikator Keunggulan Layanan (Editorial Bullet Badges - Zero Pill AI Slop) */}
+            <div
+              className={`pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 transition-all duration-700 delay-400 ease-out transform ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
+              <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-blue-300 transition-colors">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                  <Shield className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] sm:text-xs font-black text-[#0f2b5c] leading-tight">Perlindungan</div>
+                  <div className="text-[9.5px] text-slate-500 font-medium truncate">Linjamsos Adaptif</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-amber-300 transition-colors">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] sm:text-xs font-black text-[#0f2b5c] leading-tight">Pemberdayaan</div>
+                  <div className="text-[9.5px] text-slate-500 font-medium truncate">10 Pilar Mandiri</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Layers className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] sm:text-xs font-black text-[#0f2b5c] leading-tight">Satu Data</div>
+                  <div className="text-[9.5px] text-slate-500 font-medium truncate">27 Wilayah Riil</div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Right Cards: Vision & Mission with Smooth Hover Animations */}
+          {/* RIGHT COLUMN: KARTU VISI & MISI RESMI (EXECUTIVE SUMMARY CARD) */}
           <div className="lg:col-span-5 space-y-4 sm:space-y-5">
+            
             {/* VISI CARD */}
-            <div className="group relative bg-gradient-to-br from-white via-amber-50/40 to-amber-100/25 border-l-4 border-[#d4af37] p-3.5 sm:p-6 rounded-r-2xl border border-amber-200/70 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden">
-              {/* Background Ambient Glow */}
-              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-amber-300/25 rounded-full blur-2xl group-hover:bg-amber-400/40 transition-all duration-500 pointer-events-none" />
+            <div
+              className={`group relative bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border-l-4 border-l-[#d4af37] ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+              style={{ transitionDelay: '250ms' }}
+            >
+              <div className="absolute -right-10 -bottom-10 w-28 h-28 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/20 transition-all duration-500 pointer-events-none" />
 
-              <div className="relative flex gap-2.5 sm:gap-4 items-start">
-                <div className="p-2 sm:p-3.5 bg-gradient-to-br from-amber-400 to-[#d4af37] text-slate-900 rounded-xl shrink-0 shadow-md border border-amber-300/60 group-hover:rotate-6 group-hover:scale-105 transition-transform duration-300">
-                  <Target className="w-4 h-4 sm:w-6 sm:h-6 text-slate-950" />
+              <div className="relative flex gap-3.5 sm:gap-4 items-start">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-400 to-[#d4af37] text-slate-950 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 group-hover:rotate-3 transition-transform duration-300">
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-slate-950" />
                 </div>
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-xl text-[#0f2b5c] flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-black text-sm sm:text-lg text-[#0f2b5c] tracking-tight">
                       Visi Utama
                     </h3>
-                    <span className="text-[8.5px] sm:text-[10px] font-black bg-amber-100 text-amber-900 px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-amber-300/80 shadow-2xs flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600 animate-spin" />
-                      Landasan Utama
+                    <span className="text-[9px] sm:text-[10px] font-bold text-amber-700 tracking-wider uppercase">
+                      Landasan Strategis
                     </span>
                   </div>
-                  <p className="text-[11px] sm:text-sm text-slate-700 font-medium leading-relaxed pt-0.5 sm:pt-1">
-                    Terwujudnya standardisasi, transparansi, dan integrasi data pilar-pilar sosial yang responsif demi percepatan kesejahteraan sosial di Jawa Barat.
+                  <p className="text-[11.5px] sm:text-sm text-slate-600 font-normal leading-relaxed pt-0.5">
+                    Terwujudnya standardisasi, transparansi, dan integrasi data pilar-pilar sosial yang responsif demi percepatan penyelenggaraan kesejahteraan sosial di Jawa Barat.
                   </p>
                 </div>
               </div>
             </div>
 
             {/* MISI CARD */}
-            <div className="group relative bg-gradient-to-br from-white via-blue-50/40 to-blue-100/25 border-l-4 border-[#0f2b5c] p-3.5 sm:p-6 rounded-r-2xl border border-blue-200/70 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden">
-              {/* Background Ambient Glow */}
-              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-blue-300/25 rounded-full blur-2xl group-hover:bg-blue-400/40 transition-all duration-500 pointer-events-none" />
+            <div
+              className={`group relative bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border-l-4 border-l-[#0f2b5c] ${
+                textVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+              style={{ transitionDelay: '400ms' }}
+            >
+              <div className="absolute -right-10 -bottom-10 w-28 h-28 bg-blue-600/10 rounded-full blur-xl group-hover:bg-blue-600/20 transition-all duration-500 pointer-events-none" />
 
-              <div className="relative flex gap-2.5 sm:gap-4 items-start">
-                <div className="p-2 sm:p-3.5 bg-gradient-to-br from-[#0f2b5c] to-[#1a4a9c] text-blue-100 rounded-xl shrink-0 shadow-md border border-blue-500/40 group-hover:-rotate-6 group-hover:scale-105 transition-transform duration-300">
-                  <Rocket className="w-4 h-4 sm:w-6 sm:h-6 text-amber-300" />
+              <div className="relative flex gap-3.5 sm:gap-4 items-start">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#0f2b5c] to-[#1a4a9c] text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-300">
+                  <Rocket className="w-5 h-5 sm:w-6 sm:h-6 text-[#ffd700]" />
                 </div>
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-xl text-[#0f2b5c] flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-black text-sm sm:text-lg text-[#0f2b5c] tracking-tight">
                       Misi Strategis
                     </h3>
-                    <span className="text-[8.5px] sm:text-[10px] font-black bg-blue-100 text-blue-900 px-2 sm:px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-300/80 shadow-2xs flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
-                      3 Langkah
+                    <span className="text-[9px] sm:text-[10px] font-bold text-blue-700 tracking-wider uppercase">
+                      Akselerasi Nyata
                     </span>
                   </div>
-                  <p className="text-[11px] sm:text-sm text-slate-700 font-medium leading-relaxed pt-0.5 sm:pt-1">
-                    Mengembangkan kapasitas SDM pilar sosial, memfasilitasi kemitraan lintas sektor, serta mengoptimalkan pendayagunaan potensi lokal secara digital.
+                  <p className="text-[11.5px] sm:text-sm text-slate-600 font-normal leading-relaxed pt-0.5">
+                    Mengembangkan kapasitas SDM pilar sosial, memfasilitasi kemitraan lintas sektor, serta mengoptimalkan pendayagunaan potensi lokal berbasis Satu Data Terpadu.
                   </p>
                 </div>
               </div>
             </div>
+
           </div>
+
         </div>
 
-        {/* Bottom Row: 4 Metric Cards with Staggered Scroll-Triggered Animations */}
-        <div ref={metricsRef} className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-8 sm:mt-12 pt-6 sm:pt-10 border-t border-slate-200">
-          {/* Card 1: 27 Kab/Kota */}
-          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
-            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
-            <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
-              <AnimatedCounter end={27} duration={1400} trigger={metricsVisible} />
+        {/* ========================================================================= */}
+        {/* BOTTOM ROW: 4 KOTAK MATRIKS DENGAN ANIMASI SCROLL RE-TRIGGER DUA ARAH     */}
+        {/* SUBTEKS 100% DIPERTAHANKAN SESUAI PERMINTAAN USER                         */}
+        {/* ========================================================================= */}
+        <div
+          ref={metricsRef}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 lg:gap-6 mt-10 sm:mt-14 pt-8 sm:pt-10 border-t border-slate-200"
+        >
+          {/* KOTAK 1: 27 Kabupaten / Kota Terintegrasi */}
+          <div className="group relative bg-gradient-to-br from-[#0f2b5c] via-[#123673] to-[#0a1e42] text-white p-3.5 sm:p-5 lg:p-6 rounded-2xl text-center border border-blue-400/30 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden flex flex-col justify-between select-none">
+            {/* Background Ambient Glow */}
+            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-[#d4af37]/15 rounded-full blur-xl group-hover:bg-[#d4af37]/30 transition-all duration-300 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+            {/* Icon */}
+            <div className="w-9 h-9 sm:w-11 sm:h-11 mx-auto mb-1.5 sm:mb-2 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#f3d978] group-hover:scale-110 group-hover:bg-white/15 transition-all duration-300 shadow-xs">
+              <Users className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-white/80 pt-1.5 sm:pt-2 border-t border-white/10">
+
+            {/* Number Counter */}
+            <div className="text-2xl sm:text-4xl lg:text-[42px] font-black text-[#f3d978] my-0.5 sm:my-1 tracking-tight leading-none drop-shadow-xs">
+              <AnimatedCounter end={27} duration={1200} trigger={metricsVisible} />
+            </div>
+
+            {/* Subteks 100% Asli */}
+            <div className="text-[9.5px] sm:text-xs uppercase tracking-wider font-semibold text-blue-100/90 pt-2 sm:pt-2.5 border-t border-white/10 leading-tight">
               Kabupaten / Kota Terintegrasi
             </div>
           </div>
 
-          {/* Card 2: 10 Pilar */}
-          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
-            <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
-            <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
-              <AnimatedCounter end={10} duration={1400} trigger={metricsVisible} />
+          {/* KOTAK 2: 10 Pilar Utama PSKS Jabar */}
+          <div className="group relative bg-gradient-to-br from-[#0f2b5c] via-[#123673] to-[#0a1e42] text-white p-3.5 sm:p-5 lg:p-6 rounded-2xl text-center border border-blue-400/30 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden flex flex-col justify-between select-none">
+            {/* Background Ambient Glow */}
+            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-[#d4af37]/15 rounded-full blur-xl group-hover:bg-[#d4af37]/30 transition-all duration-300 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+            {/* Icon */}
+            <div className="w-9 h-9 sm:w-11 sm:h-11 mx-auto mb-1.5 sm:mb-2 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#f3d978] group-hover:scale-110 group-hover:bg-white/15 transition-all duration-300 shadow-xs">
+              <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-white/80 pt-1.5 sm:pt-2 border-t border-white/10">
+
+            {/* Number Counter */}
+            <div className="text-2xl sm:text-4xl lg:text-[42px] font-black text-[#f3d978] my-0.5 sm:my-1 tracking-tight leading-none drop-shadow-xs">
+              <AnimatedCounter end={10} duration={1200} trigger={metricsVisible} />
+            </div>
+
+            {/* Subteks 100% Asli */}
+            <div className="text-[9.5px] sm:text-xs uppercase tracking-wider font-semibold text-blue-100/90 pt-2 sm:pt-2.5 border-t border-white/10 leading-tight">
               Pilar Utama PSKS Jabar
             </div>
           </div>
 
-          {/* Card 3: 100% Akurasi */}
-          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
-            <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
-            <div className="text-2xl sm:text-4xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
-              <AnimatedCounter end={100} duration={1400} suffix="%" trigger={metricsVisible} />
+          {/* KOTAK 3: 100% Akurasi Data Lapangan */}
+          <div className="group relative bg-gradient-to-br from-[#0f2b5c] via-[#123673] to-[#0a1e42] text-white p-3.5 sm:p-5 lg:p-6 rounded-2xl text-center border border-blue-400/30 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden flex flex-col justify-between select-none">
+            {/* Background Ambient Glow */}
+            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-[#d4af37]/15 rounded-full blur-xl group-hover:bg-[#d4af37]/30 transition-all duration-300 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+            {/* Icon */}
+            <div className="w-9 h-9 sm:w-11 sm:h-11 mx-auto mb-1.5 sm:mb-2 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#f3d978] group-hover:scale-110 group-hover:bg-white/15 transition-all duration-300 shadow-xs">
+              <ShieldCheck className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-white/80 pt-1.5 sm:pt-2 border-t border-white/10">
+
+            {/* Number Counter */}
+            <div className="text-2xl sm:text-4xl lg:text-[42px] font-black text-[#f3d978] my-0.5 sm:my-1 tracking-tight leading-none drop-shadow-xs">
+              <AnimatedCounter end={100} duration={1200} suffix="%" trigger={metricsVisible} />
+            </div>
+
+            {/* Subteks 100% Asli */}
+            <div className="text-[9.5px] sm:text-xs uppercase tracking-wider font-semibold text-blue-100/90 pt-2 sm:pt-2.5 border-t border-white/10 leading-tight">
               Akurasi Data Lapangan
             </div>
           </div>
 
-          {/* Card 4: Real-Time */}
-          <div className="bg-gradient-to-br from-[#0f2b5c] via-[#143b7d] to-[#1a4a9c] text-white p-3.5 sm:p-6 rounded-2xl text-center border-2 border-[#d4af37]/40 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl group-hover:bg-[#d4af37]/25 transition-all duration-300 pointer-events-none" />
-            <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-[#d4af37] mx-auto mb-1.5 sm:mb-2 group-hover:scale-115 transition-transform duration-300" />
-            <div className="text-xl sm:text-3xl font-black text-[#f1c40f] my-0.5 sm:my-1 tracking-tight">
-              Real-Time
+          {/* KOTAK 4: Real-Time Sistem Pelaporan Mandiri */}
+          <div className="group relative bg-gradient-to-br from-[#0f2b5c] via-[#123673] to-[#0a1e42] text-white p-3.5 sm:p-5 lg:p-6 rounded-2xl text-center border border-blue-400/30 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden flex flex-col justify-between select-none">
+            {/* Background Ambient Glow */}
+            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-[#d4af37]/15 rounded-full blur-xl group-hover:bg-[#d4af37]/30 transition-all duration-300 pointer-events-none" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+            {/* Icon dengan Live Indicator Pulse */}
+            <div className="relative w-9 h-9 sm:w-11 sm:h-11 mx-auto mb-1.5 sm:mb-2 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#f3d978] group-hover:scale-110 group-hover:bg-white/15 transition-all duration-300 shadow-xs">
+              <Zap className="w-4 h-4 sm:w-6 sm:h-6" />
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
             </div>
-            <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-white/80 pt-1.5 sm:pt-2 border-t border-white/10">
+
+            {/* Real-Time Label */}
+            <div className="text-xl sm:text-3xl lg:text-[34px] font-black text-[#f3d978] my-0.5 sm:my-1 tracking-tight leading-none flex items-center justify-center gap-1.5 drop-shadow-xs">
+              <span className={`transition-all duration-500 transform ${metricsVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-60'}`}>
+                Real-Time
+              </span>
+            </div>
+
+            {/* Subteks 100% Asli */}
+            <div className="text-[9.5px] sm:text-xs uppercase tracking-wider font-semibold text-blue-100/90 pt-2 sm:pt-2.5 border-t border-white/10 leading-tight">
               Sistem Pelaporan Mandiri
             </div>
           </div>
+
         </div>
+
       </div>
     </section>
   );

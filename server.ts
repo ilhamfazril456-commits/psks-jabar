@@ -3244,7 +3244,7 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
     if (
       targetQ.includes('kontak') ||
       targetQ.includes('whatsapp') ||
-      targetQ.includes('wa') ||
+      /\b(wa|whatsapp)\b/i.test(targetQ) ||
       targetQ.includes('telepon') ||
       targetQ.includes('email') ||
       targetQ.includes('hubungi')
@@ -3928,10 +3928,10 @@ AI WAJIB:
 
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
         const candidateModels = [
+          'gemini-flash-latest',
+          'gemini-3.1-flash-lite',
           'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-2.0-flash-lite',
-          'gemini-1.5-flash',
+          'gemini-2.5-flash-lite',
         ];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
