@@ -4922,7 +4922,7 @@ export default function App() {
           />
         )}
 
-        {currentTab === 'pin_security_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'developer' || session.isDeveloper === true) && (
+        {currentTab === 'pin_security_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
           <PinSecurityManagementPage
             session={session}
             appSettings={appSettings}

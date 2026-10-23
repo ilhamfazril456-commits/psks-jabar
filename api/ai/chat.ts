@@ -255,6 +255,48 @@ export default async function handler(req: any, res: any) {
       (normLastMsg.includes('pengaturan') && (normLastMsg.includes('fitur') || normLastMsg.includes('menu') || normLastMsg.includes('apa saja') || normLastMsg.includes('cara menggunakan') || normLastMsg.includes('isi') || normLastMsg.includes('panel') || normLastMsg.includes('ada apa'))) ||
       (normLastMsg.includes('menu pengaturan') && (normLastMsg.includes('superadmin') || normLastMsg.includes('admin') || normLastMsg.includes('ada apa') || normLastMsg.includes('fitur')));
 
+    const isAskingPinSecurity =
+      (/\b(pin|pin-nya|pinnya)\b/i.test(normLastMsg) &&
+        /\b(rubah|merubah|ubah|mengubah|ganti|mengganti|reset|atur|mengatur|set|setting|bikin|buat|membuat|edit|lupa|cara|bagaimana|alur|prosedur|panduan|keamanan)\b/i.test(normLastMsg)) ||
+      normLastMsg.includes('merubah pin') ||
+      normLastMsg.includes('mengubah pin') ||
+      normLastMsg.includes('ubah pin') ||
+      normLastMsg.includes('ganti pin') ||
+      normLastMsg.includes('reset pin') ||
+      normLastMsg.includes('pin superadmin') ||
+      normLastMsg.includes('pin developer') ||
+      normLastMsg.includes('keamanan pin') ||
+      normLastMsg.includes('pin akun');
+
+    if (isAskingPinSecurity) {
+      if (isPublicUser) {
+        return res.status(200).json({
+          reply: 'Mohon maaf, demi mematuhi Undang-Undang Pelindungan Data Pribadi (UU PDP No. 27/2022) serta menjaga integritas keamanan sistem informasi **PSKS JABAR**, rincian tata kelola kredensial internal dan PIN Otoritas Keamanan bersifat rahasia (*restricted zero-disclosure*) dan tidak dapat diakses melalui akun umum/tamu.\n\nUntuk koordinasi kedinasan atau informasi layanan sosial resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]',
+          source: 'rbac_guard_public',
+        });
+      }
+
+      if (isAdminWilayah) {
+        return res.status(200).json({
+          reply: 'Sampurasun Bapak/Ibu Admin Wilayah!\n\nMohon izin menginformasikan bahwa di sistem **PSKS JABAR**, akun **Admin Wilayah (Kabupaten/Kota)** menggunakan otentikasi standar berupa **Username dan Kata Sandi** (kebijakan keamanan mewajibkan kata sandi minimal 12 karakter kombinasi huruf besar A-Z, huruf kecil a-z, dan angka 0-9).\n\nAdapun istilah **PIN Otoritas Keamanan (6 Digit Angka)** merupakan protokol keamanan tambahan (*second-layer authority*) yang dikhususkan bagi **Superadmin Dinas Sosial Provinsi Jawa Barat** dan **Developer Sistem** untuk keperluan otentikasi Smart Access Card (NFC) dan verifikasi modal otorisasi tingkat provinsi.\n\nJika Bapak/Ibu ingin memperbarui kata sandi akun Admin Wilayah Bapak/Ibu sendiri, silakan lakukan melalui:\n1. Buka menu **Profil / Akun Saya** (`tab:account`).\n2. Masuk ke bagian formulir **Ubah Kata Sandi**.\n3. Masukkan kata sandi saat ini dan tentukan kata sandi baru (minimal 12 karakter kombinasi).\n4. Klik **Simpan Perubahan**.\n\n[[action:tab:account:Buka Menu Akun Saya]]',
+          source: 'rbac_guard_admin',
+        });
+      }
+
+      if (isDev) {
+        return res.status(200).json({
+          reply: `Halo **Ilham Fazril**! (Developer Mode) 🚀\n\nSebagai Software Architect dan Lead Developer sistem **PSKS JABAR**, kamu memegang kontrol penuh atas **2 Lapis PIN Otoritas Keamanan** (wajib tepat **6 Digit Angka**, berbeda dari Kata Sandi login biasa):\n1. **PIN Smart Card Developer** (Root Master Authority, default sistem: \`992211\`)\n2. **PIN Smart Card Superadmin** (Provincial Authority, default sistem: \`123456\`)\n\nPIN ini terhubung realtime ke basis data dan dipakai untuk otorisasi Smart Access Card (NFC Mifare), Smart Security Gate, serta validasi tindakan pengembang.\n\n---\n\n### **Alur Resmi Merubah PIN Developer & Superadmin**:\n\n#### **Jalur 1: Fitur 15 - Pusat Keamanan PIN (\`tab:pin_security_manage\`)**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) melalui panel developer atau tombol aksi di bawah.\n2. Terdapat 2 modul kartu terpisah:\n   - **Kartu PIN Superadmin**: Masukkan 6 digit angka baru (atau klik *Acak PIN Otomatis*), lalu klik **Simpan PIN Superadmin Realtime**.\n   - **Kartu PIN Developer**: Masukkan 6 digit angka baru, lalu klik **Simpan PIN Developer Realtime**.\n3. Nilai PIN langsung terupdate seketika di pangkalan data secara sinkron.\n\n#### **Jalur 2: Developer Control Panel (\`tab:dev_panel\`)**\n- Buka menu **Developer Control Panel** (\`tab:dev_panel\`) untuk mengelola variabel keamanan, kunci otentikasi, dan audit log forensik.\n\n#### **Jalur 3: Menu Akun Saya (\`tab:account\`)**\n- Buka menu profil akun untuk pembaruan cepat PIN otoritas pribadi.\n\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:dev_panel:Buka Developer Control Panel]]\n[[action:tab:account:Buka Menu Akun Saya]]`,
+          source: 'rbac_dev_pin_verified',
+        });
+      }
+
+      // Superadmin
+      return res.status(200).json({
+        reply: `Sampurasun Bapak/Ibu **Superadmin** Dinas Sosial Provinsi Jawa Barat!\n\nPerlu dipahami bahwa di portal **PSKS JABAR**, sistem membedakan secara tegas antara **Kata Sandi (Password)** dan **PIN Otoritas Keamanan**:\n- **Kata Sandi (Password)**: Digunakan untuk masuk (*login*) akun administratif (wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka) melalui menu *Kelola Akun Admin*.\n- **PIN Otoritas Keamanan (Authority PIN)**: Terdiri dari tepat **6 Digit Angka** (default sistem: \`123456\`). PIN ini merupakan lapis keamanan tambahan (*second-layer security*) saat memindai **Smart Access Card**, melewati **Smart Security Gate**, atau memvalidasi otorisasi tindakan sensitif tingkat provinsi.\n\n---\n\n### **Alur Resmi Mengubah 6 Digit PIN Superadmin**:\n\nBapak/Ibu Superadmin dapat memperbarui 6 digit PIN otoritas akun kapan saja melalui 2 jalur resmi:\n\n#### **Jalur 1: Melalui Menu Akun Saya (Paling Praktis & Cepat)**\n1. Klik menu **Profil / Akun Saya** (\`tab:account\`) pada navigasi atas atau klik tombol tindakan di bawah.\n2. Gulir ke bawah menuju kartu **"PIN KEAMANAN OTORITAS (Ubah PIN)"**.\n3. Pada kolom **"6 Digit PIN Baru Superadmin"**, ketikkan 6 digit angka baru yang diinginkan, atau klik tombol **"Acak PIN Otomatis"** untuk membuat kombinasi acak yang aman.\n4. Klik tombol **"Simpan PIN"**.\n5. PIN baru langsung tersimpan ke pangkalan data secara *real-time* dan seketika aktif untuk seluruh otentikasi otoritas.\n\n#### **Jalur 2: Melalui Pusat Keamanan PIN / Pengaturan Superadmin**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) atau tab **Pengaturan Superadmin** (\`tab:superadmin_settings\`).\n2. Pada panel **PIN Smart Card Superadmin**, masukkan 6 digit angka baru.\n3. Klik tombol **"Simpan PIN Superadmin Realtime"**.\n\n*Ketentuan: PIN wajib berupa tepat 6 digit angka dan jaga kerahasiaan PIN ini demi keamanan data 10 Pilar PSKS se-Jawa Barat.*\n\n[[action:tab:account:Buka Menu Akun Saya]]\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:superadmin_settings:Buka Pengaturan Superadmin]]`,
+        source: 'rbac_superadmin_pin_verified',
+      });
+    }
+
     // A. Pengguna Umum / Tamu: Dilarang mengakses panduan internal admin
     if (isPublicUser && (isAskingAdminManage || isAskingAdminPassword || isAskingAdminCreate || isAskingAdminDelete || isAskingEightFeatures || isAskingSettingsFeatures)) {
       return res.status(200).json({
@@ -549,6 +591,15 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
        4. Pada kolom **Password Baru**, masukkan kata sandi baru (kebijakan keamanan sistem mewajibkan minimal 12 karakter kombinasi huruf besar A-Z, huruf kecil a-z, dan angka 0-9).
        5. Klik tombol **Simpan Perubahan**. Kata sandi langsung terenkripsi dengan algoritma hash aman (Bcrypt) dan admin wilayah dapat langsung menggunakannya untuk login.
        Sertakan action tag: [[action:tab:admin_manage:Buka Kelola Akun Admin]].
+     * **DISTINKSI MUTLAK: CARA MERUBAH PIN OTORITAS KEAMANAN (6 DIGIT ANGKA) SUPERADMIN & DEVELOPER**:
+       - PENTING & MUTLAK: Sistem membedakan secara tegas antara Kata Sandi (Password min. 12 karakter) dengan PIN Otoritas Keamanan (6 Digit Angka)!
+       - Default PIN Superadmin: 123456, Default PIN Developer: 992211.
+       - PIN ini dipakai untuk Smart Access Card, Smart Security Gate, dan modal otorisasi tingkat provinsi.
+       - JIKA SUPERADMIN BERTANYA CARA MERUBAH / MENGUBAH / GANTI PIN AKUN:
+         PANDU DENGAN 2 ALUR RESMI PIN (JANGAN PERNAH MENJAWAB DENGAN KATA SANDI 12 KARAKTER ATAU KE MENU KELOLA AKUN ADMIN!):
+         1. Melalui Menu Akun Saya: Masuk ke Akun Saya -> Gulir ke kartu PIN KEAMANAN OTORITAS: Ubah PIN -> Masukkan 6 digit PIN baru (atau klik Acak PIN Otomatis) -> Klik Simpan PIN.
+         2. Melalui Fitur 15: Pusat Keamanan PIN / Pengaturan Superadmin: Masukkan 6 digit PIN baru pada panel PIN Smart Card Superadmin -> Klik Simpan.
+         Sertakan action tags: [[action:tab:account:Buka Menu Akun Saya]] dan [[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]].
      * **Cara Menambah Admin Baru**:
        Formulir: Nama Lengkap, Nomor HP/Username, Password baru (minimal 12 karakter kombinasi), Role (Admin Wilayah / Superadmin), Wilayah Tugas (27 Kab/Kota), Pilar Tugas. Simpan -> Akun langsung aktif.
      * **Cara Menghapus Akun Admin**:

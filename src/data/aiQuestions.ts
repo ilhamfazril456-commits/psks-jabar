@@ -464,10 +464,17 @@ export const ROLE_QUESTION_CATALOG: Record<UserRole, AICategoryGroup[]> = {
           hint: 'Visualisasi Analitik User',
         },
         {
+          id: 'sa-pin-security',
+          category: 'Keamanan Otoritas',
+          role: 'superadmin',
+          question: 'Bagaimana cara merubah 6 Digit PIN Keamanan Otoritas Superadmin & Developer?',
+          hint: 'Ubah 6 Digit PIN Otoritas',
+        },
+        {
           id: 'sa-5',
           category: 'Manajemen Akun',
           role: 'superadmin',
-          question: 'Bagaimana SOP mereset PIN / kata sandi Admin Daerah yang lupa kredensial login?',
+          question: 'Bagaimana SOP mereset kata sandi Admin Daerah yang lupa kredensial login?',
           hint: 'Reset Kredensial Daerah',
         },
         {

@@ -292,6 +292,28 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   2. **Distribusi Status Akun**: Rasio akun berstatus Sah Terdaftar vs Menunggu Verifikasi vs Dibekukan.
   3. **Sebaran Pengguna Per Wilayah**: Pemetaan jumlah pengguna aktif di 27 Kabupaten/Kota.`,
 
+  'sa-pin-security': `**Panduan Resmi: Cara Merubah 6 Digit PIN Otoritas Keamanan (Superadmin & Developer)**:
+
+Sistem PSKS JABAR membedakan secara tegas antara **Kata Sandi (Password min. 12 karakter)** dengan **PIN Otoritas Keamanan (6 Digit Angka)**:
+- **Kata Sandi**: Dipakai untuk login username & password di menu *Kelola Akun Admin*.
+- **PIN Otoritas Keamanan (6 Digit Angka)**: Lapis otorisasi kedua (*two-factor authority*) saat memindai Smart Access Card (NFC) atau memvalidasi aksi administratif sensitif.
+
+---
+
+### **Alur Merubah PIN Superadmin**:
+1. **Melalui Menu Akun Saya** (\`tab:account\`):
+   - Klik menu **Akun Saya** pada bilah navigasi atas.
+   - Gulir ke kartu **"PIN KEAMANAN OTORITAS: Ubah PIN"**.
+   - Ketikkan 6 digit PIN baru (atau klik tombol **"Acak PIN Otomatis"**).
+   - Klik **Simpan PIN**. PIN langsung aktif seketika di pangkalan data secara realtime.
+2. **Melalui Pusat Keamanan PIN** (\`tab:pin_security_manage\`):
+   - Buka menu **Pusat Keamanan PIN** atau tab **Pengaturan Superadmin** (\`tab:superadmin_settings\`).
+   - Masukkan 6 digit PIN baru pada panel PIN Superadmin lalu simpan.
+
+[[action:tab:account:Buka Menu Akun Saya]]
+[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]
+[[action:tab:superadmin_settings:Buka Pengaturan Superadmin]]`,
+
   'sa-5': `**SOP Reset Kata Sandi Admin Daerah**:
 1. Buka menu **Manajemen Akun Admin / Pengaturan Superadmin**.
 2. Cari nama Kabupaten/Kota admin yang meminta reset.

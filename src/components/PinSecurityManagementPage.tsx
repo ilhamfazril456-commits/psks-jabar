@@ -29,7 +29,8 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
   onSaveSettings,
   onBackToHome,
 }) => {
-  const isAuthorized = session.role === 'developer' || session.isDeveloper === true;
+  const isDeveloperUser = session.role === 'developer' || session.isDeveloper === true;
+  const isAuthorized = isDeveloperUser || session.role === 'superadmin';
 
   // Real-time state derived from appSettings with clean defaults
   const superadminPinCurrent = appSettings.superadminPin || '123456';
@@ -320,79 +321,94 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
                 </span>
               </div>
 
-              {/* Status PIN Aktif Saat Ini */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-5 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
-                    PIN Aktif di Database
+              {/* Status PIN Aktif Saat Ini & Form Ubah PIN */}
+              {!isDeveloperUser ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center my-auto">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-500 mx-auto flex items-center justify-center mb-2">
+                    <Lock className="w-5 h-5 text-slate-500" />
                   </div>
-                  <div className="font-mono text-lg font-black text-slate-800 tracking-widest mt-0.5">
-                    {showDeveloperPin ? developerPinCurrent : '••••••'}
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1">
+                    Terkunci: Khusus Lead Developer
+                  </h4>
+                  <p className="text-[11px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+                    Kredensial PIN Root Developer hanya dapat dikonfigurasi dan dilihat secara eksklusif oleh akun Developer utama (*Kang Ilham Fazril*).
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-5 flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                        PIN Aktif di Database
+                      </div>
+                      <div className="font-mono text-lg font-black text-slate-800 tracking-widest mt-0.5">
+                        {showDeveloperPin ? developerPinCurrent : '••••••'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeveloperPin(!showDeveloperPin)}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white text-slate-600 hover:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title={showDeveloperPin ? 'Sembunyikan PIN' : 'Lihat PIN Asli'}
+                    >
+                      {showDeveloperPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showDeveloperPin ? 'Tutup' : 'Lihat'}</span>
+                    </button>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowDeveloperPin(!showDeveloperPin)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white text-slate-600 hover:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title={showDeveloperPin ? 'Sembunyikan PIN' : 'Lihat PIN Asli'}
-                >
-                  {showDeveloperPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>{showDeveloperPin ? 'Tutup' : 'Lihat'}</span>
-                </button>
-              </div>
 
-              {/* Form Ubah PIN */}
-              <div className="space-y-3">
-                <label className="block text-xs font-bold text-slate-700">
-                  Ubah 6 Digit PIN Developer Baru:
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    pattern="[0-9]*"
-                    value={newDeveloperPin}
-                    onChange={(e) => setNewDeveloperPin(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="Contoh: 992211"
-                    className="w-full h-11 px-3.5 font-mono text-base font-black tracking-widest rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-hidden transition-all bg-white"
-                  />
-                  <span className="absolute right-3 top-3 text-[11px] font-bold text-slate-400 font-mono">
-                    {newDeveloperPin.length}/6
-                  </span>
-                </div>
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Ubah 6 Digit PIN Developer Baru:
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        value={newDeveloperPin}
+                        onChange={(e) => setNewDeveloperPin(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="Contoh: 992211"
+                        className="w-full h-11 px-3.5 font-mono text-base font-black tracking-widest rounded-xl border-2 border-slate-300 focus:border-emerald-600 focus:outline-hidden transition-all bg-white"
+                      />
+                      <span className="absolute right-3 top-3 text-[11px] font-bold text-slate-400 font-mono">
+                        {newDeveloperPin.length}/6
+                      </span>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setNewDeveloperPin(generateRandomPin())}
-                    className="flex-1 py-2 px-3 rounded-lg border border-emerald-200 hover:border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Acak PIN Otomatis</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewDeveloperPin(generateRandomPin())}
+                        className="flex-1 py-2 px-3 rounded-lg border border-emerald-200 hover:border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Acak PIN Otomatis</span>
+                      </button>
+                    </div>
+                  </div>
 
-            <div className="pt-5 mt-5 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={handleSaveDeveloperPin}
-                disabled={isSavingDeveloper}
-                className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-[#043e2e] to-[#0a523e] hover:from-[#06503c] hover:to-[#0c6149] text-emerald-100 font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSavingDeveloper ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-200" />
-                    <span>Menyimpan ke Database...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                    <span>Simpan PIN Developer Realtime</span>
-                  </>
-                )}
-              </button>
+                  <div className="pt-5 mt-5 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleSaveDeveloperPin}
+                      disabled={isSavingDeveloper}
+                      className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-[#043e2e] to-[#0a523e] hover:from-[#06503c] hover:to-[#0c6149] text-emerald-100 font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingDeveloper ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin text-emerald-200" />
+                          <span>Menyimpan ke Database...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                          <span>Simpan PIN Developer Realtime</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

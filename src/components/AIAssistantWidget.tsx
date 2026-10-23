@@ -37,6 +37,7 @@ import {
   resolveMemberVerificationQuery,
   resolveRegionalPillarDataQuery,
   resolveSensitivePrivacyQuery,
+  resolvePinSecurityQuery,
 } from '../data/aiKnowledge';
 import { resolveDinsosAddressQuery } from '../data/dinsosAddressDirectory';
 import { ensureAIKnowledgeSeeded } from '../services/aiKnowledgeFirestoreService';
@@ -834,19 +835,21 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
     // Instant Real-Time Grounding Interceptor (Direct access to allPillarData state & UU PDP Privacy)
     // Delivers sub-50ms instant response without sluggishness, exactly matching user request
+    const roleForContext: UserRole = isDeveloperUser ? 'developer' : currentRole;
+    const pinCheck = resolvePinSecurityQuery(textToSend, roleForContext, session?.nama);
     const privacyCheck = resolveSensitivePrivacyQuery(textToSend);
     const memberCheck = resolveMemberVerificationQuery(textToSend, allPillarData, session?.wilayah);
     const regionalCheck = resolveRegionalPillarDataQuery(textToSend, allPillarData, session?.wilayah);
 
-    if (privacyCheck || memberCheck || regionalCheck) {
-      const instantReply = privacyCheck || memberCheck || regionalCheck;
+    if (pinCheck || privacyCheck || memberCheck || regionalCheck) {
+      const instantReply = pinCheck || privacyCheck || memberCheck || regionalCheck;
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         role: 'assistant',
         content: instantReply!,
         timestamp: new Date(),
         isVerified: true,
-        trackingSource: privacyCheck ? 'verified_exact' : 'state_grounded',
+        trackingSource: (pinCheck || privacyCheck) ? 'verified_exact' : 'state_grounded',
       };
 
       setMessages((prev) => [...prev, botMsg]);
