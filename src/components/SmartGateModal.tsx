@@ -1036,22 +1036,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#06152d] via-[#091f42] to-[#040e1f] w-full h-[100dvh] overflow-hidden flex flex-col justify-between select-none font-sans text-slate-800 p-0 sm:p-3 md:p-4 overscroll-none">
-      {/* Dynamic Aesthetic Ambient Glow Canvas */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[15%] -left-[10%] w-[700px] h-[700px] bg-blue-600/20 rounded-full blur-[140px]" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[700px] h-[700px] bg-indigo-600/15 rounded-full blur-[150px]" />
-        <div className="absolute top-[35%] right-[25%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[120px]" />
-      </div>
-
-      {/* Center Split-Screen Container (Full Screen Responsive, Strictly No-Scroll) */}
-      <main className="relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 h-full max-md:h-[100dvh] md:my-auto p-0 sm:py-2 flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] bg-white w-full h-[100dvh] overflow-hidden flex flex-col justify-between select-none font-sans text-slate-800 p-0 overscroll-none">
+      {/* Center Split-Screen Container (Full Screen Responsive, Strictly Edge-to-Edge on Laptop) */}
+      <main className="relative z-20 w-full flex-1 min-h-0 h-full flex flex-col md:flex-row overflow-hidden">
         
-        {/* Split-Screen Card (Full Screen Balanced on Mobile, Fixed Split-Screen on Desktop) */}
-        <div className="relative w-full h-full max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:rounded-none max-md:border-0 sm:max-h-[90vh] md:max-h-[680px] lg:max-h-[700px] bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-blue-950/80 border border-blue-800/40 overflow-hidden flex flex-col md:flex-row">
+        {/* Split-Screen Card (Full Screen on Laptop & Mobile) */}
+        <div className="relative w-full h-full flex-1 min-h-0 bg-white border-0 rounded-none shadow-none overflow-hidden flex flex-col md:flex-row">
           
           {/* ================= LEFT COLUMN: DISTINCT ROYAL BLUE BRANDING (DESKTOP / LAPTOP) ================= */}
-          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#123e8c] via-[#0d2d68] to-[#07193d] text-white p-5 lg:p-7 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-400/20 shadow-lg">
+          <div className="hidden md:flex md:w-[38%] lg:w-[40%] bg-gradient-to-br from-[#123e8c] via-[#0d2d68] to-[#07193d] text-white p-6 lg:p-10 xl:p-12 flex-col justify-between relative overflow-hidden shrink-0 border-r border-blue-900/30">
             
             {/* Subtle Atmospheric Geometric Depth (Non-distracting, pure CSS) */}
             <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full bg-blue-500/10 blur-[50px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
@@ -1115,7 +1108,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           </div>
 
           {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
-          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:px-6 md:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full transition-colors duration-300`}>
+          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:px-8 md:py-6 lg:px-12 lg:py-8 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full transition-colors duration-300`}>
             
             {/* Top Right Curved Blue Accent Wave */}
             <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-blue-400/15 bg-blue-600/10' : 'bg-blue-600/10'} pointer-events-none`} />
@@ -1176,7 +1169,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             )}
 
             {/* Header Greeting inside White Area */}
-            <div className={`relative z-10 text-center mb-1 sm:mb-2 shrink-0 ${showMobileIntro && view === 'main' ? 'hidden md:block' : 'block'}`}>
+            <div className={`relative z-10 text-center mb-1 sm:mb-2 shrink-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:block' : 'block'}`}>
               <h3 className="text-sm sm:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
                 {view === 'main' && 'Selamat Datang'}
                 {view === 'register' && 'Daftar Akun Baru'}
@@ -1200,7 +1193,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Center Animated Form Container (Strictly fits without scrollbar) */}
-            <div className={`relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5 ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
               
                 {/* ========================================================================= */}
                 {/* LAYAR UTAMA (3 JALUR UTAMA SEJAJAR) */}
@@ -2774,7 +2767,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Form Footer Links */}
-            <div className={`relative z-10 pt-1.5 sm:pt-1.5 border-t border-slate-200 flex flex-col gap-1 sm:gap-1 text-[8.5px] sm:text-[9.5px] text-slate-600 font-semibold shrink-0 pb-1 sm:pb-0 ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`relative z-10 pt-2 border-t border-slate-200 flex flex-col gap-1 text-[8.5px] sm:text-[9.5px] text-slate-600 font-semibold shrink-0 pb-1 sm:pb-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <button
@@ -2818,13 +2811,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
       </main>
 
-      {/* Bottom Page Footer (Khusus Desktop - Satu-Satunya Copyright di Layar Desktop) */}
-      <footer className="hidden md:flex relative z-20 w-full max-w-5xl lg:max-w-6xl mx-auto px-4 py-1.5 items-center justify-between text-[10px] text-blue-100/90 border border-blue-800/40 bg-[#071733]/85 backdrop-blur-md shrink-0 rounded-xl shadow-lg">
-        <div className="flex items-center gap-1.5 font-semibold">
-          <Building2 className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+      {/* Bottom Page Footer (Khusus Laptop / Desktop Full-Width) */}
+      <footer className="hidden md:flex relative z-30 w-full px-6 lg:px-10 py-2.5 items-center justify-between text-[11px] text-blue-100 bg-[#071733] border-t border-blue-900/60 shrink-0 shadow-lg select-none">
+        <div className="flex items-center gap-2 font-semibold">
+          <Building2 className="w-4 h-4 text-[#d4af37] shrink-0" />
           <span>© Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang</span>
         </div>
-        <div className="text-[9.5px] text-blue-300 font-semibold">
+        <div className="text-[10px] text-blue-300 font-semibold tracking-wide">
           Sistem Informasi Potensi & Sumber Kesejahteraan Sosial (PSKS JABAR)
         </div>
       </footer>
