@@ -23,7 +23,7 @@ interface PillarsGridProps {
   summaryCounts?: Record<string, number>;
 }
 
-const PILLAR_ICON_MAP: Record<
+export const PILLAR_ICON_MAP: Record<
   string,
   {
     icon: React.ReactNode;

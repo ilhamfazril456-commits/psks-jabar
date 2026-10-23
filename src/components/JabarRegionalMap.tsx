@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PSKSDataRecord } from '../types';
 import { KAB_KOTA_ONLY, PILLARS_CONFIG } from '../data/initialData';
+import { PILLAR_ICON_MAP } from './PillarsGrid';
 import { isRealDataLoaded } from '../services/regionalDistributionService';
 import {
   MapPin,
@@ -1329,24 +1330,47 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
                   </span>
                 </div>
 
-                <div className="space-y-1.5 max-h-[230px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                   {Object.entries(PILLARS_CONFIG).map(([pillarKey, config]) => {
                     const pillarCount = activeRegionData?.byPillar?.[pillarKey] || 0;
+                    const style = PILLAR_ICON_MAP[pillarKey] || PILLAR_ICON_MAP[pillarKey.replace(/_/g, '')] || {
+                      icon: <Layers className="w-3.5 h-3.5 text-white" />,
+                      bgGradient: 'from-emerald-600 to-teal-700',
+                      badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                      textColor: 'text-emerald-800',
+                      tag: 'PSKS',
+                    };
+
                     return (
                       <div
                         key={pillarKey}
-                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between text-xs"
+                        className="group/item bg-slate-950/90 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-xs transition-all duration-200"
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm shrink-0">{config.icon}</span>
-                          <span className="font-bold text-slate-200 truncate">{config.shortName}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Official Pillar Logo Badge matching Beranda Cards */}
+                          <div
+                            className={`w-7 h-7 rounded-lg bg-gradient-to-br ${style.bgGradient} flex items-center justify-center shadow-xs border border-white/25 shrink-0 group-hover/item:scale-105 transition-transform`}
+                            title={config.title || config.shortName}
+                          >
+                            {React.cloneElement(style.icon as React.ReactElement<any>, {
+                              className: 'w-3.5 h-3.5 text-white drop-shadow-xs',
+                            })}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-slate-200 group-hover/item:text-white truncate transition-colors text-[11.5px] leading-tight">
+                              {config.shortName}
+                            </span>
+                            <span className="text-[9.5px] text-slate-500 font-medium truncate leading-tight">
+                              {config.title}
+                            </span>
+                          </div>
                         </div>
                         <span className={`font-black px-2 py-0.5 rounded-lg text-[11px] shrink-0 ${
                           pillarCount > 0
                             ? 'bg-emerald-950 border border-emerald-500/40 text-emerald-300'
-                            : 'bg-slate-900 text-slate-600'
+                            : 'bg-slate-900 text-slate-600 border border-slate-800/80'
                         }`}>
-                          {pillarCount} {config.unitLabel}
+                          {pillarCount.toLocaleString('id-ID')} {config.unitLabel}
                         </span>
                       </div>
                     );

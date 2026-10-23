@@ -14,7 +14,10 @@ import {
   FileText,
   CheckCircle2,
   Database,
-  QrCode,
+  Building2,
+  Flame,
+  Network,
+  Briefcase,
   MapPin,
   HeartHandshake,
   Landmark,
@@ -111,7 +114,7 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
     {
       nomor: 'Permensos Terkait 10 Pilar PSKS',
       tentang: 'Regulasi Khusus Eksistensi & Pembinaan Tiap Pilar Sosial',
-      deskripsi: 'Mencakup Permensos TKSK (No. 28/2018), Karang Taruna (No. 25/2019), PSM (No. 10/2019), Tagana (No. 28/2012), LKS/Orsos (No. 184/2011), WKSBM, Pelopor Perdamaian, Dunia Usaha/CSR, KUBE, dan Anggota Veteran RI.',
+      deskripsi: 'Mencakup regulasi kementerian terkait standar kompetensi, tugas pokok, dan pembinaan 10 Pilar PSKS: Pekerja Sosial Profesional, PSM (Permensos No. 10/2019), TAGANA (Permensos No. 28/2012), LKS (Permensos No. 184/2011 & No. 5/2019), Karang Taruna (Permensos No. 25/2019), LK3, PENSOS, TKSK (Permensos No. 28/2018), Kelompok Usaha Bersama (KUBE / Badan Usaha Sosial), dan SLRT Puskesos.',
       kategori: 'Regulasi Pilar',
       icon: Layers,
     },
@@ -133,28 +136,22 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
 
   const tujuanWebsiteList = [
     {
-      judul: 'Sentralisasi & Integrasi Data 10 Pilar',
-      poin: 'Menyatukan database seluruh anggota dan lembaga dari 10 Pilar PSKS (TKSK, Karang Taruna, PSM, Tagana, LKS, WKSBM, Pelopor Perdamaian, CSR/Dunia Usaha, KUBE, & Veteran) di 27 Kabupaten/Kota Jawa Barat dalam satu pintu portal digital.',
+      judul: 'Sentralisasi & Integrasi Data 10 Pilar PSKS',
+      poin: 'Menyatukan database seluruh anggota dan lembaga dari 10 Pilar PSKS (PEKSOS, PSM, TAGANA, LKS, Karang Taruna, LK3, PENSOS, TKSK, KUBE/Badan Usaha Sosial, dan SLRT Puskesos) di 27 Kabupaten/Kota Jawa Barat dalam satu pintu portal digital resmi.',
       icon: Database,
       warna: 'from-emerald-600 to-teal-700',
     },
     {
-      judul: 'Validasi & Penerbitan Kartu Digital Pintar',
-      poin: 'Menyediakan fitur verifikasi legalitas status keanggotaan bersertifikat QR Code terenkripsi (*Smart Access Card*) untuk memastikan kredibilitas, rekam jejak, dan keaslian anggota pilar sosial yang bertugas di lapangan.',
-      icon: QrCode,
-      warna: 'from-amber-600 to-yellow-600',
+      judul: 'Pemetaan Geospasial Wilayah Sebaran',
+      poin: 'Menyajikan visualisasi interaktif peta potensi dan sebaran kekuatan sosial di tingkat provinsi hingga 27 kabupaten/kota guna mendukung pengambilan kebijakan sosial berbasis data (data-driven policy) yang presisi.',
+      icon: MapPin,
+      warna: 'from-emerald-700 to-green-800',
     },
     {
       judul: 'Transparansi & Akuntabilitas Publik',
-      poin: 'Menjamin keterbukaan informasi publik terkait capaian program, profil lembaga pilar sosial, berita resmi kedinasan, dan statistik kegiatan penanganan permasalahan sosial secara *real-time* dan dapat dipertanggungjawabkan.',
+      poin: 'Menjamin keterbukaan informasi publik terkait capaian program, profil lembaga pilar sosial, berita resmi kedinasan, dan statistik kegiatan penanganan permasalahan sosial secara transparan, akurat, dan dapat dipertanggungjawabkan.',
       icon: ShieldCheck,
       warna: 'from-blue-600 to-indigo-700',
-    },
-    {
-      judul: 'Pemetaan Geospasial Wilayah Sebaran',
-      poin: 'Menyajikan visualisasi interaktif peta potensi dan sebaran kekuatan sosial di tingkat provinsi hingga kabupaten/kota guna mendukung pengambilan keputusan berbasis data (*data-driven policy*) yang presisi.',
-      icon: MapPin,
-      warna: 'from-emerald-700 to-green-800',
     },
     {
       judul: 'Akselerasi Respon Penanganan PPKS',
@@ -163,8 +160,8 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
       warna: 'from-rose-600 to-red-700',
     },
     {
-      judul: 'Efisiensi Administrasi & Pendaftaran Mandiri',
-      poin: 'Memangkas birokrasi verifikasi pendaftaran anggota baru dan pembaharuan dokumen melalui sistem pendaftaran daring terstruktur yang divalidasi langsung oleh Admin Wilayah dan Superadmin Provinsi.',
+      judul: 'Efisiensi Administrasi & Pendataan Terpadu',
+      poin: 'Memangkas birokrasi verifikasi pendaftaran anggota dan kelembagaan melalui sistem pendataan daring terstruktur yang divalidasi langsung secara berjenjang oleh Admin Wilayah dan Superadmin Provinsi.',
       icon: TrendingUp,
       warna: 'from-violet-600 to-purple-800',
     },
@@ -212,6 +209,37 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
             </div>
           </div>
         )}
+
+        {/* IN-PAGE PROFILE SUB-NAVIGATION TABS */}
+        <div className="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap gap-1 sm:gap-2">
+          {[
+            { id: 'kadinas', label: 'Sambutan Kepala Dinas', icon: UserCheck },
+            { id: 'visi_misi', label: 'Visi & Misi', icon: Target },
+            { id: 'struktur', label: 'Struktur Organisasi', icon: Users },
+            { id: 'tupoksi', label: 'Dasar Hukum & Tupoksi', icon: Scale },
+          ].map((tab) => {
+            const TabIcon = tab.icon;
+            const isActive = currentView === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setCurrentView(tab.id as any);
+                  onSwitchSubView?.(tab.id as any);
+                }}
+                className={`flex-1 min-w-[140px] sm:min-w-0 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-xs sm:text-[13px] transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#043e2e] text-amber-300 shadow-md border border-amber-400/40'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                }`}
+              >
+                <TabIcon className={`w-4 h-4 ${isActive ? 'text-amber-300' : 'text-slate-500'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* ========================================================================= */}
         {/* BAGIAN 1: SAMBUTAN KEPALA DINAS SOSIAL PROVINSI JAWA BARAT                */}
@@ -424,10 +452,263 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
         )}
 
         {/* ========================================================================= */}
-        {/* BAGIAN 3: TUJUAN UTAMA WEBSITE SISTEM INFORMASI PSKS JABAR                */}
+        {/* BAGIAN 3: STRUKTUR ORGANISASI DINAS SOSIAL PROVINSI JAWA BARAT           */}
         {/* ========================================================================= */}
         {currentView === 'struktur' && (
-        <section id="section-tujuan-website" className="scroll-mt-24">
+        <section id="section-struktur-organisasi" className="scroll-mt-24 space-y-8">
+          <motion.div
+            initial={{ opacity: 0, y: 25 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="bg-white rounded-3xl shadow-xl border border-emerald-950/10 p-6 sm:p-10 lg:p-12 relative overflow-hidden space-y-8"
+          >
+            {/* Header Title */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 text-xs font-black text-[#b8901c] uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-md border border-amber-200/80 shadow-2xs">
+                  <Network className="w-3.5 h-3.5 text-[#b8901c]" />
+                  <span>Bagan Kelembagaan &amp; Tata Kerja Resmi</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#043e2e] tracking-tight">
+                  Struktur Organisasi Dinas Sosial Provinsi Jawa Barat
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-3xl">
+                  Bagan susunan organisasi kelembagaan Dinas Sosial Provinsi Jawa Barat beserta tata hubungan pembinaan dan koordinasi berjenjang terhadap 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS) di 27 Kabupaten/Kota se-Jawa Barat.
+                </p>
+              </div>
+            </div>
+
+            {/* LEVEL 1: PUCUK PIMPINAN KEDINASAN */}
+            <div className="flex flex-col items-center">
+              <div className="w-full max-w-xl bg-gradient-to-r from-[#032e22] via-[#043e2e] to-[#011a13] text-white rounded-2xl p-5 border-2 border-[#d4af37] shadow-xl text-center relative overflow-hidden group">
+                <div className="inline-flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/40 text-amber-300 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider mb-2">
+                  <Award className="w-3 h-3 text-amber-300" />
+                  <span>Pucuk Pimpinan Kedinasan</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black tracking-tight text-white mb-1">
+                  Kepala Dinas Sosial Provinsi Jawa Barat
+                </h3>
+                <div className="text-sm font-bold text-amber-300 mb-2">
+                  {kadinasName}
+                </div>
+                <p className="text-xs text-emerald-100/90 leading-relaxed max-w-lg mx-auto">
+                  Memimpin perumusan kebijakan teknis operasional, pembinaan aparatur, penyelenggaraan pelayanan sosial, koordinasi lintas instansi, serta pertanggungjawaban umum urusan sosial se-Provinsi Jawa Barat.
+                </p>
+              </div>
+
+              {/* Vertical Connector Line */}
+              <div className="w-0.5 h-6 bg-[#043e2e]/40 my-1" />
+
+              {/* LEVEL 2: SEKRETARIAT DINAS SOSIAL */}
+              <div className="w-full max-w-2xl bg-slate-50 border-2 border-emerald-900/20 rounded-2xl p-4 sm:p-5 shadow-sm text-center">
+                <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 text-[10.5px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider mb-1.5 border border-emerald-300/60">
+                  <Briefcase className="w-3 h-3 text-emerald-700" />
+                  <span>Unsur Pelayanan Administrasi &amp; Manajemen</span>
+                </div>
+                <h4 className="text-base font-black text-[#043e2e]">
+                  Sekretariat Dinas Sosial Provinsi Jawa Barat
+                </h4>
+                <p className="text-xs text-slate-600 mt-1 max-w-xl mx-auto">
+                  Mengoordinasikan perumusan rencana kerja, pengelolaan administrasi umum, kepegawaian, keuangan, aset, hubungan masyarakat, serta akselerasi transformasi sistem informasi digital.
+                </p>
+
+                {/* Subbagian Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-200">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 text-center">
+                    <span className="text-[11px] font-black text-[#043e2e] block">Subbag Perencanaan &amp; Program</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Penyusunan RKA &amp; Evaluasi Kinerja</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 text-center">
+                    <span className="text-[11px] font-black text-[#043e2e] block">Subbag Keuangan &amp; Aset</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Pengelolaan Anggaran &amp; BMD</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200 text-center">
+                    <span className="text-[11px] font-black text-[#043e2e] block">Subbag Kepegawaian &amp; Umum</span>
+                    <span className="text-[10px] text-slate-500 font-medium">SDM Aparatur, Surat &amp; Logistik</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vertical Connector Line */}
+              <div className="w-0.5 h-6 bg-[#043e2e]/40 my-1" />
+            </div>
+
+            {/* LEVEL 3: 4 BIDANG TEKNIS UTAMA & PEMBINA 10 PILAR PSKS */}
+            <div className="space-y-3">
+              <div className="text-center space-y-1">
+                <span className="text-xs font-black text-[#043e2e] uppercase tracking-wider bg-amber-100/90 border border-amber-300/80 px-3 py-1 rounded-full inline-block">
+                  Unsur Pelaksana Teknis &amp; Pembina 10 Pilar PSKS
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-[#043e2e]">
+                  4 Bidang Teknis Operasional Dinas Sosial Jabar
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {/* 1. Bidang Pemberdayaan Sosial */}
+                <div className="bg-gradient-to-br from-emerald-50/60 to-white p-5 rounded-2xl border-2 border-emerald-200 hover:border-emerald-500 transition-all shadow-xs flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <HeartHandshake className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-black text-[#043e2e] leading-snug">
+                          Bidang Pemberdayaan Sosial (Dayasos)
+                        </h4>
+                        <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">
+                          Pembina Kelembagaan &amp; Sumber Kesejahteraan
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed text-justify">
+                      Bertugas merumuskan kebijakan operasional, fasilitasi, penguatan kelembagaan sosial, peningkatan kompetensi, serta pengembangan kemitraan strategis dengan potensi sumber kesejahteraan sosial masyarakat.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-emerald-100">
+                    <span className="text-[10px] font-black text-[#043e2e] uppercase tracking-wider block mb-1.5">
+                      Pilar PSKS Terkait:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['PEKSOS Profesional', 'PSM', 'Karang Taruna', 'PENSOS', 'KUBE / Usaha Sosial'].map((p, pIdx) => (
+                        <span key={pIdx} className="bg-white text-emerald-900 border border-emerald-300 text-[10.5px] font-bold px-2 py-0.5 rounded-lg shadow-2xs">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Bidang Perlindungan & Jaminan Sosial */}
+                <div className="bg-gradient-to-br from-rose-50/60 to-white p-5 rounded-2xl border-2 border-rose-200 hover:border-rose-400 transition-all shadow-xs flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-rose-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <Flame className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-black text-[#043e2e] leading-snug">
+                          Bidang Perlindungan &amp; Jaminan Sosial (Linjamsos)
+                        </h4>
+                        <span className="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider">
+                          Penanggulangan Bencana &amp; Jaminan Sosial
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed text-justify">
+                      Bertugas menyelenggarakan perlindungan sosial korban bencana alam dan bencana sosial, mitigasi risiko kedaruratan, kesiapsiagaan logistik evakuasi, serta penyaluran jaminan sosial bagi keluarga korban bencana.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-rose-100">
+                    <span className="text-[10px] font-black text-[#043e2e] uppercase tracking-wider block mb-1.5">
+                      Pilar PSKS Terkait:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['TAGANA (Taruna Siaga Bencana)', 'Relawan Kebencanaan', 'Satgas Logistik Bencana'].map((p, pIdx) => (
+                        <span key={pIdx} className="bg-white text-rose-900 border border-rose-300 text-[10.5px] font-bold px-2 py-0.5 rounded-lg shadow-2xs">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Bidang Rehabilitasi Sosial */}
+                <div className="bg-gradient-to-br from-blue-50/60 to-white p-5 rounded-2xl border-2 border-blue-200 hover:border-blue-400 transition-all shadow-xs flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <Scale className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-black text-[#043e2e] leading-snug">
+                          Bidang Rehabilitasi Sosial (Rehsos)
+                        </h4>
+                        <span className="text-[10px] font-extrabold text-blue-800 uppercase tracking-wider">
+                          Pelayanan PPKS, Disabilitas, Lansia &amp; Anak
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed text-justify">
+                      Bertugas merumuskan kebijakan dan menyelenggarakan pelayanan rehabilitasi sosial berbasis lembaga dan keluarga bagi penyandang disabilitas, anak telantar, lanjut usia rentan, dan korban tindak kekerasan sosial.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-blue-100">
+                    <span className="text-[10px] font-black text-[#043e2e] uppercase tracking-wider block mb-1.5">
+                      Pilar PSKS Terkait:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['LKS (Lembaga Kesejahteraan Sosial)', 'LK3 (Konsultasi Kesejahteraan Keluarga)'].map((p, pIdx) => (
+                        <span key={pIdx} className="bg-white text-blue-900 border border-blue-300 text-[10.5px] font-bold px-2 py-0.5 rounded-lg shadow-2xs">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Bidang Penanganan Fakir Miskin */}
+                <div className="bg-gradient-to-br from-amber-50/60 to-white p-5 rounded-2xl border-2 border-amber-200 hover:border-amber-400 transition-all shadow-xs flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-amber-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <Target className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-black text-[#043e2e] leading-snug">
+                          Bidang Penanganan Fakir Miskin (PFM)
+                        </h4>
+                        <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">
+                          Penanggulangan Kemiskinan &amp; Layanan Terpadu
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed text-justify">
+                      Bertugas mengoordinasikan verifikasi dan validasi data kemiskinan terpadu, intervensi bantuan sosial ekonomi keluarga rentan miskin, serta mengoptimalkan jejaring sistem rujukan sosial di tingkat kecamatan dan desa.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-amber-100">
+                    <span className="text-[10px] font-black text-[#043e2e] uppercase tracking-wider block mb-1.5">
+                      Pilar PSKS Terkait:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['TKSK (Kecamatan)', 'SLRT & Puskesos (Pusat Kesejahteraan Sosial)'].map((p, pIdx) => (
+                        <span key={pIdx} className="bg-white text-amber-900 border border-amber-300 text-[10.5px] font-bold px-2 py-0.5 rounded-lg shadow-2xs">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* LEVEL 4 & 5: UPTD / BALAI & TATA HUBUNGAN KEWILAYAHAN */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-2 text-xs font-black text-[#043e2e] uppercase tracking-wider mb-2">
+                  <Building2 className="w-4 h-4 text-emerald-700" />
+                  <span>UPTD &amp; Balai Pelayanan Sosial Provinsi</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Unit Pelaksana Teknis Daerah yang menyelenggarakan pelayanan langsung rehabilitasi dan perlindungan sosial di lapangan, antara lain Balai Rehabilitasi Sosial Disabilitas, Balai Perlindungan Sosial Tresna Werdha (Lansia), Balai Rehabilitasi Sosial Anak dan Remaja, serta Balai Perlindungan Sosial Karya Wanita se-Jawa Barat.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-2 text-xs font-black text-[#043e2e] uppercase tracking-wider mb-2">
+                  <Landmark className="w-4 h-4 text-amber-700" />
+                  <span>Kemitraan Wilayah 27 Kab/Kota &amp; Relawan</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Menjalin sinergi koordinasi horizontal dan vertikal bersama Dinas Sosial Pemerintah Kabupaten/Kota se-Jawa Barat, Camat, Kepala Desa/Lurah, serta membina seluruh pengurus dan anggota 10 Pilar PSKS hingga ke pelosok wilayah rukun warga dan komunitas.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* BAGIAN TUJUAN SISTEM INFORMASI PSKS JABAR (TANPA KARTU PINTAR) */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -439,18 +720,18 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-2 text-xs font-black text-[#b8901c] uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-md border border-amber-200/80 shadow-2xs">
                   <Target className="w-3.5 h-3.5 text-[#b8901c]" />
-                  <span>Fungsi &amp; Maksud Pengembangan</span>
+                  <span>Fungsi &amp; Maksud Pengembangan Portal</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#043e2e] tracking-tight">
-                  Tujuan Pengembangan Portal PSKS Jabar
-                </h2>
+                <h3 className="text-xl sm:text-2xl font-black text-[#043e2e] tracking-tight">
+                  Tujuan Strategis Sistem Informasi PSKS Jabar
+                </h3>
                 <p className="text-xs sm:text-sm text-slate-600 max-w-3xl">
-                  Portal Sistem Informasi PSKS Jabar dikembangkan sebagai instrumen transformasi digital terintegrasi untuk memperkuat koordinasi, pengawasan, dan percepatan penyelenggaraan kesejahteraan sosial.
+                  Portal Sistem Informasi PSKS Jabar dikembangkan sebagai instrumen transformasi data digital terintegrasi untuk memperkuat koordinasi, keterbukaan informasi, dan percepatan penyelenggaraan kesejahteraan sosial.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               {tujuanWebsiteList.map((tujuan, idx) => {
                 const IconComponent = tujuan.icon;
                 return (
@@ -477,7 +758,7 @@ Semoga Upaya Kolaboratif Ini Mampu Memperkuat Sinergi 10 Pilar PSKS Dalam Menang
                     </div>
 
                     <div className="pt-3 mt-3 border-t border-slate-100 relative z-10 flex items-center text-[11.5px] font-bold text-emerald-800 gap-1">
-                      <span>Tujuan Strategis #{idx + 1}</span>
+                      <span>Fokus #{idx + 1}</span>
                       <ArrowRight className="w-3.5 h-3.5 ml-auto text-emerald-600 transform group-hover:translate-x-1 transition-transform" />
                     </div>
                   </motion.div>
