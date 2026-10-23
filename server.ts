@@ -556,15 +556,28 @@ async function startServer() {
     }
   });
 
-  // Initialize Gemini GenAI client lazy/safe wrapper
-  let aiClient: GoogleGenAI | null = null;
-  function getGenAI() {
-    if (!aiClient) {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-        throw new Error('GEMINI_API_KEY belum dikonfigurasi di lingkungan server.');
-      }
-      aiClient = new GoogleGenAI({
+  // =========================================================================
+  // MULTI-KEY ROTATOR & AUTO-FAILOVER ENGINE (GOOGLE GEMINI API)
+  // Mendukung 1 hingga banyak API key yang dipisahkan tanda koma (,) di Vercel / server.
+  // Dilengkapi Round-Robin load distribution dan perpindahan otomatis instan saat limit habis (429 Quota Exceeded).
+  // =========================================================================
+  function getGeminiApiKeys(): string[] {
+    const raw = process.env.GEMINI_API_KEY || '';
+    if (!raw || raw === 'MY_GEMINI_API_KEY' || raw.trim() === '') return [];
+    // Pisahkan berdasarkan koma, titik koma, spasi baris baru, atau pipe
+    return raw
+      .split(/[,;\n\r|]+/)
+      .map((k) => k.trim())
+      .filter((k) => k.length > 5 && k !== 'MY_GEMINI_API_KEY');
+  }
+
+  const geminiClientCache = new Map<string, GoogleGenAI>();
+  let geminiRotationCounter = 0;
+
+  function getClientForKey(apiKey: string): GoogleGenAI {
+    let client = geminiClientCache.get(apiKey);
+    if (!client) {
+      client = new GoogleGenAI({
         apiKey,
         httpOptions: {
           headers: {
@@ -572,8 +585,46 @@ async function startServer() {
           },
         },
       });
+      geminiClientCache.set(apiKey, client);
     }
-    return aiClient;
+    return client;
+  }
+
+  interface GeminiKeyPoolItem {
+    key: string;
+    client: GoogleGenAI;
+    keyIndex: number;
+    totalKeys: number;
+  }
+
+  function getOrderedKeyPool(): GeminiKeyPoolItem[] {
+    const keys = getGeminiApiKeys();
+    if (keys.length === 0) return [];
+
+    const startIdx = geminiRotationCounter % keys.length;
+    geminiRotationCounter = (geminiRotationCounter + 1) % keys.length;
+
+    const orderedPool: GeminiKeyPoolItem[] = [];
+    for (let i = 0; i < keys.length; i++) {
+      const actualIdx = (startIdx + i) % keys.length;
+      const keyVal = keys[actualIdx];
+      orderedPool.push({
+        key: keyVal,
+        client: getClientForKey(keyVal),
+        keyIndex: actualIdx + 1,
+        totalKeys: keys.length,
+      });
+    }
+
+    return orderedPool;
+  }
+
+  function getGenAI(): GoogleGenAI {
+    const pool = getOrderedKeyPool();
+    if (pool.length === 0) {
+      throw new Error('GEMINI_API_KEY belum dikonfigurasi di lingkungan server.');
+    }
+    return pool[0].client;
   }
 
   // Helper for normalizing message turns strictly for Gemini API requirements
@@ -3388,15 +3439,14 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
       }
 
       const lastUserMsg = messages[messages.length - 1]?.content || '';
-      const apiKey = process.env.GEMINI_API_KEY;
+      const availableKeys = getGeminiApiKeys();
 
-      if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+      if (availableKeys.length === 0) {
         const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext, messages);
         return res.json({ reply: fallbackReply });
       }
 
       try {
-        const ai = getGenAI();
         const lastMsgLower = lastUserMsg.toLowerCase();
         // Developer recognition: strictly restricted to authenticated developer account role only
         const isDeveloper = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
@@ -3876,7 +3926,7 @@ AI WAJIB:
         // Strictly normalize conversation history for Gemini API (ensures starts with user & strictly alternates)
         const sanitizedContents = normalizeGeminiContents(messages);
 
-        // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation with automatic quota failover
+        // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
         const candidateModels = [
           'gemini-2.5-flash',
           'gemini-3.8-flash',
@@ -3885,55 +3935,79 @@ AI WAJIB:
           'gemini-3.1-pro-preview',
         ];
         let replyText = '';
+        const keyPool = getOrderedKeyPool();
 
-        for (const modelName of candidateModels) {
-          try {
-            const configObj: any = {
-              systemInstruction: contextualInstruction,
-              temperature: isDeveloper ? 0.7 : 0.3,
-              maxOutputTokens: isDeveloper ? 4096 : 3072,
-            };
+        // MULTI-KEY ROTATION & AUTO-FAILOVER ENGINE:
+        // Menjalankan round-robin antar key. Jika satu key habis limit (429/quota), OTOMATIS pindah ke key berikutnya!
+        keyLoop: for (const keyItem of keyPool) {
+          for (const modelName of candidateModels) {
+            try {
+              const configObj: any = {
+                systemInstruction: contextualInstruction,
+                temperature: isDeveloper ? 0.7 : 0.3,
+                maxOutputTokens: isDeveloper ? 4096 : 3072,
+              };
 
-            // Wrap call with a 12000ms timeout to prevent premature aborts on complex answers
-            const generatePromise = ai.models.generateContent({
-              model: modelName,
-              contents: sanitizedContents,
-              config: configObj,
-            });
+              // Wrap call with a 12000ms timeout to prevent premature aborts on complex answers
+              const generatePromise = keyItem.client.models.generateContent({
+                model: modelName,
+                contents: sanitizedContents,
+                config: configObj,
+              });
 
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout 12000ms exceeded on model ${modelName}`)), 12000)
-            );
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`Timeout 12000ms exceeded on model ${modelName}`)), 12000)
+              );
 
-            const response: any = await Promise.race([generatePromise, timeoutPromise]);
+              const response: any = await Promise.race([generatePromise, timeoutPromise]);
 
-            if (response && response.text && response.text.trim()) {
-              const cleaned = response.text.trim();
-              const finishReason = response.candidates?.[0]?.finishReason;
+              if (response && response.text && response.text.trim()) {
+                const cleaned = response.text.trim();
+                const finishReason = response.candidates?.[0]?.finishReason;
 
-              // Anti-placeholder and true truncation check
-              const isTruncated =
-                finishReason === 'MAX_TOKENS' ||
-                cleaned.endsWith('(') ||
-                cleaned.endsWith('[') ||
-                cleaned.endsWith('{');
+                // Anti-placeholder and true truncation check
+                const isTruncated =
+                  finishReason === 'MAX_TOKENS' ||
+                  cleaned.endsWith('(') ||
+                  cleaned.endsWith('[') ||
+                  cleaned.endsWith('{');
 
-              if (
-                !cleaned.startsWith('(lanjutkan') &&
-                !cleaned.includes('lanjutkan penjelasan') &&
-                !isTruncated &&
-                cleaned.length >= 2
-              ) {
-                replyText = cleaned;
+                if (
+                  !cleaned.startsWith('(lanjutkan') &&
+                  !cleaned.includes('lanjutkan penjelasan') &&
+                  !isTruncated &&
+                  cleaned.length >= 2
+                ) {
+                  replyText = cleaned;
+                  break keyLoop; // BERHASIL: respon didapat dari key aktif!
+                } else if (isTruncated) {
+                  console.warn(`[AI Multi-Key Engine] Key #${keyItem.keyIndex}/${keyItem.totalKeys} - Model ${modelName} output truncated. Mencoba alternatif...`);
+                }
+              }
+            } catch (modelErr: any) {
+              const status = modelErr?.status || modelErr?.code || '';
+              const msg = (modelErr?.message || '').toLowerCase();
+              const isQuotaOrLimitError =
+                status === 429 ||
+                msg.includes('429') ||
+                msg.includes('resource_exhausted') ||
+                msg.includes('quota') ||
+                msg.includes('rate limit') ||
+                status === 403 ||
+                msg.includes('api_key_invalid');
+
+              if (isQuotaOrLimitError) {
+                console.warn(
+                  `[AI Multi-Key Engine] ⚠️ Key #${keyItem.keyIndex}/${keyItem.totalKeys} limit kuota habis (${status || msg}). OTOMATIS BERALIH KE KEY BERIKUTNYA...`
+                );
+                // Hentikan percobaan pada key ini dan segera lompat ke key berikutnya di keyPool!
                 break;
-              } else if (isTruncated) {
-                console.warn(`[AI Assistant] Model ${modelName} output was truncated (finishReason: ${finishReason}). Trying next candidate or fallback...`);
+              } else {
+                console.warn(
+                  `[AI Multi-Key Engine] Key #${keyItem.keyIndex}/${keyItem.totalKeys} - Model ${modelName} call issue (${status || msg}). Mencoba model/key alternatif...`
+                );
               }
             }
-          } catch (modelErr: any) {
-            const status = modelErr?.status || modelErr?.code || '';
-            const msg = modelErr?.message || '';
-            console.warn(`[AI Assistant] Model ${modelName} call issue (${status || msg}). Trying next candidate...`);
           }
         }
 
