@@ -62,14 +62,18 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   1. **Deteksi Dini & Pendataan**: Menjangkau dan memetakan warga Pemerlu Pelayanan Kesejahteraan Sosial (PPKS/PMKS) di lingkungan RT/RW.
   2. **Pendampingan Sosial**: Mendampingi lansia telantar, anak yatim/piatu, disabilitas, dan warga miskin mengakses bantuan pemerintah (PKH, BPNT, KIS).
   3. **Rujukan & Kemitraan**: Menjadi jembatan rujukan pertama warga ke Puskesos desa, TKSK kecamatan, dan Dinsos kabupaten/kota.
-  4. **Penggerak Gotong Royong**: Membangkitkan kepedulian sosial swadaya warga sekitar (seperti jimpitan/beras perelek).`,
+  4. **Penggerak Gotong Royong**: Membangkitkan kepedulian sosial swadaya warga sekitar (seperti jimpitan/beras perelek).
+
+[[action:pillar:psm:Lihat Data PSM]]`,
 
   'u-11': `**Peran & Kesiapsiagaan TAGANA di Jawa Barat**:
 - **Definisi**: Relawan sosial terlatih dan tersertifikasi dalam penanggulangan bencana alam dan bencana sosial di bawah naungan Bidang Perlindungan dan Jaminan Sosial (Linjamsos) Dinas Sosial.
 - **Tugas Tiga Fase Bencana**:
   1. **Pra-Bencana**: Sosialisasi mitigasi risiko, simulasi Kampung Siaga Bencana (KSB), dan edukasi Tagana Masuk Sekolah (TMS) di daerah rawan bencana Jabar.
   2. **Saat Bencana (Tanggap Darurat)**: Respon cepat 1x24 jam, pencarian dan evakuasi dasar, pendirian shelter pengungsian ramah anak/lansia, serta pengoperasian Mobil Dapur Umum Lapangan (DUMLAP) untuk suplai ribuan porsi makanan siap saji harian.
-  3. **Pasca-Bencana**: Layanan Dukungan Psikososial (LDP/trauma healing), pemulihan trauma korban, serta pendistribusian logistik dan santunan ahli waris.`,
+  3. **Pasca-Bencana**: Layanan Dukungan Psikososial (LDP/trauma healing), pemulihan trauma korban, serta pendistribusian logistik dan santunan ahli waris.
+
+[[action:pillar:tagana:Lihat Data TAGANA]]`,
 
   'u-12': `**Lembaga Kesejahteraan Sosial (LKS) & Syarat Pendaftaran**:
 - **Definisi**: Lembaga, yayasan, atau organisasi sosial kemasyarakatan berbadan hukum resmi yang didirikan masyarakat untuk melaksanakan pelayanan dan rehabilitasi sosial.
@@ -82,7 +86,9 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   1. Akta Notaris pendirian berbadan hukum Kemenkumham RI.
   2. Tanda Daftar Yayasan (TDY) & Izin Operasional resmi dari Dinas Sosial.
   3. Akreditasi kelembagaan dari Badan Akreditasi Lembaga Kesejahteraan Sosial (BALKS/Kemensos).
-  4. Kejelasan sarana prasarana shelter/panti, struktur pengurus, dan data warga binaan terverifikasi.`,
+  4. Kejelasan sarana prasarana shelter/panti, struktur pengurus, dan data warga binaan terverifikasi.
+
+[[action:pillar:lks:Lihat Data LKS]]`,
 
   'u-13': `**Peran Strategis Karang Taruna dalam Pemberdayaan Pemuda**:
 - **Definisi**: Organisasi kepemudaan non-partisan di tingkat desa/kelurahan sebagai wadah pengembangan generasi muda yang tumbuh dari, oleh, dan untuk masyarakat.
@@ -91,14 +97,18 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   1. **Pembinaan Generasi Muda**: Menampung kreativitas pemuda usia 13–45 tahun di bidang olahraga, seni budaya, dan keagamaan.
   2. **Usaha Ekonomi Produktif (UEP)**: Melatih kewirausahaan pemuda desa untuk membuka lapangan kerja dan mencegah pengangguran.
   3. **Pencegahan Patologi Sosial**: Membentengi remaja dari bahaya narkoba, tawuran, geng motor, dan kenakalan remaja.
-  4. **Kepeloporan Sosial**: Tanggap darurat bakti sosial dan kesetiakawanan di lingkungan rukun warga.`,
+  4. **Kepeloporan Sosial**: Tanggap darurat bakti sosial dan kesetiakawanan di lingkungan rukun warga.
+
+[[action:pillar:karangtaruna:Lihat Data Karang Taruna]]`,
 
   'u-14': `**Layanan Lembaga Konsultasi Kesejahteraan Keluarga (LK3)**:
 - **Definisi**: Lembaga rujukan sosial profesional yang memberikan pelayanan konseling psikologis, mediasi hukum keluarga, dan penguatan ketahanan keluarga.
 - **Ruang Lingkup Layanan**:
   1. **Konseling Psikososial**: Mengatasi persoalan keharmonisan rumah tangga, pengasuhan anak (*parenting*), dan krisis relasi keluarga.
   2. **Mediasi Krisis & Pendampingan KDRT**: Mediasi perselisihan rumah tangga dan pendampingan psikologis korban Kekerasan Dalam Rumah Tangga bekerja sama dengan Unit PPA.
-  3. **Penguatan Ketahanan Keluarga**: Mencegah perceraian, edukasi pranikah, dan advokasi hak perlindungan anak demi terwujudnya keluarga Jawa Barat Juara Lahir Batin.`,
+  3. **Penguatan Ketahanan Keluarga**: Mencegah perceraian, edukasi pranikah, dan advokasi hak perlindungan anak demi terwujudnya keluarga Jawa Barat Juara Lahir Batin.
+
+[[action:pillar:lk3:Lihat Data LK3]]`,
 
   'u-15': `**Perbedaan Utama TKSK vs PSM**:
 - **TKSK (Tenaga Kesejahteraan Sosial Kecamatan)**:
@@ -107,7 +117,10 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   * Bertanggung jawab atas koordinasi bansos, verifikasi data kemiskinan (DTKS/SIKS-NG), dan pelaporan ke Dinsos Kabupaten/Kota.
 - **PSM (Pekerja Sosial Masyarakat)**:
   * Berbasis di setiap **desa/kelurahan** dengan jumlah lebih banyak dan bersifat sukarela.
-  * Berperan langsung menjangkau warga, mendampingi PPKS di tingkat akar rumput (RT/RW), dan menjadi mitra kerja TKSK di lapangan.`,
+  * Berperan langsung menjangkau warga, mendampingi PPKS di tingkat akar rumput (RT/RW), dan menjadi mitra kerja TKSK di lapangan.
+
+[[action:pillar:tksk:Lihat Data TKSK]]
+[[action:pillar:psm:Lihat Data PSM]]`,
 
   'u-16': `**Fungsi SLRT PUSKESOS (Layanan Rujukan Terpadu Satu Pintu)**:
 - **Definisi**: Sistem Layanan dan Rujukan Terpadu (SLRT di tingkat kabupaten/kota) dan Pusat Kesejahteraan Sosial (Puskesos di tingkat desa/kelurahan).
@@ -115,21 +128,27 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
 - **Peran One-Stop Social Service**:
   1. **Penerimaan Keluhan**: Menampung keluhan masyarakat miskin/rentan yang belum terdaftar bansos.
   2. **Pencatatan & Verifikasi Fakir Miskin**: Identifikasi kebutuhan warga terkait jaminan kesehatan (BPJS PBI/KIS), pendidikan (KIP/beasiswa), PKH, atau perbaikan rumah tidak layak huni (Rutilahu).
-  3. **Rujukan Lintas Sektor**: Menghubungkan warga ke dinas teknis terkait (Dinas Kesehatan, Disdik, Disdukcapil) dengan pelacakan status penanganan terpadu.`,
+  3. **Rujukan Lintas Sektor**: Menghubungkan warga ke dinas teknis terkait (Dinas Kesehatan, Disdik, Disdukcapil) dengan pelacakan status penanganan terpadu.
+
+[[action:pillar:slrt_puskesos:Lihat Data SLRT PUSKESOS]]`,
 
   'u-17': `**KUBE (Kelompok Usaha Bersama) & Badan Usaha Sosial**:
 - **Definisi**: Wadah beranggotakan 5 hingga 10 Kepala Keluarga miskin binaan terdaftar DTKS yang dibentuk untuk mengelola kegiatan usaha ekonomi produktif bersama.
 - **Tujuan Utama**:
   1. Pemanfaatan stimulan bantuan modal usaha sosial (seperti peternakan, perikanan, warung kelontong, kuliner olahan lokal, kerajinan).
   2. Meningkatkan pendapatan keluarga pra-sejahtera melalui semangat gotong royong dan kemitraan pasar.
-  3. Transformasi kemandirian sosial ekonomi agar keluarga penerima manfaat dapat bergraduasi (keluar mandiri) dari status penerima bansos.`,
+  3. Transformasi kemandirian sosial ekonomi agar keluarga penerima manfaat dapat bergraduasi (keluar mandiri) dari status penerima bansos.
+
+[[action:pillar:badanusaha:Lihat Data KUBE]]`,
 
   'u-18': `**Peran Penyuluh Sosial Masyarakat (PENSOS)**:
 - **Definisi**: Baik Penyuluh Sosial ASN maupun tokoh masyarakat sukarela yang memiliki kompetensi komunikasi dan motivasi pembangunan kesejahteraan sosial.
 - **Tugas & Peran Strategis**:
   1. **Komunikasi Informasi Edukasi (KIE)**: Menyebarluaskan kebijakan dan program-program perlindungan sosial Dinsos Jabar kepada publik.
   2. **Penyuluhan Preventif**: Edukasi pencegahan perdagangan orang (TPPO), pencegahan perkawinan usia anak, bahaya narkoba, dan penanganan disabilitas tanpa stigma.
-  3. **Penguatan Nilai Sosial**: Menggelorakan nilai-nilai kesetiakawanan sosial, kepahlawanan, dan kearifan lokal gotong royong di masyarakat.`,
+  3. **Penguatan Nilai Sosial**: Menggelorakan nilai-nilai kesetiakawanan sosial, kepahlawanan, dan kearifan lokal gotong royong di masyarakat.
+
+[[action:pillar:pensos:Lihat Data Penyuluh Sosial]]`,
 
   'u-19': `**Pekerja Sosial Profesional (PEKSOS / PKSP) & Standar Sertifikasinya**:
 - **Definisi Resmi**: Tenaga ahli yang memiliki kualifikasi keilmuan formal pekerjaan sosial (lulusan D-IV/S-1/S-2/Profesi Spesialis Kesejahteraan Sosial/Pekerjaan Sosial) yang telah lulus uji kompetensi profesi, mengantongi Sertifikat Kompetensi dari LSP/Kemensos, serta terdaftar memiliki Surat Izin Praktik Pekerja Sosial (SIPPS).
@@ -143,7 +162,9 @@ export const EXACT_QUESTION_ANSWERS: Record<string, string> = {
   * **Manajemen Kasus (Case Management)**: Mengelola penanganan masalah sosial klien secara utuh dari asesmen hingga terminasi.
   * **Asesmen Biopsikososial**: Mengidentifikasi latar belakang psikologis, keluarga, dan sosial Pemerlu Pelayanan Kesejahteraan Sosial (PPKS).
   * **Intervensi Klinis & Advokasi**: Memberikan konseling rehabilitasi sosial, advokasi pemenuhan hak-hak sosial, serta pendampingan bagi Anak yang Berhadapan dengan Hukum (ABH), korban kekerasan (KDRT/TPPO), dan penyandang disabilitas berat.
-- **Perbedaan dengan Pilar Lain**: PEKSOS berlandaskan pendidikan akademik formal sarjana/profesi dan sertifikasi klinis resmi berlisensi SIPPS, sedangkan pilar seperti PSM atau Tagana berbasis kerelawanan pengabdian masyarakat.`,
+- **Perbedaan dengan Pilar Lain**: PEKSOS berlandaskan pendidikan akademik formal sarjana/profesi dan sertifikasi klinis resmi berlisensi SIPPS, sedangkan pilar seperti PSM atau Tagana berbasis kerelawanan pengabdian masyarakat.
+
+[[action:pillar:peksos:Lihat Data PEKSOS]]`,
 
   'u-20': `**Total Sebaran SDM PSKS Jawa Barat**:
 - Sistem PSKS JABAR mengelola puluhan ribu personil dan kelembagaan 10 Pilar yang terdistribusi merata di **27 Kabupaten/Kota, 627 Kecamatan, dan 5.957 Desa/Kelurahan** di seluruh Jawa Barat. Anda dapat mengecek angka rincian per daerah melalui grafik Beranda.`,

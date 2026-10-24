@@ -3546,11 +3546,27 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 - Pengguna SAAT INI ADALAH ILHAM FAZRIL (Developer & Software Architect sistem PSKS JABAR).
 - Panggil langsung namanya saja secara santai dan akrab: "Ilham" atau "Ham" (misal: "Halo Ilham!", "Yoo Ham!"). Mode santai, guyon, bahasa akrab sesama programmer diperbolehkan. Sampaikan jawaban to-the-point, santai, dan solutif.`;
           } else {
+            const isContinuingTurn = Array.isArray(messages) && messages.length > 1;
             contextualInstruction += `\n\n[ATURAN PENGGUNA NON-DEVELOPER & PRIVASI KEAMANAN]:
 - Anda merespons sebagai "Asisten Virtual Resmi PSKS Jabar" di bawah naungan Dinas Sosial Provinsi Jawa Barat.
-- [ATURAN PANGGILAN & SAPAAN (MUTLAK SOPAN & FORMAL)]:
+- [ATURAN PANGGILAN & SAPAAN (HANYA SEKALI DI AWAL PERCAKAPAN)]:
   * DILARANG KERAS memanggil pengguna umum, tamu publik, user terdaftar, admin wilayah, maupun superadmin dengan sebutan 'Kang/Teh', 'Kang', 'Teh', 'Akang', atau 'Teteh'!
-  * WAJIB SELALU memanggil mereka dengan sebutan formal terhormat: 'Bapak/Ibu' (contoh: 'Bapak/Ibu', 'Bapak/Ibu ${sessionName}', 'Sampurasun / Halo Bapak/Ibu') pada salam pembuka intro maupun respons percakapan agar terlihat lebih sopan, resmi, dan mencerminkan etika aparatur kedinasan Pemerintah Provinsi Jawa Barat.`;
+  * KRUSIAL & MUTLAK: Salam 'Sampurasun' dan sapaan 'Bapak/Ibu' HANYA BOLEH DIBERIKAN SEKALI SAJA DI AWAL PERCAKAPAN (Turn 1).
+  * ${isContinuingTurn ? 'PERINGATAN: SAAT INI PERCAKAPAN SEDANG BERJALAN (TURN 2+). DILARANG KERAS MENGULANG kata "Sampurasun" maupun sapaan "Bapak/Ibu" di setiap jawaban! Langsung jawab ke inti pertanyaan secara ramah, profesional, lugas, dan to-the-point tanpa basa-basi salam yang berulang-ulang!' : 'Jika ini adalah percakapan pesan pembuka pertama, Anda boleh menyapa dengan sopan "Sampurasun / Halo Bapak/Ibu".'}
+- [ATURAN TOMBOL AKSI / QUICK REPLY BUTTONS (MUTLAK RELEVAN & NYAMBUNG)]:
+  * Tombol aksi harus berupa format: [[action:type:target:Label]].
+  * KETIKA MEMBAHAS PILAR SOSIAL TERTENTU:
+    - Jika membahas PSM: WAJIB tombol [[action:pillar:psm:Lihat Data PSM]]
+    - Jika membahas TAGANA: WAJIB tombol [[action:pillar:tagana:Lihat Data TAGANA]]
+    - Jika membahas TKSK: WAJIB tombol [[action:pillar:tksk:Lihat Data TKSK]]
+    - Jika membahas Karang Taruna: WAJIB tombol [[action:pillar:karangtaruna:Lihat Data Karang Taruna]]
+    - Jika membahas PEKSOS: WAJIB tombol [[action:pillar:peksos:Lihat Data PEKSOS]]
+    - Jika membahas LKS: WAJIB tombol [[action:pillar:lks:Lihat Data LKS]]
+    - Jika membahas LK3: WAJIB tombol [[action:pillar:lk3:Lihat Data LK3]]
+    - Jika membahas Penyuluh Sosial (PENSOS): WAJIB tombol [[action:pillar:pensos:Lihat Data Penyuluh Sosial]]
+    - Jika membahas KUBE / Badan Usaha: WAJIB tombol [[action:pillar:badanusaha:Lihat Data KUBE]]
+    - Jika membahas SLRT / Puskesos: WAJIB tombol [[action:pillar:slrt_puskesos:Lihat Data SLRT PUSKESOS]]
+  * DILARANG KERAS memberikan tombol generic tidak relevan seperti "Lihat Data PSKS Jabar" ke tab:beranda saat sedang membahas pilar tertentu!`;
           }
 
           if (!isDeveloper) {
@@ -3650,7 +3666,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           if (userContext.liveSummary) {
             contextualInstruction += `\n\nData Agregat Riil 10 Pilar PSKS Saat Ini (Live Database Grounding):
 - Total Personil Terdaftar Se-Jabar: ${userContext.liveSummary.totalRecords || 0} orang
-- Rincian Riil Tiap Pilar:
+- Rincian Riil Tiap Pilar Se-Jawa Barat:
   * Peksos (Pekerja Sosial Profesional): ${userContext.liveSummary.pillarCounts?.peksos || 0} personil
   * PSM (Pekerja Sosial Masyarakat): ${userContext.liveSummary.pillarCounts?.psm || 0} personil
   * Tagana (Taruna Siaga Bencana): ${userContext.liveSummary.pillarCounts?.tagana || 0} personil
@@ -3662,6 +3678,16 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
   * KUBE & Badan Usaha: ${userContext.liveSummary.pillarCounts?.badanusaha || 0} personil
   * SLRT / Puskesos: ${userContext.liveSummary.pillarCounts?.slrt_puskesos || 0} personil
 - Jika ditanya jumlah data atau statistik per personil, gunakan angka-angka faktual di atas secara persis dan meyakinkan.`;
+
+            if (userContext.liveSummary.totalsByRegion && Object.keys(userContext.liveSummary.totalsByRegion).length > 0) {
+              const regLines: string[] = [];
+              Object.entries(userContext.liveSummary.totalsByRegion).forEach(([regName, count]) => {
+                const pBreak = userContext.liveSummary.pillarsByRegion?.[regName] || {};
+                const pStr = Object.entries(pBreak).map(([pKey, pCount]) => `${pKey.toUpperCase()}: ${pCount}`).join(', ');
+                regLines.push(`  * ${regName}: ${count} total personil/lembaga (${pStr || 'belum ada rincian data'})`);
+              });
+              contextualInstruction += `\n\n- DATA SEBARAN WILAYAH REALTIME (27 KABUPATEN/KOTA SE-JAWA BARAT):\n${regLines.join('\n')}\n* ATURAN KRUSIAL WILAYAH: Jika pengguna menanyakan jumlah pilar terdata di wilayah tertentu (seperti Kab. Bogor, Kota Bandung, Kab. Sukabumi, dll.) atau "wilayah saya" / "daerah saya", Anda WAJIB langsung menyebutkan angka riil di atas secara tepat, akurat, dan meyakinkan! Jangan katakan Anda tidak tahu atau menyuruh mengecek sendiri!`;
+            }
           }
         }
 
@@ -4081,6 +4107,64 @@ AI WAJIB:
           // Jika pengguna mengucapkan Assalamualaikum namun model lupa menjawab salam, sertakan salam di baris pertama
           if (!/wa['’]?alaikum/i.test(replyText)) {
             replyText = `Wa'alaikumsalam Warahmatullahi Wabarakatuh.\n\n${replyText}`;
+          }
+        }
+
+        // POST-PROCESSING ATURAN 1: Hapus salam & sapaan 'Sampurasun' / 'Bapak/Ibu' berulang pada dialog lanjutan (Turn 2+)
+        const isContinuingConversation = Array.isArray(messages) && messages.length > 1;
+        if (isContinuingConversation && !isDeveloper) {
+          replyText = replyText
+            .replace(/^(?:sampurasun[,\s]*(?:bapak\/ibu|bapak|ibu|sadayana)?[!.,\s]*|halo[,\s]*(?:bapak\/ibu|bapak|ibu)?[!.,\s]*|wilujeng\s+(?:sumping|enjing|siang|sonten|wengi)[!.,\s]*|bapak\/ibu[,\s]*)+/i, '')
+            .trim();
+          if (replyText.length > 0) {
+            replyText = replyText.charAt(0).toUpperCase() + replyText.slice(1);
+          }
+        }
+
+        // POST-PROCESSING ATURAN 3: Tombol Aksi Quick Reply Relevan & Nyambung dengan Konteks Percakapan
+        const PILLAR_CONFIG_MAP: Record<string, { id: string; label: string }> = {
+          psm: { id: 'psm', label: 'Lihat Data PSM' },
+          tagana: { id: 'tagana', label: 'Lihat Data TAGANA' },
+          tksk: { id: 'tksk', label: 'Lihat Data TKSK' },
+          karangtaruna: { id: 'karangtaruna', label: 'Lihat Data Karang Taruna' },
+          peksos: { id: 'peksos', label: 'Lihat Data PEKSOS' },
+          lks: { id: 'lks', label: 'Lihat Data LKS' },
+          lk3: { id: 'lk3', label: 'Lihat Data LK3' },
+          pensos: { id: 'pensos', label: 'Lihat Data Penyuluh Sosial' },
+          badanusaha: { id: 'badanusaha', label: 'Lihat Data KUBE' },
+          slrt_puskesos: { id: 'slrt_puskesos', label: 'Lihat Data SLRT PUSKESOS' },
+        };
+
+        const textToCheck = `${lastUserMsg} ${replyText}`.toLowerCase();
+        let targetPillarKey: string | null = (userContext?.activePillar as string) || (normPillar as string) || null;
+
+        if (!targetPillarKey) {
+          if (/\bpsm\b|\bpekerja sosial masyarakat\b/i.test(textToCheck)) targetPillarKey = 'psm';
+          else if (/\btagana\b|\btaruna siaga bencana\b/i.test(textToCheck)) targetPillarKey = 'tagana';
+          else if (/\btksk\b|\btenaga kesejahteraan sosial kecamatan\b/i.test(textToCheck)) targetPillarKey = 'tksk';
+          else if (/\bkarang\s*taruna\b|\bkatar\b/i.test(textToCheck)) targetPillarKey = 'karangtaruna';
+          else if (/\bpeksos\b|\bpekerja sosial profesional\b|\bpksp\b/i.test(textToCheck)) targetPillarKey = 'peksos';
+          else if (/\blks\b|\blembaga kesejahteraan sosial\b/i.test(textToCheck)) targetPillarKey = 'lks';
+          else if (/\blk3\b|\blembaga konsultasi kesejahteraan keluarga\b/i.test(textToCheck)) targetPillarKey = 'lk3';
+          else if (/\bpensos\b|\bpenyuluh sosial\b/i.test(textToCheck)) targetPillarKey = 'pensos';
+          else if (/\bkube\b|\bbadan usaha\b/i.test(textToCheck)) targetPillarKey = 'badanusaha';
+          else if (/\bslrt\b|\bpuskesos\b/i.test(textToCheck)) targetPillarKey = 'slrt_puskesos';
+        }
+
+        if (targetPillarKey && PILLAR_CONFIG_MAP[targetPillarKey]) {
+          const pInfo = PILLAR_CONFIG_MAP[targetPillarKey];
+          // Ganti tombol generic tab:beranda atau teks 'Lihat data psks' dengan tombol pilar yang presisi
+          if (/\[\[action:tab:beranda:[^\]]*\]\]/i.test(replyText) || /\[\[action:[^\]]*lihat data psks[^\]]*\]\]/i.test(replyText)) {
+            replyText = replyText.replace(
+              /\[\[action:tab:beranda:[^\]]*\]\]/gi,
+              `[[action:pillar:${pInfo.id}:${pInfo.label}]]`
+            );
+            replyText = replyText.replace(
+              /\[\[action:[^\]]*lihat data psks[^\]]*\]\]/gi,
+              `[[action:pillar:${pInfo.id}:${pInfo.label}]]`
+            );
+          } else if (!replyText.includes(`action:pillar:${pInfo.id}`) && !replyText.includes('action:tab:')) {
+            replyText = `${replyText.trim()}\n\n[[action:pillar:${pInfo.id}:${pInfo.label}]]`;
           }
         }
 

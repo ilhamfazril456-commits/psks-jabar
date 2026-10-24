@@ -26,7 +26,6 @@ import {
   Mic,
   MicOff,
   Volume2,
-  Database,
 } from 'lucide-react';
 import { UserSession, UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from '../data/aiQuestions';
@@ -34,6 +33,7 @@ import {
   getComprehensiveSmartAnswer,
   verifyAndTrackAnswerAccuracy,
   getSystemStateMetrics,
+  buildRegionalPillarBreakdown,
   resolveMemberVerificationQuery,
   resolveRegionalPillarDataQuery,
   resolveSensitivePrivacyQuery,
@@ -279,8 +279,13 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                const pillarKeys: string[] = ['psm', 'tagana', 'tksk', 'karangtaruna', 'peksos', 'lks', 'lk3', 'pensos', 'badanusaha', 'slrt_puskesos'];
                 if (act.type === 'tab') {
-                  onNavigateTab?.(act.target);
+                  if (pillarKeys.includes(act.target)) {
+                    onSelectPillar?.(act.target as PillarId);
+                  } else {
+                    onNavigateTab?.(act.target);
+                  }
                 } else if (act.type === 'pillar') {
                   onSelectPillar?.(act.target as PillarId);
                   if (act.label.toLowerCase().startsWith('cara mendaftar')) {
@@ -345,6 +350,11 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   // Compute live database metrics for grounding answers
   const liveMetrics = useMemo(() => {
     return getSystemStateMetrics(allPillarData);
+  }, [allPillarData]);
+
+  // Compute live regional metrics across all 27 Kab/Kota and per-pillar breakdown
+  const regionalMetrics = useMemo(() => {
+    return buildRegionalPillarBreakdown(allPillarData);
   }, [allPillarData]);
 
   // Ensure AI Knowledge Base is synchronized with Cloud Firestore
@@ -892,6 +902,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
             liveSummary: {
               totalRecords: liveMetrics.totalRecords,
               pillarCounts: liveMetrics.pillarCounts,
+              totalsByRegion: regionalMetrics.totalsByRegion,
+              pillarsByRegion: regionalMetrics.pillarsByRegion,
             },
           },
         }),
@@ -1180,10 +1192,6 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     <span className="bg-emerald-500/20 text-emerald-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-emerald-500/40 font-mono font-bold shrink-0 flex items-center gap-0.5">
                       <Zap className="w-2.5 h-2.5 text-amber-400" />
                       Gemini 3.8 Flash
-                    </span>
-                    <span className="hidden sm:inline-flex bg-amber-500/15 text-amber-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-amber-500/30 font-mono font-bold shrink-0 items-center gap-0.5" title="Otak dan Kamus Pengetahuan AI tersimpan dinamis di Supabase">
-                      <Database className="w-2.5 h-2.5 text-amber-400" />
-                      Supabase Brain
                     </span>
                   </div>
                   <p className="text-[9.5px] sm:text-[10px] text-emerald-300/80 font-medium truncate">

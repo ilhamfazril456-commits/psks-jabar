@@ -71,6 +71,33 @@ export function normalizeWilayahMatch(w: string): string {
 export function detectRegionInText(text: string, userWilayah?: string): string | null {
   const norm = text.toLowerCase();
 
+  // 0. Relative user region aliases ("wilayah saya", "daerah saya", dll.)
+  if (
+    norm.includes('wilayah saya') ||
+    norm.includes('daerah saya') ||
+    norm.includes('wilayah tugas saya') ||
+    norm.includes('wilayah penugasan saya') ||
+    norm.includes('wilayahku') ||
+    norm.includes('daerahku') ||
+    norm.includes('kabupaten saya') ||
+    norm.includes('kota saya') ||
+    norm.includes('tempat saya') ||
+    norm.includes('di sini')
+  ) {
+    if (userWilayah && userWilayah !== 'Jawa Barat' && userWilayah !== 'Provinsi Jawa Barat' && userWilayah !== 'PROVINSI JAWA BARAT') {
+      const cleanW = userWilayah.trim();
+      const wMatch = normalizeWilayahMatch(cleanW);
+      if (wMatch.includes('bogor')) return cleanW.toLowerCase().includes('kota') ? 'Kota Bogor' : 'Kab. Bogor';
+      if (wMatch.includes('bandung barat')) return 'Kab. Bandung Barat';
+      if (wMatch.includes('bandung')) return cleanW.toLowerCase().includes('kab') ? 'Kab. Bandung' : 'Kota Bandung';
+      if (wMatch.includes('sukabumi')) return cleanW.toLowerCase().includes('kota') ? 'Kota Sukabumi' : 'Kab. Sukabumi';
+      if (wMatch.includes('cirebon')) return cleanW.toLowerCase().includes('kota') ? 'Kota Cirebon' : 'Kab. Cirebon';
+      if (wMatch.includes('bekasi')) return cleanW.toLowerCase().includes('kota') ? 'Kota Bekasi' : 'Kab. Bekasi';
+      if (wMatch.includes('tasikmalaya') || wMatch.includes('tasik')) return cleanW.toLowerCase().includes('kota') ? 'Kota Tasikmalaya' : 'Kab. Tasikmalaya';
+      return cleanW;
+    }
+  }
+
   // 1. Specific checks distinguishing Kab vs Kota
   if (norm.includes('kab. bogor') || norm.includes('kabupaten bogor') || norm.includes('kab bogor')) return 'Kab. Bogor';
   if (norm.includes('kota bogor')) return 'Kota Bogor';
@@ -309,7 +336,30 @@ export function resolveMemberVerificationQuery(
 }
 
 /**
+ * Helper to build complete breakdown per Kab/Kota from allPillarData
+ */
+export function buildRegionalPillarBreakdown(allPillarData?: Record<string, PSKSDataRecord[]>) {
+  if (!allPillarData) return { totalsByRegion: {} as Record<string, number>, pillarsByRegion: {} as Record<string, Record<string, number>> };
+  const totalsByRegion: Record<string, number> = {};
+  const pillarsByRegion: Record<string, Record<string, number>> = {};
+
+  Object.entries(allPillarData).forEach(([pillarId, records]) => {
+    if (!Array.isArray(records)) return;
+    records.forEach((r) => {
+      if (!r?.wilayah) return;
+      const w = r.wilayah.trim();
+      totalsByRegion[w] = (totalsByRegion[w] || 0) + 1;
+      if (!pillarsByRegion[w]) pillarsByRegion[w] = {};
+      pillarsByRegion[w][pillarId] = (pillarsByRegion[w][pillarId] || 0) + 1;
+    });
+  });
+
+  return { totalsByRegion, pillarsByRegion };
+}
+
+/**
  * Real-time regional pillar data inquiry engine (prevents theoretical formula hallucinations)
+ * Instantly resolves regional counts for Kab. Bogor and any other Kab/Kota across Jawa Barat.
  */
 export function resolveRegionalPillarDataQuery(
   query: string,
@@ -333,12 +383,16 @@ export function resolveRegionalPillarDataQuery(
     q.includes('jumlah') ||
     q.includes('siapa saja') ||
     q.includes('daftar personil') ||
-    q.includes('data personil');
+    q.includes('data personil') ||
+    q.includes('total') ||
+    q.includes('terdata') ||
+    q.includes('sebaran') ||
+    q.includes('statistik');
 
   if (!hasRegionalInquiry) return null;
   if (!detectedPillar && !detectedRegion) return null;
 
-  // Case 1: Both Pillar & Region detected (e.g. "apakah ada tksk di wilayah kab bogor?", "berapa tksk di kab bogor?")
+  // Case 1: Both Pillar & Region detected (e.g. "ada berapa jumlah psm di wilayah saya?", "berapa psm di kab bogor?")
   if (detectedPillar && detectedRegion) {
     const records = allPillarData[detectedPillar.pillarId] || [];
     const normTargetRegion = normalizeWilayahMatch(detectedRegion);
@@ -350,20 +404,25 @@ export function resolveRegionalPillarDataQuery(
     });
 
     if (matchingRecords.length > 0) {
-      const list = matchingRecords
-        .map((r, i) => `${i + 1}. **${r.nama}** - Kecamatan ${r.kec || '-'} (Status: ${r.status || 'Aktif'}, SK: ${r.sertifikasi || '-'})`)
+      const sampleList = matchingRecords
+        .slice(0, 5)
+        .map((r, i) => `${i + 1}. **${r.nama}** - Kecamatan ${r.kec || '-'} (Status: ${r.status || 'Aktif'})`)
         .join('\n');
-      return `Ya, di wilayah **${detectedRegion}** terdapat personil **${detectedPillar.pillarName}** yang telah terdaftar resmi dalam pangkalan data sistem PSKS JABAR saat ini sebanyak **${matchingRecords.length} personil**:\n\n${list}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis terbarui secara real-time saat ada penambahan, perubahan, atau mutasi data.*`;
+      const moreText = matchingRecords.length > 5 ? `\n*...dan ${matchingRecords.length - 5} personil lainnya tercatat lengkap di tabel data pilar.*` : '';
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, di wilayah **${detectedRegion}** tercatat sebanyak **${matchingRecords.length} personil ${detectedPillar.pillarName}** yang telah terverifikasi resmi:\n\n${sampleList}${moreText}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis terbarui secara real-time saat ada penambahan, perubahan, atau mutasi data.*\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data ${detectedPillar.pillarName}]]`;
     } else {
-      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil **${detectedPillar.pillarName}** yang tercatat untuk wilayah **${detectedRegion}** (atau berkas pendaftaran masih dalam proses verifikasi administrasi di tingkat wilayah).\n\nUntuk mendaftarkan personil baru di wilayah ini, silakan klik menu pendaftaran mandiri di Beranda pada pilar ${detectedPillar.pillarName}.`;
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil **${detectedPillar.pillarName}** yang tercatat untuk wilayah **${detectedRegion}** (atau berkas pendaftaran baru masih dalam antrean verifikasi administrasi tingkat wilayah).\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data ${detectedPillar.pillarName}]]`;
     }
   }
 
-  // Case 2: Only Region detected with count/personil inquiry (e.g. "berapa jumlah personil di kab bogor?", "siapa saja anggota di kab bogor?")
-  if (detectedRegion && !detectedPillar && (q.includes('berapa') || q.includes('jumlah') || q.includes('personil') || q.includes('anggota'))) {
+  // Case 2: Only Region detected with count/personil inquiry (e.g. "berapa jumlah personil di kab bogor?", "jumlah pilar terdata di kab bogor")
+  if (detectedRegion && !detectedPillar && (q.includes('berapa') || q.includes('jumlah') || q.includes('personil') || q.includes('anggota') || q.includes('pilar') || q.includes('data') || q.includes('total') || q.includes('terdata'))) {
     const normTargetRegion = normalizeWilayahMatch(detectedRegion);
     let totalInRegion = 0;
     const breakdown: string[] = [];
+    let topPillarId = 'psm';
+    let topPillarTitle = 'PSM';
+    let maxCount = 0;
 
     Object.entries(allPillarData).forEach(([pId, records]) => {
       if (!Array.isArray(records)) return;
@@ -375,13 +434,18 @@ export function resolveRegionalPillarDataQuery(
       if (inRegion.length > 0) {
         const pInfo = PILLARS_CONFIG[pId];
         const pTitle = pInfo?.title || pId.toUpperCase();
-        breakdown.push(`- **${pTitle}**: ${inRegion.length} personil/lembaga (${inRegion.map((r) => r.nama).slice(0, 3).join(', ')}${inRegion.length > 3 ? ', dsb.' : ''})`);
+        breakdown.push(`- **${pTitle}**: ${inRegion.length} personil/lembaga`);
         totalInRegion += inRegion.length;
+        if (inRegion.length > maxCount) {
+          maxCount = inRegion.length;
+          topPillarId = pId;
+          topPillarTitle = pTitle;
+        }
       }
     });
 
     if (totalInRegion > 0) {
-      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, total personil dan lembaga 10 Pilar PSKS yang tercatat di wilayah **${detectedRegion}** adalah sebanyak **${totalInRegion} personil/lembaga**:\n\n${breakdown.join('\n')}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis sinkron setiap saat.*`;
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, total data 10 Pilar PSKS yang tercatat di wilayah **${detectedRegion}** adalah sebanyak **${totalInRegion} data**:\n\n${breakdown.join('\n')}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis sinkron setiap saat.*\n\n[[action:pillar:${topPillarId}:Lihat Data ${topPillarTitle}]]`;
     } else {
       return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil atau lembaga pilar sosial yang tercatat aktif di wilayah **${detectedRegion}**.\n\nPendaftaran personil baru dapat diajukan secara mandiri melalui menu Beranda.`;
     }
@@ -3364,9 +3428,9 @@ export function matchLocalDataKeyword(query: string): {
 }
 
 /**
- * Verification & Tracking System: Cross-checks response accuracy against state & knowledge base
+ * Core Answer Verification Implementation
  */
-export function verifyAndTrackAnswerAccuracy(
+function runCoreAnswerVerification(
   query: string,
   rawReply: string,
   userRole: UserRole = 'user',
@@ -4339,5 +4403,71 @@ export function verifyAndTrackAnswerAccuracy(
     isAccurate: true,
     confidence: 0.92,
     source: 'knowledge_fallback',
+  };
+}
+
+/**
+ * Verification & Tracking System: Cross-checks response accuracy against state & knowledge base,
+ * cleans repeated greetings in multi-turn dialogues, and guarantees contextual pillar action buttons.
+ */
+export function verifyAndTrackAnswerAccuracy(
+  query: string,
+  rawReply: string,
+  userRole: UserRole = 'user',
+  userName?: string,
+  userWilayah?: string,
+  currentTab?: string,
+  activePillar?: PillarId | null,
+  allPillarData?: Record<string, PSKSDataRecord[]>,
+  appSettings?: AppSettings,
+  previousContext?: string
+): {
+  finalContent: string;
+  isAccurate: boolean;
+  confidence: number;
+  source: 'verified_exact' | 'state_grounded' | 'ai_model_verified' | 'knowledge_fallback';
+} {
+  const result = runCoreAnswerVerification(
+    query,
+    rawReply,
+    userRole,
+    userName,
+    userWilayah,
+    currentTab,
+    activePillar,
+    allPillarData,
+    appSettings,
+    previousContext
+  );
+
+  let res = result.finalContent || '';
+
+  // 1. GREETING POLICY: Hapus salam & sapaan 'Sampurasun' / 'Bapak/Ibu' berulang pada dialog lanjutan (Turn 2+)
+  if (previousContext && userRole !== 'developer') {
+    res = res
+      .replace(
+        /^(?:sampurasun[,\s]*(?:bapak\/ibu|bapak|ibu|sadayana)?[!.,\s]*|halo[,\s]*(?:bapak\/ibu|bapak|ibu)?[!.,\s]*|wilujeng\s+(?:sumping|enjing|siang|sonten|wengi)[!.,\s]*|bapak\/ibu[,\s]*)+/i,
+        ''
+      )
+      .trim();
+    if (res.length > 0) {
+      res = res.charAt(0).toUpperCase() + res.slice(1);
+    }
+  }
+
+  // 2. CONTEXTUAL ACTION BUTTON: Pastikan tombol aksi relevan dan nyambung dengan pilar yang sedang dibahas
+  const detectedP = detectPillarInText(query) || (activePillar && PILLARS_CONFIG[activePillar] ? { pillarId: activePillar, pillarName: PILLARS_CONFIG[activePillar].title } : null);
+  if (detectedP) {
+    if (/\[\[action:tab:beranda:[^\]]*\]\]/i.test(res) || /\[\[action:[^\]]*lihat data psks[^\]]*\]\]/i.test(res)) {
+      res = res.replace(/\[\[action:tab:beranda:[^\]]*\]\]/gi, `[[action:pillar:${detectedP.pillarId}:Lihat Data ${detectedP.pillarName}]]`);
+      res = res.replace(/\[\[action:[^\]]*lihat data psks[^\]]*\]\]/gi, `[[action:pillar:${detectedP.pillarId}:Lihat Data ${detectedP.pillarName}]]`);
+    } else if (!res.includes(`action:pillar:${detectedP.pillarId}`) && !res.includes('action:tab:') && !res.includes('action:pillar:')) {
+      res = `${res.trim()}\n\n[[action:pillar:${detectedP.pillarId}:Lihat Data ${detectedP.pillarName}]]`;
+    }
+  }
+
+  return {
+    ...result,
+    finalContent: res,
   };
 }
