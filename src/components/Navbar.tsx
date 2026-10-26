@@ -217,14 +217,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   }
 
   const getPusatAkunSubMenus = (): AkunSubMenuItem[] => {
-    let profilDesc = 'Informasi Pengunjung Publik SIM-PSKS';
+    let profilDesc = 'Detail Profil Akun Tamu Publik';
     if (session.statusActive === 'SAH_TERDAFTAR') {
-      if (session.role === 'superadmin' || session.role === 'developer') {
-        profilDesc = 'Otoritas Penuh Dinsos Jabar / Developer';
+      if (session.role === 'superadmin') {
+        profilDesc = 'Detail Profil Akun Superadmin';
+      } else if (session.role === 'developer') {
+        profilDesc = 'Detail Profil Akun Developer';
       } else if (session.role === 'admin') {
-        profilDesc = `Pejabat Admin ${session.wilayah || '27 Kab/Kota'}`;
+        profilDesc = 'Detail Profil Akun Admin Wilayah';
       } else {
-        profilDesc = 'Data Anggota Pilar & Wilayah Terdaftar';
+        profilDesc = 'Detail Profil Akun User Terdaftar';
       }
     }
 

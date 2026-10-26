@@ -131,6 +131,8 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
 }) => {
   if (!inline && !isOpen) return null;
 
+  const isDeveloperUser = session?.role === 'developer' || session?.isDeveloper;
+
   const [formData, setFormData] = useState<AppSettings>(appSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
@@ -1891,20 +1893,21 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                     {
                       id: 'captcha',
                       num: '3',
-                      title: '3. VISUAL INTERACTIVE CAPTCHA',
-                      badge: 'ANTI-BOT DEFENSE',
+                      title: '3. VISUAL INTERACTIVE CAPTCHA & SMART SECURITY GATE',
+                      badge: 'SMART ANTI-BOT DEFENSE',
                       badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
                       headerBg: 'bg-gradient-to-r from-emerald-950/10 via-emerald-900/5 to-slate-900/5 border-emerald-300/60',
-                      icon: Puzzle,
+                      icon: ShieldCheck,
                       iconColor: 'text-emerald-600',
                       accentBox: 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100',
-                      desc: 'Teka-teki verifikasi manusia berbasis pola visual dan tantangan logika interaktif untuk menghentikan serangan bot dan otomatisasi login.',
+                      desc: 'Mekanisme verifikasi manusia cerdas 1-klik (Smart Security Gate) berstandar modern pengganti captcha konvensional, menggabungkan analisis heuristik interaksi manusiawi, tanda tangan event peramban, dan token kriptografis sekali pakai.',
                       details: [
-                        'Verifikasi acak matematika dan ekstraksi visual real-time.',
-                        'Eksekusi murni di sisi Client & Server tanpa ketergantungan API pihak ketiga (Zero Downtime).',
-                        'Mencegah manipulasi formulir publik, pendaftaran palsu, dan spamming laporan.',
+                        'Tri-Layer Defense: Analisis heuristik interaksi manusia (isTrusted browser event API), verifikasi jejak interaksi alami, dan proteksi dari bot headless otomatis.',
+                        'Kriptografi Nonce Sekali Pakai: Pembuatan token terenkripsi dinamis berbasis timestamp (validitas 3 menit) tanpa ketergantungan API pihak ketiga (100% Zero Downtime & kebal pemblokir AdBlock/VPN).',
+                        'Zero-Friction User Experience: Verifikasi responsif 1-ketukan ergonomis di seluruh perangkat (Desktop, Tablet, & Smartphone) yang menghentikan serangan otomasi login, manipulasi formulir publik, pendaftaran palsu, dan spamming laporan.',
                       ],
-                      tags: ['Zero 3rd-Party Latency', 'Math Logic Challenge', 'Bot Inhibitor'],
+                      tags: ['Smart 1-Tap Gate', 'Tri-Layer Defense', 'Zero 3rd-Party Latency', 'Cryptographic Nonce', 'AdBlock Immune'],
+                      codePreview: 'psks_sec_1740000000_a8f9x2k_auth [SINGLE-USE NONCE TOKEN]',
                     },
                     {
                       id: 'bcrypt_sha256',
@@ -3456,8 +3459,10 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                   </div>
                 </div>
 
-                {/* REALTIME FIRESTORE BRAIN & VOCABULARY CONTROL SYSTEM */}
-                <AIBrainFirestoreManager />
+                {/* REALTIME FIRESTORE BRAIN & VOCABULARY CONTROL SYSTEM - KHUSUS AKUN DEVELOPER */}
+                {isDeveloperUser && (
+                  <AIBrainFirestoreManager />
+                )}
               </div>
             )}
 
