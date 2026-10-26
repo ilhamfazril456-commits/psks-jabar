@@ -718,9 +718,17 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-500/10 via-blue-100/20 to-transparent blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto space-y-8 relative z-10">
-        {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KANAN ATAS) */}
+        {/* TOP NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KIRI ATAS) */}
         <div id="account-top-anchor" className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs font-bold text-slate-600 bg-white/90 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-2">
+          {onBackToHome && (
+            <BackToHomeButton
+              onClick={onBackToHome}
+              id="btn-back-top-account"
+              label="Kembali ke Beranda"
+            />
+          )}
+
+          <div className="text-xs font-bold text-slate-600 bg-white/90 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-2 ml-auto">
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
             <span>
               {activeSubView === 'ubah_password'
@@ -730,14 +738,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 : 'Submenu: Detail Profil Akun'}
             </span>
           </div>
-
-          {onBackToHome && (
-            <BackToHomeButton
-              onClick={onBackToHome}
-              id="btn-back-top-account"
-              label="Kembali ke Beranda"
-            />
-          )}
         </div>
 
         {/* Header Title Section - Clean Biru Jabar & Gold Accent */}
@@ -1408,9 +1408,17 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
         )}
 
-        {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KANAN BAWAH) */}
+        {/* BOTTOM NAVIGATION BAR: BUTTON KEMBALI KE BERANDA (POJOK KIRI BAWAH) */}
         <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
-          <div className="text-xs text-slate-500 font-semibold">
+          {onBackToHome && (
+            <BackToHomeButton
+              onClick={onBackToHome}
+              id="btn-back-bottom-account"
+              label="Kembali ke Beranda"
+            />
+          )}
+
+          <div className="text-xs text-slate-500 font-semibold ml-auto">
             <span>
               PSKS JABAR Provinsi Jawa Barat •{' '}
               {activeSubView === 'ubah_password'
@@ -1420,14 +1428,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 : 'Halaman Profil & Otoritas'}
             </span>
           </div>
-
-          {onBackToHome && (
-            <BackToHomeButton
-              onClick={onBackToHome}
-              id="btn-back-bottom-account"
-              label="Kembali ke Beranda"
-            />
-          )}
         </div>
 
 
