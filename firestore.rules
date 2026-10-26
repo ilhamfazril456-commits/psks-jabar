@@ -7,11 +7,87 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
-    // Default global rule: Allow read and write for all collections in the portal
+    // 1. Audit Trail System Logs: STRICT APPEND-ONLY (No one can tamper with or erase logs)
+    match /system_logs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId);
+      allow update, delete: if false;
+    }
+
+    // 2. Security Signals: Forensics append-only
+    match /security_signals/{signalId} {
+      allow read: if true;
+      allow create: if isValidId(signalId);
+      allow update, delete: if false;
+    }
+
+    // 3. Admin Accounts: Protected against wipeout
+    match /admin_accounts/{accountId} {
+      allow read: if true;
+      allow create, update: if isValidId(accountId);
+      allow delete: if false;
+    }
+
+    // 4. Global App Settings: Protected against deletion
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isValidId(settingId);
+      allow delete: if false;
+    }
+
+    // 5. IP Registrations: Anti-spoofing device binding
+    match /ip_registrations/{ipId} {
+      allow read: if true;
+      allow create, update: if isValidId(ipId);
+      allow delete: if false;
+    }
+
+    // 6. 10 Pilar Social Data Records
+    match /psks_records/{recordId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(recordId);
+    }
+
+    // 7. Public Informational Content (Regional Logos & Portal FAQs)
+    match /psks_regional_logos/{logoId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(logoId);
+    }
+
+    match /portal_faqs/{faqId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(faqId);
+    }
+
+    // 8. AI Dynamic Knowledge Base & Brain Storage
+    match /ai_knowledge/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /ai_vocabulary/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /ai_brain/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /ai_unmatched_logs/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    // 9. Video Background Sync
+    match /sync_video/{videoId} {
+      allow read, write: if isValidId(videoId);
+    }
+
+    // 10. Default Deny Catch-All: Block any unlisted or arbitrary paths
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
-
-
