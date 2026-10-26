@@ -628,7 +628,7 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
         if (viewFilter === 'info_only') {
           return {
             title: 'Informasi Website',
-            desc: 'Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa pemrograman, pustaka, database Supabase, AI, dan pengembang.',
+            desc: 'Pusat informasi lengkap spesifikasi keamanan 19 lapis, smart access card, bahasa pemrograman, pustaka, database Supabase, AI, dan pengembang.',
             badge: 'FITUR 16 • KONTROL PUSAT',
           };
         }
@@ -1840,16 +1840,16 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                         SPESIFIKASI & INFRASTRUKTUR SISTEM KEAMANAN (COMPREHENSIVE)
                       </h3>
                       <p className="text-xs text-slate-500 font-medium">
-                        18 Lapisan Proteksi Keamanan Terenkripsi, Kepatuhan UU PDP No. 27/2022, Audit Forensik BSSN, & Hardening Server Diskominfo.
+                        19 Lapisan Proteksi Keamanan Terenkripsi, Kepatuhan UU PDP No. 27/2022, Audit Forensik BSSN, & Hardening Server Diskominfo.
                       </p>
                     </div>
                   </div>
                   <span className="text-[10px] font-black bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full border border-emerald-200">
-                    18 Lapisan Proteksi Aktif
+                    19 Lapisan Proteksi Aktif
                   </span>
                 </div>
 
-                {/* 18 ACCORDION SECURITY MODULES (BERJEJER KEBAWAH) */}
+                {/* 19 ACCORDION SECURITY MODULES (BERJEJER KEBAWAH) */}
                 <div className="space-y-3.5">
                   {[
                     {
@@ -2124,13 +2124,13 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       icon: Activity,
                       iconColor: 'text-amber-600',
                       accentBox: 'bg-slate-950 border-amber-500/50 text-amber-200 font-mono text-[11px]',
-                      desc: 'Aturan integritas log audit aktivitas forensik yang dikunci secara permanen di database Supabase untuk memenuhi standar audit BSSN.',
+                      desc: 'Aturan integritas log audit aktivitas forensik yang dikunci secara permanen di database untuk memenuhi standar audit BSSN.',
                       details: [
                         'Sifat Log Append-Only: Catatan riwayat aktivitas di `system_logs` HANYA dapat ditambah (create) dan dibaca (read).',
-                        'Dilarang Keras Update & Delete: Aturan Firestore `allow update, delete: if false;` memastikan jejak digital perubahan data tidak dapat dihapus atau dimanipulasi oleh siapa pun.',
+                        'Dilarang Keras Update & Delete: Aturan Row-Level Security (RLS) & append-only log memastikan jejak digital perubahan data tidak dapat dihapus atau dimanipulasi oleh siapa pun.',
                       ],
                       tags: ['BSSN Forensic Standard', 'Append-Only Log', 'No-Delete Rule', 'Tamper-Proof'],
-                      codePreview: 'match /system_logs/{logId} { allow read, create: if true; allow update, delete: if false; }',
+                      codePreview: 'CREATE POLICY "immutable_logs" ON system_logs FOR INSERT WITH CHECK (true); -- NO UPDATE / DELETE ALLOWED',
                     },
                     {
                       id: 'barcode_auth',
@@ -2170,9 +2170,31 @@ export const DeveloperControlPanel: React.FC<DeveloperControlPanelProps> = ({
                       codePreview: 'NFC_HANDSHAKE: [MIFARE_UID:04:A2:3F:8C:91] -> FREQ: 13.56MHz -> AUTH_GRANTED_SUPERADMIN',
                     },
                     {
-                      id: 'xss_mitigation',
+                      id: 'authority_pin_security',
                       num: '18',
-                      title: '18. MITIGASI XSS & SANITASI INPUT PESAN PUBLIK',
+                      title: '18. PIN KEAMANAN 6 DIGIT OTORITAS TINGGI (HIGH-PRIVILEGE 2FA PIN)',
+                      badge: '6-DIGIT HIGH ENTROPY PIN',
+                      badgeColor: 'bg-indigo-100 text-indigo-900 border-indigo-300',
+                      headerBg: 'bg-gradient-to-r from-indigo-950/10 via-purple-900/5 to-slate-900/5 border-indigo-300/60',
+                      icon: KeyRound,
+                      iconColor: 'text-indigo-600',
+                      accentBox: 'bg-slate-950 border-indigo-500/50 text-indigo-200 font-mono text-[11px]',
+                      desc: 'Lapisan verifikasi sekunder 6 digit PIN numerik ber-entropi tinggi untuk melindungi aksi otorisasi tingkat tinggi, sinkronisasi Smart Access Card, dan konfigurasi kritis Superadmin/Developer.',
+                      details: [
+                        'Format Wajib 6 Digit Numerik: Validasi regex ketat /^[0-9]{6}$/ pada client & server yang menolak karakter non-angka dan kombinasi sekuensial lemah.',
+                        'Multi-Factor Companion (Smart Card & QR): Menjadi faktor otentikasi pelengkap (two-factor challenge) saat verifikasi Smart Access Card NFC Mifare atau kartu ber-QR Code untuk membuktikan kepemilikan fisik dan pengetahuan kredensial.',
+                        'Self-Service Management Mandiri: Superadmin dan Developer dapat memperbarui PIN secara independen melalui submenu Ubah PIN Otoritas di Profil Akun atau panel khusus Pengaturan PIN Keamanan.',
+                        'Sinkronisasi Realtime Terdistribusi: Setiap pembaruan PIN langsung tersimpan ke database cloud dan aktif seketika (realtime sync) di seluruh pintu login dan terminal Jawa Barat.',
+                        'Fitur Acak PIN Kriptografis: Dilengkapi tombol generator PIN acak berkeamanan tinggi (100.000 s/d 999.999) untuk menjamin keacakan entropi PIN yang optimal.',
+                        'Mitigasi Brute-Force & Freeze: Terhubung dengan sistem rate limiter dan auto-lockout bila terjadi kesalahan input berulang, menjaga akun dari serangan tebak PIN otomatis.',
+                      ],
+                      tags: ['6-Digit Numeric PIN', '2FA Companion', 'Realtime Sync', 'Entropy Generator', 'Anti-Brute Force'],
+                      codePreview: 'validatePin(inputPin) => /^[0-9]{6}$/.test(inputPin) && hashCheck(inputPin, storedPin)',
+                    },
+                    {
+                      id: 'xss_mitigation',
+                      num: '19',
+                      title: '19. MITIGASI XSS & SANITASI INPUT PESAN PUBLIK',
                       badge: 'DOM SANITIZER',
                       badgeColor: 'bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300',
                       headerBg: 'bg-gradient-to-r from-fuchsia-950/10 via-pink-900/5 to-slate-900/5 border-fuchsia-300/60',

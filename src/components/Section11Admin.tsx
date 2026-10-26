@@ -862,7 +862,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                 Informasi Website
               </h4>
               <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
-                Pusat informasi lengkap spesifikasi keamanan 18 lapis, smart access card, bahasa, pustaka, database, AI, & pengembang.
+                Pusat informasi lengkap spesifikasi keamanan 19 lapis, smart access card, bahasa, pustaka, database, AI, & pengembang.
               </p>
 
               <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
