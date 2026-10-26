@@ -816,6 +816,14 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
         });
         return;
       }
+      if (!cleanNik.startsWith('32')) {
+        setAlertInfo({
+          title: 'Format NIK Jawa Barat (Kode 32)',
+          message: 'NIK Kependudukan wajib diawali kode wilayah "32" untuk Provinsi Jawa Barat sesuai standar Kemendagri RI. Mohon periksa kembali nomor KTP Anda.',
+          type: 'error',
+        });
+        return;
+      }
       if (!formData.nama.trim()) {
         setAlertInfo({ title: 'Kolom Wajib Diisi', message: 'Kolom 1: Nama Lengkap wajib diisi.', type: 'error' });
         return;

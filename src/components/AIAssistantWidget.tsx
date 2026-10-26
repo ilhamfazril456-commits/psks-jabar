@@ -26,6 +26,10 @@ import {
   Mic,
   MicOff,
   Volume2,
+  Phone,
+  FileText,
+  ExternalLink,
+  Compass,
 } from 'lucide-react';
 import { UserSession, UserRole, PillarId, PSKSDataRecord, AppSettings } from '../types';
 import { ROLE_QUESTION_CATALOG, AIQuestionItem } from '../data/aiQuestions';
@@ -73,6 +77,7 @@ interface AIAssistantWidgetProps {
 interface TypingFormattedTextProps {
   content: string;
   isAnimated: boolean;
+  isStreaming?: boolean;
   session?: UserSession;
   onScrollToBottom?: () => void;
   onComplete?: () => void;
@@ -84,6 +89,7 @@ interface TypingFormattedTextProps {
 const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   content,
   isAnimated,
+  isStreaming = false,
   session,
   onScrollToBottom,
   onComplete,
@@ -205,10 +211,19 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     return { cleanText: clean, actions: foundActions };
   }, [content, session]);
 
-  const [displayedLength, setDisplayedLength] = useState(isAnimated ? 0 : cleanText.length);
-  const [isDone, setIsDone] = useState(!isAnimated);
+  const [displayedLength, setDisplayedLength] = useState(
+    isStreaming ? cleanText.length : (isAnimated ? 0 : cleanText.length)
+  );
+  const [isDone, setIsDone] = useState(!isAnimated && !isStreaming);
 
   useEffect(() => {
+    if (isStreaming) {
+      setDisplayedLength(cleanText.length);
+      setIsDone(false);
+      if (onScrollToBottom) onScrollToBottom();
+      return;
+    }
+
     if (!isAnimated) {
       setDisplayedLength(cleanText.length);
       setIsDone(true);
@@ -237,7 +252,7 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [cleanText, isAnimated]);
+  }, [cleanText, isAnimated, isStreaming]);
 
   const currentText = cleanText.slice(0, displayedLength);
 
@@ -307,7 +322,7 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
   };
 
   const handleSkipTyping = () => {
-    if (!isDone) {
+    if (!isDone && !isStreaming) {
       setDisplayedLength(cleanText.length);
       setIsDone(true);
       if (onComplete) onComplete();
@@ -318,51 +333,134 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     <div
       className="relative cursor-pointer select-text break-words [overflow-wrap:anywhere]"
       onClick={handleSkipTyping}
-      title={!isDone ? 'Klik untuk tampilkan semua teks seketika' : undefined}
+      title={!isDone && !isStreaming ? 'Klik untuk tampilkan semua teks seketika' : undefined}
     >
-      <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{formatText(currentText)}</div>
-      {!isDone && (
-        <span className="inline-block w-1.5 h-3.5 bg-amber-400 ml-1 animate-pulse align-middle font-bold rounded-xs shadow-xs" />
+      {isStreaming && cleanText.length === 0 ? (
+        <div className="flex items-center gap-2 py-1">
+          <span className="flex gap-1 items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce"></span>
+          </span>
+          <span className="text-[11px] text-amber-300/80 font-medium italic">Sedang menyusun respon real-time...</span>
+        </div>
+      ) : (
+        <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{formatText(currentText)}</div>
       )}
 
-      {/* Interactive Action Navigation Buttons when Typing is Complete */}
-      {actions.length > 0 && isDone && (
-        <div className="mt-3 pt-2.5 border-t border-slate-700/60 flex flex-wrap gap-2">
-          {actions.map((act, aIdx) => (
-            <button
-              key={aIdx}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                const pillarKeys: string[] = ['psm', 'tagana', 'tksk', 'karangtaruna', 'peksos', 'lks', 'lk3', 'pensos', 'badanusaha', 'slrt_puskesos'];
-                if (act.type === 'tab') {
-                  if (pillarKeys.includes(act.target)) {
-                    onSelectPillar?.(act.target as PillarId);
-                  } else if (act.target === 'account') {
-                    onNavigateTab?.('akun');
-                  } else if (act.target === 'pin_security_manage' && session?.role !== 'developer' && !session?.isDeveloper) {
-                    onNavigateTab?.('ubah_pin');
-                  } else {
-                    onNavigateTab?.(act.target);
-                  }
-                } else if (act.type === 'pillar') {
-                  onSelectPillar?.(act.target as PillarId);
-                  if (act.label.toLowerCase().startsWith('cara mendaftar')) {
-                    onSendMessage?.(`Bagaimana ${act.label.toLowerCase()}?`);
-                  }
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md transition-all transform hover:scale-103 active:scale-95 cursor-pointer"
+      {(!isDone || isStreaming) && cleanText.length > 0 && (
+        <span className="inline-block w-2 h-3.5 bg-amber-400 ml-1 animate-pulse align-middle font-bold rounded-xs shadow-xs" />
+      )}
+
+      {/* Rich Action Cards when response is complete */}
+      {actions.length > 0 && isDone && !isStreaming && (
+        <div className="mt-3.5 pt-2.5 border-t border-slate-700/60 flex flex-col gap-2">
+          <div className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Zap className="w-3 h-3 text-amber-400" />
+            <span>Aksi & Rekomendasi Terkait</span>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {actions.map((act, aIdx) => {
+              const pillarKeys: string[] = ['psm', 'tagana', 'tksk', 'karangtaruna', 'peksos', 'lks', 'lk3', 'pensos', 'badanusaha', 'slrt_puskesos'];
+              const isPillarAction = act.type === 'pillar' || pillarKeys.includes(act.target);
+              const pConfig = isPillarAction ? PILLARS_CONFIG[act.target as PillarId] : null;
+
+              return (
+                <div
+                  key={aIdx}
+                  className="bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 rounded-xl p-2.5 transition-all shadow-sm group"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs ${
+                        isPillarAction
+                          ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30'
+                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      }`}>
+                        {isPillarAction ? <Layers className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                          {isPillarAction ? (pConfig?.shortName || 'Pilar PSKS') : 'Navigasi Portal'}
+                        </div>
+                        <div className="text-[11.5px] font-bold text-white group-hover:text-amber-300 transition-colors truncate">
+                          {act.label}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (act.type === 'tab') {
+                            if (pillarKeys.includes(act.target)) {
+                              onSelectPillar?.(act.target as PillarId);
+                            } else if (act.target === 'account') {
+                              onNavigateTab?.('akun');
+                            } else if (act.target === 'pin_security_manage' && session?.role !== 'developer' && !session?.isDeveloper) {
+                              onNavigateTab?.('ubah_pin');
+                            } else {
+                              onNavigateTab?.(act.target);
+                            }
+                          } else if (act.type === 'pillar') {
+                            onSelectPillar?.(act.target as PillarId);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-lg text-[10.5px] font-bold shadow transition-transform transform active:scale-95 cursor-pointer"
+                      >
+                        <span>Buka</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+
+                      {isPillarAction && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSendMessage?.(`Bagaimana alur pendaftaran dan syarat menjadi relawan ${pConfig?.title || act.label}?`);
+                          }}
+                          className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer"
+                          title="Tanyakan syarat & alur pendaftaran"
+                        >
+                          <FileText className="w-2.5 h-2.5" />
+                          <span>Syarat</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Contextual Smart Action Card if message mentions Dinsos Hotline */}
+      {actions.length === 0 && isDone && !isStreaming && cleanText.includes('0811-222-0144') && (
+        <div className="mt-3 pt-2 border-t border-slate-700/60">
+          <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                <Phone className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold text-emerald-400 uppercase">Hotline Resmi Dinsos Jabar</div>
+                <div className="text-[11px] font-bold text-white">0811-222-0144 (WhatsApp)</div>
+              </div>
+            </div>
+            <a
+              href="https://wa.me/628112220144"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10.5px] font-bold transition-all shadow-sm"
             >
-              {act.type === 'pillar' ? (
-                <Layers className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-              ) : (
-                <Sparkles className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-              )}
-              <span>{act.label}</span>
-              <ChevronRight className="w-3 h-3 text-slate-950 shrink-0" />
-            </button>
-          ))}
+              <MessageCircle className="w-3 h-3" />
+              <span>Hubungi</span>
+            </a>
+          </div>
         </div>
       )}
     </div>
@@ -385,6 +483,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnreadInBackground, setHasUnreadInBackground] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Speech Recognition (Voice-to-Text) State
@@ -935,6 +1034,18 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
 
     setIsLoading(true);
 
+    const botMsgId = `bot-${Date.now()}`;
+    const initialBotMsg: Message = {
+      id: botMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isVerified: false,
+      trackingSource: 'ai_model_verified',
+    };
+    setMessages((prev) => [...prev, initialBotMsg]);
+    setStreamingMessageId(botMsgId);
+
     try {
       const historyPayload = [...messages, userMsg].map((m) => ({
         role: m.role,
@@ -950,6 +1061,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          stream: true,
           messages: historyPayload,
           userContext: {
             nama: nameForContext,
@@ -969,11 +1081,50 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         }),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      let accumulatedText = '';
 
-      let rawContent = '';
-      if (res.ok && data?.reply) {
-        rawContent = data.reply;
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') {
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.chunk) {
+                accumulatedText += parsed.chunk;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === botMsgId ? { ...m, content: accumulatedText } : m))
+                );
+                scrollToBottom();
+              } else if (parsed.error) {
+                console.warn('[AI Stream] SSE chunk error:', parsed.error);
+              }
+            } catch {
+              // Ignore partial JSON parse errors
+            }
+          }
+        }
+      } else {
+        const data = await res.json();
+        if (res.ok && data?.reply) {
+          accumulatedText = data.reply;
+        }
       }
 
       const previousAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
@@ -981,7 +1132,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
       // Run answer verification and grounding system against local system state
       const verifiedResult = verifyAndTrackAnswerAccuracy(
         textToSend,
-        rawContent,
+        accumulatedText,
         roleForContext,
         nameForContext,
         session?.wilayah,
@@ -992,20 +1143,23 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         previousAssistantMessage
       );
 
-      const botMsg: Message = {
-        id: `bot-${Date.now()}`,
-        role: 'assistant',
-        content: verifiedResult.finalContent,
-        timestamp: new Date(),
-        isVerified: verifiedResult.isAccurate,
-        trackingSource: verifiedResult.source,
-      };
+      const finalContent = verifiedResult.finalContent || accumulatedText;
 
-      setMessages((prev) => [...prev, botMsg]);
-      if (isOpenRef.current) {
-        setTypingMessageId(botMsg.id);
-      } else {
-        setTypingMessageId(null);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                content: finalContent,
+                isVerified: verifiedResult.isAccurate,
+                trackingSource: verifiedResult.source,
+              }
+            : m
+        )
+      );
+
+      setStreamingMessageId(null);
+      if (!isOpenRef.current) {
         setHasUnreadInBackground(true);
       }
     } catch (err: any) {
@@ -1029,19 +1183,20 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
         previousAssistantMessage
       );
 
-      const fallbackMsg: Message = {
-        id: `fallback-${Date.now()}`,
-        role: 'assistant',
-        content: verifiedResult.finalContent,
-        timestamp: new Date(),
-        isVerified: verifiedResult.isAccurate,
-        trackingSource: verifiedResult.source,
-      };
-      setMessages((prev) => [...prev, fallbackMsg]);
-      if (isOpenRef.current) {
-        setTypingMessageId(fallbackMsg.id);
-      } else {
-        setTypingMessageId(null);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                content: verifiedResult.finalContent,
+                isVerified: verifiedResult.isAccurate,
+                trackingSource: verifiedResult.source,
+              }
+            : m
+        )
+      );
+      setStreamingMessageId(null);
+      if (!isOpenRef.current) {
         setHasUnreadInBackground(true);
       }
     } finally {
@@ -1495,6 +1650,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                             content={msg.content}
                             session={session}
                             isAnimated={msg.id === typingMessageId}
+                            isStreaming={msg.id === streamingMessageId}
                             onScrollToBottom={scrollToBottom}
                             onComplete={() => setTypingMessageId(null)}
                             onNavigateTab={onNavigateTab}

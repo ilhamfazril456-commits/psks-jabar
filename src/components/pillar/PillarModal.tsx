@@ -119,8 +119,13 @@ export const PillarModal: React.FC<PillarModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleProcessFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setCompressError('Format file harus berupa gambar (JPG, PNG, atau WebP).');
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type.toLowerCase()) && !file.type.startsWith('image/')) {
+      setCompressError('Format berkas tidak didukung! Mohon gunakan format gambar resmi (JPG, PNG, atau WebP).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setCompressError('Ukuran berkas asli terlalu besar (Maksimal 10 MB). Silakan unggah foto dengan ukuran lebih kecil.');
       return;
     }
     setCompressError(null);
@@ -135,7 +140,7 @@ export const PillarModal: React.FC<PillarModalProps> = ({
         berkasFotoOriginalSizeKb: result.originalSizeKb,
       }));
     } catch (err: any) {
-      setCompressError(err?.message || 'Gagal memproses dan mengompresi gambar.');
+      setCompressError(err?.message || 'Gagal memproses dan mengompresi gambar berkas.');
     } finally {
       setIsCompressing(false);
     }

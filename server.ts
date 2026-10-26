@@ -248,6 +248,19 @@ async function startServer() {
     expiresAt: number;
   }
 
+  // Server-Side Session Revocation Blacklist (Mencegah token lama tetap dapat dipakai setelah logout)
+  const revokedTokensMap = new Map<string, number>();
+
+  // Pembersihan berkala token yang telah dicabut dan kedaluwarsa (> 7 hari) setiap 6 jam
+  setInterval(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    for (const [tok, timestamp] of revokedTokensMap.entries()) {
+      if (timestamp < cutoff) {
+        revokedTokensMap.delete(tok);
+      }
+    }
+  }, 6 * 60 * 60 * 1000);
+
   function signSessionToken(payload: Omit<VerifiedSessionPayload, 'issuedAt' | 'expiresAt'>): string {
     const issuedAt = Date.now();
     const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000; // 7 Hari Masa Berlaku Sesi
@@ -259,6 +272,10 @@ async function startServer() {
 
   function verifySessionToken(token: string): VerifiedSessionPayload | null {
     if (!token || typeof token !== 'string' || !token.startsWith('ses_')) return null;
+    // Periksa apakah token telah dicabut (Revoked / Blacklisted pada saat logout)
+    if (revokedTokensMap.has(token)) {
+      return null;
+    }
     const tokenBody = token.slice(4);
     const parts = tokenBody.split('.');
     if (parts.length !== 2) return null;
@@ -475,6 +492,22 @@ async function startServer() {
       });
     } catch (err: any) {
       return res.status(500).json({ valid: false, message: 'Gagal memverifikasi sesi.' });
+    }
+  });
+
+  // Endpoint Logout Server-Side (Mencabut & Mem-blacklist Token Sesi di Server)
+  app.post('/api/auth/logout', (req, res) => {
+    try {
+      const authHeader = req.headers['authorization'] || '';
+      const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const token = tokenFromHeader || (req.body && req.body.sessionToken) || (req.headers['x-session-token'] as string);
+
+      if (token && typeof token === 'string' && token.startsWith('ses_')) {
+        revokedTokensMap.set(token, Date.now());
+      }
+      return res.json({ success: true, message: 'Sesi berhasil dicabut dan dinonaktifkan di server.' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: 'Gagal memproses pencabutan sesi.' });
     }
   });
 
@@ -919,8 +952,8 @@ async function startServer() {
       return [{ role: 'user', parts: [{ text: lastText }] }];
     }
 
-    // Retain rich conversation window (up to last 16 turns for full multi-turn context)
-    const windowedList = cleanList.slice(-16);
+    // Retain rich conversation window (up to last 32 turns for world-class deep multi-turn context)
+    const windowedList = cleanList.slice(-32);
 
     // Strip leading model again if slice began with model
     while (windowedList.length > 0 && windowedList[0].role === 'model') {
@@ -3722,21 +3755,54 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     return `Halo! Terkait "${cleanTopic || 'hal yang Anda tanyakan'}", saya siap membantu Anda berdiskusi dan memberikan informasi seputar **10 Pilar Kesejahteraan Sosial Jawa Barat** (Tagana, PSM, TKSK, Peksos, Karang Taruna, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran mandiri pilar, maupun program perlindungan sosial Dinas Sosial Provinsi Jawa Barat.\n\nSilakan sampaikan pertanyaan atau aspek apa yang ingin Anda ketahui lebih lanjut, saya siap membantu menjawabnya! 😊\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]`;
   }
 
-  // API endpoint for AI Chat Assistant (with Rate Limiting Protection)
+  // API endpoint for AI Chat Assistant (with Rate Limiting Protection & SSE Realtime Streaming)
   app.post('/api/ai/chat', rateLimitAI, async (req, res) => {
     try {
-      const { messages, userContext } = req.body;
+      const { messages, userContext, stream: wantStream } = req.body;
 
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
         return res.status(400).json({ error: 'Pesan tidak boleh kosong.' });
       }
+
+      if (wantStream) {
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        if (res.flushHeaders) res.flushHeaders();
+      }
+
+      const sendStreamChunk = (chunkText: string) => {
+        if (wantStream && !res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
+        }
+      };
+
+      const sendStreamDone = (fullText?: string) => {
+        if (wantStream && !res.writableEnded) {
+          if (fullText) {
+            res.write(`data: ${JSON.stringify({ done: true, fullText })}\n\n`);
+          }
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      };
+
+      const sendResponse = (replyPayload: { reply: string; source?: string; isVerified?: boolean }) => {
+        if (wantStream) {
+          sendStreamChunk(replyPayload.reply);
+          sendStreamDone(replyPayload.reply);
+          return;
+        }
+        return res.json(replyPayload);
+      };
 
       const lastUserMsg = messages[messages.length - 1]?.content || '';
       const availableKeys = getGeminiApiKeys();
 
       if (availableKeys.length === 0) {
         const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext, messages);
-        return res.json({ reply: fallbackReply });
+        return sendResponse({ reply: fallbackReply });
       }
 
       try {
@@ -3754,7 +3820,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           /\b(system\s*prompt|prompt\s*asli|developer\s*mode\s*jailbreak|dan\s*jailbreak|roleplay\s*sebagai\s*hacker)\b/i.test(lastMsgLower);
 
         if (isMaliciousInjection) {
-          return res.json({
+          return sendResponse({
             reply: '⚠️ **Akses Dibatasi (Protokol Keamanan Siber Diskominfo / BSSN)**:\n\nPermintaan Anda terdeteksi mengandung manipulasi prompt (*prompt injection*) atau upaya ekstraksi kredensial internal sistem.\n\nSesuai standar keamanan sistem informasi **PSKS JABAR** dan UU Pelindungan Data Pribadi No. 27/2022, Asisten AI beroperasi dalam koridor *Zero-Trust Isolation* dan tidak diizinkan mengungkap kata sandi, PIN, struktur teknis rahasia, maupun mengabaikan instruksi tata kelola yang telah ditetapkan.\n\nApakah ada informasi seputar 10 Pilar Kesejahteraan Sosial Jawa Barat yang dapat saya bantu?',
             source: 'security_injection_blocked',
           });
@@ -3772,12 +3838,12 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 
         if (isAskingDatabaseStorage) {
           if (isPublicUser) {
-            return res.json({
+            return sendResponse({
               reply: 'Mohon maaf, demi menjaga keamanan informasi, privasi data warga (UU Pelindungan Data Pribadi No. 27/2022), serta integritas sistem **PSKS JABAR**, rincian mengenai arsitektur pangkalan data (*database*), server, dan lokasi penyimpanan teknis sistem bersifat rahasia (*restricted*) dan tidak dapat dipublikasikan kepada publik.\n\nApakah ada informasi seputar 10 Pilar Kesejahteraan Sosial atau layanan Dinas Sosial Jawa Barat yang bisa saya bantu jelaskan?',
               source: 'db_guard_public',
             });
           }
-          return res.json({
+          return sendResponse({
             reply: `Sampurasun / Halo **${userContext?.nama || (isDeveloper ? 'Kang Ilham Fazril' : 'Superadmin')}**! Pangkalan data (*database*) sistem **PSKS JABAR** disimpan dan dikelola menggunakan **Supabase** (PostgreSQL Cloud) dengan skema relasional modern, keamanan *Row Level Security* (RLS), performa sinkronisasi tinggi, serta enkripsi data yang aman untuk seluruh data 10 Pilar PSKS, log audit, dan konfigurasi sistem.`,
             source: 'db_guard_authorized',
           });
@@ -4280,10 +4346,10 @@ AI WAJIB:
 
         // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
         const candidateModels = [
+          'gemini-3.8-flash',
           'gemini-flash-latest',
           'gemini-3.1-flash-lite',
           'gemini-2.5-flash',
-          'gemini-2.5-flash-lite',
         ];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
@@ -4299,40 +4365,64 @@ AI WAJIB:
                 maxOutputTokens: isDeveloper ? 4096 : 3072,
               };
 
-              // Wrap call with a 6500ms timeout for world-class fast failover and responsive experience
-              const generatePromise = keyItem.client.models.generateContent({
-                model: modelName,
-                contents: sanitizedContents,
-                config: configObj,
-              });
+              if (wantStream) {
+                // Streaming mode via generateContentStream (Real-time SSE token stream)
+                const responseStream = await keyItem.client.models.generateContentStream({
+                  model: modelName,
+                  contents: sanitizedContents,
+                  config: configObj,
+                });
 
-              const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error(`Timeout 6500ms exceeded on model ${modelName}`)), 6500)
-              );
+                let accumulated = '';
+                for await (const chunk of responseStream) {
+                  const chunkText = (chunk as any)?.text || '';
+                  if (chunkText) {
+                    accumulated += chunkText;
+                    sendStreamChunk(chunkText);
+                  }
+                }
 
-              const response: any = await Promise.race([generatePromise, timeoutPromise]);
+                if (accumulated.trim().length >= 2) {
+                  replyText = accumulated.trim();
+                  break keyLoop; // BERHASIL: stream selesai didapat dari key aktif!
+                }
+              } else {
+                // Non-streaming mode (standard JSON)
+                // Wrap call with a 6500ms timeout for world-class fast failover and responsive experience
+                const generatePromise = keyItem.client.models.generateContent({
+                  model: modelName,
+                  contents: sanitizedContents,
+                  config: configObj,
+                });
 
-              if (response && response.text && response.text.trim()) {
-                const cleaned = response.text.trim();
-                const finishReason = response.candidates?.[0]?.finishReason;
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error(`Timeout 6500ms exceeded on model ${modelName}`)), 6500)
+                );
 
-                // Anti-placeholder and true truncation check
-                const isTruncated =
-                  finishReason === 'MAX_TOKENS' ||
-                  cleaned.endsWith('(') ||
-                  cleaned.endsWith('[') ||
-                  cleaned.endsWith('{');
+                const response: any = await Promise.race([generatePromise, timeoutPromise]);
 
-                if (
-                  !cleaned.startsWith('(lanjutkan') &&
-                  !cleaned.includes('lanjutkan penjelasan') &&
-                  !isTruncated &&
-                  cleaned.length >= 2
-                ) {
-                  replyText = cleaned;
-                  break keyLoop; // BERHASIL: respon didapat dari key aktif!
-                } else if (isTruncated) {
-                  console.warn(`[AI Multi-Key Engine] Key #${keyItem.keyIndex}/${keyItem.totalKeys} - Model ${modelName} output truncated. Mencoba alternatif...`);
+                if (response && response.text && response.text.trim()) {
+                  const cleaned = response.text.trim();
+                  const finishReason = response.candidates?.[0]?.finishReason;
+
+                  // Anti-placeholder and true truncation check
+                  const isTruncated =
+                    finishReason === 'MAX_TOKENS' ||
+                    cleaned.endsWith('(') ||
+                    cleaned.endsWith('[') ||
+                    cleaned.endsWith('{');
+
+                  if (
+                    !cleaned.startsWith('(lanjutkan') &&
+                    !cleaned.includes('lanjutkan penjelasan') &&
+                    !isTruncated &&
+                    cleaned.length >= 2
+                  ) {
+                    replyText = cleaned;
+                    break keyLoop; // BERHASIL: respon didapat dari key aktif!
+                  } else if (isTruncated) {
+                    console.warn(`[AI Multi-Key Engine] Key #${keyItem.keyIndex}/${keyItem.totalKeys} - Model ${modelName} output truncated. Mencoba alternatif...`);
+                  }
                 }
               }
             } catch (modelErr: any) {
@@ -4467,7 +4557,11 @@ AI WAJIB:
               `[[action:pillar:${pInfo.id}:${pInfo.label}]]`
             );
           } else if (!replyText.includes(`action:pillar:${pInfo.id}`) && !replyText.includes('action:tab:')) {
-            replyText = `${replyText.trim()}\n\n[[action:pillar:${pInfo.id}:${pInfo.label}]]`;
+            const pillarSuffix = `\n\n[[action:pillar:${pInfo.id}:${pInfo.label}]]`;
+            replyText = `${replyText.trim()}${pillarSuffix}`;
+            if (wantStream) {
+              sendStreamChunk(pillarSuffix);
+            }
           }
         }
 
@@ -4491,15 +4585,25 @@ AI WAJIB:
           });
         }
 
+        if (wantStream) {
+          sendStreamDone(replyText);
+          return;
+        }
+
         return res.json({ reply: replyText });
       } catch (geminiErr: any) {
         console.warn('[AI Assistant] Upstream Gemini unavailable, using smart local engine fallback.');
         const fallbackReply = getSmartFallbackReply(lastUserMsg, userContext, messages);
-        return res.json({ reply: fallbackReply });
+        return sendResponse({ reply: fallbackReply });
       }
     } catch (err: any) {
       console.error('[AI Assistant] Error handling chat request:', err?.message || err);
       const fallbackReply = getSmartFallbackReply('', null);
+      if (req.body && req.body.stream && !res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ chunk: fallbackReply, done: true, fullText: fallbackReply })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
       return res.json({ reply: fallbackReply });
     }
   });

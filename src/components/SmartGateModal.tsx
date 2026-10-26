@@ -527,6 +527,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       return;
     }
 
+    if (!nikTrim.startsWith('32')) {
+      setErrorMessage('⚠️ NIK Kependudukan harus diawali kode wilayah "32" untuk Provinsi Jawa Barat (Sesuai Standar Kemendagri RI).');
+      return;
+    }
+
     // Check duplicate NIK in existing database accounts
     const isNikDuplicate = adminAccounts.some((acc) => acc.nik && acc.nik.trim() === nikTrim);
     if (isNikDuplicate) {
@@ -687,6 +692,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
     if (!nikTrim || !/^[0-9]{16}$/.test(nikTrim)) {
       setErrorMessage('❌ NIK Kependudukan wajib tepat 16 digit angka!');
+      return;
+    }
+    if (!nikTrim.startsWith('32')) {
+      setErrorMessage('⚠️ NIK Kependudukan harus diawali kode wilayah "32" untuk Provinsi Jawa Barat (Sesuai Standar Kemendagri RI).');
       return;
     }
     if (!waTrim || !/^(08|628|\+628)[0-9]{8,12}$/.test(waTrim)) {

@@ -90,6 +90,7 @@ import {
 import { DEFAULT_DOCUMENT_REPOSITORY } from './data/defaultDocuments';
 import { Inbox, ArrowRight, ClipboardList, Lock, LogIn, Check } from 'lucide-react';
 import { isSubmissionPendingWilayah } from './utils/submissionStatus';
+import { safeSetItem, safeGetItem, safeRemoveItem } from './utils/safeStorage';
 
 const LoginSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
 const LogoutConfirmModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
@@ -2761,6 +2762,18 @@ export default function App() {
   };
 
   const handleForceLogout = (reason?: string) => {
+    // 🛡️ Revoke session token on the server (Blacklist in-memory & prevent token reuse)
+    try {
+      const activeToken = sessionStorage.getItem('session_token');
+      if (activeToken) {
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken: activeToken }),
+        }).catch(() => {});
+      }
+    } catch {}
+
     // Set offline status for logging out admin account
     if (session.statusActive === 'SAH_TERDAFTAR') {
       const matched = adminAccounts.find(
