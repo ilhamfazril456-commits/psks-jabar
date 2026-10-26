@@ -32,8 +32,7 @@ import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { compareRecordsChronological } from './utils/regionSort';
-
-const FloatingAnnouncementModal = React.lazy(() => import('./components/FloatingAnnouncementModal').then(m => ({ default: m.FloatingAnnouncementModal })));
+import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
 const MaintenanceOverlay = React.lazy(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
 
@@ -2174,6 +2173,12 @@ export default function App() {
     if (!appSettings.announcement?.active) {
       setIsFloatingAnnouncementOpen(false);
       return;
+    }
+
+    // Preload poster image immediately so it's fully ready when modal appears 1 second later
+    if (appSettings.announcement?.photoUrl) {
+      const preloadImg = new Image();
+      preloadImg.src = appSettings.announcement.photoUrl;
     }
 
     // Auto-trigger on page refresh/initial mount exactly 1 second (1000ms) after refresh
@@ -4945,15 +4950,13 @@ export default function App() {
         </React.Suspense>
       </main>
 
-      {/* Floating Announcement Modal - 15s Timer Realtime on Entry */}
-      <React.Suspense fallback={null}>
-        <FloatingAnnouncementModal
-          isOpen={isFloatingAnnouncementOpen}
-          announcement={appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG}
-          onClose={() => setIsFloatingAnnouncementOpen(false)}
-          onOpenDetail={() => handleOpenAnnouncementDetail(appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG)}
-        />
-      </React.Suspense>
+      {/* Floating Announcement Modal - Precision Realtime Timer on Entry */}
+      <FloatingAnnouncementModal
+        isOpen={isFloatingAnnouncementOpen}
+        announcement={appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG}
+        onClose={() => setIsFloatingAnnouncementOpen(false)}
+        onOpenDetail={() => handleOpenAnnouncementDetail(appSettings.announcement || DEFAULT_ANNOUNCEMENT_CONFIG)}
+      />
 
       {/* Floating Elements & Modals */}
       <React.Suspense fallback={null}>

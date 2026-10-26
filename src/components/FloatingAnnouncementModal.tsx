@@ -16,8 +16,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
   onOpenDetail,
 }) => {
   const durationSeconds =
-    announcement.displayDurationSeconds &&
-    [10, 15, 20, 25, 30].includes(announcement.displayDurationSeconds)
+    announcement.displayDurationSeconds && announcement.displayDurationSeconds > 0
       ? announcement.displayDurationSeconds
       : 15;
 
@@ -46,11 +45,12 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
       onClose();
       setIsClosing(false);
       isClosingRef.current = false;
-    }, 240);
+    }, 220);
   };
 
-  // 100% Robust, 1-Second Interval tied to system wall-clock
-  // Mengurangi frekuensi render React dari 20x/detik menjadi 1x/detik (Optimasi 95% CPU/Main-Thread)
+  // Precision Wall-Clock Synchronized Countdown
+  // Evaluates every 100ms against wall clock, triggers re-render ONLY when remaining second changes,
+  // preventing layout thrash while maintaining 100% synchronization with CSS progress bar and SVG ring.
   useEffect(() => {
     if (!isOpen || !announcement || !announcement.active) {
       setIsClosing(false);
@@ -69,29 +69,30 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
     setIsClosing(false);
     isClosingRef.current = false;
     setRemainingSeconds(durationSeconds);
-    targetEndTimeRef.current = Date.now() + durationSeconds * 1000;
+    const endTime = Date.now() + durationSeconds * 1000;
+    targetEndTimeRef.current = endTime;
 
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
 
-    // Interval 1000ms (1 detik) hemat memori & CPU
     timerIntervalRef.current = setInterval(() => {
       if (isClosingRef.current) return;
 
       const now = Date.now();
-      const secondsLeft = Math.max(0, Math.ceil((targetEndTimeRef.current - now) / 1000));
+      const msLeft = targetEndTimeRef.current - now;
+      const secondsLeft = Math.max(0, Math.ceil(msLeft / 1000));
 
-      setRemainingSeconds(secondsLeft);
+      setRemainingSeconds(prev => (prev !== secondsLeft ? secondsLeft : prev));
 
-      if (secondsLeft <= 0) {
+      if (msLeft <= 0) {
         if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
         }
         handleInitiateClose();
       }
-    }, 1000);
+    }, 100);
 
     return () => {
       if (timerIntervalRef.current) {
@@ -126,7 +127,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
   return (
     <div
       id="floating-announcement-overlay"
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-xs transition-all duration-300 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-sm ${
         isClosing ? 'animate-overlay-exit' : 'animate-overlay-fade'
       }`}
       onClick={handleInitiateClose}
@@ -134,18 +135,18 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
       aria-modal="true"
       aria-labelledby="floating-announcement-card"
     >
-      {/* Perfectly Proportioned 1:1 Square (Kotak) Frameless Card Container */}
+      {/* Perfectly Proportioned 1:1 Square Frameless Card with Hardware Acceleration */}
       <div
         id="floating-announcement-card"
         style={{ '--announcement-duration': `${durationSeconds}s` } as React.CSSProperties}
-        className={`relative w-[88vw] max-w-[460px] aspect-square max-h-[85vh] rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col transition-all bg-slate-950 select-none ${
+        className={`relative w-[88vw] max-w-[460px] aspect-square max-h-[85vh] rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col bg-slate-950 select-none transform-gpu ${
           isClosing ? 'animate-pop-exit' : 'animate-pop-spring'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Hardware-Accelerated Pure CSS Continuous Top Progress Bar (60-120 FPS di GPU Compositor) */}
-        <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-white/20 overflow-hidden">
-          <div className="h-full w-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] animate-announcement-bar" />
+        <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-white/20 overflow-hidden transform-gpu">
+          <div className="h-full w-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)] animate-announcement-bar transform-gpu" />
         </div>
 
         {/* Floating Top Controls Overlay */}
@@ -153,12 +154,12 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
           {/* Modern White Countdown Ring & Pill Timer */}
           <div
             id="floating-announcement-timer"
-            className="pointer-events-auto inline-flex items-center gap-2 bg-black/60 hover:bg-black/75 text-white border border-white/25 px-3 py-1.5 rounded-full shadow-lg transition-all duration-200"
+            className="pointer-events-auto inline-flex items-center gap-2 bg-black/60 hover:bg-black/75 text-white border border-white/25 px-3 py-1.5 rounded-full shadow-lg transition-colors duration-200"
             title="Waktu tayang otomatis tersisa"
           >
             {/* Smooth GPU-Accelerated SVG Countdown Ring */}
             <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5 -rotate-90" viewBox="0 0 36 36">
+              <svg className="w-5 h-5 -rotate-90 transform-gpu" viewBox="0 0 36 36">
                 <circle
                   cx="18"
                   cy="18"
@@ -172,7 +173,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
                   cx="18"
                   cy="18"
                   r="14"
-                  className="text-white animate-announcement-ring drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                  className="text-white animate-announcement-ring transform-gpu"
                   strokeWidth="3.5"
                   strokeDasharray={88}
                   strokeLinecap="round"
@@ -181,7 +182,7 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
                 />
               </svg>
             </div>
-            <span className="text-xs font-black font-mono tracking-wider text-white drop-shadow-sm">
+            <span className="text-xs font-black font-mono tracking-wider text-white drop-shadow-sm tabular-nums min-w-[20px] text-center select-none">
               {remainingSeconds}s
             </span>
           </div>
@@ -208,24 +209,20 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
         >
           {announcement.photoUrl ? (
             <>
-              {/* Subtle ambient background poster */}
-              <img
-                src={announcement.photoUrl}
-                alt=""
+              {/* Subtle ambient background glow without rasterization blur bottlenecks */}
+              <div
+                className="absolute inset-0 w-full h-full bg-cover bg-center opacity-20 scale-110 pointer-events-none transform-gpu"
+                style={{ backgroundImage: `url(${announcement.photoUrl})` }}
                 aria-hidden="true"
-                width="460"
-                height="460"
-                loading="lazy"
-                decoding="async"
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover blur-sm opacity-25 scale-105 pointer-events-none"
               />
+              <div className="absolute inset-0 bg-slate-950/30 pointer-events-none" />
               {/* Crisp Foreground Poster fitted seamlessly into 1:1 square card */}
               <img
                 src={announcement.photoUrl}
                 alt={announcement.title || 'Pengumuman Resmi'}
                 width="460"
                 height="460"
+                loading="eager"
                 decoding="async"
                 referrerPolicy="no-referrer"
                 className="relative z-10 w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-300 select-none block"
@@ -272,3 +269,4 @@ export const FloatingAnnouncementModal: React.FC<FloatingAnnouncementModalProps>
     </div>
   );
 };
+

@@ -36,51 +36,48 @@
 }
 
 /* Ultra Smooth Popping Spring Announcement Animation (GPU Optimized, 60-120 FPS) */
-@keyframes popSmoothSpring {
+@keyframes popSmoothEntrance {
   0% {
     opacity: 0;
-    transform: scale(0.82) translateY(24px);
-  }
-  65% {
-    opacity: 1;
-    transform: scale(1.018) translateY(-2px);
-  }
-  85% {
-    transform: scale(0.995) translateY(1px);
+    transform: scale3d(0.92, 0.92, 1) translateY(14px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale3d(1, 1, 1) translateY(0);
   }
 }
 
 .animate-pop-spring {
-  animation: popSmoothSpring 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: popSmoothEntrance 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 @keyframes popSmoothExit {
   0% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale3d(1, 1, 1) translateY(0);
   }
   100% {
     opacity: 0;
-    transform: scale(0.92) translateY(16px);
+    transform: scale3d(0.94, 0.94, 1) translateY(10px);
   }
 }
 
 .animate-pop-exit {
-  animation: popSmoothExit 0.24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: popSmoothExit 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Hardware Accelerated Continuous Countdown Animations */
 @keyframes announcementProgressBarAnim {
-  from {
+  0% {
     transform: scaleX(1);
   }
-  to {
+  100% {
     transform: scaleX(0);
   }
 }
@@ -89,13 +86,14 @@
   transform-origin: left center;
   animation: announcementProgressBarAnim var(--announcement-duration, 15s) linear forwards;
   will-change: transform;
+  transform: translateZ(0);
 }
 
 @keyframes announcementSvgRingAnim {
-  from {
+  0% {
     stroke-dashoffset: 0;
   }
-  to {
+  100% {
     stroke-dashoffset: 88;
   }
 }
@@ -103,6 +101,7 @@
 .animate-announcement-ring {
   animation: announcementSvgRingAnim var(--announcement-duration, 15s) linear forwards;
   will-change: stroke-dashoffset;
+  transform: translateZ(0);
 }
 
 @keyframes overlayFadeIn {
@@ -115,7 +114,8 @@
 }
 
 .animate-overlay-fade {
-  animation: overlayFadeIn 0.3s ease-out forwards;
+  animation: overlayFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity;
 }
 
 @keyframes overlayFadeOut {
@@ -128,7 +128,8 @@
 }
 
 .animate-overlay-exit {
-  animation: overlayFadeOut 0.28s ease-in forwards;
+  animation: overlayFadeOut 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: opacity;
 }
 
 @keyframes fadeIn {
