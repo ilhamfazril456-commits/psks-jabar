@@ -52,6 +52,13 @@ export function normalizePersonName(name: string): string {
 }
 
 /**
+ * Escapes characters with special meaning in RegExp
+ */
+export function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Normalizes wilayah name to match Jabar kab/kota without punctuation
  */
 export function normalizeWilayahMatch(w: string): string {
@@ -240,6 +247,40 @@ export function resolveSensitivePrivacyQuery(query: string): string | null {
 }
 
 /**
+ * Polite refusal for off-topic non-PSKS queries for non-developer roles
+ * (Cooking, recipes, games, celebrity gossip, hardware, programming, general unrelated chit-chat)
+ */
+export function resolveOffTopicPublicQuery(
+  query: string,
+  userRole: UserRole = 'user',
+  isDeveloperUser: boolean = false
+): string | null {
+  if (isDeveloperUser || userRole === 'developer') {
+    return null; // Developer has unrestricted free inquiry
+  }
+
+  const q = query.toLowerCase().trim();
+
+  const isOffTopic =
+    // Memasak & Kuliner
+    /\b(memasak|masak|resep|bumbu|goreng\s+ayam|ayam\s+goreng|rendang|nasi\s+goreng|kue|bikin\s+kopi|jus|cara\s+bikin\s+makanan)\b/i.test(q) ||
+    // Game & Hiburan Umum
+    /\b(main\s+game|game|mobile\s+legends|free\s+fire|pubg|roblox|genshin|cheat\s+game|nonton\s+film|anime|drama\s+korea)\b/i.test(q) ||
+    // Otomotif & Reparasi Umum
+    /\b(reparasi\s+motor|servis\s+motor|oli\s+motor|modifikasi\s+mobil|bengkel\s+mobil)\b/i.test(q) ||
+    // Coding / Programming / Hacking untuk Akun Publik
+    /\b(koding|coding|ngoding|bikin\s+skrip|python|javascript|c\+\+|html|css|bikin\s+website|buat\s+web)\b/i.test(q) ||
+    // Rumus Matematika / Fisika Murni yang Tidak Terkait Bansos
+    /\b(rumus\s+fisika|rumus\s+kimia|hitung\s+integral|kalkulus|rumus\s+trigonometri)\b/i.test(q);
+
+  if (isOffTopic) {
+    return `Mohon maaf, sebagai Asisten Virtual Resmi Dinas Sosial Provinsi Jawa Barat, saya difokuskan khusus untuk melayani informasi dan layanan seputar **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)**, data sebaran relawan di 27 Kabupaten/Kota se-Jawa Barat, alur pendaftaran mandiri, serta layanan kedinasan sosial Jawa Barat. 🙏\n\nApakah ada hal seputar pilar sosial atau informasi kedinasan yang dapat saya bantu jelaskan?`;
+  }
+
+  return null;
+}
+
+/**
  * Real-time member verification lookup engine querying active allPillarData state directly
  */
 export function resolveMemberVerificationQuery(
@@ -254,20 +295,36 @@ export function resolveMemberVerificationQuery(
   const privacyRefusal = resolveSensitivePrivacyQuery(q);
   if (privacyRefusal) return privacyRefusal;
 
-  // 2. Check if inquiry is about registration / verification / status
-  const isVerificationInquiry =
-    q.includes('terdaftar') ||
-    q.includes('tercatat') ||
-    q.includes('terverifikasi') ||
-    q.includes('anggota') ||
-    q.includes('personil') ||
-    q.includes('nama') ||
-    q.includes('cek') ||
-    q.includes('status') ||
-    q.includes('apakah ada') ||
-    q.includes('apakah');
+  // 2. Strict Exclusion: Queries asking for count/total or requesting a batch/list of records
+  // Must NOT trigger individual member verification (e.g. "berikan saya data 6 personil lainnya")
+  const isBatchOrCountQuery =
+    q.includes('berapa') ||
+    q.includes('jumlah') ||
+    q.includes('total') ||
+    q.includes('sebaran') ||
+    q.includes('lainnya') ||
+    q.includes('berikan saya data') ||
+    q.includes('tampilkan data') ||
+    q.includes('daftar personil') ||
+    q.includes('data personil') ||
+    q.includes('data anggota');
 
-  if (!isVerificationInquiry) return null;
+  if (isBatchOrCountQuery) return null;
+
+  // 3. Check if inquiry is genuinely about individual person registration / verification
+  const isAskingMemberVerification =
+    q.includes('apakah nama') ||
+    q.includes('adakah nama') ||
+    q.includes('cek nama') ||
+    q.includes('cek status') ||
+    q.includes('apakah saudara') ||
+    q.includes('apakah sdr') ||
+    q.includes('terdaftar sebagai') ||
+    q.includes('tercatat sebagai') ||
+    (q.includes('terdaftar') && (q.includes('apakah') || q.includes('cek') || q.includes('nama') || q.includes('status'))) ||
+    (q.includes('tercatat') && (q.includes('apakah') || q.includes('cek') || q.includes('nama') || q.includes('status')));
+
+  if (!isAskingMemberVerification) return null;
 
   const cleanQ = normalizePersonName(q);
   const detectedPillar = detectPillarInText(q);
@@ -284,11 +341,29 @@ export function resolveMemberVerificationQuery(
       const cleanRecName = normalizePersonName(rec.nama);
       if (cleanRecName.length < 3) continue;
 
-      const nameTokens = cleanRecName.split(' ').filter((t) => t.length > 2);
-      const isExactSubstring = cleanQ.includes(cleanRecName);
-      const hasAllTokens = nameTokens.length >= 2 && nameTokens.every((token) => cleanQ.includes(token));
+      const nameTokens = cleanRecName.split(' ').filter((t) => t.length >= 2);
+      if (nameTokens.length === 0) continue;
 
-      if (isExactSubstring || hasAllTokens) {
+      let isMatch = false;
+
+      if (nameTokens.length >= 2) {
+        // Multi-word name: all tokens must be present as distinct whole words in cleanQ
+        isMatch = nameTokens.every((token) => new RegExp(`\\b${escapeRegExp(token)}\\b`, 'i').test(cleanQ));
+      } else {
+        // Single-word name (e.g. "soni", "dudi"): NEVER do raw substring match!
+        // Must be whole word AND query must have explicit name indicator
+        const singleToken = nameTokens[0];
+        const isCommonWord = ['personil', 'anggota', 'relawan', 'daftar', 'data', 'pilar', 'wilayah', 'kecamatan', 'desa', 'lainnya', 'bantuan', 'petugas'].includes(singleToken);
+        if (!isCommonWord) {
+          const isWholeWord = new RegExp(`\\b${escapeRegExp(singleToken)}\\b`, 'i').test(cleanQ);
+          const hasNameMarker = q.includes('nama') || q.includes('saudara') || q.includes('apakah') || q.includes('cek');
+          if (isWholeWord && hasNameMarker) {
+            isMatch = true;
+          }
+        }
+      }
+
+      if (isMatch) {
         foundRecord = rec;
         foundPillarId = rec.pillarId || pId;
         break;
@@ -404,12 +479,27 @@ export function resolveRegionalPillarDataQuery(
     });
 
     if (matchingRecords.length > 0) {
+      // Check if user explicitly asked for names/list of personnel
+      const isExplicitNameRequest =
+        q.includes('siapa saja') ||
+        q.includes('siapa aja') ||
+        q.includes('sebutkan nama') ||
+        q.includes('nama-nama') ||
+        q.includes('namanya siapa') ||
+        q.includes('siapa namanya') ||
+        q.includes('daftar nama');
+
+      // Requirement SS 2: If asking for count / data, ONLY return the total count! Never output sample names by default!
+      if (!isExplicitNameRequest) {
+        return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, jumlah personil **${detectedPillar.pillarName}** yang terdaftar di wilayah **${detectedRegion}** adalah sebanyak **${matchingRecords.length} personil** terverifikasi.\n\n*Catatan: Sesuai prinsip efisiensi data dan UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi, daftar nama personil hanya ditampilkan jika Anda secara spesifik menanyakan nama atau memeriksa keaktifan personil tertentu.*\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data Lengkap ${detectedPillar.pillarName}]]`;
+      }
+
       const sampleList = matchingRecords
         .slice(0, 5)
         .map((r, i) => `${i + 1}. **${r.nama}** - Kecamatan ${r.kec || '-'} (Status: ${r.status || 'Aktif'})`)
         .join('\n');
       const moreText = matchingRecords.length > 5 ? `\n*...dan ${matchingRecords.length - 5} personil lainnya tercatat lengkap di tabel data pilar.*` : '';
-      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, di wilayah **${detectedRegion}** tercatat sebanyak **${matchingRecords.length} personil ${detectedPillar.pillarName}** yang telah terverifikasi resmi:\n\n${sampleList}${moreText}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis terbarui secara real-time saat ada penambahan, perubahan, atau mutasi data.*\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data ${detectedPillar.pillarName}]]`;
+      return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, di wilayah **${detectedRegion}** tercatat sebanyak **${matchingRecords.length} personil ${detectedPillar.pillarName}** yang telah terverifikasi resmi. Berikut nama personil terdaftar:\n\n${sampleList}${moreText}\n\n*Data ini bersumber langsung dari basis data riil website dan otomatis terbarui secara real-time saat ada penambahan, perubahan, atau mutasi data.*\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data ${detectedPillar.pillarName}]]`;
     } else {
       return `Berdasarkan pangkalan data resmi sistem PSKS JABAR saat ini, belum ada personil **${detectedPillar.pillarName}** yang tercatat untuk wilayah **${detectedRegion}** (atau berkas pendaftaran baru masih dalam antrean verifikasi administrasi tingkat wilayah).\n\n[[action:pillar:${detectedPillar.pillarId}:Lihat Data ${detectedPillar.pillarName}]]`;
     }
@@ -3451,6 +3541,17 @@ function runCoreAnswerVerification(
   // STRICT RULE: Developer is ONLY role === 'developer', never inferred from name
   const isDeveloperUser = userRole === 'developer';
   const { coreQuery: extractedCoreQ, isPureIntro: accuracyIsPureIntro, hasQuestion: accuracyHasQuestion } = extractCoreQueryIntent(query);
+
+  // 0.01 Polite Off-Topic Refusal for Non-Developer Roles
+  const offTopicRefusal = resolveOffTopicPublicQuery(query, userRole, isDeveloperUser);
+  if (offTopicRefusal) {
+    return {
+      finalContent: offTopicRefusal,
+      isAccurate: true,
+      confidence: 1.0,
+      source: 'verified_exact',
+    };
+  }
 
   // 0. STRICT SECURITY GUARD CHECK (HANYA UNTUK SERANGAN EKSPLOITASI / MALICIOUS INJECTION / LEAK NYATA)
   const isMaliciousExploit =

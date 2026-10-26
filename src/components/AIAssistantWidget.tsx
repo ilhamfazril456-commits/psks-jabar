@@ -38,6 +38,7 @@ import {
   resolveRegionalPillarDataQuery,
   resolveSensitivePrivacyQuery,
   resolvePinSecurityQuery,
+  resolveOffTopicPublicQuery,
 } from '../data/aiKnowledge';
 import { resolveDinsosAddressQuery } from '../data/dinsosAddressDirectory';
 import { ensureAIKnowledgeSeeded } from '../services/aiKnowledgeFirestoreService';
@@ -165,9 +166,9 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
 
     let currentIndex = 0;
     const totalLength = cleanText.length;
-    // High-speed typing stream animation: fast yet distinctly visible typing effect (~0.5s - 0.9s total)
-    const chunkSize = Math.max(2, Math.ceil(totalLength / 55));
-    const intervalMs = 12;
+    // High-speed typing stream animation: lightning-fast world-class AI streaming feel (~0.2s - 0.4s total)
+    const chunkSize = Math.max(4, Math.ceil(totalLength / 35));
+    const intervalMs = 8;
 
     const timer = setInterval(() => {
       currentIndex = Math.min(currentIndex + chunkSize, totalLength);
@@ -846,20 +847,21 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     // Instant Real-Time Grounding Interceptor (Direct access to allPillarData state & UU PDP Privacy)
     // Delivers sub-50ms instant response without sluggishness, exactly matching user request
     const roleForContext: UserRole = isDeveloperUser ? 'developer' : currentRole;
+    const offTopicCheck = resolveOffTopicPublicQuery(textToSend, roleForContext, isDeveloperUser);
     const pinCheck = resolvePinSecurityQuery(textToSend, roleForContext, session?.nama);
     const privacyCheck = resolveSensitivePrivacyQuery(textToSend);
     const memberCheck = resolveMemberVerificationQuery(textToSend, allPillarData, session?.wilayah);
     const regionalCheck = resolveRegionalPillarDataQuery(textToSend, allPillarData, session?.wilayah);
 
-    if (pinCheck || privacyCheck || memberCheck || regionalCheck) {
-      const instantReply = pinCheck || privacyCheck || memberCheck || regionalCheck;
+    if (offTopicCheck || pinCheck || privacyCheck || memberCheck || regionalCheck) {
+      const instantReply = offTopicCheck || pinCheck || privacyCheck || memberCheck || regionalCheck;
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         role: 'assistant',
         content: instantReply!,
         timestamp: new Date(),
         isVerified: true,
-        trackingSource: (pinCheck || privacyCheck) ? 'verified_exact' : 'state_grounded',
+        trackingSource: (offTopicCheck || pinCheck || privacyCheck) ? 'verified_exact' : 'state_grounded',
       };
 
       setMessages((prev) => [...prev, botMsg]);

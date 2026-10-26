@@ -27,6 +27,7 @@ import {
   resolveDinsosAddressQuery,
   DINSOS_ADDRESS_DIRECTORY,
 } from './src/data/dinsosAddressDirectory';
+import { resolveOffTopicPublicQuery } from './src/data/aiKnowledge';
 import { supabase } from './src/lib/supabase';
 import { DEFAULT_ADMIN_ACCOUNTS } from './src/data/initialData';
 import { comparePassword, hashPassword } from './src/utils/crypto';
@@ -3549,8 +3550,10 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
             const isContinuingTurn = Array.isArray(messages) && messages.length > 1;
             contextualInstruction += `\n\n[ATURAN PENGGUNA NON-DEVELOPER & PRIVASI KEAMANAN]:
 - Anda merespons sebagai "Asisten Virtual Resmi PSKS Jabar" di bawah naungan Dinas Sosial Provinsi Jawa Barat.
-- [ATURAN PANGGILAN & SAPAAN (HANYA SEKALI DI AWAL PERCAKAPAN)]:
-  * DILARANG KERAS memanggil pengguna umum, tamu publik, user terdaftar, admin wilayah, maupun superadmin dengan sebutan 'Kang/Teh', 'Kang', 'Teh', 'Akang', atau 'Teteh'!
+- [ATURAN PANGGILAN & TONE (HAK AKSES NON-DEVELOPER)]:
+  * DILARANG KERAS memanggil pengguna dengan sebutan "Ham", "Ilham", "Bro", "Bang", "Akang", "Kang", atau "Teteh", BAHKAN JIKA NAMA PENGGUNA DI PROFIL AKUN ADALAH ILHAM! Sapaan akrab "Ham" HANYA EKSKLUSIF UNTUK HAK AKSES ROLE DEVELOPER.
+  * Gunakan sebutan yang sopan dan terhormat: "Bapak/Ibu" atau nama lengkap secara santun.
+  * DILARANG KERAS menggunakan emotikon bercanda, ngakak, tertawa lelucon, atau santai (seperti 😄, 😂, 🤣, 😜, 🤪, 😎, 😁, 😆, dsb). HANYA pergunakan emotikon santun dan hormat seperti 🙏 atau 😊.
   * KRUSIAL & MUTLAK: Salam 'Sampurasun' dan sapaan 'Bapak/Ibu' HANYA BOLEH DIBERIKAN SEKALI SAJA DI AWAL PERCAKAPAN (Turn 1).
   * ${isContinuingTurn ? 'PERINGATAN: SAAT INI PERCAKAPAN SEDANG BERJALAN (TURN 2+). DILARANG KERAS MENGULANG kata "Sampurasun" maupun sapaan "Bapak/Ibu" di setiap jawaban! Langsung jawab ke inti pertanyaan secara ramah, profesional, lugas, dan to-the-point tanpa basa-basi salam yang berulang-ulang!' : 'Jika ini adalah percakapan pesan pembuka pertama, Anda boleh menyapa dengan sopan "Sampurasun / Halo Bapak/Ibu".'}
 - [ATURAN TOMBOL AKSI / QUICK REPLY BUTTONS (MUTLAK RELEVAN & NYAMBUNG)]:
@@ -3655,12 +3658,14 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     3. Status Resmi: Setelah disahkan resmi menjadi status SAH_TERDAFTAR, data personil resmi tercatat dalam pangkalan data potensi dan sumber kesejahteraan sosial Jawa Barat.
     4. Tindak Lanjut: Jika melebihi batas waktu tersebut belum ada pembaruan status, silakan berkoordinasi langsung dengan pihak Dinas Sosial Kabupaten/Kota domisili Anda atau Dinas Sosial Provinsi Jawa Barat.
     Sertakan action tags: [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]] [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
-- [KEBIJAKAN KETIKA PERTANYAAN DI LUAR KNOWLEDGE BASE / TIDAK RELEVAN]:
-  * Jawablah secara alami, ramah, dan manusiawi layaknya asisten cerdas berwawasan luas.
-  * Jika pertanyaan di luar domain kesejahteraan sosial dan kedinasan (seperti rumus matematika umum, sains, budaya, atau sapaan santai), Anda boleh merespons secara singkat, ramah, dan membantu, lalu secara luwes mengarahkan kembali ke layanan 10 Pilar PSKS Jawa Barat.
+- [KEBIJAKAN KETIKA PERTANYAAN DI LUAR KNOWLEDGE BASE / TIDAK RELEVAN UNTUK NON-DEVELOPER]:
+  * SIKAP RESMI KEDINASAN: Pertanyaan bebas dan bahasa sangat santai HANYA DIPERUNTUKKAN UNTUK HAK AKSES DEVELOPER.
+  * Disaat seseorang dengan hak akses selain developer (tamu publik, user terdaftar, admin wilayah, superadmin) bertanya mengenai hal di luar pembahasan sistem informasi PSKS Jabar dan layanan kedinasan sosial (seperti cara memasak, resep masakan, game, otomotif, dsb), ANDA HARUS MENOLAK DENGAN SOPAN DAN HORMAT:
+    "Mohon maaf, sebagai Asisten Virtual Resmi Dinas Sosial Provinsi Jawa Barat, ruang lingkup pelayanan saya difokuskan khusus untuk melayani informasi seputar 10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS), data relawan di 27 Kab/Kota Jawa Barat, alur pendaftaran, serta layanan kedinasan sosial. 🙏\n\nApakah ada informasi seputar pilar sosial atau layanan kesejahteraan sosial yang dapat saya bantu?"
+  * DILARANG meladeni pertanyaan di luar pembahasan untuk akun selain developer!
   * Jika pengguna menanyakan data kedinasan internal yang tidak Anda miliki, berikan penjelasan secara wajar dan sopan bahwa data spesifik tersebut saat ini belum tercatat pada basis data sistem kami, dan sarankan untuk menghubungi Dinas Sosial Provinsi Jawa Barat melalui tombol: [[action:tab:contact:Hubungi Dinas Sosial Jabar]]
   * DILARANG KERAS menempelkan masukan pengguna mentah-mentah ke dalam tanda kurung kalimat template kaku!
-  * PERINGATAN PENTING (DILARANG SALAH MENERAPKAN): Tanggapan percakapan alami, obrolan santai, konfirmasi ("oke", "siap", "paham", "baik"), niat bertanya ("ada 1 hal lagi", "ingin bertanya lagi"), apresiasi/pujian (misal: "hebat juga beliau", "keren ya", "mantap", "salut"), maupun ucapan terima kasih/salam HARUS selalu disambut secara hangat, bersahabat, kontekstual, dan mengalir!`;
+  * Catatan: Tanggapan percakapan wajar kedinasan ("oke", "siap", "paham", "terima kasih") tetap disambut secara sopan dan santun kedinasan.`;
           }
 
           if (userContext.liveSummary) {
@@ -3830,6 +3835,12 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
           return res.json({
             reply: 'Mohon maaf, informasi dan panduan teknis pengelolaan akun administrator sistem (seperti menambah, merubah, mengedit, atau menghapus akun admin, monitoring admin, maupun mode maintenance) merupakan wewenang khusus Superadmin / Administrator Dinas Sosial Provinsi Jawa Barat dan tidak dapat diakses melalui akun pengguna umum/tamu. Untuk keperluan administratif atau koordinasi kedinasan resmi, silakan hubungi pihak Dinas Sosial Provinsi Jawa Barat.\n\n[[action:tab:contact:Hubungi Dinas Sosial Jabar]]'
           });
+        }
+
+        // Intersepsi Pertanyaan di Luar Pembahasan untuk Hak Akses Non-Developer (SS 3)
+        const offTopicRefusal = resolveOffTopicPublicQuery(lastUserMsg, userContext?.role || 'user', isDeveloper);
+        if (offTopicRefusal) {
+          return res.json({ reply: offTopicRefusal });
         }
 
         // PANGKALAN DATA BASIS PENGETAHUAN & NORMALISASI KOSAKATA DARI CLOUD FIRESTORE
@@ -4012,7 +4023,7 @@ AI WAJIB:
                 maxOutputTokens: isDeveloper ? 4096 : 3072,
               };
 
-              // Wrap call with a 12000ms timeout to prevent premature aborts on complex answers
+              // Wrap call with a 6500ms timeout for world-class fast failover and responsive experience
               const generatePromise = keyItem.client.models.generateContent({
                 model: modelName,
                 contents: sanitizedContents,
@@ -4020,7 +4031,7 @@ AI WAJIB:
               });
 
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error(`Timeout 12000ms exceeded on model ${modelName}`)), 12000)
+                setTimeout(() => reject(new Error(`Timeout 6500ms exceeded on model ${modelName}`)), 6500)
               );
 
               const response: any = await Promise.race([generatePromise, timeoutPromise]);
@@ -4119,6 +4130,22 @@ AI WAJIB:
           if (replyText.length > 0) {
             replyText = replyText.charAt(0).toUpperCase() + replyText.slice(1);
           }
+        }
+
+        // POST-PROCESSING ATURAN 2: Anti-'Ham' & Anti-Emoticon Santai/Bercanda untuk Akun Non-Developer (SS 3)
+        if (!isDeveloper) {
+          replyText = replyText
+            .replace(/\b(halo|hai|yoo|hey|salam)\s+ham\b/gi, '$1 Bapak/Ibu')
+            .replace(/\bham\b/gi, (match, offset, str) => {
+              const prev = str.slice(Math.max(0, offset - 10), offset);
+              if (/[,!?\s](kang|bang|bro|a)?\s*$/i.test(prev)) {
+                return 'Bapak/Ibu';
+              }
+              return match;
+            });
+
+          // Ubah emotikon tertawa/bercanda menjadi santun kedinasan
+          replyText = replyText.replace(/[😂🤣🤪😜😎😆😁]/g, '😊');
         }
 
         // POST-PROCESSING ATURAN 3: Tombol Aksi Quick Reply Relevan & Nyambung dengan Konteks Percakapan
