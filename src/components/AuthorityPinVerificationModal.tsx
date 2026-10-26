@@ -122,7 +122,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     }
   };
 
-  const validatePin = (pinToTest: string) => {
+  const validatePin = async (pinToTest: string) => {
     if (lockoutRemaining > 0 || isVerifying || isSuccess) return;
 
     if (pinToTest.length !== 6) {
@@ -132,68 +132,85 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
 
     setIsVerifying(true);
 
-    // Determine expected PIN based on target role from AppSettings / defaults
-    let expectedPin = '123456';
-    if (role === 'developer') {
-      expectedPin = (appSettings?.developerPin || '992211').trim();
-    } else {
-      expectedPin = (appSettings?.superadminPin || '123456').trim();
-    }
+    try {
+      const res = await fetch('/api/auth/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinToTest, targetRole: role }),
+      });
 
-    // Check with safe fallback
-    const isCorrect = pinToTest === expectedPin || 
-      (role === 'developer' && (pinToTest === '992211' || pinToTest === (appSettings?.developerPin || '').trim())) ||
-      (role === 'superadmin' && (pinToTest === '123456' || pinToTest === (appSettings?.superadminPin || '').trim()));
+      const data = await res.json();
 
-    if (isCorrect) {
-      setIsSuccess(true);
-      setErrorMessage(null);
+      if (data.valid) {
+        setIsSuccess(true);
+        setErrorMessage(null);
+        setIsVerifying(false);
+
+        // Play subtle success chime
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const ctx = new AudioContextClass();
+            [587, 880, 1174].forEach((freq, i) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.07);
+              gain.gain.setValueAtTime(0.001, ctx.currentTime + i * 0.07);
+              gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.07 + 0.01);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.07 + 0.09);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(ctx.currentTime + i * 0.07);
+              osc.stop(ctx.currentTime + i * 0.07 + 0.1);
+            });
+          }
+        } catch (_) {}
+
+        setTimeout(() => {
+          onSuccess();
+        }, 400);
+        return;
+      }
+
       setIsVerifying(false);
 
-      // Play subtle success chime
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          const ctx = new AudioContextClass();
-          [587, 880, 1174].forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.07);
-            gain.gain.setValueAtTime(0.001, ctx.currentTime + i * 0.07);
-            gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.07 + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.07 + 0.09);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(ctx.currentTime + i * 0.07);
-            osc.stop(ctx.currentTime + i * 0.07 + 0.1);
-          });
-        }
-      } catch (_) {}
-
-      setTimeout(() => {
-        onSuccess();
-      }, 400);
-    } else {
-      setIsVerifying(false);
-      const newFailed = failedCount + 1;
-      setFailedCount(newFailed);
-
-      // Reset digit inputs and refocus first box
-      setDigits(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-
-      // Anti-brute force policy:
-      // 3 wrong attempts -> 15 seconds lockout
-      // >= 4 wrong attempts -> 30 seconds lockout per wrong attempt
-      if (newFailed === 3) {
-        setLockoutRemaining(15);
-        setErrorMessage('⚠️ 3 kali PIN salah. Akses dibekukan selama 15 detik.');
-      } else if (newFailed > 3) {
-        setLockoutRemaining(30);
-        setErrorMessage('⚠️ Akses dibekukan selama 30 detik untuk perlindungan keamanan.');
+      if (data.locked) {
+        setLockoutRemaining(data.lockoutRemaining || 300);
+        setErrorMessage(data.message || '⚠️ Sistem dikunci sementara karena percobaan gagal.');
       } else {
-        const remainingAttempts = 3 - newFailed;
-        setErrorMessage(`❌ PIN salah. Sisa kesempatan sebelum dibekukan: ${remainingAttempts} kali.`);
+        const newFailed = failedCount + 1;
+        setFailedCount(newFailed);
+        setDigits(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+        setErrorMessage(data.message || '❌ PIN salah.');
+      }
+    } catch {
+      // Offline fallback: verify against appSettings if backend is completely unreachable
+      let expectedPin = (appSettings?.superadminPin || '123456').trim();
+      if (role === 'developer') {
+        expectedPin = (appSettings?.developerPin || '992211').trim();
+      }
+      const isCorrect = pinToTest === expectedPin;
+
+      if (isCorrect) {
+        setIsSuccess(true);
+        setErrorMessage(null);
+        setIsVerifying(false);
+        setTimeout(() => {
+          onSuccess();
+        }, 400);
+      } else {
+        setIsVerifying(false);
+        const newFailed = failedCount + 1;
+        setFailedCount(newFailed);
+        setDigits(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+        if (newFailed >= 3) {
+          setLockoutRemaining(15);
+          setErrorMessage('⚠️ 3 kali PIN salah. Akses dibekukan selama 15 detik.');
+        } else {
+          setErrorMessage(`❌ PIN salah. Sisa kesempatan: ${3 - newFailed} kali.`);
+        }
       }
     }
   };

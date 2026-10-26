@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
@@ -230,6 +231,106 @@ async function startServer() {
     next();
   };
 
+  // =========================================================================
+  // CRYPTOGRAPHIC ZERO-TRUST SESSION & TOKEN MANAGEMENT (HMAC-SHA256)
+  // Mencegah pemalsuan sesi via DevTools/F12 (Anti-Client-Side Role Spoofing)
+  // =========================================================================
+  const SESSION_SECRET = process.env.SESSION_SECRET || 'psks_jabar_hmac_secret_2026_authority_key_!@#';
+
+  interface VerifiedSessionPayload {
+    id: string;
+    username: string;
+    role: 'user' | 'admin' | 'superadmin' | 'developer';
+    namaAdmin: string;
+    wilayahTugas: string;
+    statusActive: string;
+    issuedAt: number;
+    expiresAt: number;
+  }
+
+  function signSessionToken(payload: Omit<VerifiedSessionPayload, 'issuedAt' | 'expiresAt'>): string {
+    const issuedAt = Date.now();
+    const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000; // 7 Hari Masa Berlaku Sesi
+    const fullPayload: VerifiedSessionPayload = { ...payload, issuedAt, expiresAt };
+    const data = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
+    const signature = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+    return `ses_${data}.${signature}`;
+  }
+
+  function verifySessionToken(token: string): VerifiedSessionPayload | null {
+    if (!token || typeof token !== 'string' || !token.startsWith('ses_')) return null;
+    const tokenBody = token.slice(4);
+    const parts = tokenBody.split('.');
+    if (parts.length !== 2) return null;
+    const [data, signature] = parts;
+    if (!data || !signature) return null;
+    const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+    if (signature !== expectedSig) return null;
+    try {
+      const payload: VerifiedSessionPayload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
+      if (payload.expiresAt && Date.now() > payload.expiresAt) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  // Middleware Otorisasi: Wajib Superadmin atau Developer
+  function requireAdminOrDev(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers['authorization'] || '';
+    const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    const token = tokenFromHeader || (req.headers['x-session-token'] as string) || (req.body && req.body.sessionToken);
+
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'Akses ditolak: Token autentikasi sesi tidak ditemukan.' });
+    }
+
+    const session = verifySessionToken(token);
+    if (!session) {
+      return res.status(401).json({ success: false, error: 'Akses ditolak: Token sesi palsu, tidak sah, atau kedaluwarsa.' });
+    }
+
+    if (session.role !== 'superadmin' && session.role !== 'developer') {
+      return res.status(403).json({ success: false, error: 'Akses ditolak: Otoritas tidak mencukupi (Wajib Superadmin atau Developer).' });
+    }
+
+    (req as any).user = session;
+    next();
+  }
+
+  // Server-Side PIN Brute-Force Rate Limiter & Lockout Map (Max 5 attempts per 5 minutes per IP)
+  const pinRateLimitMap = new Map<string, { attempts: number; lockUntil: number }>();
+
+  function checkPinRateLimit(ip: string): { locked: boolean; waitSeconds?: number } {
+    const now = Date.now();
+    const record = pinRateLimitMap.get(ip);
+    if (!record) return { locked: false };
+    if (record.lockUntil > now) {
+      return { locked: true, waitSeconds: Math.ceil((record.lockUntil - now) / 1000) };
+    }
+    if (now > record.lockUntil) {
+      pinRateLimitMap.delete(ip);
+    }
+    return { locked: false };
+  }
+
+  function recordFailedPinAttempt(ip: string): { attempts: number; locked: boolean } {
+    const now = Date.now();
+    const record = pinRateLimitMap.get(ip) || { attempts: 0, lockUntil: 0 };
+    record.attempts += 1;
+    let locked = false;
+    if (record.attempts >= 5) {
+      record.lockUntil = now + 5 * 60 * 1000; // 5 menit lockout
+      locked = true;
+    }
+    pinRateLimitMap.set(ip, record);
+    return { attempts: record.attempts, locked };
+  }
+
+  function clearPinRateLimit(ip: string) {
+    pinRateLimitMap.delete(ip);
+  }
+
   // Authoritative Server-Side QR Code Access Card Verification (Preserves 100% of Printed Physical Cards)
   const SUPERADMIN_SECRET_TOKEN = 'ENC::SA-8F2B9D4C1E';
   const DEVELOPER_SECRET_TOKEN = 'ENC::DEV-7A3C5F9B2D';
@@ -250,11 +351,20 @@ async function startServer() {
         upperPayload === SUPERADMIN_SECRET_TOKEN.toUpperCase() ||
         upperPayload.includes('SA-8F2B9D4C1E')
       ) {
+        const sessionToken = signSessionToken({
+          id: 'adm-super',
+          username: 'superadmin',
+          role: 'superadmin',
+          namaAdmin: 'Superadmin Jabar',
+          wilayahTugas: 'PROVINSI JAWA BARAT',
+          statusActive: 'SAH_TERDAFTAR',
+        });
         return res.json({
           valid: true,
           role: 'superadmin',
           nama: 'Superadmin Jabar',
           wilayah: 'PROVINSI JAWA BARAT',
+          sessionToken,
           message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
         });
       }
@@ -265,11 +375,20 @@ async function startServer() {
         upperPayload === DEVELOPER_SECRET_TOKEN.toUpperCase() ||
         upperPayload.includes('DEV-7A3C5F9B2D')
       ) {
+        const sessionToken = signSessionToken({
+          id: 'adm-dev',
+          username: 'ilhamfazril',
+          role: 'developer',
+          namaAdmin: 'Ilham Fazril',
+          wilayahTugas: 'Pusat Developer Jabar',
+          statusActive: 'SAH_TERDAFTAR',
+        });
         return res.json({
           valid: true,
           role: 'developer',
           nama: 'Ilham Fazril',
           wilayah: 'Pusat Developer Jabar',
+          sessionToken,
           message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
         });
       }
@@ -282,20 +401,38 @@ async function startServer() {
           const tokenUpper = token.toUpperCase();
 
           if (token === SUPERADMIN_SECRET_TOKEN || tokenUpper.includes('SA-8F2B9D4C1E')) {
+            const sessionToken = signSessionToken({
+              id: 'adm-super',
+              username: 'superadmin',
+              role: 'superadmin',
+              namaAdmin: 'Superadmin Jabar',
+              wilayahTugas: 'PROVINSI JAWA BARAT',
+              statusActive: 'SAH_TERDAFTAR',
+            });
             return res.json({
               valid: true,
               role: 'superadmin',
               nama: 'Superadmin Jabar',
               wilayah: 'PROVINSI JAWA BARAT',
+              sessionToken,
               message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
             });
           }
           if (token === DEVELOPER_SECRET_TOKEN || tokenUpper.includes('DEV-7A3C5F9B2D')) {
+            const sessionToken = signSessionToken({
+              id: 'adm-dev',
+              username: 'ilhamfazril',
+              role: 'developer',
+              namaAdmin: 'Ilham Fazril',
+              wilayahTugas: 'Pusat Developer Jabar',
+              statusActive: 'SAH_TERDAFTAR',
+            });
             return res.json({
               valid: true,
               role: 'developer',
               nama: 'Ilham Fazril',
               wilayah: 'Pusat Developer Jabar',
+              sessionToken,
               message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
             });
           }
@@ -308,6 +445,124 @@ async function startServer() {
       });
     } catch (err: any) {
       return res.status(500).json({ valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi QR code.' });
+    }
+  });
+
+  // Endpoint Verifikasi Sesi Kriptografi (Mencegah Tampering & Role Spoofing F12 Console)
+  app.post('/api/auth/verify-session', (req, res) => {
+    try {
+      const { sessionToken } = req.body;
+      if (!sessionToken || typeof sessionToken !== 'string') {
+        return res.status(401).json({ valid: false, message: 'Token sesi tidak ditemukan.' });
+      }
+
+      const verified = verifySessionToken(sessionToken);
+      if (!verified) {
+        return res.status(401).json({ valid: false, message: 'Token sesi tidak sah atau telah kedaluwarsa.' });
+      }
+
+      return res.json({
+        valid: true,
+        session: {
+          id: verified.id,
+          username: verified.username,
+          role: verified.role,
+          namaAdmin: verified.namaAdmin,
+          wilayahTugas: verified.wilayahTugas,
+          statusActive: verified.statusActive,
+          sessionToken,
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ valid: false, message: 'Gagal memverifikasi sesi.' });
+    }
+  });
+
+  // Endpoint Validasi PIN 6-Digit di Server (Perlindungan Anti-Brute-Force & Rate-Limiting Ketat)
+  app.post('/api/auth/verify-pin', rateLimitAuth, async (req, res) => {
+    try {
+      const { pin, targetRole } = req.body;
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || 'unknown';
+
+      const rateCheck = checkPinRateLimit(ip);
+      if (rateCheck.locked) {
+        return res.status(429).json({
+          valid: false,
+          locked: true,
+          lockoutRemaining: rateCheck.waitSeconds,
+          message: `⚠️ Terlalu banyak percobaan PIN salah. Akses PIN dikunci sementara demi keamanan. Coba lagi dalam ${rateCheck.waitSeconds} detik.`,
+        });
+      }
+
+      if (!pin || typeof pin !== 'string' || !/^\d{6}$/.test(pin.trim())) {
+        return res.status(400).json({ valid: false, message: 'PIN wajib berupa tepat 6 digit angka.' });
+      }
+
+      const cleanPin = pin.trim();
+
+      // Ambil konfigurasi PIN terkini dari pangkalan data
+      let currentSettings: any = null;
+      try {
+        const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
+        if (data && data.data) currentSettings = data.data;
+      } catch {}
+
+      const validSuperadminPin = (currentSettings?.superadminPin || '123456').trim();
+      const validDeveloperPin = (currentSettings?.developerPin || '992211').trim();
+
+      let isMatch = false;
+      let authorizedRole = '';
+
+      if (targetRole === 'developer') {
+        isMatch = (cleanPin === validDeveloperPin);
+        authorizedRole = 'developer';
+      } else if (targetRole === 'superadmin') {
+        isMatch = (cleanPin === validSuperadminPin || cleanPin === validDeveloperPin);
+        authorizedRole = 'superadmin';
+      } else {
+        if (cleanPin === validDeveloperPin) {
+          isMatch = true;
+          authorizedRole = 'developer';
+        } else if (cleanPin === validSuperadminPin) {
+          isMatch = true;
+          authorizedRole = 'superadmin';
+        }
+      }
+
+      if (!isMatch) {
+        const record = recordFailedPinAttempt(ip);
+        if (record.locked) {
+          return res.status(429).json({
+            valid: false,
+            locked: true,
+            lockoutRemaining: 300,
+            message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 5 menit.',
+          });
+        }
+        return res.status(401).json({
+          valid: false,
+          remainingAttempts: Math.max(0, 5 - record.attempts),
+          message: `❌ 6 Digit PIN Otoritas salah. Sisa kesempatan sebelum dibekukan: ${Math.max(0, 5 - record.attempts)} kali.`,
+        });
+      }
+
+      clearPinRateLimit(ip);
+
+      const authorityToken = crypto
+        .createHmac('sha256', SESSION_SECRET)
+        .update(`${authorizedRole}_${Date.now() + 30 * 60 * 1000}`)
+        .digest('hex');
+
+      return res.json({
+        valid: true,
+        role: authorizedRole,
+        authorityToken,
+        message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
+      });
+    } catch (err: any) {
+      console.error('[Verify PIN Server Error]:', err);
+      return res.status(500).json({ valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi PIN.' });
     }
   });
 
@@ -534,8 +789,15 @@ async function startServer() {
           ? 'Pusat Developer Jabar'
           : matchedAccount.wilayahTugas || 'Jawa Barat';
 
-      // 5. Generate cryptographically safe session token
-      const sessionToken = `ses_${Buffer.from(`${matchedAccount.id}_${Date.now()}_${Math.random()}`).toString('base64url')}`;
+      // 5. Generate cryptographically signed session token (HMAC-SHA256)
+      const sessionToken = signSessionToken({
+        id: matchedAccount.id,
+        username: matchedAccount.username,
+        role: finalRole,
+        namaAdmin: matchedAccount.namaAdmin,
+        wilayahTugas: finalWilayah,
+        statusActive: matchedAccount.statusActive,
+      });
 
       // 6. Return strictly sanitized payload (NEVER return passwordHash or passwordPolos)
       return res.json({
@@ -1280,11 +1542,11 @@ PRINSIP UTAMA KECERDASAN, GAYA BAHASA & KONTINUITAS PERCAKAPAN (BERLAKU UNTUK SE
       }
 
       if (isDev) {
-        return `Halo **Ilham Fazril**! (Developer Mode) 🚀\n\nSebagai Software Architect dan Lead Developer sistem **PSKS JABAR**, kamu memegang kontrol penuh atas **2 Lapis PIN Otoritas Keamanan** (wajib tepat **6 Digit Angka**, berbeda dari Kata Sandi login biasa):\n1. **PIN Smart Card Developer** (Root Master Authority, default sistem: \`992211\`)\n2. **PIN Smart Card Superadmin** (Provincial Authority, default sistem: \`123456\`)\n\nPIN ini terhubung realtime ke basis data dan dipakai untuk otorisasi Smart Access Card (NFC Mifare), Smart Security Gate, serta validasi tindakan pengembang.\n\n---\n\n### **Alur Resmi Merubah PIN Developer & Superadmin**:\n\n#### **Jalur 1: Fitur 15 - Pusat Keamanan PIN (\`tab:pin_security_manage\`)**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) melalui panel developer atau tombol aksi di bawah.\n2. Terdapat 2 modul kartu terpisah:\n   - **Kartu PIN Superadmin**: Masukkan 6 digit angka baru (atau klik *Acak PIN Otomatis*), lalu klik **Simpan PIN Superadmin Realtime**.\n   - **Kartu PIN Developer**: Masukkan 6 digit angka baru, lalu klik **Simpan PIN Developer Realtime**.\n3. Nilai PIN langsung terupdate seketika di pangkalan data secara sinkron.\n\n#### **Jalur 2: Developer Control Panel (\`tab:dev_panel\`)**\n- Buka menu **Developer Control Panel** (\`tab:dev_panel\`) untuk mengelola variabel keamanan, kunci otentikasi, dan audit log forensik.\n\n#### **Jalur 3: Menu Akun Saya (\`tab:account\`)**\n- Buka menu profil akun untuk pembaruan cepat PIN otoritas pribadi.\n\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:dev_panel:Buka Developer Control Panel]]\n[[action:tab:account:Buka Menu Akun Saya]]`;
+        return `Halo **Ilham Fazril**! (Developer Mode) 🚀\n\nSebagai Software Architect dan Lead Developer sistem **PSKS JABAR**, kamu memegang kontrol penuh atas **2 Lapis PIN Otoritas Keamanan** (wajib tepat **6 Digit Angka**, berbeda dari Kata Sandi login biasa):\n1. **PIN Smart Card Developer** (Root Master Authority, PIN Rahasia Terenkripsi)\n2. **PIN Smart Card Superadmin** (Provincial Authority, PIN Rahasia Terenkripsi)\n\nPIN ini terhubung realtime ke basis data dan dipakai untuk otorisasi Smart Access Card (NFC Mifare), Smart Security Gate, serta validasi tindakan pengembang.\n\n---\n\n### **Alur Resmi Merubah PIN Developer & Superadmin**:\n\n#### **Jalur 1: Fitur 15 - Pusat Keamanan PIN (\`tab:pin_security_manage\`)**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) melalui panel developer atau tombol aksi di bawah.\n2. Terdapat 2 modul kartu terpisah:\n   - **Kartu PIN Superadmin**: Masukkan 6 digit angka baru (atau klik *Acak PIN Otomatis*), lalu klik **Simpan PIN Superadmin Realtime**.\n   - **Kartu PIN Developer**: Masukkan 6 digit angka baru, lalu klik **Simpan PIN Developer Realtime**.\n3. Nilai PIN langsung terupdate seketika di pangkalan data secara sinkron.\n\n#### **Jalur 2: Developer Control Panel (\`tab:dev_panel\`)**\n- Buka menu **Developer Control Panel** (\`tab:dev_panel\`) untuk mengelola variabel keamanan, kunci otentikasi, dan audit log forensik.\n\n#### **Jalur 3: Menu Akun Saya (\`tab:account\`)**\n- Buka menu profil akun untuk pembaruan cepat PIN otoritas pribadi.\n\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:dev_panel:Buka Developer Control Panel]]\n[[action:tab:account:Buka Menu Akun Saya]]`;
       }
 
       // Superadmin
-      return `Sampurasun Bapak/Ibu **Superadmin** Dinas Sosial Provinsi Jawa Barat!\n\nPerlu dipahami bahwa di portal **PSKS JABAR**, sistem membedakan secara tegas antara **Kata Sandi (Password)** dan **PIN Otoritas Keamanan**:\n- **Kata Sandi (Password)**: Digunakan untuk masuk (*login*) akun administratif (wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka) melalui menu *Kelola Akun Admin*.\n- **PIN Otoritas Keamanan (Authority PIN)**: Terdiri dari tepat **6 Digit Angka** (default sistem: \`123456\`). PIN ini merupakan lapis keamanan tambahan (*second-layer security*) saat memindai **Smart Access Card**, melewati **Smart Security Gate**, atau memvalidasi otorisasi tindakan sensitif tingkat provinsi.\n\n---\n\n### **Alur Resmi Mengubah 6 Digit PIN Superadmin**:\n\nBapak/Ibu Superadmin dapat memperbarui 6 digit PIN otoritas akun kapan saja melalui 2 jalur resmi:\n\n#### **Jalur 1: Melalui Menu Akun Saya (Paling Praktis & Cepat)**\n1. Klik menu **Profil / Akun Saya** (\`tab:account\`) pada navigasi atas atau klik tombol tindakan di bawah.\n2. Gulir ke bawah menuju kartu **"PIN KEAMANAN OTORITAS (Ubah PIN)"**.\n3. Pada kolom **"6 Digit PIN Baru Superadmin"**, ketikkan 6 digit angka baru yang diinginkan, atau klik tombol **"Acak PIN Otomatis"** untuk membuat kombinasi acak yang aman.\n4. Klik tombol **"Simpan PIN"**.\n5. PIN baru langsung tersimpan ke pangkalan data secara *real-time* dan seketika aktif untuk seluruh otentikasi otoritas.\n\n#### **Jalur 2: Melalui Pusat Keamanan PIN / Pengaturan Superadmin**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) atau tab **Pengaturan Superadmin** (\`tab:superadmin_settings\`).\n2. Pada panel **PIN Smart Card Superadmin**, masukkan 6 digit angka baru.\n3. Klik tombol **"Simpan PIN Superadmin Realtime"**.\n\n*Ketentuan: PIN wajib berupa tepat 6 digit angka dan jaga kerahasiaan PIN ini demi keamanan data 10 Pilar PSKS se-Jawa Barat.*\n\n[[action:tab:account:Buka Menu Akun Saya]]\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:superadmin_settings:Buka Pengaturan Superadmin]]`;
+      return `Sampurasun Bapak/Ibu **Superadmin** Dinas Sosial Provinsi Jawa Barat!\n\nPerlu dipahami bahwa di portal **PSKS JABAR**, sistem membedakan secara tegas antara **Kata Sandi (Password)** dan **PIN Otoritas Keamanan**:\n- **Kata Sandi (Password)**: Digunakan untuk masuk (*login*) akun administratif (wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka) melalui menu *Kelola Akun Admin*.\n- **PIN Otoritas Keamanan (Authority PIN)**: Terdiri dari tepat **6 Digit Angka rahasia**. PIN ini merupakan lapis keamanan tambahan (*second-layer security*) saat memindai **Smart Access Card**, melewati **Smart Security Gate**, atau memvalidasi otorisasi tindakan sensitif tingkat provinsi.\n\n---\n\n### **Alur Resmi Mengubah 6 Digit PIN Superadmin**:\n\nBapak/Ibu Superadmin dapat memperbarui 6 digit PIN otoritas akun kapan saja melalui 2 jalur resmi:\n\n#### **Jalur 1: Melalui Menu Akun Saya (Paling Praktis & Cepat)**\n1. Klik menu **Profil / Akun Saya** (\`tab:account\`) pada navigasi atas atau klik tombol tindakan di bawah.\n2. Gulir ke bawah menuju kartu **"PIN KEAMANAN OTORITAS (Ubah PIN)"**.\n3. Pada kolom **"6 Digit PIN Baru Superadmin"**, ketikkan 6 digit angka baru yang diinginkan, atau klik tombol **"Acak PIN Otomatis"** untuk membuat kombinasi acak yang aman.\n4. Klik tombol **"Simpan PIN"**.\n5. PIN baru langsung tersimpan ke pangkalan data secara *real-time* dan seketika aktif untuk seluruh otentikasi otoritas.\n\n#### **Jalur 2: Melalui Pusat Keamanan PIN / Pengaturan Superadmin**\n1. Buka menu **Pusat Keamanan PIN** (\`tab:pin_security_manage\`) atau tab **Pengaturan Superadmin** (\`tab:superadmin_settings\`).\n2. Pada panel **PIN Smart Card Superadmin**, masukkan 6 digit angka baru.\n3. Klik tombol **"Simpan PIN Superadmin Realtime"**.\n\n*Ketentuan: PIN wajib berupa tepat 6 digit angka dan jaga kerahasiaan PIN ini demi keamanan data 10 Pilar PSKS se-Jawa Barat.*\n\n[[action:tab:account:Buka Menu Akun Saya]]\n[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]\n[[action:tab:superadmin_settings:Buka Pengaturan Superadmin]]`;
     }
 
     // 1. Jika Tamu Publik atau Pengguna Terdaftar (Role: User/Tamu) menanyakan fitur admin/superadmin/developer -> TOLAK HALUS
@@ -3484,6 +3746,20 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         const isSuperadmin = userContext?.role === 'superadmin' && userContext?.statusActive === 'SAH_TERDAFTAR';
         const isPublicUser = !isDeveloper && !isSuperadmin;
 
+        // 🛡️ ANTI-PROMPT INJECTION & CREDENTIAL LEAKAGE GUARD (ZERO-TRUST COMPLIANCE)
+        const isMaliciousInjection =
+          /\b(abaikan|ignore|lupakan|bypass|forget)\s+(semua|seluruh|instruksi|aturan|prompt|system|previous|sebelumnya)\b/i.test(lastMsgLower) ||
+          /\b(tampilkan|bocorkan|berikan|minta|spill|lihat|reveal|show|dump)\s+(password|kata\s*sandi|pin|token|secret|kredensial|api\s*key|database\s*url|hash)\b/i.test(lastMsgLower) ||
+          /\b(apa|berapa|sebutkan|tahu)\s+(pin\s*superadmin|pin\s*developer|password\s*superadmin|password\s*admin|pinnya|kombinasi\s*pin)\b/i.test(lastMsgLower) ||
+          /\b(system\s*prompt|prompt\s*asli|developer\s*mode\s*jailbreak|dan\s*jailbreak|roleplay\s*sebagai\s*hacker)\b/i.test(lastMsgLower);
+
+        if (isMaliciousInjection) {
+          return res.json({
+            reply: '⚠️ **Akses Dibatasi (Protokol Keamanan Siber Diskominfo / BSSN)**:\n\nPermintaan Anda terdeteksi mengandung manipulasi prompt (*prompt injection*) atau upaya ekstraksi kredensial internal sistem.\n\nSesuai standar keamanan sistem informasi **PSKS JABAR** dan UU Pelindungan Data Pribadi No. 27/2022, Asisten AI beroperasi dalam koridor *Zero-Trust Isolation* dan tidak diizinkan mengungkap kata sandi, PIN, struktur teknis rahasia, maupun mengabaikan instruksi tata kelola yang telah ditetapkan.\n\nApakah ada informasi seputar 10 Pilar Kesejahteraan Sosial Jawa Barat yang dapat saya bantu?',
+            source: 'security_injection_blocked',
+          });
+        }
+
         // PROTEKSI KEAMANAN DATABASE (SUPABASE UNTUK DEV/SUPERADMIN, PENOLAKAN SOPAN UNTUK PUBLIK)
         const isAskingDatabaseStorage =
           (/\b(database|basis\s*data|pangkalan\s*data|data)\b/i.test(lastMsgLower) &&
@@ -3603,7 +3879,7 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
     1. Berikan panduan lengkap, santun, dan solutif mengenai seluruh **8 FITUR SUPERADMIN DI BERANDA & PENGATURAN** (Kelola Akun Admin, Manajemen User, Pemantauan Admin, Riwayat Aktivitas Audit Trail, Pengesahan & Penerimaan Anggota Task Manager, Tambah Pengumuman, Kontak Floating WA, dan Saklar Maintenance Sistem).
     2. Jika Superadmin bertanya mengenai cara merubah akun admin wilayah, cara mengubah/reset password admin wilayah, cara menambah admin, atau cara menghapus admin: PANDU SECARA STEP-BY-STEP menggunakan menu **Kelola Akun Admin** (\`tab:admin_manage\`), jelaskan syarat kata sandi minimal 12 karakter kombinasi (huruf besar, kecil, angka), dan sertakan tag: [[action:tab:admin_manage:Buka Kelola Akun Admin]].
     3. [DISTINKSI MUTLAK: KATA SANDI VS PIN OTORITAS KEAMANAN 6 DIGIT]:
-       - PENTING & MUTLAK: Sistem membedakan secara tegas antara Kata Sandi (Password min. 12 karakter alfanumerik) dengan PIN Otoritas Keamanan (tepat 6 Digit Angka, default Superadmin: 123456, default Developer: 992211)!
+       - PENTING & MUTLAK: Sistem membedakan secara tegas antara Kata Sandi (Password min. 12 karakter alfanumerik) dengan PIN Otoritas Keamanan (tepat 6 Digit Angka rahasia otoritas)!
        - PIN dipakai untuk Smart Access Card, Smart Security Gate, dan verifikasi tindakan sensitif Superadmin.
        - JIKA SUPERADMIN BERTANYA CARA MERUBAH / MENGUBAH / GANTI PIN AKUN:
          DILARANG KERAS MENJAWAB DENGAN KATA SANDI 12 KARAKTER ATAU KE MENU KELOLA AKUN ADMIN!
@@ -4238,7 +4514,7 @@ AI WAJIB:
     }
   });
 
-  app.put('/api/ai/brain', async (req, res) => {
+  app.put('/api/ai/brain', requireAdminOrDev, async (req, res) => {
     try {
       await saveAIBrainConfig(req.body);
       res.json({ success: true, message: 'Otak AI berhasil diperbarui di Firestore' });
@@ -4257,7 +4533,7 @@ AI WAJIB:
     }
   });
 
-  app.post('/api/ai/vocabulary', async (req, res) => {
+  app.post('/api/ai/vocabulary', requireAdminOrDev, async (req, res) => {
     try {
       await saveAIVocabularyItem(req.body);
       res.json({ success: true, message: 'Kosakata berhasil disimpan di Firestore' });
@@ -4266,7 +4542,7 @@ AI WAJIB:
     }
   });
 
-  app.delete('/api/ai/vocabulary/:id', async (req, res) => {
+  app.delete('/api/ai/vocabulary/:id', requireAdminOrDev, async (req, res) => {
     try {
       await deleteAIVocabularyItem(req.params.id);
       res.json({ success: true, message: 'Kosakata berhasil dihapus dari Firestore' });
@@ -4285,7 +4561,7 @@ AI WAJIB:
     }
   });
 
-  app.post('/api/ai/knowledge/sync', async (_req, res) => {
+  app.post('/api/ai/knowledge/sync', requireAdminOrDev, async (_req, res) => {
     try {
       const docs = await ensureAIKnowledgeSeeded(true);
       res.json({
@@ -4299,8 +4575,8 @@ AI WAJIB:
     }
   });
 
-  // PILAR 5: Active Learning & Unmatched Query Logs Endpoints
-  app.get('/api/ai/unmatched-logs', async (_req, res) => {
+  // PILAR 5: Active Learning & Unmatched Query Logs Endpoints (Protected)
+  app.get('/api/ai/unmatched-logs', requireAdminOrDev, async (_req, res) => {
     try {
       const logs = await getAIUnmatchedLogs();
       res.json({ success: true, count: logs.length, data: logs });
@@ -4309,7 +4585,7 @@ AI WAJIB:
     }
   });
 
-  app.post('/api/ai/unmatched-logs/promote', async (req, res) => {
+  app.post('/api/ai/unmatched-logs/promote', requireAdminOrDev, async (req, res) => {
     try {
       const { logId, vocab } = req.body;
       if (!logId || !vocab || !vocab.word || !vocab.meaning) {
@@ -4322,7 +4598,7 @@ AI WAJIB:
     }
   });
 
-  app.delete('/api/ai/unmatched-logs/:id', async (req, res) => {
+  app.delete('/api/ai/unmatched-logs/:id', requireAdminOrDev, async (req, res) => {
     try {
       await deleteUnmatchedLog(req.params.id);
       res.json({ success: true, message: 'Log berhasil dihapus.' });
@@ -4331,7 +4607,7 @@ AI WAJIB:
     }
   });
 
-  app.post('/api/ai/sync-master', async (_req, res) => {
+  app.post('/api/ai/sync-master', requireAdminOrDev, async (_req, res) => {
     try {
       const result = await syncMasterItemsToFirestore();
       res.json({

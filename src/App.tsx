@@ -147,8 +147,7 @@ export default function App() {
     const userId = sessionStorage.getItem('session_user_id') || undefined;
     const deviceId = sessionStorage.getItem('session_device_id') || undefined;
     const passwordHash = sessionStorage.getItem('session_user_password_hash') || undefined;
-    const passwordPolos = sessionStorage.getItem('session_user_password_polos') || undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash, passwordPolos };
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash };
   });
 
   // Pending NFC SmartCard 6-Digit PIN Authority Gate State
@@ -546,6 +545,64 @@ export default function App() {
       setRescueProgressText('');
     }
   };
+
+  // 🛡️ Zero-Trust Cryptographic Session Verification on Application Startup & Resume
+  // Memverifikasi tanda tangan HMAC token ke server & membersihkan sesi jika terjadi pemalsuan DevTools / F12
+  useEffect(() => {
+    const activeToken = sessionStorage.getItem('session_token');
+    const loginActive = sessionStorage.getItem('statusLoginActive');
+
+    if (loginActive === 'SAH_TERDAFTAR') {
+      if (!activeToken) {
+        console.warn('[Security Shield] Sesi terdeteksi tanpa tanda tangan token kriptografi. Mereset sesi ke Tamu.');
+        sessionStorage.clear();
+        setSession({
+          role: 'user',
+          nama: 'Tamu Publik',
+          wilayah: '',
+          statusActive: 'GUEST',
+          isDeveloper: false,
+        });
+        return;
+      }
+
+      fetch('/api/auth/verify-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionToken: activeToken }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.valid || !data.session) {
+            console.warn('[Security Shield] Token sesi tidak sah atau kedaluwarsa. Melakukan logout otomatis.');
+            sessionStorage.clear();
+            setSession({
+              role: 'user',
+              nama: 'Tamu Publik',
+              wilayah: '',
+              statusActive: 'GUEST',
+              isDeveloper: false,
+            });
+          } else {
+            const s = data.session;
+            setSession((prev) => ({
+              ...prev,
+              id: s.id,
+              username: s.username,
+              role: s.role,
+              nama: s.namaAdmin || s.nama || prev.nama,
+              wilayah: s.wilayahTugas || s.wilayah || prev.wilayah,
+              statusActive: 'SAH_TERDAFTAR',
+              isDeveloper: s.role === 'developer',
+            }));
+            sessionStorage.setItem('session_user_role', s.role);
+          }
+        })
+        .catch(() => {
+          // Graceful handling jika server offline
+        });
+    }
+  }, []);
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -2553,7 +2610,6 @@ export default function App() {
     );
 
     const initialPasswordHash = matched?.passwordHash || '';
-    const initialPasswordPolos = matched?.passwordPolos || '';
     const initialLastUpdated = matched?.lastUpdatedTimestamp || loginTimestamp;
 
     const newSession: UserSession = { 
@@ -2568,7 +2624,6 @@ export default function App() {
       loginTimestamp,
       deviceId: currentDeviceId,
       passwordHash: initialPasswordHash,
-      passwordPolos: initialPasswordPolos,
       lastUpdatedTimestamp: initialLastUpdated,
     };
     setSession(newSession);
@@ -2583,7 +2638,6 @@ export default function App() {
     sessionStorage.setItem('login_timestamp', String(loginTimestamp));
     sessionStorage.setItem('session_device_id', currentDeviceId);
     if (initialPasswordHash) sessionStorage.setItem('session_user_password_hash', initialPasswordHash);
-    if (initialPasswordPolos) sessionStorage.setItem('session_user_password_polos', initialPasswordPolos);
     setGateModalOpen(false);
 
     const now = new Date();
