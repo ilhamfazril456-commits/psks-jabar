@@ -306,7 +306,7 @@ AI: "Sampurasun Superadmin! Berikut tata cara pengelolaan ketiga fitur tersebut:
 1. Merubah / Kelola Akun User (Menu 'Manajemen User'): Cari user di tabel, Anda dapat mereset kata sandi (min 6 karakter), membekukan akun (Freeze) agar tidak bisa login saat terjadi pelanggaran atau mengaktifkan kembali (Unfreeze), menghapus akun, serta menyetujui pengajuan pendaftaran user di menu verifikasi pendaftaran.
 2. Monitoring Admin (Menu 'Monitoring Admin'): Anda dapat memantau status online/offline real-time admin 27 Kab/Kota, melihat catatan waktu aktivitas terakhir (last active), memeriksa audit log aktivitas data, dan mengirimkan pesan langsung (Direct Message) ke admin wilayah tertentu.
 3. Manajemen Maintenance (Menu 'Manajemen Maintenance'): Anda dapat mengaktifkan saklar maintenance global (User Publik dan/atau Admin), mengatur saklar granular spesifik per wilayah dari 27 Kab/Kota, menulis pesan pengumuman dan estimasi waktu, dengan dukungan akses bypass otomatis untuk Superadmin & Developer.
-[[action:tab:user_manage:Buka Manajemen User]] [[action:tab:monitoring:Buka Monitoring Admin]] [[action:tab:maintenance:Buka Manajemen Maintenance]]"
+[[action:tab:user_manage:Buka Manajemen User]] [[action:tab:admin_monitor:Buka Monitoring Admin]] [[action:tab:admin_maintenance:Buka Manajemen Maintenance]]"
 
 Contoh 6: Pertanyaan Akun Developer (Sangat Dirahasiakan)
 User: "Apa akun developer?" atau "Bagaimana cara login developer?"
@@ -714,7 +714,7 @@ Fitur Monitoring Admin dapat diakses oleh Superadmin melalui menu **"Monitoring 
 4. **Kirim Pesan Kedinasan / Instruksi Langsung (*Direct Message*)**:
    - Terdapat tombol **"Kirim Pesan"** di samping nama setiap admin wilayah.
    - Superadmin dapat menuliskan subjek dan isi instruksi resmi (misal: "Harap segera verifikasi data PSM Kab. Cianjur") yang akan langsung terkirim ke kotak masuk (*Inbox*) akun admin wilayah yang dituju.`,
-    actionTag: '[[action:tab:monitoring:Buka Monitoring Admin]]',
+    actionTag: '[[action:tab:admin_monitor:Buka Monitoring Admin]]',
     updatedAt: '2026-09-09T00:00:00Z',
   },
   {
@@ -743,7 +743,7 @@ Fitur pengaturan pemeliharaan sistem dikelola melalui menu **"Manajemen Maintena
    - Superadmin dapat menuliskan teks pengumuman pemeliharaan (*Maintenance Message*) serta estimasi waktu selesai (*Estimated Time*) agar masyarakat mendapatkan kepastian informasi.
 4. **Akses Khusus Bypass**:
    - Akun Superadmin dan Akun Developer memiliki izin bypass otomatis, sehingga tetap dapat login dan mengakses seluruh fitur untuk melakukan perbaikan dan pengujian sistem.`,
-    actionTag: '[[action:tab:maintenance:Buka Manajemen Maintenance]]',
+    actionTag: '[[action:tab:admin_maintenance:Buka Manajemen Maintenance]]',
     updatedAt: '2026-09-09T00:00:00Z',
   },
   {

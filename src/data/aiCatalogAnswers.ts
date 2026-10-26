@@ -322,18 +322,15 @@ Sistem PSKS JABAR membedakan secara tegas antara **Kata Sandi (Password min. 12 
 ---
 
 ### **Alur Merubah PIN Superadmin**:
-1. **Melalui Menu Akun Saya** (\`tab:account\`):
-   - Klik menu **Akun Saya** pada bilah navigasi atas.
-   - Gulir ke kartu **"PIN KEAMANAN OTORITAS: Ubah PIN"**.
-   - Ketikkan 6 digit PIN baru (atau klik tombol **"Acak PIN Otomatis"**).
+1. **Melalui Subnavigasi Ubah PIN** (\`tab:ubah_pin\`):
+   - Klik tombol aksi **Buka Menu Ubah PIN** di bawah atau masuk ke menu navigasi **Pusat Akun -> Detail Profil Akun Superadmin**, lalu pilih subnavigasi **Ubah PIN**.
+   - Pada kartu **"PIN KEAMANAN OTORITAS"**, ketikkan 6 digit PIN baru (atau klik tombol **"Acak PIN Otomatis"**).
    - Klik **Simpan PIN**. PIN langsung aktif seketika di pangkalan data secara realtime.
-2. **Melalui Pusat Keamanan PIN** (\`tab:pin_security_manage\`):
-   - Buka menu **Pusat Keamanan PIN** atau tab **Pengaturan Superadmin** (\`tab:superadmin_settings\`).
-   - Masukkan 6 digit PIN baru pada panel PIN Superadmin lalu simpan.
 
-[[action:tab:account:Buka Menu Akun Saya]]
-[[action:tab:pin_security_manage:Buka Pusat Keamanan PIN]]
-[[action:tab:superadmin_settings:Buka Pengaturan Superadmin]]`,
+*Catatan: Menu Pusat Keamanan PIN lanjutan dikhususkan untuk Developer. Akun Superadmin mengelola PIN secara mandiri melalui subnavigasi Ubah PIN.*
+
+[[action:tab:ubah_pin:Buka Menu Ubah PIN]]
+[[action:tab:akun:Buka Menu Akun Saya]]`,
 
   'sa-5': `**SOP Reset Kata Sandi Admin Daerah**:
 1. Buka menu **Manajemen Akun Admin / Pengaturan Superadmin**.

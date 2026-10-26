@@ -2269,16 +2269,45 @@ export default function App() {
       subView?: string | null;
     }
   ) => {
+    let targetTab = tab;
+
+    // Normalize known aliases to valid registered tabs so NO tab renders an empty view
+    if (targetTab === 'account') targetTab = 'akun';
+    if (targetTab === 'monitoring') targetTab = 'admin_monitor';
+    if (targetTab === 'maintenance') targetTab = 'admin_maintenance';
+    if (targetTab === 'task_manager') targetTab = 'task_manage';
+    if (targetTab === 'pillars') targetTab = 'beranda';
+
+    const isDeveloper =
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      (session.role === 'developer' || session.isDeveloper === true);
+
+    // Rule: Never navigate Superadmin to developer-only pin_security_manage; redirect to subnavigasi 'Ubah PIN'
+    if (targetTab === 'pin_security_manage' && !isDeveloper) {
+      targetTab = 'akun';
+      options = { ...options, subView: 'ubah_pin' };
+    }
+
+    if (targetTab === 'ubah_pin' || targetTab === 'account_ubah_pin') {
+      targetTab = 'akun';
+      options = { ...options, subView: 'ubah_pin' };
+    }
+
+    if (targetTab === 'ubah_password' || targetTab === 'account_ubah_password') {
+      targetTab = 'akun';
+      options = { ...options, subView: 'ubah_password' };
+    }
+
     // 1. If we are currently on 'beranda', save the user's exact scroll position
     if (currentTab === 'beranda') {
       dashboardScrollYRef.current = window.pageYOffset || document.documentElement.scrollTop || 0;
     }
 
     // 2. Immediately prefetch target module
-    handlePrefetchTab(tab);
+    handlePrefetchTab(targetTab);
 
     // 3. Immediately reset scroll to top synchronously BEFORE state commit if navigating to any feature/subpage
-    if (tab !== 'beranda') {
+    if (targetTab !== 'beranda') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (typeof document !== 'undefined') {
         document.documentElement.scrollTop = 0;
@@ -2287,7 +2316,7 @@ export default function App() {
     }
 
     // 4. Update state directly for instantaneous 0ms tab navigation
-    if (tab === 'pillar_detail') {
+    if (targetTab === 'pillar_detail') {
       if (options?.pillarId) setActivePillar(options.pillarId);
     } else {
       setActivePillar(null);
@@ -2297,19 +2326,19 @@ export default function App() {
       setActiveAnnouncementDetail(options.detailData);
     }
 
-    if (tab === 'profil') {
+    if (targetTab === 'profil') {
       if (options?.subView) {
         setProfileSubView(options.subView as any);
       }
     }
 
-    if (tab === 'contact') {
+    if (targetTab === 'contact') {
       if (options?.subView) {
         setContactSubView(options.subView as any);
       }
     }
 
-    if (tab === 'akun') {
+    if (targetTab === 'akun') {
       if (options?.subView) {
         setAccountSubView(options.subView as any);
       } else {
@@ -2317,12 +2346,12 @@ export default function App() {
       }
     }
 
-    if (tab === 'beranda') {
+    if (targetTab === 'beranda') {
       shouldRestoreDashboardScrollRef.current = true;
     }
 
-    setCurrentTab(tab);
-  }, [currentTab, handlePrefetchTab]);
+    setCurrentTab(targetTab);
+  }, [currentTab, handlePrefetchTab, session]);
 
   // Handlers using unified navigateToTab
   const handleSelectPillar = (pillarId: PillarId) => {
@@ -4992,22 +5021,78 @@ export default function App() {
             const isSuperadminOrDev =
               session.statusActive === 'SAH_TERDAFTAR' &&
               (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true);
+            const isDeveloper =
+              session.statusActive === 'SAH_TERDAFTAR' &&
+              (session.role === 'developer' || session.isDeveloper === true);
             const isAdmin =
               session.statusActive === 'SAH_TERDAFTAR' && session.role === 'admin';
 
-            if (superadminTabs.includes(tab) && !isSuperadminOrDev) {
-              return;
-            }
-            if (tab === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
+            let targetTab = tab;
+            if (targetTab === 'account') targetTab = 'akun';
+            if (targetTab === 'monitoring') targetTab = 'admin_monitor';
+            if (targetTab === 'maintenance') targetTab = 'admin_maintenance';
+            if (targetTab === 'task_manager') targetTab = 'task_manage';
+            if (targetTab === 'pillars') targetTab = 'beranda';
+
+            // Modal Trigger for Developer Control Panel
+            if (targetTab === 'dev_panel') {
+              if (isDeveloper) {
+                setIsDeveloperPanelOpen(true);
+              }
               return;
             }
 
-            if (tab === 'beranda') {
+            // Subnavigasi Ubah PIN: strictly for Superadmin and Developer
+            if (targetTab === 'ubah_pin' || targetTab === 'account_ubah_pin') {
+              setAccountSubView('ubah_pin');
+              navigateToTab('akun', { subView: 'ubah_pin' });
+              return;
+            }
+
+            // Subnavigasi Ubah Kata Sandi
+            if (targetTab === 'ubah_password' || targetTab === 'account_ubah_password') {
+              setAccountSubView('ubah_password');
+              navigateToTab('akun', { subView: 'ubah_password' });
+              return;
+            }
+
+            // CRITICAL: If Superadmin triggers pin_security_manage, ALWAYS redirect to subnavigasi Ubah PIN on AccountPage
+            if (targetTab === 'pin_security_manage' && !isDeveloper) {
+              setAccountSubView('ubah_pin');
+              navigateToTab('akun', { subView: 'ubah_pin' });
+              return;
+            }
+
+            if (targetTab === 'akun') {
+              setAccountSubView('profil');
+              navigateToTab('akun', { subView: 'profil' });
+              return;
+            }
+
+            if (targetTab === 'login') {
+              if (session.statusActive === 'SAH_TERDAFTAR') {
+                setAccountSubView('profil');
+                navigateToTab('akun', { subView: 'profil' });
+              } else {
+                setOpenLoginModalOnAkun(true);
+                navigateToTab('akun');
+              }
+              return;
+            }
+
+            if (superadminTabs.includes(targetTab) && !isSuperadminOrDev) {
+              return;
+            }
+            if (targetTab === 'terima_pendaftaran' && !isAdmin && !isSuperadminOrDev) {
+              return;
+            }
+
+            if (targetTab === 'beranda') {
               handleBackToHome();
-            } else if (tab === 'user_reg_history' && session.statusActive !== 'SAH_TERDAFTAR') {
+            } else if (targetTab === 'user_reg_history' && session.statusActive !== 'SAH_TERDAFTAR') {
               setShowGuestHistoryModal(true);
             } else {
-              navigateToTab(tab);
+              navigateToTab(targetTab);
             }
           }}
           onSelectPillar={(pillarId: PillarId) => {

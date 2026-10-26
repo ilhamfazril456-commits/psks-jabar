@@ -98,7 +98,13 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
     const foundActions: ActionTag[] = [];
     const isSuperadminOrDev =
       session?.statusActive === 'SAH_TERDAFTAR' &&
-      (session?.role === 'superadmin' || session?.role === 'developer');
+      (session?.role === 'superadmin' || session?.role === 'developer' || session?.isDeveloper === true);
+    const isDeveloper =
+      session?.statusActive === 'SAH_TERDAFTAR' &&
+      (session?.role === 'developer' || session?.isDeveloper === true);
+    const isSuperadmin =
+      session?.statusActive === 'SAH_TERDAFTAR' &&
+      session?.role === 'superadmin';
     const isAdmin =
       session?.statusActive === 'SAH_TERDAFTAR' && session?.role === 'admin';
 
@@ -112,16 +118,61 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
       'floating_wa_manage',
       'user_manage',
       'task_manage',
+      'faq_manage',
+      'document_repository',
+      'bg_logo_manage',
+      'profile_kadinas_manage',
+      'social_media_manage',
+      'regional_logo_manage',
+      'website_info_manage',
     ];
 
     let match;
     while ((match = actionRegex.exec(content)) !== null) {
       const type = match[1] as 'tab' | 'pillar';
-      const target = match[2];
-      const label = match[3];
+      let target = match[2];
+      let label = match[3];
 
-      // Strict access filter: NEVER allow admin management button to guest, regular user, or unauthorized admin
+      // Strict access filter & normalization: NEVER allow admin management button to unauthorized roles
       if (type === 'tab') {
+        // Alias Normalizations so no tab target is ever an unrecognized/empty view
+        if (target === 'account') {
+          target = 'akun';
+        }
+        if (target === 'monitoring') {
+          target = 'admin_monitor';
+        }
+        if (target === 'maintenance') {
+          target = 'admin_maintenance';
+        }
+        if (target === 'task_manager') {
+          target = 'task_manage';
+        }
+        if (target === 'pillars') {
+          target = 'beranda';
+        }
+
+        // ROLE-BASED ACCESS CONTROL FOR PIN SECURITY:
+        // Superadmin must NEVER be given developer-only pin_security_manage; route to subnavigasi 'Ubah PIN'
+        if (target === 'pin_security_manage') {
+          if (isSuperadmin) {
+            target = 'ubah_pin';
+            label = 'Buka Menu Ubah PIN';
+          } else if (!isDeveloper) {
+            continue;
+          }
+        }
+
+        // Ubah PIN: only for superadmin and developer
+        if ((target === 'ubah_pin' || target === 'account_ubah_pin') && !isSuperadminOrDev) {
+          continue;
+        }
+
+        // Developer-only tabs
+        if (target === 'dev_panel' && !isDeveloper) {
+          continue;
+        }
+
         if (superadminOnlyTabs.includes(target) && !isSuperadminOrDev) {
           continue;
         }
@@ -141,11 +192,14 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
         }
       }
 
-      foundActions.push({
-        type,
-        target,
-        label,
-      });
+      // Avoid duplicates
+      if (!foundActions.some(a => a.type === type && a.target === target)) {
+        foundActions.push({
+          type,
+          target,
+          label,
+        });
+      }
     }
     const clean = content.replace(actionRegex, '').trim();
     return { cleanText: clean, actions: foundActions };
@@ -284,6 +338,10 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
                 if (act.type === 'tab') {
                   if (pillarKeys.includes(act.target)) {
                     onSelectPillar?.(act.target as PillarId);
+                  } else if (act.target === 'account') {
+                    onNavigateTab?.('akun');
+                  } else if (act.target === 'pin_security_manage' && session?.role !== 'developer' && !session?.isDeveloper) {
+                    onNavigateTab?.('ubah_pin');
                   } else {
                     onNavigateTab?.(act.target);
                   }
