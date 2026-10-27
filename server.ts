@@ -3772,8 +3772,10 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
         if (res.flushHeaders) res.flushHeaders();
       }
 
+      let streamSentAnyChunk = false;
       const sendStreamChunk = (chunkText: string) => {
         if (wantStream && !res.writableEnded) {
+          streamSentAnyChunk = true;
           res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
         }
       };
@@ -4327,7 +4329,7 @@ AI WAJIB:
 
         if (firestoreKnowledgeMatches.length > 0) {
           contextualInstruction += `\n\n[BASIS PENGETAHUAN RESMI TERVERIFIKASI DARI CLOUD FIRESTORE]:`;
-          for (const item of firestoreKnowledgeMatches.slice(0, 3)) {
+          for (const item of firestoreKnowledgeMatches.slice(0, 2)) {
             contextualInstruction += `\n\n### ${item.title} (Topik: ${item.topic})\n${item.content}`;
           }
           if (isAckOrConfirmMsg) {
@@ -4344,12 +4346,11 @@ AI WAJIB:
         // Strictly normalize conversation history for Gemini API (ensures starts with user & strictly alternates)
         const sanitizedContents = normalizeGeminiContents(messages);
 
-        // Candidate models prioritized for ultra-fast generation, high uptime, and zero truncation
+        // Candidate models prioritized for ultra-fast generation (<1s TTFT), high uptime, and zero truncation
         const candidateModels = [
-          'gemini-3.8-flash',
+          'gemini-flash-lite-latest',
+          'gemini-3-flash-preview',
           'gemini-flash-latest',
-          'gemini-3.1-flash-lite',
-          'gemini-2.5-flash',
         ];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
@@ -4361,21 +4362,40 @@ AI WAJIB:
             try {
               const configObj: any = {
                 systemInstruction: contextualInstruction,
-                temperature: isDeveloper ? 0.7 : 0.3,
-                maxOutputTokens: isDeveloper ? 4096 : 3072,
+                temperature: isDeveloper ? 0.7 : 0.25,
+                maxOutputTokens: isDeveloper ? 4096 : 2048,
+                thinkingConfig: { thinkingLevel: 'LOW' },
               };
 
               if (wantStream) {
-                // Streaming mode via generateContentStream (Real-time SSE token stream)
-                const responseStream = await keyItem.client.models.generateContentStream({
+                // Streaming mode via generateContentStream with strict initiation and chunk timeouts
+                const streamInitTimeout = 3500;
+                const streamInitPromise = keyItem.client.models.generateContentStream({
                   model: modelName,
                   contents: sanitizedContents,
                   config: configObj,
                 });
 
+                const streamTimeoutPromise = new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error(`Timeout ${streamInitTimeout}ms exceeded starting stream on ${modelName}`)), streamInitTimeout)
+                );
+
+                const responseStream = await Promise.race([streamInitPromise, streamTimeoutPromise]);
+
                 let accumulated = '';
-                for await (const chunk of responseStream) {
-                  const chunkText = (chunk as any)?.text || '';
+                const iterator = (responseStream as any)[Symbol.asyncIterator]();
+
+                while (true) {
+                  const nextPromise = iterator.next();
+                  const chunkTimeout = accumulated ? 4000 : 3500;
+                  const chunkTimer = new Promise<{ value?: any; done: boolean }>((_, reject) =>
+                    setTimeout(() => reject(new Error(`Timeout ${chunkTimeout}ms waiting for next chunk on ${modelName}`)), chunkTimeout)
+                  );
+
+                  const step = await Promise.race([nextPromise, chunkTimer]);
+                  if (step.done) break;
+
+                  const chunkText = (step.value as any)?.text || '';
                   if (chunkText) {
                     accumulated += chunkText;
                     sendStreamChunk(chunkText);
@@ -4387,8 +4407,7 @@ AI WAJIB:
                   break keyLoop; // BERHASIL: stream selesai didapat dari key aktif!
                 }
               } else {
-                // Non-streaming mode (standard JSON)
-                // Wrap call with a 6500ms timeout for world-class fast failover and responsive experience
+                // Non-streaming mode (standard JSON) with 3500ms timeout
                 const generatePromise = keyItem.client.models.generateContent({
                   model: modelName,
                   contents: sanitizedContents,
@@ -4396,7 +4415,7 @@ AI WAJIB:
                 });
 
                 const timeoutPromise = new Promise<never>((_, reject) =>
-                  setTimeout(() => reject(new Error(`Timeout 6500ms exceeded on model ${modelName}`)), 6500)
+                  setTimeout(() => reject(new Error(`Timeout 3500ms exceeded on model ${modelName}`)), 3500)
                 );
 
                 const response: any = await Promise.race([generatePromise, timeoutPromise]);
@@ -4586,6 +4605,9 @@ AI WAJIB:
         }
 
         if (wantStream) {
+          if (!streamSentAnyChunk && replyText) {
+            sendStreamChunk(replyText);
+          }
           sendStreamDone(replyText);
           return;
         }
