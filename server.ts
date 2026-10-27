@@ -4343,13 +4343,11 @@ AI WAJIB:
           contextualInstruction += `\n\n[INTENSI KOSAKATA PENGGUNA TERDETEKSI]: ${normIntents.join(', ')}. Pastikan jawaban langsung menjawab maksud pengguna secara tuntas dan tidak ambigu.`;
         }
 
-        // Strictly normalize conversation history for Gemini API (ensures starts with user & strictly alternates)
-        const sanitizedContents = normalizeGeminiContents(messages);
+        // Strictly normalize conversation history for Gemini API (trimmed to last 8 turns for ultra-fast TTFT)
+        const sanitizedContents = normalizeGeminiContents(messages.slice(-8));
 
         // Candidate models prioritized for ultra-fast generation (<1s TTFT), high uptime, and zero truncation
-        const candidateModels = wantStream
-          ? ['gemini-flash-lite-latest']
-          : ['gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-flash-latest'];
+        const candidateModels = ['gemini-flash-latest'];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
 
@@ -4361,13 +4359,12 @@ AI WAJIB:
               const configObj: any = {
                 systemInstruction: contextualInstruction,
                 temperature: isDeveloper ? 0.7 : 0.25,
-                maxOutputTokens: isDeveloper ? 4096 : 1024,
-                thinkingConfig: { thinkingLevel: 'LOW' },
+                maxOutputTokens: isDeveloper ? 2048 : 512,
               };
 
               if (wantStream) {
-                // Streaming mode via generateContentStream with strict initiation and chunk timeouts
-                const streamInitTimeout = 3500;
+                // Streaming mode via generateContentStream with strict 2500ms ceiling timeout
+                const streamInitTimeout = 2500;
                 const streamInitPromise = keyItem.client.models.generateContentStream({
                   model: modelName,
                   contents: sanitizedContents,

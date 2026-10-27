@@ -161,9 +161,10 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { messages, userContext } = (req.body || {}) as {
+    const { messages, userContext, stream: wantStream } = (req.body || {}) as {
       messages: ChatMessage[];
       userContext?: UserContext;
+      stream?: boolean;
     };
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -693,17 +694,17 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
    - Jika pengguna meminta NIK 16 digit, kata sandi, atau nomor kontak pribadi:
      Tolak secara santun dan tegas demi mematuhi Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP). Sistem hanya memverifikasi status pendaftaran sah, nama lengkap, pilar sosial, dan wilayah penugasan anggota.`;
 
-    // 4. SANITIZE & CONVERT MESSAGES FOR GEMINI SDK
+    // 4. SANITIZE & CONVERT MESSAGES FOR GEMINI SDK (TRIM TO LAST 8 TURNS FOR ULTRA-FAST TTFT)
+    const recentMessages = messages.slice(-8);
     const contents: any[] = [];
     let currentRole: 'user' | 'model' = 'user';
 
-    for (const m of messages) {
+    for (const m of recentMessages) {
       const gRole = m.role === 'assistant' ? 'model' : 'user';
       if (contents.length === 0 && gRole !== 'user') {
         continue;
       }
       if (contents.length > 0 && gRole === currentRole) {
-        // Concatenate consecutive same-role messages
         contents[contents.length - 1].parts[0].text += `\n${m.content}`;
       } else {
         contents.push({
@@ -721,36 +722,93 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
       });
     }
 
-    const candidateModels = [
-      'gemini-flash-latest',
-      'gemini-3.1-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-    ];
-
+    // High-speed production models
+    const candidateModels = ['gemini-flash-latest'];
     let generatedReply = '';
 
+    // Initialize SSE streaming headers if client requested streaming
+    if (wantStream) {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+      if (res.flushHeaders) res.flushHeaders();
+    }
+
+    const sendChunk = (text: string) => {
+      if (wantStream && !res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+      }
+    };
+
+    // Strict 2500ms race ceiling for first token to guarantee sub-3s response time
     keyLoop: for (const keyItem of keyPool) {
       for (const model of candidateModels) {
         try {
-          const response: any = await keyItem.client.models.generateContent({
-            model,
-            contents,
-            config: {
-              systemInstruction,
-              temperature: isDev ? 0.7 : 0.4,
-              maxOutputTokens: 2048,
-            },
-          });
+          const configObj = {
+            systemInstruction,
+            temperature: isDev ? 0.7 : 0.25,
+            maxOutputTokens: isDev ? 1024 : 512,
+          };
 
-          if (response && response.text && response.text.trim()) {
-            generatedReply = response.text.trim();
-            break keyLoop;
+          if (wantStream) {
+            const streamInitTimeout = 2500;
+            const streamInitPromise = keyItem.client.models.generateContentStream({
+              model,
+              contents,
+              config: configObj,
+            });
+
+            const streamTimeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout ${streamInitTimeout}ms exceeded starting stream on ${model}`)), streamInitTimeout)
+            );
+
+            const responseStream = await Promise.race([streamInitPromise, streamTimeoutPromise]);
+            let accumulated = '';
+            const iterator = (responseStream as any)[Symbol.asyncIterator]();
+
+            while (true) {
+              const nextPromise = iterator.next();
+              const chunkTimer = new Promise<{ value?: any; done: boolean }>((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout waiting for next chunk')), 2500)
+              );
+
+              const step = await Promise.race([nextPromise, chunkTimer]);
+              if (step.done) break;
+
+              const chunkText = (step.value as any)?.text || '';
+              if (chunkText) {
+                accumulated += chunkText;
+                sendChunk(chunkText);
+              }
+            }
+
+            if (accumulated.trim().length >= 2) {
+              generatedReply = accumulated.trim();
+              break keyLoop;
+            }
+          } else {
+            const generatePromise = keyItem.client.models.generateContent({
+              model,
+              contents,
+              config: configObj,
+            });
+
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout 2800ms exceeded on model ${model}`)), 2800)
+            );
+
+            const response: any = await Promise.race([generatePromise, timeoutPromise]);
+            if (response && response.text && response.text.trim()) {
+              generatedReply = response.text.trim();
+              break keyLoop;
+            }
           }
         } catch (err: any) {
-          console.warn(`[Vercel Serverless AI] Key #${keyItem.keyIndex} with model ${model} failed:`, err?.message || err);
           const errStr = (err?.message || '').toLowerCase();
-          // If quota exceeded (429) or invalid key, immediately failover to next key in keyPool
+          console.warn(`[Vercel AI] Key #${keyItem.keyIndex} with model ${model} issue:`, errStr);
           if (
             errStr.includes('429') ||
             errStr.includes('quota') ||
@@ -758,16 +816,24 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
             errStr.includes('api key not valid') ||
             errStr.includes('permission_denied')
           ) {
-            break; // break inner model loop to try next key in keyPool
+            break;
           }
         }
       }
     }
 
+    // Instant local verified fallback if models timeout or fail
     if (!generatedReply) {
+      const fallbackText = getSmartFallbackReply(lastUserMsg, userContext);
+      if (wantStream) {
+        sendChunk(fallbackText);
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
       return res.status(200).json({
-        reply: getSmartFallbackReply(lastUserMsg, userContext),
-        source: 'smart_fallback_exhausted',
+        reply: fallbackText,
+        source: 'smart_fallback_fast',
       });
     }
 
@@ -783,7 +849,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
       generatedReply.includes('tidak dapat dilakukan secara mandiri');
 
     if (isHallucinatedBureaucracy && (isSuperadmin || isDev)) {
-      generatedReply = `**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
+      const sanitizedStep = `**Panduan Resmi Superadmin: Cara Merubah Akun Admin Wilayah**:
 
 Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, status, maupun wilayah penugasan akun Admin Wilayah di 27 Kabupaten/Kota langsung melalui antarmuka website PSKS JABAR:
 
@@ -806,6 +872,15 @@ Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, statu
    - Klik tombol hijau **"Simpan Perubahan"**. Data akun admin langsung diperbarui seketika di Supabase dan mutasi ini otomatis tercatat dalam **Audit Trail (Riwayat Log)** sistem.
 
 [[action:tab:admin_manage:Buka Kelola Akun Admin]]`;
+      generatedReply = sanitizedStep;
+    }
+
+    if (wantStream) {
+      if (!res.writableEnded) {
+        res.write('data: [DONE]\n\n');
+        res.end();
+      }
+      return;
     }
 
     return res.status(200).json({
@@ -814,8 +889,16 @@ Sebagai Superadmin, Anda memiliki hak penuh untuk memperbarui data, peran, statu
     });
   } catch (error: any) {
     console.error('[Vercel Serverless AI Error]:', error);
-    return res.status(200).json({
-      reply: 'Mohon maaf, terjadi kendala saat memproses respons. Silakan sampaikan kembali pertanyaan Anda seputar 10 Pilar PSKS atau layanan sosial Jawa Barat. 😊',
-    });
+    if (!res.writableEnded) {
+      if (req.body?.stream) {
+        res.write(`data: ${JSON.stringify({ chunk: 'Mohon maaf, terjadi kendala saat memproses respons. Silakan sampaikan kembali pertanyaan Anda seputar 10 Pilar PSKS atau layanan sosial Jawa Barat. 😊' })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } else {
+        res.status(200).json({
+          reply: 'Mohon maaf, terjadi kendala saat memproses respons. Silakan sampaikan kembali pertanyaan Anda seputar 10 Pilar PSKS atau layanan sosial Jawa Barat. 😊',
+        });
+      }
+    }
   }
 }

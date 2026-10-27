@@ -1047,7 +1047,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     setStreamingMessageId(botMsgId);
 
     try {
-      const historyPayload = [...messages, userMsg].map((m) => ({
+      const historyPayload = [...messages.slice(-8), userMsg].map((m) => ({
         role: m.role,
         content: m.content,
       }));
