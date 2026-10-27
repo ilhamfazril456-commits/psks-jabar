@@ -336,13 +336,13 @@ const TypingFormattedText: React.FC<TypingFormattedTextProps> = ({
       title={!isDone && !isStreaming ? 'Klik untuk tampilkan semua teks seketika' : undefined}
     >
       {isStreaming && cleanText.length === 0 ? (
-        <div className="flex items-center gap-2 py-1">
-          <span className="flex gap-1 items-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.3s]"></span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.15s]"></span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce"></span>
+        <div className="flex items-center gap-2 py-1 px-0.5">
+          <span className="flex gap-1.5 items-center">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-bounce"></span>
           </span>
-          <span className="text-[11px] text-amber-300/80 font-medium italic">Sedang menyusun respon real-time...</span>
+          <span className="text-[11px] text-emerald-300/90 font-medium ml-1">Mengetik jawaban...</span>
         </div>
       ) : (
         <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{formatText(currentText)}</div>
@@ -1406,7 +1406,7 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     </h3>
                     <span className="bg-emerald-500/20 text-emerald-300 text-[8.5px] sm:text-[9px] px-1.5 py-0.2 rounded-full border border-emerald-500/40 font-mono font-bold shrink-0 flex items-center gap-0.5">
                       <Zap className="w-2.5 h-2.5 text-amber-400" />
-                      Gemini 3.8 Flash
+                      Gemini Flash Real-Time
                     </span>
                   </div>
                   <p className="text-[9.5px] sm:text-[10px] text-emerald-300/80 font-medium truncate">
@@ -1679,27 +1679,34 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                               })}
                             </span>
                             {msg.role === 'assistant' && (
-                              msg.trackingSource === 'ai_model_verified' ? (
-                                <span
-                                  className="inline-flex items-center gap-1 text-[8px] sm:text-[8.5px] text-cyan-300 font-semibold bg-cyan-950/80 px-1.5 py-0.5 rounded-full border border-cyan-700/60 shadow-xs"
-                                  title="Respon bersifat informatif umum yang disusun oleh AI Generatif"
-                                >
-                                  <Sparkles className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
-                                  <span>Verifikasi: AI Generatif</span>
-                                </span>
+                              (msg.content && msg.content.trim().length > 0) ? (
+                                msg.trackingSource === 'ai_model_verified' ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[8px] sm:text-[8.5px] text-cyan-300 font-semibold bg-cyan-950/80 px-1.5 py-0.5 rounded-full border border-cyan-700/60 shadow-xs"
+                                    title="Respon bersifat informatif umum yang disusun oleh AI Generatif"
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                                    <span>Verifikasi: AI Generatif</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[8px] sm:text-[8.5px] text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded-full border border-emerald-600/60 shadow-xs"
+                                    title="Jawaban diverifikasi langsung dari database lokal & data sistem resmi"
+                                  >
+                                    <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                    <span>Verifikasi: Berhasil</span>
+                                  </span>
+                                )
                               ) : (
-                                <span
-                                  className="inline-flex items-center gap-1 text-[8px] sm:text-[8.5px] text-emerald-300 font-semibold bg-emerald-950/80 px-1.5 py-0.5 rounded-full border border-emerald-600/60 shadow-xs"
-                                  title="Jawaban diverifikasi langsung dari database lokal & data sistem resmi"
-                                >
-                                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                                  <span>Verifikasi: Berhasil</span>
+                                <span className="inline-flex items-center gap-1 text-[8px] sm:text-[8.5px] text-emerald-400/90 font-medium animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  <span>Menghubungkan AI...</span>
                                 </span>
                               )
                             )}
                           </div>
 
-                          {msg.role === 'assistant' && (
+                          {msg.role === 'assistant' && msg.content && msg.content.trim().length > 0 && (
                             <button
                               type="button"
                               onClick={() => handleCopy(msg.id, msg.content)}
@@ -1724,8 +1731,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
                     </div>
                   ))}
 
-                  {/* Loading Indicator */}
-                  {isLoading && (
+                  {/* Loading Indicator (Hanya tampil jika belum ada bubble pesan streaming aktif di atas, mencegah indikator ganda) */}
+                  {isLoading && !streamingMessageId && (
                     <div className="flex items-start gap-2 sm:gap-2.5">
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-900/90 text-amber-300 border border-emerald-700/60 flex items-center justify-center shrink-0">
                         <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" style={{ animationDuration: '2s' }} />

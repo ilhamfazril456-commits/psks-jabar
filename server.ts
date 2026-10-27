@@ -4347,11 +4347,9 @@ AI WAJIB:
         const sanitizedContents = normalizeGeminiContents(messages);
 
         // Candidate models prioritized for ultra-fast generation (<1s TTFT), high uptime, and zero truncation
-        const candidateModels = [
-          'gemini-flash-lite-latest',
-          'gemini-3-flash-preview',
-          'gemini-flash-latest',
-        ];
+        const candidateModels = wantStream
+          ? ['gemini-flash-lite-latest']
+          : ['gemini-flash-lite-latest', 'gemini-3-flash-preview', 'gemini-flash-latest'];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
 
@@ -4363,7 +4361,7 @@ AI WAJIB:
               const configObj: any = {
                 systemInstruction: contextualInstruction,
                 temperature: isDeveloper ? 0.7 : 0.25,
-                maxOutputTokens: isDeveloper ? 4096 : 2048,
+                maxOutputTokens: isDeveloper ? 4096 : 1024,
                 thinkingConfig: { thinkingLevel: 'LOW' },
               };
 
@@ -4387,7 +4385,7 @@ AI WAJIB:
 
                 while (true) {
                   const nextPromise = iterator.next();
-                  const chunkTimeout = accumulated ? 4000 : 3500;
+                  const chunkTimeout = accumulated ? 3000 : 2500;
                   const chunkTimer = new Promise<{ value?: any; done: boolean }>((_, reject) =>
                     setTimeout(() => reject(new Error(`Timeout ${chunkTimeout}ms waiting for next chunk on ${modelName}`)), chunkTimeout)
                   );
@@ -4407,7 +4405,7 @@ AI WAJIB:
                   break keyLoop; // BERHASIL: stream selesai didapat dari key aktif!
                 }
               } else {
-                // Non-streaming mode (standard JSON) with 3500ms timeout
+                // Non-streaming mode (standard JSON) with 2800ms timeout
                 const generatePromise = keyItem.client.models.generateContent({
                   model: modelName,
                   contents: sanitizedContents,
@@ -4415,7 +4413,7 @@ AI WAJIB:
                 });
 
                 const timeoutPromise = new Promise<never>((_, reject) =>
-                  setTimeout(() => reject(new Error(`Timeout 3500ms exceeded on model ${modelName}`)), 3500)
+                  setTimeout(() => reject(new Error(`Timeout 2800ms exceeded on model ${modelName}`)), 2800)
                 );
 
                 const response: any = await Promise.race([generatePromise, timeoutPromise]);
@@ -4606,7 +4604,11 @@ AI WAJIB:
 
         if (wantStream) {
           if (!streamSentAnyChunk && replyText) {
-            sendStreamChunk(replyText);
+            const words = replyText.split(' ');
+            for (let i = 0; i < words.length; i += 4) {
+              const slice = (i === 0 ? '' : ' ') + words.slice(i, i + 4).join(' ');
+              sendStreamChunk(slice);
+            }
           }
           sendStreamDone(replyText);
           return;
