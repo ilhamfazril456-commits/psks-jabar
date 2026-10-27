@@ -234,8 +234,10 @@ async function startServer() {
   // =========================================================================
   // CRYPTOGRAPHIC ZERO-TRUST SESSION & TOKEN MANAGEMENT (HMAC-SHA256)
   // Mencegah pemalsuan sesi via DevTools/F12 (Anti-Client-Side Role Spoofing)
-  // =========================================================================
-  const SESSION_SECRET = process.env.SESSION_SECRET || 'psks_jabar_hmac_secret_2026_authority_key_!@#';
+  // Cryptographically secure secret with runtime randomized fallback (prevents static key forgery)
+  const SESSION_SECRET =
+    process.env.SESSION_SECRET ||
+    ((globalThis as any).__PSKS_HMAC_SECRET || ((globalThis as any).__PSKS_HMAC_SECRET = crypto.randomBytes(32).toString('hex')));
 
   interface VerifiedSessionPayload {
     id: string;

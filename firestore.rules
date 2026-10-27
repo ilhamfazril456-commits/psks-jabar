@@ -21,11 +21,10 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 3. Admin Accounts: Protected against wipeout
+    // 3. Admin Accounts: STRICT ZERO-DISCLOSURE (Client SDK direct reads & writes denied)
+    // All login verification and account management are mediated securely via the backend server
     match /admin_accounts/{accountId} {
-      allow read: if true;
-      allow create, update: if isValidId(accountId);
-      allow delete: if false;
+      allow read, write: if false;
     }
 
     // 4. Global App Settings: Protected against deletion

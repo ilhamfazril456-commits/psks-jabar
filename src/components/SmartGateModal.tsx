@@ -907,11 +907,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         triggerFailedAttempt();
         return;
       }
-      if (resp.status === 401) {
-        // Proceed to fallback check below to validate against real-time local/Supabase/Firestore account
+      if (resp.status === 401 || !resp.ok) {
+        setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+        triggerFailedAttempt();
+        return;
       }
     } catch {
-      // Offline fallback: continue to local check only if server is unreachable
+      // Offline notice if server cannot be reached
+      setErrorMessage('⚠️ Gagal terhubung ke server autentikasi. Silakan periksa koneksi internet Anda.');
+      return;
     }
 
     // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash, plain password, or reset ticket)

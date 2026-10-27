@@ -1383,15 +1383,23 @@ export default function App() {
   }, [deletedIds, session.statusActive, gateModalOpen]);
 
   // 3. Admin Accounts List with Firestore Real-time Sync
+  // 3. Admin Accounts List with Firestore Real-time Sync (Strictly Restricted to Authorized Superadmin & Developer)
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
     try {
+      const isAuthorized =
+        sessionStorage.getItem('statusLoginActive') === 'SAH_TERDAFTAR' &&
+        ['superadmin', 'developer'].includes(sessionStorage.getItem('session_user_role') || '');
+      if (!isAuthorized) {
+        localStorage.removeItem('psks_admin_accounts');
+        return [];
+      }
       const cached = localStorage.getItem('psks_admin_accounts');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return DEFAULT_ADMIN_ACCOUNTS;
+    return [];
   });
 
   const adminAccountsRef = useRef(adminAccounts);
@@ -1400,7 +1408,19 @@ export default function App() {
   }, [adminAccounts]);
 
   useEffect(() => {
-    // Continuous Real-Time Sync for all clients: instant verification status, instant password reset, and single-session kick
+    // Zero-Trust Isolation: Only Superadmin and Developer sessions are allowed to sync admin accounts
+    const isAuthorized =
+      session.statusActive === 'SAH_TERDAFTAR' &&
+      (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper);
+
+    if (!isAuthorized) {
+      setAdminAccounts([]);
+      try {
+        localStorage.removeItem('psks_admin_accounts');
+      } catch {}
+      return;
+    }
+
     let unsubscribe: (() => void) | null = null;
     const delay = 100;
     const timer = setTimeout(() => {
@@ -1545,7 +1565,8 @@ export default function App() {
           const finalList = Array.from(dedupedMap.values());
           setAdminAccounts(finalList);
           try {
-            localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
+            const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }) => rest);
+            sessionStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
           } catch {}
         }
       },
@@ -1555,7 +1576,7 @@ export default function App() {
           quotaExceededRef.current = true;
           setIsQuotaExceeded(true);
         }
-        const cached = localStorage.getItem('psks_admin_accounts');
+        const cached = sessionStorage.getItem('psks_admin_accounts');
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
