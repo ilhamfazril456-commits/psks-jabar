@@ -2,9 +2,14 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zwjbjmafxixudhlvaxef.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-Q49NtwnUsY9oF3jpRXEmw_J82UN4Uy';
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_-Q49NtwnUsY9oF3jpRXEmw_J82UN4Uy';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false },
 });
 
