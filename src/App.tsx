@@ -629,6 +629,10 @@ export default function App() {
             if (settings.logoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
               const local = localStorage.getItem('dinsos_logo_url');
               if (local && local !== 'LOCAL_STORAGE_SAVED_PHOTO') settings.logoUrl = local;
+            } else if (settings.logoUrl && settings.logoUrl.trim() !== '') {
+              try {
+                localStorage.setItem('dinsos_logo_url', settings.logoUrl);
+              } catch {}
             }
             if (settings.kadinasPhotoUrl === 'LOCAL_STORAGE_SAVED_PHOTO') {
               const local = localStorage.getItem('dinsos_kadinas_photo_url');
@@ -705,6 +709,23 @@ export default function App() {
       if (unsubVideo) unsubVideo();
     };
   }, []);
+
+  // Dynamic Browser Tab Favicon Synchronization: ensures tab icon is always identical to official logo
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentLogo = appSettings?.logoUrl || localStorage.getItem('dinsos_logo_url');
+    if (currentLogo && currentLogo.trim() !== '' && currentLogo !== 'LOCAL_STORAGE_SAVED_PHOTO') {
+      try {
+        localStorage.setItem('dinsos_logo_url', currentLogo);
+      } catch {}
+      const iconSelectors = ["link[rel*='icon']", "link[rel='apple-touch-icon']", "link[rel='shortcut icon']"];
+      iconSelectors.forEach((selector) => {
+        document.querySelectorAll<HTMLLinkElement>(selector).forEach((link) => {
+          link.href = currentLogo;
+        });
+      });
+    }
+  }, [appSettings?.logoUrl]);
 
   // Instant Smart Card NFC 13.56 MHz Auto-Login Handler on URL Tap
   useEffect(() => {

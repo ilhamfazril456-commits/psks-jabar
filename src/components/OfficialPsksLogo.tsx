@@ -15,14 +15,21 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
   showRing = true,
   logoUrl,
 }) => {
-  const isCustomLogo =
-    logoUrl &&
-    logoUrl.trim() !== '' &&
-    logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO' &&
-    !logoUrl.includes('official_psks_jabar_logo_transparent') &&
-    !logoUrl.includes('official_logo') &&
-    !logoUrl.endsWith('.svg');
-  const activeLogo = isCustomLogo ? logoUrl : DEFAULT_OPTIMIZED_LOGO;
+  // Synchronous cache lookup to prevent any momentary flash of old fallback logo
+  const resolvedLogo = React.useMemo(() => {
+    if (logoUrl && logoUrl.trim() !== '' && logoUrl !== 'LOCAL_STORAGE_SAVED_PHOTO') {
+      return logoUrl;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dinsos_logo_url');
+        if (cached && cached.trim() !== '' && cached !== 'LOCAL_STORAGE_SAVED_PHOTO') {
+          return cached;
+        }
+      } catch {}
+    }
+    return DEFAULT_OPTIMIZED_LOGO;
+  }, [logoUrl]);
 
   return (
     <div
@@ -37,8 +44,7 @@ export const OfficialPsksLogo: React.FC<OfficialPsksLogoProps> = ({
       }}
     >
       <img
-        src={activeLogo}
-        srcSet={!isCustomLogo ? '/official_logo_64.webp 1x, /official_logo_128.webp 2x' : undefined}
+        src={resolvedLogo}
         alt="Logo Resmi PSKS Jawa Barat - Dinas Sosial Provinsi Jawa Barat"
         width="48"
         height="48"

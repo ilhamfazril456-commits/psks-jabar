@@ -8,6 +8,19 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=5" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5" />
     <link rel="shortcut icon" type="image/png" href="/favicon.png?v=5" />
+    <script>
+      (function() {
+        try {
+          var savedLogo = localStorage.getItem('dinsos_logo_url');
+          if (savedLogo && savedLogo !== 'LOCAL_STORAGE_SAVED_PHOTO' && savedLogo.trim() !== '') {
+            var iconLinks = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']");
+            for (var i = 0; i < iconLinks.length; i++) {
+              iconLinks[i].href = savedLogo;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="theme-color" content="#0f2b5c" />
     <meta name="description" content="Sistem Pemantauan Terintegrasi dan Pengelolaan Data Pilar-Pilar Kesejahteraan Sosial Dinas Sosial Provinsi Jawa Barat" />
     <link rel="canonical" href="https://psks-jabar.vercel.app/" />
