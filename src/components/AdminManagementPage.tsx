@@ -189,7 +189,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
       namaAdmin: userIn,
       wilayahTugas: wilayahIn,
       role: assignedRole,
-      passwordPolos: sandiIn,
       passwordHash: hashPassword(sandiIn),
       terakhirLogin: 'Baru dibuat',
     });
@@ -215,7 +214,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
     }
     setEditingAccount(account);
     setEditAdminUser(account.username);
-    setEditAdminPassword(account.passwordPolos || '');
+    setEditAdminPassword('');
     const initialWilayah =
       account.id === 'adm-super' || (account.username || '').toLowerCase().includes('superadmin')
         ? 'PROVINSI JAWA BARAT'
@@ -280,7 +279,6 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
           namaAdmin: userNew,
           role: lockedRole,
           wilayahTugas: normalizedWilayah,
-          passwordPolos: sandiNew,
           passwordHash: hashPassword(sandiNew),
           lastUpdatedTimestamp: Date.now(),
           lastEditedBy: session?.username || session?.nama,
@@ -596,7 +594,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                             <span>
                               {isPasswordMasked
                                 ? '••••••••'
-                                : (item.passwordPolos || 'Tersimpan Terenkripsi')}
+                                : 'Tersimpan Terenkripsi (Hash)'}
                             </span>
                             <span className="text-[9px] font-sans font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded w-max flex items-center gap-1">
                               <ShieldCheck className="w-2.5 h-2.5 text-emerald-600 inline" />

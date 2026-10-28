@@ -191,7 +191,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
         ? 'Pusat Developer Jabar'
         : wilayahTugas || '';
 
-    const preservedPasswordPolos = passwordPolos || rest.passwordPolos || cleaned.passwordPolos || '';
+    const { passwordPolos: _ignoredPass, ...sanitizedRest } = rest;
 
     return {
       id: docId,
@@ -203,8 +203,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       passwordHash: passwordHash || '',
       sessionToken: sessionToken || '',
       data: {
-        ...rest,
-        passwordPolos: preservedPasswordPolos,
+        ...sanitizedRest,
         loginTimestamp: cleaned.loginTimestamp || rest.loginTimestamp || 0,
       },
     };
@@ -852,22 +851,25 @@ export async function setFirestoreDoc(
       }
       if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
 
-      // Extract non-column fields to store in JSONB data (passwordPolos strictly lives in data JSONB)
-      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, ...rest } = data;
+      // Extract non-column fields to store in JSONB data (never persist plaintext passwordPolos)
+      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, ...rest } = data;
       try {
         const existing = await supabase.from('admin_accounts').select('id, data').eq('id', docId).maybeSingle();
         if (!existing.data) {
           // Row does not exist yet in Supabase, perform complete upsert
           const row = mapDocToSupabaseRow(collectionName, docId, data);
+          if (row.data && typeof row.data === 'object') {
+            delete (row.data as any).passwordPolos;
+          }
           const { error } = await supabase.from('admin_accounts').upsert(row);
           if (!error) supabaseOk = true;
           else supabaseError = error;
         } else {
-          const existingData = existing.data?.data && typeof existing.data.data === 'object' ? existing.data.data : {};
+          const existingData = existing.data?.data && typeof existing.data.data === 'object' ? { ...existing.data.data } : {};
+          delete (existingData as any).passwordPolos;
           partialUpdate.data = {
             ...existingData,
             ...rest,
-            ...(data.passwordPolos !== undefined ? { passwordPolos: data.passwordPolos } : {}),
             ...(data.passwordHash !== undefined ? { passwordHash: data.passwordHash } : {}),
             ...(data.lastUpdatedTimestamp ? { lastUpdatedTimestamp: data.lastUpdatedTimestamp } : {}),
           };
