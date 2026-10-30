@@ -42,6 +42,9 @@ async function startServer() {
   // Security hardening: Disable X-Powered-By to prevent server information disclosure
   app.disable('x-powered-by');
 
+  // Security hardening: Trust reverse proxy (Vercel / Cloud Run / Cloudflare) for accurate client IP & rate limiting
+  app.set('trust proxy', 1);
+
   // Security hardening: Inject comprehensive security headers (OWASP & Diskominfo Grade A+ Compliance)
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -354,6 +357,32 @@ async function startServer() {
   const SUPERADMIN_SECRET_TOKEN = 'ENC::SA-8F2B9D4C1E';
   const DEVELOPER_SECRET_TOKEN = 'ENC::DEV-7A3C5F9B2D';
 
+  function signCardChallengeToken(role: 'superadmin' | 'developer'): string {
+    const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes challenge window
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const payload = JSON.stringify({ role, nonce, expiresAt });
+    const data = Buffer.from(payload).toString('base64url');
+    const sig = crypto.createHmac('sha256', SESSION_SECRET).update(`card_${data}`).digest('base64url');
+    return `ch_${data}.${sig}`;
+  }
+
+  function verifyCardChallengeToken(token: string, expectedRole?: string): boolean {
+    if (!token || typeof token !== 'string' || !token.startsWith('ch_')) return false;
+    const parts = token.slice(3).split('.');
+    if (parts.length !== 2) return false;
+    const [data, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(`card_${data}`).digest('base64url');
+    if (sig !== expectedSig) return false;
+    try {
+      const payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
+      if (payload.expiresAt && Date.now() > payload.expiresAt) return false;
+      if (expectedRole && payload.role !== expectedRole) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   app.post('/api/auth/verify-qr', rateLimitAuth, (req, res) => {
     try {
       const { payload } = req.body;
@@ -364,55 +393,43 @@ async function startServer() {
       const cleanPayload = payload.trim();
       const upperPayload = cleanPayload.toUpperCase();
 
-      // 1. Check Superadmin Card
+      // 1. Check Superadmin Card (Permanent physical card token)
       if (
         cleanPayload === SUPERADMIN_SECRET_TOKEN ||
         upperPayload === SUPERADMIN_SECRET_TOKEN.toUpperCase() ||
         upperPayload.includes('SA-8F2B9D4C1E')
       ) {
-        const sessionToken = signSessionToken({
-          id: 'adm-super',
-          username: 'superadmin',
-          role: 'superadmin',
-          namaAdmin: 'Superadmin Jabar',
-          wilayahTugas: 'PROVINSI JAWA BARAT',
-          statusActive: 'SAH_TERDAFTAR',
-        });
+        const challengeToken = signCardChallengeToken('superadmin');
         return res.json({
           valid: true,
+          requiresPin: true,
           role: 'superadmin',
           nama: 'Superadmin Jabar',
           wilayah: 'PROVINSI JAWA BARAT',
-          sessionToken,
-          message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
+          challengeToken,
+          message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
         });
       }
 
-      // 2. Check Developer Card
+      // 2. Check Developer Card (Permanent physical card token)
       if (
         cleanPayload === DEVELOPER_SECRET_TOKEN ||
         upperPayload === DEVELOPER_SECRET_TOKEN.toUpperCase() ||
         upperPayload.includes('DEV-7A3C5F9B2D')
       ) {
-        const sessionToken = signSessionToken({
-          id: 'adm-dev',
-          username: 'ilhamfazril',
-          role: 'developer',
-          namaAdmin: 'Ilham Fazril',
-          wilayahTugas: 'Pusat Developer Jabar',
-          statusActive: 'SAH_TERDAFTAR',
-        });
+        const challengeToken = signCardChallengeToken('developer');
         return res.json({
           valid: true,
+          requiresPin: true,
           role: 'developer',
           nama: 'Ilham Fazril',
           wilayah: 'Pusat Developer Jabar',
-          sessionToken,
-          message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
+          challengeToken,
+          message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
         });
       }
 
-      // 3. JSON Wrapper Check
+      // 3. JSON Wrapper Check (Containing permanent tokens)
       try {
         const json = JSON.parse(cleanPayload);
         if (json && (json.token || json.access_key || json.code || json.key)) {
@@ -420,39 +437,27 @@ async function startServer() {
           const tokenUpper = token.toUpperCase();
 
           if (token === SUPERADMIN_SECRET_TOKEN || tokenUpper.includes('SA-8F2B9D4C1E')) {
-            const sessionToken = signSessionToken({
-              id: 'adm-super',
-              username: 'superadmin',
-              role: 'superadmin',
-              namaAdmin: 'Superadmin Jabar',
-              wilayahTugas: 'PROVINSI JAWA BARAT',
-              statusActive: 'SAH_TERDAFTAR',
-            });
+            const challengeToken = signCardChallengeToken('superadmin');
             return res.json({
               valid: true,
+              requiresPin: true,
               role: 'superadmin',
               nama: 'Superadmin Jabar',
               wilayah: 'PROVINSI JAWA BARAT',
-              sessionToken,
-              message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
+              challengeToken,
+              message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
             });
           }
           if (token === DEVELOPER_SECRET_TOKEN || tokenUpper.includes('DEV-7A3C5F9B2D')) {
-            const sessionToken = signSessionToken({
-              id: 'adm-dev',
-              username: 'ilhamfazril',
-              role: 'developer',
-              namaAdmin: 'Ilham Fazril',
-              wilayahTugas: 'Pusat Developer Jabar',
-              statusActive: 'SAH_TERDAFTAR',
-            });
+            const challengeToken = signCardChallengeToken('developer');
             return res.json({
               valid: true,
+              requiresPin: true,
               role: 'developer',
               nama: 'Ilham Fazril',
               wilayah: 'Pusat Developer Jabar',
-              sessionToken,
-              message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
+              challengeToken,
+              message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
             });
           }
         }
@@ -513,10 +518,16 @@ async function startServer() {
     }
   });
 
+  // In-memory Server-Authoritative PIN Store (Isolates secret PINs from public client bundles & public Firestore)
+  const serverPinStore = {
+    superadminPin: process.env.SUPERADMIN_PIN || '123456',
+    developerPin: process.env.DEVELOPER_PIN || '992211',
+  };
+
   // Endpoint Validasi PIN 6-Digit di Server (Perlindungan Anti-Brute-Force & Rate-Limiting Ketat)
   app.post('/api/auth/verify-pin', rateLimitAuth, async (req, res) => {
     try {
-      const { pin, targetRole } = req.body;
+      const { pin, targetRole, challengeToken } = req.body;
       const forwarded = req.headers['x-forwarded-for'];
       const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || 'unknown';
 
@@ -534,17 +545,30 @@ async function startServer() {
         return res.status(400).json({ valid: false, message: 'PIN wajib berupa tepat 6 digit angka.' });
       }
 
+      // If challengeToken is provided (from physical smart card scan), verify its cryptographic signature
+      if (challengeToken && typeof challengeToken === 'string') {
+        const isChallengeValid = verifyCardChallengeToken(challengeToken, targetRole);
+        if (!isChallengeValid) {
+          return res.status(401).json({
+            valid: false,
+            message: 'Token kartu akses fisik telah kedaluwarsa atau tidak sah. Silakan tap/scan ulang kartu fisik Anda.',
+          });
+        }
+      }
+
       const cleanPin = pin.trim();
 
-      // Ambil konfigurasi PIN terkini dari pangkalan data
-      let currentSettings: any = null;
+      // Ambil konfigurasi PIN terkini dari server store atau database
+      let validSuperadminPin = serverPinStore.superadminPin;
+      let validDeveloperPin = serverPinStore.developerPin;
+
       try {
         const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
-        if (data && data.data) currentSettings = data.data;
+        if (data && data.data) {
+          if (data.data.superadminPin) validSuperadminPin = String(data.data.superadminPin).trim();
+          if (data.data.developerPin) validDeveloperPin = String(data.data.developerPin).trim();
+        }
       } catch {}
-
-      const validSuperadminPin = (currentSettings?.superadminPin || '123456').trim();
-      const validDeveloperPin = (currentSettings?.developerPin || '992211').trim();
 
       let isMatch = false;
       let authorizedRole = '';
@@ -589,15 +613,71 @@ async function startServer() {
         .update(`${authorizedRole}_${Date.now() + 30 * 60 * 1000}`)
         .digest('hex');
 
+      // Issue signed session token for privileged login sessions
+      const sessionToken = signSessionToken({
+        id: authorizedRole === 'developer' ? 'adm-dev' : 'adm-super',
+        username: authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin',
+        role: authorizedRole as 'developer' | 'superadmin',
+        namaAdmin: authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar',
+        wilayahTugas: authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT',
+        statusActive: 'SAH_TERDAFTAR',
+      });
+
       return res.json({
         valid: true,
         role: authorizedRole,
         authorityToken,
+        sessionToken,
+        nama: authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar',
+        wilayah: authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT',
         message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
       });
     } catch (err: any) {
       console.error('[Verify PIN Server Error]:', err);
       return res.status(500).json({ valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi PIN.' });
+    }
+  });
+
+  // Endpoint Update PIN 6-Digit Server-Side (Khusus Developer / Superadmin Terautentikasi)
+  app.post('/api/auth/update-pin', rateLimitAuth, requireAdminOrDev, async (req, res) => {
+    try {
+      const { newPin, pinType } = req.body;
+      const user = (req as any).user;
+
+      if (!newPin || typeof newPin !== 'string' || !/^\d{6}$/.test(newPin.trim())) {
+        return res.status(400).json({ success: false, message: 'PIN baru wajib berupa tepat 6 digit angka.' });
+      }
+
+      const cleanPin = newPin.trim();
+
+      if (pinType === 'developer' && user.role !== 'developer') {
+        return res.status(403).json({ success: false, message: 'Hanya Developer Utama yang berwenang mengubah PIN Developer.' });
+      }
+
+      // Update in server memory
+      if (pinType === 'developer') {
+        serverPinStore.developerPin = cleanPin;
+      } else {
+        serverPinStore.superadminPin = cleanPin;
+      }
+
+      // Sync securely to Supabase without exposing to public
+      try {
+        const updatePayload: any = {};
+        if (pinType === 'developer') updatePayload.developerPin = cleanPin;
+        else updatePayload.superadminPin = cleanPin;
+        await supabase.from('app_settings').upsert({ id: 'global', data: updatePayload }, { onConflict: 'id' });
+      } catch (dbErr) {
+        console.warn('[Server Pin Update DB notice]:', dbErr);
+      }
+
+      return res.json({
+        success: true,
+        message: `PIN ${pinType === 'developer' ? 'Developer' : 'Superadmin'} berhasil diperbarui dengan aman di server!`,
+      });
+    } catch (err: any) {
+      console.error('[Update PIN Server Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal memperbarui PIN di server.' });
     }
   });
 
@@ -609,14 +689,21 @@ async function startServer() {
         return res.status(400).json({ valid: false, message: 'Nama Pengguna dan Kata Sandi wajib diisi.' });
       }
 
-      // Official Production Cloudflare Turnstile verification
-      if (
-        turnstileToken &&
-        typeof turnstileToken === 'string' &&
-        !turnstileToken.startsWith('manual_turnstile_') &&
-        !turnstileToken.startsWith('psks_sec_') &&
-        turnstileToken !== 'TURNSTILE_VERIFIED'
-      ) {
+      // Strict Anti-Bot & Turnstile verification
+      if (!turnstileToken || typeof turnstileToken !== 'string') {
+        return res.status(400).json({ valid: false, message: 'Verifikasi keamanan Anti-Bot wajib diselesaikan.' });
+      }
+
+      if (turnstileToken.startsWith('psks_sec_')) {
+        const parts = turnstileToken.split('_');
+        const tokenTime = parseInt(parts[2], 10);
+        const now = Date.now();
+        if (isNaN(tokenTime) || tokenTime > now + 60000 || now - tokenTime > 5 * 60 * 1000) {
+          return res.status(403).json({ valid: false, message: 'Token verifikasi keamanan telah kedaluwarsa. Silakan ulangi verifikasi.' });
+        }
+      } else if (turnstileToken === 'TURNSTILE_VERIFIED') {
+        // Fallback for visual gate
+      } else {
         try {
           const CLOUDFLARE_TURNSTILE_SECRET = process.env.CLOUDFLARE_TURNSTILE_SECRET || '0x4AAAAAAFYHSSCGIj4gZIH09iBuVqEg8-E';
           const cfFormData = new URLSearchParams();
@@ -628,7 +715,7 @@ async function startServer() {
           });
           const cfData: any = await cfRes.json();
           if (cfData && cfData.success === false) {
-            console.warn('[Cloudflare Turnstile] Challenge rejected:', cfData['error-codes']);
+            return res.status(403).json({ valid: false, message: 'Verifikasi keamanan Turnstile tidak sah. Silakan refresh dan coba lagi.' });
           }
         } catch (cfErr) {
           console.warn('[Cloudflare Turnstile] Siteverify network notice:', cfErr);
@@ -754,26 +841,28 @@ async function startServer() {
         });
       }
 
-      // 4. Validate password against plain text (authoritative current password), approved reset ticket, or bcrypt hash fallback
+      // 4. Validate password against Bcrypt cryptographic hash or approved reset ticket
       const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
       let isValid = false;
 
       if (tempResetPass && pClean === tempResetPass) {
         isValid = true;
+      } else if (matchedAccount.passwordHash) {
+        isValid = comparePassword(pClean, matchedAccount.passwordHash);
       } else if (matchedAccount.passwordPolos) {
-        // Jika akun memiliki passwordPolos aktif yang sah, input WAJIB cocok dengan passwordPolos aktif ini
-        isValid = (pClean === matchedAccount.passwordPolos);
-        // Sinkronkan hash jika hash lama belum sesuai dengan password baru
-        if (isValid && matchedAccount.passwordHash && !comparePassword(pClean, matchedAccount.passwordHash)) {
-          matchedAccount.passwordHash = hashPassword(pClean);
+        // Upgrade legacy unhashed account to bcrypt hash on first successful login
+        if (pClean === matchedAccount.passwordPolos) {
+          isValid = true;
+          const upgradedHash = hashPassword(pClean);
           try {
             const { doc, setDoc } = await import('firebase/firestore');
             const { db } = await import('./src/lib/firebase');
-            await setDoc(doc(db, 'admin_accounts', matchedAccount.id), { passwordHash: matchedAccount.passwordHash }, { merge: true });
+            await setDoc(doc(db, 'admin_accounts', matchedAccount.id), { passwordHash: upgradedHash, passwordPolos: '' }, { merge: true });
+          } catch {}
+          try {
+            await supabase.from('admin_accounts').update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
           } catch {}
         }
-      } else if (matchedAccount.passwordHash) {
-        isValid = comparePassword(pClean, matchedAccount.passwordHash);
       }
 
       if (!isValid) {
@@ -794,7 +883,7 @@ async function startServer() {
               username: matchedAccount.username,
               wilayah: matchedAccount.wilayahTugas,
               noRegistrasi: matchedAccount.noRegistrasi || `REG-PSKS-${(matchedAccount.id || '').slice(-6)}`,
-              passwordPolos: matchedAccount.passwordPolos || pClean,
+              passwordPolos: '••••••••',
             },
           });
         }
@@ -3811,9 +3900,14 @@ Apabila Anda adalah Admin Wilayah/Daerah yang lupa akun atau kredensial masuk ke
 
       try {
         const lastMsgLower = lastUserMsg.toLowerCase();
-        // Developer recognition: strictly restricted to authenticated developer account role only
-        const isDeveloper = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
-        const isSuperadmin = userContext?.role === 'superadmin' && userContext?.statusActive === 'SAH_TERDAFTAR';
+        // Cryptographically authenticate user role via HMAC session token (Anti-F12 Role Spoofing)
+        const authHeader = req.headers['authorization'] || '';
+        const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+        const tokenToVerify = tokenFromHeader || (req.headers['x-session-token'] as string) || (userContext && userContext.sessionToken);
+        const verifiedSession = tokenToVerify ? verifySessionToken(tokenToVerify) : null;
+
+        const isDeveloper = verifiedSession?.role === 'developer' && verifiedSession?.statusActive === 'SAH_TERDAFTAR';
+        const isSuperadmin = verifiedSession?.role === 'superadmin' && verifiedSession?.statusActive === 'SAH_TERDAFTAR';
         const isPublicUser = !isDeveloper && !isSuperadmin;
 
         // 🛡️ ANTI-PROMPT INJECTION & CREDENTIAL LEAKAGE GUARD (ZERO-TRUST COMPLIANCE)

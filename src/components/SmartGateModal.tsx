@@ -630,7 +630,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         role: 'user',
         nik: nikTrim,
         noWhatsapp: waTrim,
-        passwordPolos: pTrim,
         passwordHash: hashPassword(pTrim),
         terakhirLogin: 'Baru mendaftar',
         isOnline: false,
@@ -672,7 +671,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         wilayah: selectedRegisterRegion,
         waktuPendaftaran: formattedDate,
         noRegistrasi: ticketNumber,
-        passwordPolos: pTrim,
+        passwordPolos: '••••••••',
         nik: nikTrim,
         noWhatsapp: waTrim,
       };
@@ -964,7 +963,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             statusActive: sbUser.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
             wilayahTugas: sbUser.wilayahTugas || restData.wilayahTugas || '',
             passwordHash: sbUser.passwordHash || restData.passwordHash || '',
-            passwordPolos: sbUser.passwordPolos || restData.passwordPolos || '',
+            passwordPolos: undefined,
             statusVerval: sbUser.statusVerval || restData.statusVerval || '',
             alasanPenolakan: sbUser.alasanPenolakan || restData.alasanPenolakan || '',
             noRegistrasi: sbUser.noRegistrasi || restData.noRegistrasi || '',
@@ -987,11 +986,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
       if (tempResetPass && pInput === tempResetPass) {
         isValid = true;
-      } else if (matchedAccount.passwordPolos) {
-        // Hanya passwordPolos aktif yang sah yang diterima
-        isValid = (pInput === matchedAccount.passwordPolos);
       } else if (matchedAccount.passwordHash) {
         isValid = comparePassword(pInput, matchedAccount.passwordHash);
+      } else if (matchedAccount.passwordPolos) {
+        isValid = (pInput === matchedAccount.passwordPolos);
       }
 
       if (isValid) {
@@ -1006,7 +1004,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               wilayah: matchedAccount.wilayahTugas,
               waktuPendaftaran: matchedAccount.tanggalPendaftaranFormatted || matchedAccount.waktuPendaftaran || 'Baru mendaftar',
               noRegistrasi: matchedAccount.noRegistrasi || `REG-PSKS-${(matchedAccount.id || '').slice(-6)}`,
-              passwordPolos: matchedAccount.passwordPolos || pInput,
+              passwordPolos: '••••••••',
             };
             setRegistrationTicket(ticketData);
             try {
@@ -2502,13 +2500,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             <div>
                               <span className="text-[9px] font-black uppercase text-slate-400 block">Sandi Sementara Anda:</span>
                               <code className="text-sm sm:text-base font-mono font-black text-emerald-900 tracking-wider">
-                                {ticket?.temporaryPassword || liveAcc?.passwordPolos || '••••••••'}
+                                {ticket?.temporaryPassword || '••••••••'}
                               </code>
                             </div>
                             <button
                               type="button"
                               onClick={() => {
-                                const pass = ticket?.temporaryPassword || liveAcc?.passwordPolos || '';
+                                const pass = ticket?.temporaryPassword || '';
                                 if (pass) {
                                   navigator.clipboard.writeText(pass);
                                   setForgotTicketCopied(true);
@@ -2534,7 +2532,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const pass = ticket?.temporaryPassword || liveAcc?.passwordPolos || '';
+                              const pass = ticket?.temporaryPassword || '';
                               setUsernameInput(liveAcc?.username || targetUname);
                               setPasswordInput(pass);
                               setErrorMessage('');

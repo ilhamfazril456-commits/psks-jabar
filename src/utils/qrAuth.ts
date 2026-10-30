@@ -4,9 +4,12 @@ export const PERMANENT_DEVELOPER_QR_TOKEN = 'ENC::DEV-7A3C5F9B2D';
 
 export interface QRAuthResult {
   valid: boolean;
+  requiresPin?: boolean;
   role?: 'superadmin' | 'developer';
   nama?: string;
   wilayah?: string;
+  challengeToken?: string;
+  sessionToken?: string;
   message?: string;
 }
 
@@ -77,10 +80,11 @@ export function validateQRCardPayload(payload: string): QRAuthResult {
   ) {
     return {
       valid: true,
+      requiresPin: true,
       role: 'superadmin',
       nama: 'Superadmin Jabar',
       wilayah: 'PROVINSI JAWA BARAT',
-      message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
+      message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
     };
   }
 
@@ -91,10 +95,11 @@ export function validateQRCardPayload(payload: string): QRAuthResult {
   ) {
     return {
       valid: true,
+      requiresPin: true,
       role: 'developer',
       nama: 'Ilham Fazril',
       wilayah: 'Pusat Developer Jabar',
-      message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
+      message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
     };
   }
 
@@ -108,19 +113,21 @@ export function validateQRCardPayload(payload: string): QRAuthResult {
       if (tokenUpper.includes('SA-8F2B9D4C1E')) {
         return {
           valid: true,
+          requiresPin: true,
           role: 'superadmin',
           nama: 'Superadmin Jabar',
           wilayah: 'PROVINSI JAWA BARAT',
-          message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
+          message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
         };
       }
       if (tokenUpper.includes('DEV-7A3C5F9B2D')) {
         return {
           valid: true,
+          requiresPin: true,
           role: 'developer',
           nama: 'Ilham Fazril',
           wilayah: 'Pusat Developer Jabar',
-          message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
+          message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
         };
       }
     }

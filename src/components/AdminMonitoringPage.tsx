@@ -688,8 +688,8 @@ export const AdminMonitoringPage: React.FC<AdminMonitoringPageProps> = ({
 
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="font-bold text-slate-500">Kata Sandi Akses:</span>
-                  <span className="font-bold text-slate-800 font-mono">
-                    {selectedAccount.passwordPolos || '••••••••'}
+                  <span className="font-bold text-emerald-700 font-mono text-xs">
+                    •••••••• (Terenkripsi Bcrypt)
                   </span>
                 </div>
               </div>

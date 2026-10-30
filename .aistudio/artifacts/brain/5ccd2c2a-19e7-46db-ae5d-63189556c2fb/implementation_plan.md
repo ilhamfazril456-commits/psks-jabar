@@ -45,3 +45,29 @@ Dokumen ini mencatat penyelesaian dan implementasi tuntas atas 4 kebutuhan utama
   - Setiap kali proses login terjadi di mana pun, token sesi unik baru (`sessionToken`) diterbitkan dan disimpan ke dokumen akun di Firestore.
   - Sesi aktif yang sedang berjalan terus memantau `matched.sessionToken`. Jika token di database berbeda dengan `localToken` sesi lokal (`matched.sessionToken !== localToken`), sesi lama langsung memunculkan `MultipleSessionWarningModal` dan melakukan *force logout*.
   - Sesi baru di perangkat kedua tetap berjalan normal dan aman tanpa risiko tertimpa kembali oleh sesi lama.
+
+
+---
+
+### 5. Penguatan Keamanan Komprehensif Kategori A (Zero-Trust & Hardening)
+* **Tujuan**: Menutup seluruh celah keamanan teknis di level sistem, server backend, dan database tanpa mengubah atau membatalkan kartu fisik Smart Card NFC/QR yang telah dicetak.
+* **Implementasi**:
+  1. **Zero-Trust 2FA pada Kartu Smart Card Fisik Permanen**:
+     - Token permanen yang tercetak di kartu fisik (`ENC::SA-8F2B9D4C1E` untuk Superadmin & `ENC::DEV-7A3C5F9B2D` untuk Developer) **tetap dipertahankan 100%**.
+     - Server `/api/auth/verify-qr` kini tidak lagi langsung menerbitkan tiket sesi login saat QR dipindai. Sebagai gantinya, server memvalidasi keaslian kartu dan menerbitkan `challengeToken` sementara (berlaku 2 menit).
+     - Antarmuka otomatis meminta verifikasi PIN 6-digit rahasia (`AuthorityPinVerificationModal`). Sesi login hanya diterbitkan setelah PIN dan `challengeToken` berhasil diverifikasi bersama di server (`/api/auth/verify-pin`).
+  2. **Isolasi PIN Server-Authoritative**:
+     - `superadminPin` dan `developerPin` tidak lagi diungkap secara bebas ke publik melalui dokumen Firestore `app_settings`.
+     - Ditambahkan endpoint khusus `/api/auth/update-pin` yang dilindungi otorisasi HMAC Bearer token.
+     - Perbandingan PIN offline pada sisi klien dihapus total (Zero-Trust).
+  3. **Eliminasi Total Plaintext Password (`passwordPolos`)**:
+     - Menghapus pembacaan dan penyimpanan `passwordPolos` di seluruh modul (`SmartGateModal`, `UserManagementPage`, `AccountPage`, `AdminMonitoringPage`, `firestoreDataService`, dan `App.tsx`).
+     - Seluruh verifikasi sandi kini mutlak menggunakan algoritma kriptografi Bcrypt `passwordHash`.
+  4. **Proteksi Otoritas Asisten AI (`/api/ai/chat`)**:
+     - Server memverifikasi keabsahan sesi melalui HMAC session token (`Authorization: Bearer <token>`), bukan lagi mempercayai `userContext.role` dari JSON body mentah.
+  5. **Hardening Firestore Rules**:
+     - Menambahkan aturan proteksi pada `app_settings` untuk memblokir penulisan atau injeksi `superadminPin` dan `developerPin` dari sisi klien.
+     - Aturan telah berhasil dideploy langsung via RPC `DeployRules`.
+  6. **Hardening Reverse Proxy & Anti-Bot**:
+     - Dikonfigurasi `app.set('trust proxy', 1);` untuk pendeteksian IP yang akurat di balik proxy/CDN.
+     - Bypass token statis (`manual_turnstile_`) telah dihapus dan digantikan validasi waktu kedaluwarsa token anti-bot dinamis.

@@ -229,7 +229,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   // 1. EDIT PASSWORD ACTION
   const handleOpenEditPassword = (account: AdminAccount) => {
     setEditingAccount(account);
-    setNewPassword(account.passwordPolos || '');
+    setNewPassword('');
     setShowNewPassword(false);
     setEditError('');
   };
@@ -259,7 +259,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
     const updatedAccount: AdminAccount = {
       ...editingAccount,
-      passwordPolos: pTrim,
+      passwordPolos: undefined,
       passwordHash: hashPassword(pTrim),
       resetTicket: null as any,
       lastUpdatedTimestamp: Date.now(),
@@ -276,7 +276,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
       if (rawTicket) {
         const parsed = JSON.parse(rawTicket);
         if ((parsed?.username || '').toLowerCase().trim() === targetUname.toLowerCase().trim()) {
-          parsed.passwordPolos = pTrim;
+          delete parsed.passwordPolos;
           localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(parsed));
           window.dispatchEvent(new Event('psks_registration_ticket_updated'));
         }
@@ -350,12 +350,11 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   const handleConfirmApprove = () => {
     if (!approvingAccount) return;
     const account = approvingAccount;
-    const preservedPassPolos = account.passwordPolos || (account as any).data?.passwordPolos || '';
     const preservedPassHash = account.passwordHash || (account as any).data?.passwordHash || '';
 
     const updatedAccount: AdminAccount = {
       ...account,
-      passwordPolos: preservedPassPolos,
+      passwordPolos: undefined,
       passwordHash: preservedPassHash,
       statusVerval: 'DISETUJUI',
       statusActive: 'SAH_TERDAFTAR',
@@ -443,7 +442,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
 
     const updatedAccount: AdminAccount = {
       ...resettingAccount,
-      passwordPolos: tempPass,
+      passwordPolos: undefined,
       passwordHash: hashPassword(tempPass),
       resetTicket: {
         ...(resettingAccount.resetTicket || {
@@ -927,7 +926,7 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                     const isApproved = user.statusVerval === 'DISETUJUI' || (!user.statusVerval && user.statusActive === 'SAH_TERDAFTAR');
                     const isFrozen = user.isFrozen === true || user.statusAkun === 'DIBEKUKAN';
                     const isPassVisible = visiblePasswords[user.id] || false;
-                    const plainPass = user.passwordPolos || user.resetTicket?.temporaryPassword || (user as any).data?.passwordPolos || '********';
+                    const plainPass = user.resetTicket?.temporaryPassword || '••••••••';
 
                     return (
                       <tr

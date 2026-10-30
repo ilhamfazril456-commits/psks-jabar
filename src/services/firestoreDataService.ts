@@ -87,7 +87,7 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
       statusActive: row.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
       wilayahTugas: row.wilayahTugas || restData.wilayahTugas || '',
       passwordHash: row.passwordHash || restData.passwordHash || '',
-      passwordPolos: row.passwordPolos || restData.passwordPolos || '',
+      passwordPolos: '',
       sessionToken: row.sessionToken || restData.sessionToken || '',
       loginTimestamp: typeof row.loginTimestamp === 'number' ? row.loginTimestamp : (typeof restData.loginTimestamp === 'number' ? restData.loginTimestamp : 0),
     };

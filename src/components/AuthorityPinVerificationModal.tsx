@@ -7,8 +7,9 @@ interface AuthorityPinVerificationModalProps {
   nama?: string;
   wilayah?: string;
   method?: 'manual' | 'qr' | 'nfc';
+  challengeToken?: string;
   appSettings?: AppSettings;
-  onSuccess: () => void;
+  onSuccess: (sessionData?: { sessionToken?: string; role?: string; nama?: string; wilayah?: string }) => void;
   onCancel: () => void;
 }
 
@@ -17,6 +18,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   nama,
   wilayah,
   method = 'manual',
+  challengeToken,
   appSettings,
   onSuccess,
   onCancel,
@@ -136,7 +138,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
       const res = await fetch('/api/auth/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinToTest, targetRole: role }),
+        body: JSON.stringify({ pin: pinToTest, targetRole: role, challengeToken }),
       });
 
       const data = await res.json();
@@ -145,6 +147,14 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         setIsSuccess(true);
         setErrorMessage(null);
         setIsVerifying(false);
+
+        // Store authoritative sessionToken if issued
+        if (data.sessionToken) {
+          try {
+            sessionStorage.setItem('psks_session_token', data.sessionToken);
+            localStorage.setItem('psks_session_token', data.sessionToken);
+          } catch {}
+        }
 
         // Play subtle success chime
         try {
@@ -167,7 +177,12 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         } catch (_) {}
 
         setTimeout(() => {
-          onSuccess();
+          onSuccess({
+            sessionToken: data.sessionToken,
+            role: data.role || role,
+            nama: data.nama || nama,
+            wilayah: data.wilayah || wilayah,
+          });
         }, 400);
         return;
       }
@@ -185,33 +200,8 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         setErrorMessage(data.message || '❌ PIN salah.');
       }
     } catch {
-      // Offline fallback: verify against appSettings if backend is completely unreachable
-      let expectedPin = (appSettings?.superadminPin || '123456').trim();
-      if (role === 'developer') {
-        expectedPin = (appSettings?.developerPin || '992211').trim();
-      }
-      const isCorrect = pinToTest === expectedPin;
-
-      if (isCorrect) {
-        setIsSuccess(true);
-        setErrorMessage(null);
-        setIsVerifying(false);
-        setTimeout(() => {
-          onSuccess();
-        }, 400);
-      } else {
-        setIsVerifying(false);
-        const newFailed = failedCount + 1;
-        setFailedCount(newFailed);
-        setDigits(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-        if (newFailed >= 3) {
-          setLockoutRemaining(15);
-          setErrorMessage('⚠️ 3 kali PIN salah. Akses dibekukan selama 15 detik.');
-        } else {
-          setErrorMessage(`❌ PIN salah. Sisa kesempatan: ${3 - newFailed} kali.`);
-        }
-      }
+      setIsVerifying(false);
+      setErrorMessage('❌ Gagal terhubung ke server autentikasi. Silakan periksa koneksi jaringan Anda.');
     }
   };
 

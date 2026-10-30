@@ -303,14 +303,30 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
     setIsSavingSuperadminPin(true);
     try {
+      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
+      const res = await fetch('/api/auth/update-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          newPin: cleanPin,
+          pinType: 'superadmin',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Gagal menyimpan PIN ke server');
+      }
+
       if (onSaveAppSettings && appSettings) {
         await onSaveAppSettings({
           ...appSettings,
-          superadminPin: cleanPin,
           pinSecurityUpdatedAt: Date.now(),
         });
       }
-      setSuperadminPinSuccess('✅ PIN Smart Access Card Superadmin berhasil diperbarui dan aktif realtime di database!');
+      setSuperadminPinSuccess('✅ PIN Smart Access Card Superadmin berhasil diperbarui dan aktif realtime di server!');
       setTimeout(() => setSuperadminPinSuccess(null), 5000);
     } catch (err: any) {
       setSuperadminPinError('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));
@@ -373,10 +389,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return;
     }
 
-    // Verifikasi kata sandi lama
-    const matchesOld =
-      (targetAccount.passwordPolos && targetAccount.passwordPolos === oldTrim) ||
-      (targetAccount.passwordHash && comparePassword(oldTrim, targetAccount.passwordHash));
+    // Verifikasi kata sandi lama via Bcrypt Hash
+    const matchesOld = targetAccount.passwordHash
+      ? comparePassword(oldTrim, targetAccount.passwordHash)
+      : (targetAccount.passwordPolos && targetAccount.passwordPolos === oldTrim);
 
     if (!matchesOld) {
       setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
@@ -389,8 +405,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       const nowMs = Date.now();
       const updatedAccount: AdminAccount = {
         ...targetAccount,
-        passwordPolos: newTrim,
         passwordHash: newHash,
+        passwordPolos: undefined,
         lastUpdatedTimestamp: nowMs,
         lastEditedBy: session.username || session.nama,
         lastEditedByRole: session.role,
@@ -402,7 +418,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         const storedSession = sessionStorage.getItem('psks_active_session');
         if (storedSession) {
           const parsed = JSON.parse(storedSession);
-          parsed.passwordPolos = newTrim;
+          delete parsed.passwordPolos;
           parsed.passwordHash = newHash;
           parsed.lastUpdatedTimestamp = nowMs;
           sessionStorage.setItem('psks_active_session', JSON.stringify(parsed));
@@ -633,7 +649,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       namaAdmin: userIn,
       wilayahTugas: wilayahIn,
       role: assignedRole,
-      passwordPolos: sandiIn,
       passwordHash: hashPassword(sandiIn),
       terakhirLogin: 'Baru dibuat',
     });
@@ -651,7 +666,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   const handleOpenEditModal = (account: AdminAccount) => {
     setEditingAccount(account);
     setEditAdminUser(account.username);
-    setEditAdminPassword(account.passwordPolos || '');
+    setEditAdminPassword('');
     setEditAdminWilayah(account.wilayahTugas);
   };
 
@@ -663,20 +678,23 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     const sandiNew = editAdminPassword.trim();
     const wilayahNew = editAdminWilayah;
 
-    if (!userNew || !sandiNew || !wilayahNew) {
+    if (!userNew || !wilayahNew) {
       alert('Mohon isi semua data perubahan!');
       return;
     }
 
     if (onUpdateAdminAccount) {
-      onUpdateAdminAccount({
+      const updateData: AdminAccount = {
         ...editingAccount,
         username: userNew,
         namaAdmin: userNew,
         wilayahTugas: wilayahNew,
-        passwordPolos: sandiNew,
-        passwordHash: hashPassword(sandiNew),
-      });
+        passwordPolos: undefined,
+      };
+      if (sandiNew) {
+        updateData.passwordHash = hashPassword(sandiNew);
+      }
+      onUpdateAdminAccount(updateData);
     }
 
     alert("📝 Perubahan Berhasil!\nData Kredensial Admin Wilayah Berhasil Diperbarui & Sinkron Global.");

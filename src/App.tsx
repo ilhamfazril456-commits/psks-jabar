@@ -1490,9 +1490,8 @@ export default function App() {
               (def) => def.id === docId || (def.username || '').toLowerCase().trim() === uname
             );
 
-            // For admin accounts and user accounts, preserve real updated password
+            // For admin accounts and user accounts, preserve real updated password hash
             const accDataObj = accData as any;
-            let plainPass = accData.passwordPolos || accDataObj.data?.passwordPolos || defaultMatch?.passwordPolos || '';
             let passHash = accData.passwordHash || accDataObj.data?.passwordHash || defaultMatch?.passwordHash || '';
 
             const safeRole =
@@ -1525,7 +1524,7 @@ export default function App() {
               role: safeRole,
               passwordHash: passHash,
               terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
-              passwordPolos: plainPass,
+              passwordPolos: '',
               registeredIp: accData.registeredIp || undefined,
               deviceId: accData.deviceId || undefined,
             });
@@ -1559,7 +1558,7 @@ export default function App() {
                 namaAdmin: existing.namaAdmin || def.namaAdmin || '',
                 wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
                 role: existing.role || def.role || 'admin',
-                passwordPolos: existing.passwordPolos || def.passwordPolos,
+                passwordPolos: '',
                 passwordHash: existing.passwordHash || def.passwordHash || '',
               };
               loadedMap.set(existing.id, sanitized);
@@ -2974,8 +2973,7 @@ export default function App() {
         // 4. Check Account Edited remotely by an authoritative superior
         // ATURAN MUTLAK: Perubahan password/kredensial secara MANDIRI DILARANG diberi pop-up dan DILARANG ditendang keluar!
         const passwordChanged = Boolean(
-          (session.passwordHash && matched.passwordHash && session.passwordHash !== matched.passwordHash) ||
-          (session.passwordPolos && matched.passwordPolos && session.passwordPolos !== matched.passwordPolos)
+          session.passwordHash && matched.passwordHash && session.passwordHash !== matched.passwordHash
         );
         const usernameChanged = Boolean(
           session.username && matched.username && session.username.toLowerCase().trim() !== matched.username.toLowerCase().trim()
@@ -3011,7 +3009,6 @@ export default function App() {
         if (passwordChanged && !isSuperiorEdit) {
           setSession((prev) => ({
             ...prev,
-            passwordPolos: matched.passwordPolos || prev.passwordPolos,
             passwordHash: matched.passwordHash || prev.passwordHash,
             lastUpdatedTimestamp: matched.lastUpdatedTimestamp || prev.lastUpdatedTimestamp,
           }));
@@ -4163,7 +4160,6 @@ export default function App() {
         const ticketUname = (parsed?.username || '').toLowerCase().trim();
         if (ticketUname && (ticketUname === targetUname || (prevUname && ticketUname === prevUname) || (targetId && ticketUname === targetId))) {
           parsed.username = sanitizedAdmin.username || parsed.username;
-          parsed.passwordPolos = sanitizedAdmin.passwordPolos || parsed.passwordPolos;
           parsed.statusActive = sanitizedAdmin.statusActive || parsed.statusActive;
           parsed.statusVerval = sanitizedAdmin.statusVerval || parsed.statusVerval;
           localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(parsed));
@@ -4210,7 +4206,6 @@ export default function App() {
       setSession((prev) => {
         const updated = {
           ...prev,
-          passwordPolos: sanitizedAdmin.passwordPolos || prev.passwordPolos,
           passwordHash: sanitizedAdmin.passwordHash || prev.passwordHash,
           lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
         };

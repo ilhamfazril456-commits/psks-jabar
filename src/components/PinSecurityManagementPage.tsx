@@ -80,13 +80,29 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
     setIsSavingSuperadmin(true);
     try {
+      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
+      const res = await fetch('/api/auth/update-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          newPin: cleanPin,
+          pinType: 'superadmin',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Gagal menyimpan PIN ke server');
+      }
+
       const updated: AppSettings = {
         ...appSettings,
-        superadminPin: cleanPin,
         pinSecurityUpdatedAt: Date.now(),
       };
       await onSaveSettings(updated);
-      setSuccessMessage('✅ PIN Smart Card Superadmin berhasil diperbarui dan aktif realtime di database!');
+      setSuccessMessage('✅ PIN Smart Card Superadmin berhasil diperbarui dan aktif realtime di server!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
       setErrorMessage('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));
@@ -107,13 +123,29 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
     setIsSavingDeveloper(true);
     try {
+      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
+      const res = await fetch('/api/auth/update-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          newPin: cleanPin,
+          pinType: 'developer',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Gagal menyimpan PIN ke server');
+      }
+
       const updated: AppSettings = {
         ...appSettings,
-        developerPin: cleanPin,
         pinSecurityUpdatedAt: Date.now(),
       };
       await onSaveSettings(updated);
-      setSuccessMessage('✅ PIN Smart Card Developer berhasil diperbarui dan aktif realtime di database!');
+      setSuccessMessage('✅ PIN Smart Card Developer berhasil diperbarui dan aktif realtime di server!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
       setErrorMessage('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));

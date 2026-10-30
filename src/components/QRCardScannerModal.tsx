@@ -61,6 +61,7 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
     nama: string;
     wilayah: string;
     method: 'qr' | 'nfc';
+    challengeToken?: string;
   } | null>(null);
   const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -156,11 +157,13 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
       if (isHandlingScanRef.current) return;
       if (!decodedText || typeof decodedText !== 'string') return;
 
-      let result = validateQRCardPayload(decodedText);
-      if (!result.valid) {
-        try {
-          result = await validateQRCardPayloadAsync(decodedText);
-        } catch (_) {}
+      let result: any = null;
+      try {
+        result = await validateQRCardPayloadAsync(decodedText);
+      } catch (_) {}
+
+      if (!result || !result.valid) {
+        result = validateQRCardPayload(decodedText);
       }
 
       if (result.valid && result.role) {
@@ -169,13 +172,14 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         stopCamera();
         stopNfcScanning();
 
-        if (mode === 'login') {
+        if (mode === 'login' || result.requiresPin) {
           // Pause and require 6-digit PIN verification before granting login
           setPendingCardAuth({
             role: result.role,
             nama: result.nama || (result.role === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar'),
             wilayah: result.wilayah || 'PROVINSI JAWA BARAT',
             method,
+            challengeToken: result.challengeToken,
           });
         } else {
           setScanSuccessResult({
@@ -584,6 +588,7 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         nama={pendingCardAuth.nama}
         wilayah={pendingCardAuth.wilayah}
         method={pendingCardAuth.method}
+        challengeToken={pendingCardAuth.challengeToken}
         appSettings={appSettings}
         onSuccess={() => {
           triggerSuccessFeedback();
