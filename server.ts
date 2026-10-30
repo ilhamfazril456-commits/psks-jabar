@@ -781,35 +781,43 @@ async function startServer() {
       const uClean = username.trim().toLowerCase();
       const pClean = password.trim();
 
-      // 1. Look up account from Supabase (Primary Source of Truth)
+      // 1. Look up account from Supabase (checking segregated tables first)
       let matchedAccount: any = null;
-      try {
-        const { data, error } = await supabase
-          .from('admin_accounts')
-          .select('*')
-          .or(`username.ilike.${uClean},id.eq.${uClean}`)
-          .maybeSingle();
+      const sbTablesToCheck = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
+      for (const t of sbTablesToCheck) {
+        try {
+          const { data, error } = await supabase
+            .from(t)
+            .select('*')
+            .or(`username.ilike.${uClean},id.eq.${uClean}`)
+            .maybeSingle();
 
-        if (!error && data) {
-          const restData = data.data && typeof data.data === 'object' ? data.data : {};
-          matchedAccount = {
-            id: data.id,
-            username: data.username || restData.username || data.id,
-            namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
-            role: data.role || restData.role || 'admin',
-            statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
-            wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
-            passwordHash: data.passwordHash || restData.passwordHash || '',
-            passwordPolos: data.passwordPolos || restData.passwordPolos || '',
-            statusVerval: data.statusVerval || restData.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
-            alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
-            noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
-            isFrozen: data.isFrozen === true || restData.isFrozen === true,
-            statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
-          };
+          if (!error && data) {
+            const restData = data.data && typeof data.data === 'object' ? data.data : {};
+            matchedAccount = {
+              id: data.id,
+              sbTableSource: t,
+              username: data.username || restData.username || data.id,
+              namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
+              role: data.role || restData.role || (t === 'user_accounts' ? 'user' : t === 'superadmin_accounts' ? 'superadmin' : t === 'dev_accounts' ? 'developer' : 'admin'),
+              statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+              wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
+              passwordHash: data.passwordHash || restData.passwordHash || '',
+              passwordPolos: data.passwordPolos || restData.passwordPolos || '',
+              statusVerval: data.statusVerval || restData.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+              alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
+              noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
+              isFrozen: data.isFrozen === true || restData.isFrozen === true,
+              statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
+              nik: data.nik || restData.nik || '',
+              nikHash: data.nikHash || restData.nikHash || '',
+              noWhatsapp: data.noWhatsapp || restData.noWhatsapp || '',
+            };
+            break;
+          }
+        } catch (sbErr) {
+          // Table may not exist yet, continue checking others
         }
-      } catch (sbErr) {
-        console.warn('[Auth Server] Supabase lookup notice:', sbErr);
       }
 
       // 1.5. Look up account from segregated Firestore collections (Zero-Trust Architecture)
@@ -928,7 +936,11 @@ async function startServer() {
             await setDoc(doc(db, targetCollection, matchedAccount.id), { passwordHash: upgradedHash, passwordPolos: '' }, { merge: true });
           } catch {}
           try {
-            await supabase.from('admin_accounts').update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
+            const sbTable = (matchedAccount as any).sbTableSource || (matchedAccount.role === 'user' ? 'user_accounts' : matchedAccount.role === 'developer' ? 'dev_accounts' : matchedAccount.role === 'superadmin' ? 'superadmin_accounts' : 'admin_accounts');
+            await supabase.from(sbTable).update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
+            if (sbTable !== 'admin_accounts') {
+              await supabase.from('admin_accounts').update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
+            }
           } catch {}
         }
       }

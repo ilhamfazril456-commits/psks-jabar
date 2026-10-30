@@ -955,30 +955,37 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     if (!matchedAccount) {
       try {
         const { supabase } = await import('../lib/supabase');
-        const { data: sbUser } = await supabase
-          .from('admin_accounts')
-          .select('*')
-          .or(`username.ilike.${uLower},id.eq.${uLower}`)
-          .maybeSingle();
+        const sbTables = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
+        for (const t of sbTables) {
+          const { data: sbUser } = await supabase
+            .from(t)
+            .select('*')
+            .or(`username.ilike.${uLower},id.eq.${uLower}`)
+            .maybeSingle();
 
-        if (sbUser) {
-          const restData = sbUser.data && typeof sbUser.data === 'object' ? sbUser.data : {};
-          matchedAccount = {
-            id: sbUser.id,
-            username: sbUser.username || restData.username || sbUser.id,
-            namaAdmin: sbUser.namaAdmin || restData.namaAdmin || sbUser.username,
-            role: sbUser.role || restData.role || 'user',
-            statusActive: sbUser.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
-            wilayahTugas: sbUser.wilayahTugas || restData.wilayahTugas || '',
-            passwordHash: sbUser.passwordHash || restData.passwordHash || '',
-            passwordPolos: undefined,
-            statusVerval: sbUser.statusVerval || restData.statusVerval || '',
-            alasanPenolakan: sbUser.alasanPenolakan || restData.alasanPenolakan || '',
-            noRegistrasi: sbUser.noRegistrasi || restData.noRegistrasi || '',
-            isFrozen: sbUser.isFrozen === true || restData.isFrozen === true,
-            statusAkun: sbUser.statusAkun || restData.statusAkun || 'AKTIF',
-            resetTicket: sbUser.resetTicket || restData.resetTicket || null,
-          } as AdminAccount;
+          if (sbUser) {
+            const restData = sbUser.data && typeof sbUser.data === 'object' ? sbUser.data : {};
+            matchedAccount = {
+              id: sbUser.id,
+              username: sbUser.username || restData.username || sbUser.id,
+              namaAdmin: sbUser.namaAdmin || restData.namaAdmin || sbUser.username,
+              role: sbUser.role || restData.role || (t === 'user_accounts' ? 'user' : t === 'superadmin_accounts' ? 'superadmin' : t === 'dev_accounts' ? 'developer' : 'admin'),
+              statusActive: sbUser.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+              wilayahTugas: sbUser.wilayahTugas || restData.wilayahTugas || '',
+              passwordHash: sbUser.passwordHash || restData.passwordHash || '',
+              passwordPolos: undefined,
+              statusVerval: sbUser.statusVerval || restData.statusVerval || '',
+              alasanPenolakan: sbUser.alasanPenolakan || restData.alasanPenolakan || '',
+              noRegistrasi: sbUser.noRegistrasi || restData.noRegistrasi || '',
+              isFrozen: sbUser.isFrozen === true || restData.isFrozen === true,
+              statusAkun: sbUser.statusAkun || restData.statusAkun || 'AKTIF',
+              resetTicket: sbUser.resetTicket || restData.resetTicket || null,
+              nik: sbUser.nik || restData.nik || '',
+              nikHash: sbUser.nikHash || restData.nikHash || '',
+              noWhatsapp: sbUser.noWhatsapp || restData.noWhatsapp || '',
+            } as AdminAccount;
+            break;
+          }
         }
       } catch {}
     }

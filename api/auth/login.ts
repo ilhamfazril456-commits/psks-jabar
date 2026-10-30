@@ -69,36 +69,44 @@ export default async function handler(req: any, res: any) {
     const uClean = username.trim().toLowerCase();
     const pClean = password.trim();
 
-    // 1. Query Supabase
+    // 1. Query Supabase (checking segregated tables first)
     let matchedAccount: any = null;
-    try {
-      const { data, error } = await supabase
-        .from('admin_accounts')
-        .select('*')
-        .or(`username.ilike.${uClean},id.eq.${uClean}`)
-        .maybeSingle();
+    const sbTablesToCheck = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
+    for (const t of sbTablesToCheck) {
+      try {
+        const { data, error } = await supabase
+          .from(t)
+          .select('*')
+          .or(`username.ilike.${uClean},id.eq.${uClean}`)
+          .maybeSingle();
 
-      if (!error && data) {
-        const restData = data.data && typeof data.data === 'object' ? data.data : {};
-        matchedAccount = {
-          id: data.id,
-          username: data.username || restData.username || data.id,
-          namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
-          role: data.role || restData.role || 'admin',
-          statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
-          wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
-          passwordHash: data.passwordHash || restData.passwordHash || '',
-          passwordPolos: restData.passwordPolos || '',
-          isFrozen: data.isFrozen === true || restData.isFrozen === true,
-          statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
-          statusVerval: data.statusVerval || restData.statusVerval || '',
-          alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
-          noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
-          resetTicket: data.resetTicket || restData.resetTicket || null,
-        };
+        if (!error && data) {
+          const restData = data.data && typeof data.data === 'object' ? data.data : {};
+          matchedAccount = {
+            id: data.id,
+            sbTableSource: t,
+            username: data.username || restData.username || data.id,
+            namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
+            role: data.role || restData.role || (t === 'user_accounts' ? 'user' : t === 'superadmin_accounts' ? 'superadmin' : t === 'dev_accounts' ? 'developer' : 'admin'),
+            statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
+            wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
+            passwordHash: data.passwordHash || restData.passwordHash || '',
+            passwordPolos: restData.passwordPolos || '',
+            isFrozen: data.isFrozen === true || restData.isFrozen === true,
+            statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
+            statusVerval: data.statusVerval || restData.statusVerval || '',
+            alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
+            noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
+            resetTicket: data.resetTicket || restData.resetTicket || null,
+            nik: data.nik || restData.nik || '',
+            nikHash: data.nikHash || restData.nikHash || '',
+            noWhatsapp: data.noWhatsapp || restData.noWhatsapp || '',
+          };
+          break;
+        }
+      } catch (dbErr) {
+        // Table might not exist yet, continue checking others
       }
-    } catch (dbErr) {
-      console.warn('[Vercel Auth] Supabase lookup error:', dbErr);
     }
 
     if (!matchedAccount) {

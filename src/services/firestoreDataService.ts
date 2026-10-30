@@ -1,5 +1,6 @@
 import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import { OperationType, handleFirestoreError, isQuotaError } from '../lib/firebaseErrors';
+import { encryptSensitiveData, hashSearchableField } from '../utils/crypto';
 
 let firestoreModulePromise: Promise<{
   firestore: typeof import('firebase/firestore');
@@ -195,6 +196,17 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
 
     const { passwordPolos: _ignoredPass, ...sanitizedRest } = rest;
 
+    // Encrypt sensitive PII (NIK & WhatsApp) before persisting to Supabase
+    const rawNik = (sanitizedRest as any).nik || '';
+    const rawWa = (sanitizedRest as any).noWhatsapp || '';
+    const encNik = rawNik ? encryptSensitiveData(rawNik) : '';
+    const nikHash = rawNik ? hashSearchableField(rawNik) : ((sanitizedRest as any).nikHash || '');
+    const encWa = rawWa ? encryptSensitiveData(rawWa) : '';
+
+    if (rawNik) (sanitizedRest as any).nik = encNik;
+    if (nikHash) (sanitizedRest as any).nikHash = nikHash;
+    if (rawWa) (sanitizedRest as any).noWhatsapp = encWa;
+
     return {
       id: docId,
       username: safeUsername,
@@ -204,8 +216,12 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       wilayahTugas: safeWilayah,
       passwordHash: passwordHash || '',
       sessionToken: sessionToken || '',
+      ...(encNik ? { nik: encNik, nikHash } : {}),
+      ...(encWa ? { noWhatsapp: encWa } : {}),
       data: {
         ...sanitizedRest,
+        ...(encNik ? { nik: encNik, nikHash } : {}),
+        ...(encWa ? { noWhatsapp: encWa } : {}),
         loginTimestamp: cleaned.loginTimestamp || rest.loginTimestamp || 0,
       },
     };
@@ -822,8 +838,23 @@ export async function setFirestoreDoc(
   const isMerge = options?.merge === true;
 
   try {
-    if (isMerge && collectionName === 'admin_accounts') {
-      // PARTIAL UPDATE for admin_accounts: NEVER wipe omitted columns (like username, role, passwordHash)!
+    const isAccountCol =
+      collectionName === 'admin_accounts' ||
+      collectionName === 'user_accounts' ||
+      collectionName === 'superadmin_accounts' ||
+      collectionName === 'dev_accounts';
+
+    const targetTable =
+      collectionName === 'user_accounts' || data.role === 'user'
+        ? 'user_accounts'
+        : collectionName === 'superadmin_accounts' || docId === 'adm-super'
+        ? 'superadmin_accounts'
+        : collectionName === 'dev_accounts' || docId === 'adm-dev'
+        ? 'dev_accounts'
+        : 'admin_accounts';
+
+    if (isMerge && isAccountCol) {
+      // PARTIAL UPDATE for account collections: NEVER wipe omitted columns (like username, role, passwordHash)!
       const partialUpdate: Record<string, any> = {};
       if (data.username !== undefined && data.username !== '') {
         partialUpdate.username = data.username;
@@ -852,31 +883,53 @@ export async function setFirestoreDoc(
         partialUpdate.passwordHash = data.passwordHash;
       }
       if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
+      if (data.nik !== undefined) {
+        const enc = encryptSensitiveData(data.nik);
+        partialUpdate.nik = enc;
+        partialUpdate.nikHash = hashSearchableField(enc);
+      }
+      if (data.noWhatsapp !== undefined) {
+        partialUpdate.noWhatsapp = encryptSensitiveData(data.noWhatsapp);
+      }
 
       // Extract non-column fields to store in JSONB data (never persist plaintext passwordPolos)
-      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, ...rest } = data;
+      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, nik: _nik, noWhatsapp: _wa, ...rest } = data;
+      const encNik = _nik ? encryptSensitiveData(_nik) : '';
+      const nikHash = _nik ? hashSearchableField(_nik) : '';
+      const encWa = _wa ? encryptSensitiveData(_wa) : '';
+
       try {
-        const existing = await supabase.from('admin_accounts').select('id, data').eq('id', docId).maybeSingle();
+        let chosenTable = targetTable;
+        let existing = await supabase.from(chosenTable).select('id, data').eq('id', docId).maybeSingle();
+        if (existing.error && chosenTable !== 'admin_accounts') {
+          chosenTable = 'admin_accounts';
+          existing = await supabase.from(chosenTable).select('id, data').eq('id', docId).maybeSingle();
+        }
+
         if (!existing.data) {
           // Row does not exist yet in Supabase, perform complete upsert
           const row = mapDocToSupabaseRow(collectionName, docId, data);
           if (row.data && typeof row.data === 'object') {
             delete (row.data as any).passwordPolos;
+            delete (row.data as any).superadminPin;
           }
-          const { error } = await supabase.from('admin_accounts').upsert(row);
+          const { error } = await supabase.from(chosenTable).upsert(row);
           if (!error) supabaseOk = true;
           else supabaseError = error;
         } else {
           const existingData = existing.data?.data && typeof existing.data.data === 'object' ? { ...existing.data.data } : {};
           delete (existingData as any).passwordPolos;
+          delete (existingData as any).superadminPin;
           partialUpdate.data = {
             ...existingData,
             ...rest,
+            ...(encNik ? { nik: encNik, nikHash } : {}),
+            ...(encWa ? { noWhatsapp: encWa } : {}),
             ...(data.passwordHash !== undefined ? { passwordHash: data.passwordHash } : {}),
             ...(data.lastUpdatedTimestamp ? { lastUpdatedTimestamp: data.lastUpdatedTimestamp } : {}),
           };
 
-          const { error } = await supabase.from('admin_accounts').update(partialUpdate).eq('id', docId);
+          const { error } = await supabase.from(chosenTable).update(partialUpdate).eq('id', docId);
           if (!error) {
             supabaseOk = true;
           } else {
@@ -888,19 +941,30 @@ export async function setFirestoreDoc(
       }
     } else {
       const row = mapDocToSupabaseRow(collectionName, docId, data);
-      const { error } = await supabase.from(collectionName).upsert(row);
-      if (!error) {
+      let chosenTable = isAccountCol ? targetTable : collectionName;
+      let res = await supabase.from(chosenTable).upsert(row);
+      if (res.error && isAccountCol && chosenTable !== 'admin_accounts') {
+        chosenTable = 'admin_accounts';
+        res = await supabase.from(chosenTable).upsert(row);
+      }
+      if (!res.error) {
         supabaseOk = true;
       } else {
-        supabaseError = error;
+        supabaseError = res.error;
       }
     }
   } catch (sbErr) {
     supabaseError = sbErr;
   }
 
-  // Ensure critical collections (admin_accounts, security_signals) are immediately and synchronously written to Firestore as well
-  if (collectionName === 'admin_accounts' || collectionName === 'security_signals') {
+  // Ensure critical collections (admin_accounts, user_accounts, etc.) are immediately and synchronously written to Firestore as well
+  if (
+    collectionName === 'admin_accounts' ||
+    collectionName === 'user_accounts' ||
+    collectionName === 'superadmin_accounts' ||
+    collectionName === 'dev_accounts' ||
+    collectionName === 'security_signals'
+  ) {
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, collectionName, docId);
@@ -964,6 +1028,9 @@ export async function deleteFirestoreDoc(
 ): Promise<void> {
   try {
     await supabase.from(collectionName).delete().eq('id', docId);
+    if (collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
+      await supabase.from('admin_accounts').delete().eq('id', docId);
+    }
   } catch {}
 
   // Silent passive background delete from Firestore
