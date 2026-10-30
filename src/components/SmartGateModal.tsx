@@ -1158,6 +1158,23 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               </div>
             )}
 
+            {/* Desktop Co-Branding Dual Logos (Geulis Jabar Style: [PSKS] | [DINSOS JABAR]) */}
+            <div className="hidden md:flex items-center justify-center gap-5 lg:gap-6 mb-3 sm:mb-4 select-none shrink-0">
+              <img
+                src="/psks_horizontal_logo.webp"
+                alt="Logo Resmi PSKS Jawa Barat"
+                className="h-8 lg:h-9 w-auto object-contain pointer-events-none"
+                loading="eager"
+              />
+              <div className="h-6 w-[1.5px] bg-slate-300 rounded-full" />
+              <img
+                src="/dinsos_jabar_horizontal_logo.webp"
+                alt="Logo Resmi Dinas Sosial Provinsi Jawa Barat"
+                className="h-7 lg:h-8 w-auto object-contain pointer-events-none"
+                loading="eager"
+              />
+            </div>
+
             {/* Header Greeting inside White Area */}
             <div className={`relative z-10 text-center mb-1 sm:mb-2 shrink-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:block' : 'block'}`}>
               <h3 className="text-sm sm:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
