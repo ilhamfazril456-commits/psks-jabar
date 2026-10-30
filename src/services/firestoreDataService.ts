@@ -76,14 +76,14 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
     };
   }
 
-  if (collectionName === 'admin_accounts') {
+  if (collectionName === 'admin_accounts' || collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
     const restData = row.data && typeof row.data === 'object' ? row.data : {};
     return {
       id: row.id,
       ...restData,
       username: row.username || restData.username || row.id,
       namaAdmin: row.namaAdmin || restData.namaAdmin || '',
-      role: row.role || restData.role || 'admin',
+      role: row.role || restData.role || (collectionName === 'user_accounts' ? 'user' : collectionName === 'superadmin_accounts' ? 'superadmin' : collectionName === 'dev_accounts' ? 'developer' : 'admin'),
       statusActive: row.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
       wilayahTugas: row.wilayahTugas || restData.wilayahTugas || '',
       passwordHash: row.passwordHash || restData.passwordHash || '',
@@ -166,21 +166,23 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
     };
   }
 
-  if (collectionName === 'admin_accounts') {
+  if (collectionName === 'admin_accounts' || collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
     const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos, ...rest } = cleaned;
 
     // Strict protection for master accounts: prevent accidental downgrade or ID-as-username overwrite
     const safeRole =
-      docId === 'adm-dev' || username === 'ilhamfazril'
+      collectionName === 'dev_accounts' || docId === 'adm-dev' || username === 'ilhamfazril'
         ? 'developer'
-        : docId === 'adm-super' || (username && username.includes('superadmin'))
+        : collectionName === 'superadmin_accounts' || docId === 'adm-super' || (username && username.includes('superadmin'))
         ? 'superadmin'
+        : collectionName === 'user_accounts'
+        ? 'user'
         : role || 'admin';
 
     const safeUsername =
-      docId === 'adm-dev' && (!username || username === 'adm-dev')
+      safeRole === 'developer' && (!username || username === 'adm-dev')
         ? 'ilhamfazril'
-        : docId === 'adm-super' && (!username || username === 'adm-super')
+        : safeRole === 'superadmin' && (!username || username === 'adm-super')
         ? 'superadmin jabar'
         : username || docId;
 

@@ -71,3 +71,24 @@ Dokumen ini mencatat penyelesaian dan implementasi tuntas atas 4 kebutuhan utama
   6. **Hardening Reverse Proxy & Anti-Bot**:
      - Dikonfigurasi `app.set('trust proxy', 1);` untuk pendeteksian IP yang akurat di balik proxy/CDN.
      - Bypass token statis (`manual_turnstile_`) telah dihapus dan digantikan validasi waktu kedaluwarsa token anti-bot dinamis.
+
+---
+
+### 6. Pemisahan Struktur 4 Koleksi Akun Terisolasi (Zero-Trust Account Segregation)
+* **Tujuan**: Memisahkan wadah penyimpanan akun agar data warga (PII/NIK), admin wilayah, superadmin, dan developer tidak saling bercampur dalam satu wadah.
+* **Arsitektur Koleksi Baru**:
+  1. `user_accounts`: Wadah terisolasi khusus akun warga dan personil 10 pilar sosial terdaftar (menyimpan NIK kependudukan, nomor WhatsApp, status verval, dan Bcrypt `passwordHash`).
+  2. `admin_accounts`: Wadah terisolasi khusus 27 akun Administrator resmi Kabupaten/Kota se-Jawa Barat.
+  3. `superadmin_accounts`: Wadah terisolasi khusus otoritas tertinggi Superadmin Provinsi Jawa Barat.
+  4. `dev_accounts`: Wadah terisolasi khusus Developer Utama SIM-PSKS.
+* **Implementasi Teknis**:
+  - **`firestore.rules`**: Menetapkan aturan `allow read, write: if false;` secara ketat untuk keempat koleksi (`user_accounts`, `admin_accounts`, `superadmin_accounts`, `dev_accounts`) sehingga 100% terlindung dari akses langsung client browser / hacker luar. Aturan berhasil dideploy ke cloud via RPC.
+  - **`firebase-blueprint.json`**: Menambahkan skema entitas dan jalur firestore resmi untuk keempat koleksi tersebut.
+  - **`server.ts`**:
+    - Menambahkan mesin migrasi dan segregasi otomatis pada saat server startup (`migrateAndSegregateFirestoreAccounts`) yang memilah dokumen dari koleksi lama ke koleksi masing-masing dan membuang field `passwordPolos`.
+    - Memperbarui `/api/auth/login` untuk memeriksa otentikasi login secara bertahap pada `dev_accounts`, `superadmin_accounts`, `admin_accounts`, dan `user_accounts`.
+    - Menyediakan endpoint API terproteksi Bearer token untuk pengelolaan masing-masing jenis akun.
+  - **`src/services/firestoreDataService.ts` & `src/App.tsx`**:
+    - Mendukung konversi row-ke-dokumen dan dokumen-ke-row untuk seluruh 4 koleksi akun.
+    - Menyesuaikan penambahan, pengeditan, dan penghapusan akun agar tepat sasaran ke koleksinya masing-masing tanpa mengubah kemudahan navigasi pengguna.
+

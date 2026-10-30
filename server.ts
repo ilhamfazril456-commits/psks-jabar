@@ -69,6 +69,52 @@ async function startServer() {
     console.warn('[AI Server] Dynamic Firestore Knowledge Base seed notice:', err?.message || err);
   });
 
+  // Automated Zero-Trust Account Segregation Engine:
+  // Memisahkan secara otomatis koleksi admin_accounts menjadi 4 wadah terisolasi:
+  // 1. dev_accounts (khusus developer)
+  // 2. superadmin_accounts (khusus superadmin)
+  // 3. admin_accounts (khusus admin wilayah kab/kota)
+  // 4. user_accounts (khusus akun warga & personil potensi sosial + NIK)
+  async function migrateAndSegregateFirestoreAccounts() {
+    try {
+      const { collection, getDocs, doc, setDoc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+
+      const adminCol = collection(db, 'admin_accounts');
+      const snap = await getDocs(adminCol);
+
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          const data = d.data();
+          const role = (data.role || '').toLowerCase().trim();
+          const docId = d.id;
+          const uname = (data.username || '').toLowerCase().trim();
+
+          const { passwordPolos, ...cleanData } = data;
+
+          if (role === 'developer' || docId === 'adm-dev' || uname === 'ilhamfazril') {
+            await setDoc(doc(db, 'dev_accounts', docId), { ...cleanData, role: 'developer' }, { merge: true });
+            await deleteDoc(doc(db, 'admin_accounts', docId));
+            console.log(`[Segregation] Akun Developer (${docId}) dipindahkan ke dev_accounts.`);
+          } else if (role === 'superadmin' || docId === 'adm-super' || uname.includes('superadmin')) {
+            await setDoc(doc(db, 'superadmin_accounts', docId), { ...cleanData, role: 'superadmin' }, { merge: true });
+            await deleteDoc(doc(db, 'admin_accounts', docId));
+            console.log(`[Segregation] Akun Superadmin (${docId}) dipindahkan ke superadmin_accounts.`);
+          } else if (role === 'user' || docId.startsWith('usr-') || data.nik) {
+            await setDoc(doc(db, 'user_accounts', docId), { ...cleanData, role: 'user' }, { merge: true });
+            await deleteDoc(doc(db, 'admin_accounts', docId));
+            console.log(`[Segregation] Akun User (${docId} - ${uname}) dipindahkan ke user_accounts.`);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Account Segregation Notice]:', err?.message || err);
+    }
+  }
+
+  // Trigger background segregation
+  migrateAndSegregateFirestoreAccounts().catch(() => {});
+
   // CORS middleware for iframe / cross-origin preview support
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -756,41 +802,25 @@ async function startServer() {
         console.warn('[Auth Server] Supabase lookup notice:', sbErr);
       }
 
-      // 1.5. Look up account from Firestore (Authoritative Primary Firestore Database)
+      // 1.5. Look up account from segregated Firestore collections (Zero-Trust Architecture)
       if (!matchedAccount) {
         try {
           const { collection, getDocs, query, where, doc, getDoc } = await import('firebase/firestore');
           const { db } = await import('./src/lib/firebase');
-          const directDoc = await getDoc(doc(db, 'admin_accounts', uClean));
-          if (directDoc.exists()) {
-            const data = directDoc.data();
-            matchedAccount = {
-              id: directDoc.id,
-              username: data.username || directDoc.id,
-              namaAdmin: data.namaAdmin || data.username || directDoc.id,
-              role: data.role || 'user',
-              statusActive: data.statusActive || 'SAH_TERDAFTAR',
-              wilayahTugas: data.wilayahTugas || '',
-              passwordHash: data.passwordHash || '',
-              passwordPolos: data.passwordPolos || '',
-              statusVerval: data.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
-              alasanPenolakan: data.alasanPenolakan || '',
-              noRegistrasi: data.noRegistrasi || '',
-              isFrozen: data.isFrozen === true,
-              statusAkun: data.statusAkun || 'AKTIF',
-              resetTicket: data.resetTicket || null,
-            };
-          } else {
-            const q = query(collection(db, 'admin_accounts'), where('username', '==', uClean));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              const d = snap.docs[0];
-              const data = d.data();
+
+          const collectionsToCheck = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
+
+          for (const colName of collectionsToCheck) {
+            // Check direct doc ID
+            const directDoc = await getDoc(doc(db, colName, uClean));
+            if (directDoc.exists()) {
+              const data = directDoc.data();
               matchedAccount = {
-                id: d.id,
-                username: data.username || d.id,
-                namaAdmin: data.namaAdmin || data.username || d.id,
-                role: data.role || 'user',
+                id: directDoc.id,
+                collectionSource: colName,
+                username: data.username || directDoc.id,
+                namaAdmin: data.namaAdmin || data.username || directDoc.id,
+                role: data.role || (colName === 'dev_accounts' ? 'developer' : colName === 'superadmin_accounts' ? 'superadmin' : colName === 'user_accounts' ? 'user' : 'admin'),
                 statusActive: data.statusActive || 'SAH_TERDAFTAR',
                 wilayahTugas: data.wilayahTugas || '',
                 passwordHash: data.passwordHash || '',
@@ -802,6 +832,33 @@ async function startServer() {
                 statusAkun: data.statusAkun || 'AKTIF',
                 resetTicket: data.resetTicket || null,
               };
+              break;
+            }
+
+            // Check username query
+            const q = query(collection(db, colName), where('username', '==', uClean));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const d = snap.docs[0];
+              const data = d.data();
+              matchedAccount = {
+                id: d.id,
+                collectionSource: colName,
+                username: data.username || d.id,
+                namaAdmin: data.namaAdmin || data.username || d.id,
+                role: data.role || (colName === 'dev_accounts' ? 'developer' : colName === 'superadmin_accounts' ? 'superadmin' : colName === 'user_accounts' ? 'user' : 'admin'),
+                statusActive: data.statusActive || 'SAH_TERDAFTAR',
+                wilayahTugas: data.wilayahTugas || '',
+                passwordHash: data.passwordHash || '',
+                passwordPolos: data.passwordPolos || '',
+                statusVerval: data.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+                alasanPenolakan: data.alasanPenolakan || '',
+                noRegistrasi: data.noRegistrasi || '',
+                isFrozen: data.isFrozen === true,
+                statusAkun: data.statusAkun || 'AKTIF',
+                resetTicket: data.resetTicket || null,
+              };
+              break;
             }
           }
         } catch (fsErr) {
@@ -857,7 +914,8 @@ async function startServer() {
           try {
             const { doc, setDoc } = await import('firebase/firestore');
             const { db } = await import('./src/lib/firebase');
-            await setDoc(doc(db, 'admin_accounts', matchedAccount.id), { passwordHash: upgradedHash, passwordPolos: '' }, { merge: true });
+            const targetCollection = (matchedAccount as any).collectionSource || (matchedAccount.role === 'user' ? 'user_accounts' : matchedAccount.role === 'developer' ? 'dev_accounts' : matchedAccount.role === 'superadmin' ? 'superadmin_accounts' : 'admin_accounts');
+            await setDoc(doc(db, targetCollection, matchedAccount.id), { passwordHash: upgradedHash, passwordPolos: '' }, { merge: true });
           } catch {}
           try {
             await supabase.from('admin_accounts').update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
@@ -940,6 +998,209 @@ async function startServer() {
     } catch (err: any) {
       console.error('[Auth Server Error]:', err);
       return res.status(500).json({ valid: false, message: 'Terjadi kesalahan server saat memproses login.' });
+    }
+  });
+
+  // =========================================================================
+  // DEDICATED SEGREGATED ACCOUNT MANAGEMENT ENDPOINTS (ZERO-TRUST ARCHITECTURE)
+  // Memisahkan secara permanen: user_accounts, admin_accounts, superadmin_accounts, dev_accounts
+  // =========================================================================
+
+  // 1. Ambil seluruh akun terkelompok berdasarkan perannya (Khusus Superadmin & Developer)
+  app.get('/api/accounts/all', requireAdminOrDev, async (req, res) => {
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+
+      const [userSnap, adminSnap, superSnap, devSnap] = await Promise.all([
+        getDocs(collection(db, 'user_accounts')),
+        getDocs(collection(db, 'admin_accounts')),
+        getDocs(collection(db, 'superadmin_accounts')),
+        getDocs(collection(db, 'dev_accounts')),
+      ]);
+
+      const mapDocs = (snap: any, defaultRole: string) => {
+        return snap.docs.map((d: any) => {
+          const data = d.data();
+          const { passwordPolos, ...clean } = data;
+          return {
+            id: d.id,
+            ...clean,
+            role: clean.role || defaultRole,
+          };
+        });
+      };
+
+      const userAccounts = mapDocs(userSnap, 'user');
+      const adminAccounts = mapDocs(adminSnap, 'admin');
+      const superadminAccounts = mapDocs(superSnap, 'superadmin');
+      const devAccounts = mapDocs(devSnap, 'developer');
+
+      return res.json({
+        success: true,
+        userAccounts,
+        adminAccounts,
+        superadminAccounts,
+        devAccounts,
+      });
+    } catch (err: any) {
+      console.error('[API Accounts All Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal mengambil data akun terpisah.' });
+    }
+  });
+
+  // 2. Registrasi Mandiri Akun Warga Baru (Strictly Masuk ke user_accounts)
+  app.post('/api/accounts/register-user', rateLimitAuth, async (req, res) => {
+    try {
+      const { username, password, nik, noWhatsapp, wilayahTugas, registeredIp, deviceId } = req.body;
+
+      if (!username || !password || !nik || !wilayahTugas) {
+        return res.status(400).json({ success: false, message: 'Data pendaftaran belum lengkap.' });
+      }
+
+      const uTrim = String(username).trim();
+      const pTrim = String(password).trim();
+      const nikTrim = String(nik).trim();
+      const waTrim = String(noWhatsapp || '').trim();
+
+      if (!/^[0-9]{16}$/.test(nikTrim)) {
+        return res.status(400).json({ success: false, message: 'NIK wajib berupa tepat 16 digit angka.' });
+      }
+
+      if (pTrim.length < 8) {
+        return res.status(400).json({ success: false, message: 'Kata sandi minimal 8 karakter.' });
+      }
+
+      const { collection, getDocs, query, where, doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+
+      // Cek apakah NIK atau Username sudah ada di user_accounts
+      const [nikSnap, unameSnap] = await Promise.all([
+        getDocs(query(collection(db, 'user_accounts'), where('nik', '==', nikTrim))),
+        getDocs(query(collection(db, 'user_accounts'), where('username', '==', uTrim.toLowerCase()))),
+      ]);
+
+      if (!nikSnap.empty) {
+        return res.status(400).json({ success: false, message: 'NIK tersebut sudah pernah terdaftar pada sistem.' });
+      }
+
+      if (!unameSnap.empty) {
+        return res.status(400).json({ success: false, message: 'Username sudah digunakan. Silakan gunakan username lain.' });
+      }
+
+      const nowMs = Date.now();
+      const userId = `usr-${nowMs}-${Math.random().toString(36).slice(2, 6)}`;
+      const ticketNumber = `REG-PSKS-${nowMs.toString().slice(-6)}`;
+      const formattedDate = new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'full',
+        timeStyle: 'medium',
+        timeZone: 'Asia/Jakarta',
+      }).format(new Date(nowMs)) + ' WIB';
+
+      const userPayload = {
+        id: userId,
+        username: uTrim.toLowerCase(),
+        namaAdmin: uTrim,
+        wilayahTugas: String(wilayahTugas).trim(),
+        role: 'user',
+        nik: nikTrim,
+        noWhatsapp: waTrim,
+        passwordHash: hashPassword(pTrim),
+        terakhirLogin: 'Baru mendaftar',
+        isOnline: false,
+        statusKoneksi: 'OFFLINE',
+        statusLayar: 'OFFLINE',
+        registeredIp: registeredIp || req.ip || undefined,
+        deviceId: deviceId || undefined,
+        statusVerval: 'MENUNGGU_VERIFIKASI',
+        statusActive: 'PENDING_VERIFIKASI',
+        statusAkun: 'AKTIF',
+        noRegistrasi: ticketNumber,
+        waktuPendaftaran: new Date(nowMs).toISOString(),
+        tanggalPendaftaranFormatted: formattedDate,
+        lastUpdatedTimestamp: nowMs,
+      };
+
+      await setDoc(doc(db, 'user_accounts', userId), userPayload);
+
+      return res.json({
+        success: true,
+        user: {
+          id: userId,
+          username: uTrim,
+          noRegistrasi: ticketNumber,
+          wilayahTugas: String(wilayahTugas).trim(),
+          statusVerval: 'MENUNGGU_VERIFIKASI',
+          tanggalPendaftaranFormatted: formattedDate,
+        },
+        message: 'Pendaftaran akun berhasil disimpan ke database user_accounts!',
+      });
+    } catch (err: any) {
+      console.error('[Register User Server Error]:', err);
+      return res.status(500).json({ success: false, message: 'Terjadi kesalahan sistem saat mendaftarkan akun.' });
+    }
+  });
+
+  // 3. Update Akun Warga (Verval Approval, Reject, Freeze, Reset Password)
+  app.post('/api/accounts/update-user', requireAdminOrDev, async (req, res) => {
+    try {
+      const { id, updates } = req.body;
+      if (!id || !updates || typeof updates !== 'object') {
+        return res.status(400).json({ success: false, message: 'ID akun dan data perubahan wajib diisi.' });
+      }
+
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+
+      // Sanitize: pastikan passwordPolos tidak pernah disimpan
+      const { passwordPolos, ...cleanUpdates } = updates;
+      cleanUpdates.lastUpdatedTimestamp = Date.now();
+
+      await setDoc(doc(db, 'user_accounts', id), cleanUpdates, { merge: true });
+
+      return res.json({
+        success: true,
+        message: `Akun user (${id}) berhasil diperbarui di user_accounts.`,
+      });
+    } catch (err: any) {
+      console.error('[Update User Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal memperbarui data user.' });
+    }
+  });
+
+  // 4. Hapus Akun Warga
+  app.post('/api/accounts/delete-user', requireAdminOrDev, async (req, res) => {
+    try {
+      const { id } = req.body;
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'ID akun wajib diisi.' });
+      }
+
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+
+      await deleteDoc(doc(db, 'user_accounts', id));
+
+      return res.json({
+        success: true,
+        message: `Akun user (${id}) berhasil dihapus dari user_accounts.`,
+      });
+    } catch (err: any) {
+      console.error('[Delete User Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menghapus user.' });
+    }
+  });
+
+  // 5. Trigger Pemisahan Akun Manual / Segregation On-Demand
+  app.post('/api/admin/run-segregation', requireAdminOrDev, async (req, res) => {
+    try {
+      await migrateAndSegregateFirestoreAccounts();
+      return res.json({
+        success: true,
+        message: 'Pemisahan akun ke user_accounts, admin_accounts, superadmin_accounts, dan dev_accounts berhasil diproses!',
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: 'Gagal menjalankan pemisahan akun: ' + (err?.message || err) });
     }
   });
 

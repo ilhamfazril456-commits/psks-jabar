@@ -4055,14 +4055,18 @@ export default function App() {
   };
 
   const handleAddAdminAccount = async (newAdmin: Omit<AdminAccount, 'id'>) => {
-    const adminId = `adm-${Date.now()}`;
+    const isUser = newAdmin.role === 'user';
+    const isDev = newAdmin.role === 'developer';
+    const isSuper = newAdmin.role === 'superadmin';
+    const targetCollection = isUser ? 'user_accounts' : isDev ? 'dev_accounts' : isSuper ? 'superadmin_accounts' : 'admin_accounts';
+    const adminId = isUser ? `usr-${Date.now()}` : `adm-${Date.now()}`;
     const fullAdmin: AdminAccount = {
       ...newAdmin,
       id: adminId,
       username: newAdmin.username || '',
       namaAdmin: newAdmin.namaAdmin || '',
       wilayahTugas: newAdmin.wilayahTugas || '',
-      role: newAdmin.role || 'admin',
+      role: newAdmin.role || (isUser ? 'user' : 'admin'),
       registeredIp: newAdmin.registeredIp,
       deviceId: newAdmin.deviceId,
     };
@@ -4096,21 +4100,21 @@ export default function App() {
       session,
       category: 'ADMIN_ACCOUNT',
       actionType: 'CREATE',
-      targetCollection: 'admin_accounts',
+      targetCollection: targetCollection,
       targetId: adminId,
       targetName: fullAdmin.namaAdmin || fullAdmin.username,
       targetWilayah: fullAdmin.wilayahTugas,
-      details: `${actorLabel} telah MENAMBAHKAN akun admin baru [${fullAdmin.namaAdmin}] (${fullAdmin.username}) untuk wilayah [${fullAdmin.wilayahTugas}] dengan peran [${fullAdmin.role === 'superadmin' ? 'Superadmin' : 'Admin Wilayah'}]`,
+      details: `${actorLabel} telah MENAMBAHKAN akun baru [${fullAdmin.namaAdmin}] (${fullAdmin.username}) untuk wilayah [${fullAdmin.wilayahTugas}] dengan peran [${fullAdmin.role}] ke koleksi [${targetCollection}]`,
     });
 
     try {
-      await setFirestoreDoc('admin_accounts', adminId, cleanFirestoreData(fullAdmin));
+      await setFirestoreDoc(targetCollection, adminId, cleanFirestoreData(fullAdmin));
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      addToSyncQueue({ collection: 'admin_accounts', docId: adminId, type: 'SET', data: cleanFirestoreData(fullAdmin) });
+      addToSyncQueue({ collection: targetCollection, docId: adminId, type: 'SET', data: cleanFirestoreData(fullAdmin) });
     }
   };
 
@@ -4284,14 +4288,19 @@ export default function App() {
       details: `${actorLabel} telah MENGUBAH data/status akun admin [${sanitizedAdmin.namaAdmin}] (${sanitizedAdmin.username}) - Wilayah: [${sanitizedAdmin.wilayahTugas}]`,
     });
 
+    const isUser = sanitizedAdmin.role === 'user';
+    const isDev = sanitizedAdmin.role === 'developer';
+    const isSuper = sanitizedAdmin.role === 'superadmin';
+    const targetCollection = isUser ? 'user_accounts' : isDev ? 'dev_accounts' : isSuper ? 'superadmin_accounts' : 'admin_accounts';
+
     try {
-      await setFirestoreDoc('admin_accounts', sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin), { merge: true });
+      await setFirestoreDoc(targetCollection, sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin), { merge: true });
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      addToSyncQueue({ collection: 'admin_accounts', docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(sanitizedAdmin) });
+      addToSyncQueue({ collection: targetCollection, docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(sanitizedAdmin) });
     }
   };
 
@@ -4416,17 +4425,25 @@ export default function App() {
       details: `${actorLabel} telah MENGHAPUS akun admin [${targetName}] (${targetUname}) - Wilayah: [${targetWil}]`,
     });
 
+    const isUser = target?.role === 'user';
+    const isDev = target?.role === 'developer';
+    const isSuper = target?.role === 'superadmin';
+    const targetCollection = isUser ? 'user_accounts' : isDev ? 'dev_accounts' : isSuper ? 'superadmin_accounts' : 'admin_accounts';
+
     try {
-      await deleteFirestoreDoc('admin_accounts', targetId);
+      await deleteFirestoreDoc(targetCollection, targetId);
       if (id !== targetId) {
-        await deleteFirestoreDoc('admin_accounts', id).catch(() => {});
+        await deleteFirestoreDoc(targetCollection, id).catch(() => {});
+      }
+      if (targetCollection !== 'admin_accounts') {
+        await deleteFirestoreDoc('admin_accounts', targetId).catch(() => {});
       }
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      addToSyncQueue({ collection: 'admin_accounts', docId: targetId, type: 'DELETE' });
+      addToSyncQueue({ collection: targetCollection, docId: targetId, type: 'DELETE' });
     }
   };
 

@@ -1,8 +1,8 @@
 {
   "entities": {
-    "admin_accounts": {
-      "title": "Admin Accounts",
-      "description": "Daftar akun admin regional dan superadmin SIM-PSKS Jawa Barat",
+    "user_accounts": {
+      "title": "User Accounts",
+      "description": "Daftar akun warga dan personil potensi sosial SIM-PSKS Jawa Barat",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -10,7 +10,9 @@
         "namaAdmin": { "type": "string" },
         "wilayahTugas": { "type": "string" },
         "role": { "type": "string" },
-        "passwordPolos": { "type": "string" },
+        "nik": { "type": "string" },
+        "noWhatsapp": { "type": "string" },
+        "passwordHash": { "type": "string" },
         "terakhirLogin": { "type": "string" },
         "statusVerval": { "type": "string" },
         "statusActive": { "type": "string" },
@@ -19,11 +21,59 @@
         "waktuPendaftaran": { "type": "string" },
         "tanggalPendaftaranFormatted": { "type": "string" },
         "alasanPenolakan": { "type": "string" },
-        "vervalAt": { "type": "number" },
-        "vervalBy": { "type": "string" },
+        "registeredIp": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "lastUpdatedTimestamp": { "type": "number" }
+      },
+      "required": ["username", "wilayahTugas", "role", "nik"]
+    },
+    "admin_accounts": {
+      "title": "Regional Admin Accounts",
+      "description": "Daftar akun administrator resmi 27 Kabupaten/Kota se-Jawa Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "namaAdmin": { "type": "string" },
+        "wilayahTugas": { "type": "string" },
+        "role": { "type": "string" },
+        "passwordHash": { "type": "string" },
+        "terakhirLogin": { "type": "string" },
+        "statusActive": { "type": "string" },
+        "statusAkun": { "type": "string" },
         "lastUpdatedTimestamp": { "type": "number" }
       },
       "required": ["username", "wilayahTugas", "role"]
+    },
+    "superadmin_accounts": {
+      "title": "Superadmin Accounts",
+      "description": "Kredensial dan akun otoritas tertinggi Superadmin Provinsi Jawa Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "namaAdmin": { "type": "string" },
+        "wilayahTugas": { "type": "string" },
+        "role": { "type": "string" },
+        "passwordHash": { "type": "string" },
+        "terakhirLogin": { "type": "string" }
+      },
+      "required": ["username", "role"]
+    },
+    "dev_accounts": {
+      "title": "Developer Accounts",
+      "description": "Kredensial dan akun otoritas tertinggi Developer Utama SIM-PSKS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "namaAdmin": { "type": "string" },
+        "wilayahTugas": { "type": "string" },
+        "role": { "type": "string" },
+        "passwordHash": { "type": "string" },
+        "terakhirLogin": { "type": "string" }
+      },
+      "required": ["username", "role"]
     },
     "psks_records": {
       "title": "PSKS Records",
@@ -267,9 +317,21 @@
     }
   },
   "firestore": {
+    "/user_accounts/{userId}": {
+      "schema": "user_accounts",
+      "description": "Akun warga dan personil potensi sosial terdaftar"
+    },
     "/admin_accounts/{accountId}": {
       "schema": "admin_accounts",
-      "description": "Akun administrator wilayah dan superadmin"
+      "description": "Akun administrator resmi 27 Kabupaten/Kota se-Jawa Barat"
+    },
+    "/superadmin_accounts/{superadminId}": {
+      "schema": "superadmin_accounts",
+      "description": "Akun Superadmin Pemerintah Provinsi Jawa Barat"
+    },
+    "/dev_accounts/{devId}": {
+      "schema": "dev_accounts",
+      "description": "Akun Developer Utama Sistem Informasi PSKS"
     },
     "/psks_records/{recordId}": {
       "schema": "psks_records",
