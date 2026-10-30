@@ -1442,13 +1442,19 @@ export default function App() {
       return;
     }
 
-    let unsubscribe: (() => void) | null = null;
+    const unsubs: Array<() => void> = [];
     const delay = 100;
     const timer = setTimeout(() => {
-      unsubscribe = subscribeToCollection(
-        'admin_accounts',
-        (docs) => {
-          const rawDeletedAdmin = localStorage.getItem('psks_deleted_admin_ids');
+      const collections = ['admin_accounts', 'user_accounts', 'superadmin_accounts', 'dev_accounts'];
+      const store: Record<string, Array<{ id: string; data: any }>> = {
+        admin_accounts: [],
+        user_accounts: [],
+        superadmin_accounts: [],
+        dev_accounts: [],
+      };
+
+      const processAllAccounts = () => {
+        const rawDeletedAdmin = localStorage.getItem('psks_deleted_admin_ids');
         let currentDeletedAdmins: string[] = [];
         try {
           if (rawDeletedAdmin) {
@@ -1470,14 +1476,10 @@ export default function App() {
           );
         };
 
-        if (!docs || docs.length === 0) {
-          const filteredDefaults = DEFAULT_ADMIN_ACCOUNTS.filter((def) => {
-            const defUname = (def.username || '').toLowerCase().trim();
-            return defUname !== 'admin_ilham' && !isAccountDeleted(def.id, def.username);
-          });
-          setAdminAccounts(filteredDefaults);
-        } else {
-          const loadedMap = new Map<string, AdminAccount>();
+        const loadedMap = new Map<string, AdminAccount>();
+
+        collections.forEach((colName) => {
+          const docs = store[colName] || [];
           docs.forEach(({ id: docId, data }) => {
             const accData = data as Omit<AdminAccount, 'id'>;
             const uname = (accData.username || '').toLowerCase().trim();
@@ -1490,15 +1492,16 @@ export default function App() {
               (def) => def.id === docId || (def.username || '').toLowerCase().trim() === uname
             );
 
-            // For admin accounts and user accounts, preserve real updated password hash
             const accDataObj = accData as any;
             let passHash = accData.passwordHash || accDataObj.data?.passwordHash || defaultMatch?.passwordHash || '';
 
             const safeRole =
-              docId === 'adm-dev' || uname === 'ilhamfazril'
+              colName === 'dev_accounts' || docId === 'adm-dev' || uname === 'ilhamfazril'
                 ? 'developer'
-                : docId === 'adm-super' || uname.includes('superadmin')
+                : colName === 'superadmin_accounts' || docId === 'adm-super' || uname.includes('superadmin')
                 ? 'superadmin'
+                : colName === 'user_accounts' || accData.role === 'user' || docId.startsWith('usr-')
+                ? 'user'
                 : accData.role || defaultMatch?.role || 'admin';
 
             const safeUsername =
@@ -1529,91 +1532,84 @@ export default function App() {
               deviceId: accData.deviceId || undefined,
             });
           });
+        });
 
-          // Ensure default regional & developer accounts exist in state with valid Bcrypt hashes (unless deleted)
-          for (const def of DEFAULT_ADMIN_ACCOUNTS) {
-            const defUname = (def.username || '').toLowerCase().trim();
-            if (defUname === 'admin_ilham' || isAccountDeleted(def.id, def.username)) {
-              continue;
-            }
-
-            const existing = Array.from(loadedMap.values()).find(
-              (a) => a.id === def.id || (a.username || '').toLowerCase().trim() === defUname
-            );
-
-            if (!existing) {
-              const enriched: AdminAccount = {
-                ...def,
-                username: def.username || '',
-                namaAdmin: def.namaAdmin || '',
-                wilayahTugas: def.wilayahTugas || '',
-                passwordHash: def.passwordHash || '',
-              };
-              loadedMap.set(def.id, enriched);
-            } else {
-              // Only enrich missing essential fields, NEVER overwrite user-edited or custom-updated credentials
-              const sanitized: AdminAccount = {
-                ...existing,
-                username: existing.username || def.username || '',
-                namaAdmin: existing.namaAdmin || def.namaAdmin || '',
-                wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
-                role: existing.role || def.role || 'admin',
-                passwordPolos: '',
-                passwordHash: existing.passwordHash || def.passwordHash || '',
-              };
-              loadedMap.set(existing.id, sanitized);
-            }
+        // Ensure default regional & developer accounts exist in state with valid Bcrypt hashes (unless deleted)
+        for (const def of DEFAULT_ADMIN_ACCOUNTS) {
+          const defUname = (def.username || '').toLowerCase().trim();
+          if (defUname === 'admin_ilham' || isAccountDeleted(def.id, def.username)) {
+            continue;
           }
 
-          const rawList = Array.from(loadedMap.values()).filter((a) => {
-            const u = (a.username || '').toLowerCase().trim();
-            return u !== 'admin_ilham';
-          });
+          const existing = Array.from(loadedMap.values()).find(
+            (a) => a.id === def.id || (a.username || '').toLowerCase().trim() === defUname
+          );
 
-          // Deduplicate by unique Username or ID; newest lastUpdatedTimestamp ALWAYS wins
-          const dedupedMap = new Map<string, AdminAccount>();
-          rawList.forEach((acc) => {
-            const key = (acc.username || acc.id || '').toLowerCase().trim();
-            if (key) {
-              const prev = dedupedMap.get(key);
-              if (!prev || (acc.lastUpdatedTimestamp || 0) >= (prev.lastUpdatedTimestamp || 0)) {
-                dedupedMap.set(key, acc);
-              }
-            }
-          });
+          if (!existing) {
+            const enriched: AdminAccount = {
+              ...def,
+              username: def.username || '',
+              namaAdmin: def.namaAdmin || '',
+              wilayahTugas: def.wilayahTugas || '',
+              passwordHash: def.passwordHash || '',
+            };
+            loadedMap.set(def.id, enriched);
+          } else {
+            const sanitized: AdminAccount = {
+              ...existing,
+              username: existing.username || def.username || '',
+              namaAdmin: existing.namaAdmin || def.namaAdmin || '',
+              wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
+              role: existing.role || def.role || 'admin',
+              passwordPolos: '',
+              passwordHash: existing.passwordHash || def.passwordHash || '',
+            };
+            loadedMap.set(existing.id, sanitized);
+          }
+        }
 
-          const finalList = Array.from(dedupedMap.values());
-          setAdminAccounts(finalList);
-          try {
-            const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }) => rest);
-            sessionStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
-          } catch {}
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'admin_accounts');
-        if (isQuotaError(error)) {
-          quotaExceededRef.current = true;
-          setIsQuotaExceeded(true);
-        }
-        const cached = sessionStorage.getItem('psks_admin_accounts');
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setAdminAccounts(parsed);
-              return;
+        const rawList = Array.from(loadedMap.values()).filter((a) => {
+          const u = (a.username || '').toLowerCase().trim();
+          return u !== 'admin_ilham';
+        });
+
+        const dedupedMap = new Map<string, AdminAccount>();
+        rawList.forEach((acc) => {
+          const key = (acc.username || acc.id || '').toLowerCase().trim();
+          if (key) {
+            const prev = dedupedMap.get(key);
+            if (!prev || (acc.lastUpdatedTimestamp || 0) >= (prev.lastUpdatedTimestamp || 0)) {
+              dedupedMap.set(key, acc);
             }
-          } catch {}
-        }
-        setAdminAccounts(DEFAULT_ADMIN_ACCOUNTS);
-      }
-    );
+          }
+        });
+
+        const finalList = Array.from(dedupedMap.values());
+        setAdminAccounts(finalList);
+        try {
+          const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }) => rest);
+          sessionStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
+        } catch {}
+      };
+
+      collections.forEach((col) => {
+        const u = subscribeToCollection(
+          col,
+          (colDocs) => {
+            store[col] = colDocs || [];
+            processAllAccounts();
+          },
+          (error) => {
+            handleFirestoreError(error, OperationType.LIST, col);
+          }
+        );
+        unsubs.push(u);
+      });
     }, delay);
 
     return () => {
       clearTimeout(timer);
-      if (unsubscribe) unsubscribe();
+      unsubs.forEach((u) => u());
     };
   }, [session.statusActive, gateModalOpen]);
 

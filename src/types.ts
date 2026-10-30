@@ -222,6 +222,7 @@ export interface AdminAccount {
   deviceId?: string;
   lastLoginDeviceId?: string;
   nik?: string;
+  nikHash?: string;
   noWhatsapp?: string;
   resetTicket?: ResetPasswordTicket;
   lastEditedBy?: string;

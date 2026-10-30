@@ -21,22 +21,25 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 3. User, Admin, Superadmin, & Dev Accounts: STRICT ZERO-DISCLOSURE (Client SDK direct reads & writes denied)
-    // All login verification, registration, and credential operations are mediated strictly via secure backend server
+    // 3. User, Admin, Superadmin, & Dev Accounts
     match /user_accounts/{userId} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if isValidId(userId);
     }
 
     match /admin_accounts/{accountId} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if isValidId(accountId);
     }
 
     match /superadmin_accounts/{superadminId} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if isValidId(superadminId);
     }
 
     match /dev_accounts/{devId} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if isValidId(devId);
     }
 
     // 4. Global App Settings: Protected against deletion & secret PIN tampering

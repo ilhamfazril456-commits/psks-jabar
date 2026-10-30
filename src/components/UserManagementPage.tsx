@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AdminAccount, UserSession } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
-import { hashPassword } from '../utils/crypto';
+import { hashPassword, maskNik, maskPhone, decryptSensitiveData } from '../utils/crypto';
 import { BackToHomeButton } from './BackToHomeButton';
 import { UserAccountAnalyticsChart } from './UserAccountAnalyticsChart';
 import {
@@ -71,6 +71,10 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
   const [tempPasswordInput, setTempPasswordInput] = useState<string>('');
   const [showTempPassword, setShowTempPassword] = useState<boolean>(true);
   const [rejectingResetAccount, setRejectingResetAccount] = useState<AdminAccount | null>(null);
+
+  // PII Visibility Toggle State (Masked by default for UU PDP & ISO 27001 compliance)
+  const [revealedNik, setRevealedNik] = useState<Record<string, boolean>>({});
+  const [revealedWa, setRevealedWa] = useState<Record<string, boolean>>({});
 
   // Freeze/Unfreeze Modal State
   const [freezingAccount, setFreezingAccount] = useState<AdminAccount | null>(null);
@@ -987,14 +991,40 @@ export const UserManagementPage: React.FC<UserManagementPageProps> = ({
                                   </span>
                                 </div>
                                 {(user.nik || user.resetTicket?.nik) && (
-                                  <span className="text-[9.5px] font-mono font-bold text-slate-600">
-                                    NIK: <span className="text-[#0f2b5c] font-black">{user.resetTicket?.nik || user.nik}</span>
-                                  </span>
+                                  <div className="flex items-center gap-1 text-[9.5px] font-mono text-slate-600">
+                                    <span className="font-bold">NIK:</span>
+                                    <span className="text-[#0f2b5c] font-black tracking-tight">
+                                      {revealedNik[user.id]
+                                        ? decryptSensitiveData(user.resetTicket?.nik || user.nik || '')
+                                        : maskNik(user.resetTicket?.nik || user.nik || '')}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRevealedNik((prev) => ({ ...prev, [user.id]: !prev[user.id] }))}
+                                      className="p-0.5 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                      title={revealedNik[user.id] ? 'Sembunyikan NIK' : 'Tampilkan NIK Lengkap'}
+                                    >
+                                      {revealedNik[user.id] ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                                    </button>
+                                  </div>
                                 )}
                                 {(user.noWhatsapp || user.resetTicket?.noWhatsapp) && (
-                                  <span className="text-[9.5px] font-mono font-bold text-slate-600">
-                                    WA: <span className="text-emerald-700 font-black">{user.resetTicket?.noWhatsapp || user.noWhatsapp}</span>
-                                  </span>
+                                  <div className="flex items-center gap-1 text-[9.5px] font-mono text-slate-600">
+                                    <span className="font-bold">WA:</span>
+                                    <span className="text-emerald-700 font-black tracking-tight">
+                                      {revealedWa[user.id]
+                                        ? decryptSensitiveData(user.resetTicket?.noWhatsapp || user.noWhatsapp || '')
+                                        : maskPhone(user.resetTicket?.noWhatsapp || user.noWhatsapp || '')}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRevealedWa((prev) => ({ ...prev, [user.id]: !prev[user.id] }))}
+                                      className="p-0.5 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                      title={revealedWa[user.id] ? 'Sembunyikan WhatsApp' : 'Tampilkan WhatsApp Lengkap'}
+                                    >
+                                      {revealedWa[user.id] ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </div>

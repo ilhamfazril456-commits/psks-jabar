@@ -31,7 +31,7 @@ import {
 import { resolveOffTopicPublicQuery } from './src/data/aiKnowledge';
 import { supabase } from './src/lib/supabase';
 import { DEFAULT_ADMIN_ACCOUNTS } from './src/data/initialData';
-import { comparePassword, hashPassword } from './src/utils/crypto';
+import { comparePassword, hashPassword, encryptSensitiveData, hashSearchableField, decryptSensitiveData } from './src/utils/crypto';
 
 dotenv.config();
 
@@ -101,9 +101,19 @@ async function startServer() {
             await deleteDoc(doc(db, 'admin_accounts', docId));
             console.log(`[Segregation] Akun Superadmin (${docId}) dipindahkan ke superadmin_accounts.`);
           } else if (role === 'user' || docId.startsWith('usr-') || data.nik) {
-            await setDoc(doc(db, 'user_accounts', docId), { ...cleanData, role: 'user' }, { merge: true });
+            const rawNik = data.nik || '';
+            const rawWa = data.noWhatsapp || '';
+            const targetId = docId.startsWith('adm-') ? 'usr-' + docId.slice(4) : docId;
+            await setDoc(doc(db, 'user_accounts', targetId), {
+              ...cleanData,
+              id: targetId,
+              role: 'user',
+              nik: rawNik ? encryptSensitiveData(rawNik) : '',
+              nikHash: rawNik ? hashSearchableField(rawNik) : '',
+              noWhatsapp: rawWa ? encryptSensitiveData(rawWa) : '',
+            }, { merge: true });
             await deleteDoc(doc(db, 'admin_accounts', docId));
-            console.log(`[Segregation] Akun User (${docId} - ${uname}) dipindahkan ke user_accounts.`);
+            console.log(`[Segregation] Akun User (${docId} - ${uname}) dipindahkan ke user_accounts sebagai ${targetId}.`);
           }
         }
       }
@@ -1075,8 +1085,9 @@ async function startServer() {
       const { db } = await import('./src/lib/firebase');
 
       // Cek apakah NIK atau Username sudah ada di user_accounts
+      const targetNikHash = hashSearchableField(nikTrim);
       const [nikSnap, unameSnap] = await Promise.all([
-        getDocs(query(collection(db, 'user_accounts'), where('nik', '==', nikTrim))),
+        getDocs(query(collection(db, 'user_accounts'), where('nikHash', '==', targetNikHash))),
         getDocs(query(collection(db, 'user_accounts'), where('username', '==', uTrim.toLowerCase()))),
       ]);
 
@@ -1103,8 +1114,9 @@ async function startServer() {
         namaAdmin: uTrim,
         wilayahTugas: String(wilayahTugas).trim(),
         role: 'user',
-        nik: nikTrim,
-        noWhatsapp: waTrim,
+        nik: encryptSensitiveData(nikTrim),
+        nikHash: targetNikHash,
+        noWhatsapp: encryptSensitiveData(waTrim),
         passwordHash: hashPassword(pTrim),
         terakhirLogin: 'Baru mendaftar',
         isOnline: false,

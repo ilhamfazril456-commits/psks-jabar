@@ -550,8 +550,15 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       return;
     }
 
-    // Check duplicate NIK in existing database accounts
-    const isNikDuplicate = adminAccounts.some((acc) => acc.nik && acc.nik.trim() === nikTrim);
+    // Check duplicate NIK in existing database accounts (supporting encrypted & hashed NIK)
+    const { hashSearchableField, decryptSensitiveData } = await import('../utils/crypto');
+    const inputNikHash = hashSearchableField(nikTrim);
+    const isNikDuplicate = adminAccounts.some((acc) => {
+      if (!acc.nik) return false;
+      if (acc.nikHash && acc.nikHash === inputNikHash) return true;
+      const dec = decryptSensitiveData(acc.nik).trim();
+      return dec === nikTrim;
+    });
     if (isNikDuplicate) {
       setErrorMessage(`❌ NIK "${nikTrim}" sudah terdaftar pada sistem! 1 NIK hanya berlaku untuk 1 akun pengguna.`);
       return;
@@ -614,7 +621,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     setIsRegistering(true);
 
     try {
-      const { hashPassword } = await import('../utils/crypto');
+      const { hashPassword, encryptSensitiveData, hashSearchableField } = await import('../utils/crypto');
       const nowMs = Date.now();
       const ticketNumber = `REG-PSKS-${Date.now().toString().slice(-6)}`;
       const formattedDate = new Intl.DateTimeFormat('id-ID', {
@@ -628,8 +635,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         namaAdmin: uTrim,
         wilayahTugas: selectedRegisterRegion,
         role: 'user',
-        nik: nikTrim,
-        noWhatsapp: waTrim,
+        nik: encryptSensitiveData(nikTrim),
+        nikHash: hashSearchableField(nikTrim),
+        noWhatsapp: encryptSensitiveData(waTrim),
         passwordHash: hashPassword(pTrim),
         terakhirLogin: 'Baru mendaftar',
         isOnline: false,
