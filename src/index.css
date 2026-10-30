@@ -20,6 +20,21 @@
   will-change: top, opacity;
 }
 
+/* Geulis Jabar Smooth Floating Levitation Animation */
+@keyframes gentleFloatAnim {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentleFloatAnim 4s ease-in-out infinite;
+  will-change: transform;
+}
+
 @keyframes scaleUp {
   0% {
     transform: scale(0.93);
