@@ -1159,7 +1159,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   {/* Copyright Resmi Lapisan 1 - Terangkat dan Tidak Terpotong */}
                   <div className="pt-1 pb-0.5 w-full">
                     <p className="text-[7.5px] sm:text-[8.5px] text-slate-400 font-semibold tracking-tight text-center leading-snug break-words px-1">
-                      © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
+                      © Dinas Sosial Provinsi Jawa Barat ( Developed By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
                     </p>
                   </div>
                 </div>
@@ -1178,25 +1178,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             }`}>
 
               {/* Co-Branding Dual Logos (Geulis Jabar Style: [PSKS] | [DINSOS JABAR]) */}
-              <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-1 sm:mb-1.5 md:mb-3.5 select-none shrink-0">
+              <div className="flex items-center justify-center gap-4 sm:gap-5 md:gap-6 pt-2 sm:pt-3 mb-3.5 sm:mb-4 md:mb-5 select-none shrink-0">
                 <img
                   src="/psks_horizontal_logo.webp"
                   alt="Logo Resmi PSKS Jawa Barat"
-                  className="h-6 sm:h-7 md:h-8 lg:h-9 w-auto object-contain pointer-events-none"
+                  className="h-8 sm:h-8.5 md:h-8 lg:h-9 w-auto object-contain pointer-events-none"
                   loading="eager"
                 />
-                <div className="h-4.5 sm:h-5 md:h-6 w-[1.5px] bg-slate-300 rounded-full" />
+                <div className="h-6 w-[1.5px] bg-slate-300 rounded-full" />
                 <img
                   src="/dinsos_jabar_horizontal_logo.webp"
                   alt="Logo Resmi Dinas Sosial Provinsi Jawa Barat"
-                  className="h-5 sm:h-6 md:h-7 lg:h-8 w-auto object-contain pointer-events-none"
+                  className="h-7 sm:h-7.5 md:h-7 lg:h-8 w-auto object-contain pointer-events-none"
                   loading="eager"
                 />
               </div>
 
               {/* Header Greeting inside White Area */}
-              <div className="relative z-10 text-center mb-1 sm:mb-1.5 md:mb-2 shrink-0 w-full max-w-xl mx-auto">
-                <h3 className="text-sm sm:text-base md:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
+              <div className="relative z-10 text-center mb-3 sm:mb-3.5 md:mb-4 shrink-0 w-full max-w-xl mx-auto">
+                <h3 className="text-base sm:text-lg md:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
                   {view === 'main' && 'Selamat Datang'}
                   {view === 'register' && 'Daftar Akun Baru'}
                   {view === 'login_choice' && 'Pilih Metode Masuk'}
@@ -1206,7 +1206,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   {view === 'forgot_password' && 'Lupa Kata Sandi'}
                   {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
                 </h3>
-                <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-600 font-semibold mt-0.5">
+                <p className="text-[10.5px] sm:text-xs text-slate-600 font-medium leading-relaxed max-w-[280px] sm:max-w-md mx-auto mt-1">
                   {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
                   {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
                   {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
@@ -2828,7 +2828,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
               {/* Copyright Resmi Khusus Mobile Lapisan 2 (Satu-Satunya di HP) - Terangkat dan Tidak Terpotong */}
               <div className="md:hidden text-[7.5px] sm:text-[8.5px] text-slate-500 font-medium text-center leading-tight break-words px-1 pt-1 pb-0.5">
-                © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
+                © Dinas Sosial Provinsi Jawa Barat ( Developed By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
 
