@@ -92,8 +92,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest' | 'forgot_password' | 'forgot_password_status'>('main');
 
   // Khusus Tampilan Layar HP: Lapisan Pertama (Intro Selamat Datang & Tombol MULAI)
-  // Ketika tombol MULAI ditekan, berlanjut ke Lapisan Kedua (Pilihan Login yang sudah ada)
+  // Ketika tombol MULAI ditekan, berlanjut ke Lapisan Kedua dengan animasi Iris / Center Circle Reveal (Opsi B)
   const [showMobileIntro, setShowMobileIntro] = useState<boolean>(true);
+  const [isIrisTransitioning, setIsIrisTransitioning] = useState<boolean>(false);
+
+  const handleStartMobile = () => {
+    if (isIrisTransitioning) return;
+    setIsIrisTransitioning(true);
+    setTimeout(() => {
+      setShowMobileIntro(false);
+      setIsIrisTransitioning(false);
+    }, 620);
+  };
 
   // Wilayah selection states - defaults to empty string so user consciously selects
   const [selectedGuestRegion, setSelectedGuestRegion] = useState<string>('');
@@ -337,6 +347,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       window.removeEventListener('psks_registration_ticket_updated', handleTicketEvent);
     };
   }, []);
+
+  // Reset mobile intro state whenever modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setShowMobileIntro(true);
+      setIsIrisTransitioning(false);
+    }
+  }, [isOpen]);
 
   // Detect IP dynamically whenever gate modal is open
   useEffect(() => {
@@ -1098,59 +1116,49 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           </div>
 
           {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
-          <div className={`w-full md:w-[62%] lg:w-[60%] ${showMobileIntro && view === 'main' ? 'max-md:bg-gradient-to-br max-md:from-[#143b7d] max-md:via-[#0f2b5c] max-md:to-[#091f42] max-md:text-white bg-white text-slate-800' : 'bg-white text-slate-800'} px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:px-8 md:py-6 lg:px-12 lg:py-8 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full transition-colors duration-300`}>
+          <div className="w-full md:w-[62%] lg:w-[60%] bg-white text-slate-800 px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:px-8 md:py-6 lg:px-12 lg:py-8 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full">
             
-            {/* Top Right Curved Blue Accent Wave */}
-            <div className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-blue-400/15 bg-blue-600/10' : 'bg-blue-600/10'} pointer-events-none`} />
-            <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full ${showMobileIntro && view === 'main' ? 'max-md:bg-[#d4af37]/10 bg-blue-700/15' : 'bg-blue-700/15'} pointer-events-none`} />
+            {/* Top Right Subtle Accent Wave */}
+            <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-blue-600/5 pointer-events-none" />
+            <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-blue-700/5 pointer-events-none" />
 
             {/* ========================================================================= */}
-            {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (INTRO BIRU SELAMAT DATANG & BUTTON MULAI) */}
+            {/* KHUSUS TAMPILAN HP: LAPISAN PERTAMA (PUTIH MURNI DENGAN LOGO PSKS MELEBUR & BUTTON MULAI) */}
             {/* ========================================================================= */}
             {showMobileIntro && view === 'main' && (
-              <div className="md:hidden relative z-10 flex-1 min-h-0 flex flex-col justify-between items-center text-center pt-2 pb-1 px-1 animate-fadeIn text-white h-full">
-                {/* Bagian Atas: Logo Resmi & Identitas Bersih (Anti-AI Slop, Zero Pill) */}
-                <div className="flex flex-col items-center pt-2">
-                  <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-14 h-14 mb-2 drop-shadow-lg" />
-                  <span className="text-sm font-black tracking-widest text-white uppercase drop-shadow-xs">
-                    PSKS JABAR
-                  </span>
-                  <span className="text-[10px] font-semibold text-blue-200/90 tracking-wide mt-0.5">
-                    Dinas Sosial Provinsi Jawa Barat
-                  </span>
+              <div className={`md:hidden absolute inset-0 z-20 bg-white flex flex-col justify-between items-center text-center px-4 py-5 overflow-hidden select-none ${isIrisTransitioning ? 'pointer-events-none' : ''}`}>
+                
+                {/* Space Atas Bersih yang Menyatu Sempurna */}
+                <div className="w-full pt-1 flex items-center justify-center">
+                  <div className="h-1 w-10 rounded-full bg-slate-200/80" />
                 </div>
 
-                {/* Bagian Tengah: Teks Sambutan & Identitas Sistem Bersih */}
-                <div className="my-auto py-3 flex flex-col items-center">
-                  <h2 className="text-2xl font-black text-white tracking-tight leading-tight mb-1.5">
-                    Selamat Datang
-                  </h2>
-                  <p className="text-xs font-medium text-blue-100 leading-relaxed max-w-[280px] px-2 mb-2">
-                    Potensi & Sumber Kesejahteraan Sosial Provinsi Jawa Barat
-                  </p>
-                  <p className="text-[10px] text-blue-200/80 font-medium tracking-wide">
-                    Integrasi Satu Data & Verifikasi Pilar Sosial Se-Jawa Barat
-                  </p>
+                {/* Bagian Tengah: Kotak Logo PSKS Dimaksimalkan ke Samping Mentok (Menyatu Sempurna dengan Background Putih Layar HP) */}
+                <div className={`w-full max-w-[340px] px-2 flex items-center justify-center my-auto transition-transform duration-500 ${isIrisTransitioning ? 'animate-iris-logo-exit' : 'animate-gentle-float'}`}>
+                  <img
+                    src="/psks_white_logo.webp"
+                    alt="PSKS - Potensi dan Sumber Kesejahteraan Sosial Provinsi Jawa Barat"
+                    className="w-full h-auto aspect-square object-contain select-none pointer-events-none drop-shadow-xs"
+                    loading="eager"
+                    fetchPriority="high"
+                  />
                 </div>
 
-                {/* Bagian Bawah: Button MULAI & Copyright Lapisan 1 (Satu-Satunya) */}
-                <div className="w-full space-y-2 pt-1 pb-1">
+                {/* Bagian Bawah: Button MULAI & Copyright Resmi */}
+                <div className="w-full max-w-sm space-y-2 pt-1 pb-1 shrink-0">
                   <button
                     type="button"
                     id="btn-mobile-intro-mulai"
-                    onClick={() => setShowMobileIntro(false)}
-                    className="w-full min-h-[46px] py-2.5 px-6 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#f3d978] to-[#d4af37] hover:brightness-105 active:scale-95 text-[#043e2e] font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-amber-500/25 border-2 border-amber-300 transition-all cursor-pointer select-none"
+                    onClick={handleStartMobile}
+                    className="w-full min-h-[48px] py-3 px-6 rounded-2xl bg-gradient-to-r from-[#143b7d] via-[#10326e] to-[#0f2b5c] hover:brightness-110 active:scale-95 text-white font-black text-sm sm:text-base tracking-widest uppercase flex items-center justify-center gap-2.5 shadow-lg shadow-blue-950/20 border-2 border-blue-400/40 transition-all cursor-pointer select-none"
                   >
                     <span>MULAI</span>
-                    <ArrowRight className="w-5 h-5 text-[#043e2e] stroke-[2.5]" />
+                    <ArrowRight className="w-5 h-5 text-amber-300 stroke-[2.5]" />
                   </button>
-                  <div className="flex items-center justify-center gap-1.5 text-[8.5px] text-blue-200/80 font-semibold">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Portal Resmi Terverifikasi • 27 Kab/Kota</span>
-                  </div>
-                  {/* Copyright Resmi Lapisan 1 (Satu-Satunya) - Terangkat dan Tidak Terpotong */}
-                  <div className="pt-1.5 pb-1 border-t border-blue-400/25 w-full">
-                    <p className="text-[7.5px] sm:text-[8.5px] text-blue-100 font-semibold tracking-tight text-center leading-snug break-words px-1">
+
+                  {/* Copyright Resmi Lapisan 1 - Terangkat dan Tidak Terpotong */}
+                  <div className="pt-1 pb-0.5 w-full">
+                    <p className="text-[7.5px] sm:text-[8.5px] text-slate-400 font-semibold tracking-tight text-center leading-snug break-words px-1">
                       © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
                     </p>
                   </div>
@@ -1158,49 +1166,60 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               </div>
             )}
 
-            {/* Desktop Co-Branding Dual Logos (Geulis Jabar Style: [PSKS] | [DINSOS JABAR]) */}
-            <div className="hidden md:flex items-center justify-center gap-5 lg:gap-6 mb-3 sm:mb-4 select-none shrink-0">
-              <img
-                src="/psks_horizontal_logo.webp"
-                alt="Logo Resmi PSKS Jawa Barat"
-                className="h-8 lg:h-9 w-auto object-contain pointer-events-none"
-                loading="eager"
-              />
-              <div className="h-6 w-[1.5px] bg-slate-300 rounded-full" />
-              <img
-                src="/dinsos_jabar_horizontal_logo.webp"
-                alt="Logo Resmi Dinas Sosial Provinsi Jawa Barat"
-                className="h-7 lg:h-8 w-auto object-contain pointer-events-none"
-                loading="eager"
-              />
-            </div>
+            {/* ========================================================================= */}
+            {/* LAPISAN KEDUA: LOGO GANDA, GREETING, 3 JALUR UTAMA & FOOTER LINKS */}
+            {/* ========================================================================= */}
+            <div className={`w-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden ${
+              showMobileIntro && !isIrisTransitioning && view === 'main'
+                ? 'hidden md:flex'
+                : isIrisTransitioning
+                ? 'flex animate-iris-expand absolute inset-0 z-30 bg-white px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:p-0 md:relative md:z-auto'
+                : 'flex relative z-10'
+            }`}>
 
-            {/* Header Greeting inside White Area */}
-            <div className={`relative z-10 text-center mb-1 sm:mb-2 shrink-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:block' : 'block'}`}>
-              <h3 className="text-sm sm:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
-                {view === 'main' && 'Selamat Datang'}
-                {view === 'register' && 'Daftar Akun Baru'}
-                {view === 'login_choice' && 'Pilih Metode Masuk'}
-                {view === 'login_manual' && 'Masuk Akun'}
-                {view === 'login_smart_card' && 'Smart Card Login'}
-                {view === 'guest' && 'Akses Tamu Publik'}
-                {view === 'forgot_password' && 'Lupa Kata Sandi'}
-                {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
-              </h3>
-              <p className="text-[9.5px] sm:text-xs text-slate-700 font-semibold mt-0.5">
-                {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
-                {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
-                {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
-                {view === 'login_manual' && 'Masukkan kredensial akun terdaftar Anda'}
-                {view === 'login_smart_card' && 'Otorisasi instan menggunakan Smart Card'}
-                {view === 'guest' && 'Pilih wilayah Jawa Barat untuk akses mode tamu'}
-                {view === 'forgot_password' && 'Verifikasi NIK dan WhatsApp resmi untuk reset sandi'}
-                {view === 'forgot_password_status' && 'Pantau persetujuan tiket reset sandi secara realtime'}
-              </p>
-            </div>
+              {/* Co-Branding Dual Logos (Geulis Jabar Style: [PSKS] | [DINSOS JABAR]) */}
+              <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-1 sm:mb-1.5 md:mb-3.5 select-none shrink-0">
+                <img
+                  src="/psks_horizontal_logo.webp"
+                  alt="Logo Resmi PSKS Jawa Barat"
+                  className="h-6 sm:h-7 md:h-8 lg:h-9 w-auto object-contain pointer-events-none"
+                  loading="eager"
+                />
+                <div className="h-4.5 sm:h-5 md:h-6 w-[1.5px] bg-slate-300 rounded-full" />
+                <img
+                  src="/dinsos_jabar_horizontal_logo.webp"
+                  alt="Logo Resmi Dinas Sosial Provinsi Jawa Barat"
+                  className="h-5 sm:h-6 md:h-7 lg:h-8 w-auto object-contain pointer-events-none"
+                  loading="eager"
+                />
+              </div>
 
-            {/* Center Animated Form Container (Strictly fits without scrollbar) */}
-            <div className={`relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+              {/* Header Greeting inside White Area */}
+              <div className="relative z-10 text-center mb-1 sm:mb-1.5 md:mb-2 shrink-0 w-full max-w-xl mx-auto">
+                <h3 className="text-sm sm:text-base md:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
+                  {view === 'main' && 'Selamat Datang'}
+                  {view === 'register' && 'Daftar Akun Baru'}
+                  {view === 'login_choice' && 'Pilih Metode Masuk'}
+                  {view === 'login_manual' && 'Masuk Akun'}
+                  {view === 'login_smart_card' && 'Smart Card Login'}
+                  {view === 'guest' && 'Akses Tamu Publik'}
+                  {view === 'forgot_password' && 'Lupa Kata Sandi'}
+                  {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
+                </h3>
+                <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-600 font-semibold mt-0.5">
+                  {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
+                  {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
+                  {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
+                  {view === 'login_manual' && 'Masukkan kredensial akun terdaftar Anda'}
+                  {view === 'login_smart_card' && 'Otorisasi instan menggunakan Smart Card'}
+                  {view === 'guest' && 'Pilih wilayah Jawa Barat untuk akses mode tamu'}
+                  {view === 'forgot_password' && 'Verifikasi NIK dan WhatsApp resmi untuk reset sandi'}
+                  {view === 'forgot_password_status' && 'Pantau persetujuan tiket reset sandi secara realtime'}
+                </p>
+              </div>
+
+              {/* Center Animated Form Container (Strictly fits without scrollbar) */}
+              <div className="relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5 w-full max-w-xl mx-auto">
               
                 {/* ========================================================================= */}
                 {/* LAYAR UTAMA (3 JALUR UTAMA SEJAJAR) */}
@@ -1216,16 +1235,16 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       type="button"
                       id="btn-jalur-daftar-akun-baru"
                       onClick={handleDaftarAkunBaruClick}
-                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2.5 min-h-[58px] sm:min-h-[64px] md:min-h-[72px] lg:min-h-[78px] rounded-xl sm:rounded-2xl bg-blue-50/90 hover:bg-blue-100 border-2 border-blue-500/40 hover:border-blue-600 transition-all duration-200 shadow-xs hover:shadow-sm cursor-pointer flex items-center gap-2 sm:gap-2.5 md:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
-                        <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-[#0f2b5c] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0">
+                        <UserPlus className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 text-blue-200" />
                       </div>
-                      <div className="flex-1 min-w-0 pr-22 sm:pr-26 flex flex-col justify-center">
-                        <span className="text-xs sm:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate block">
+                      <div className="flex-1 min-w-0 pr-18 sm:pr-22 md:pr-26 flex flex-col justify-center">
+                        <span className="text-xs sm:text-xs md:text-sm font-black text-[#0f2b5c] group-hover:text-blue-950 truncate block">
                           Daftar Akun Baru
                         </span>
-                        <p className="text-[9px] sm:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
+                        <p className="text-[8.5px] sm:text-[9.5px] md:text-[10.5px] text-slate-600 font-medium leading-tight mt-0.5 line-clamp-2">
                           {!clientRegisteredAccount
                             ? 'Registrasi mandiri 1 akun per perangkat untuk warga & personil potensi sosial Jabar.'
                             : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
@@ -1236,7 +1255,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         </p>
                       </div>
                       {/* Pinned Corner Badge */}
-                      <span className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-tight ${
+                      <span className={`absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 text-[7px] sm:text-[7.5px] md:text-[8px] font-black px-1.5 sm:px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-tight ${
                         !clientRegisteredAccount
                           ? 'bg-blue-200 text-blue-900 border border-blue-300/50'
                           : clientRegisteredAccount.statusVerval === 'DISETUJUI' || clientRegisteredAccount.statusActive === 'SAH_TERDAFTAR'
@@ -1256,29 +1275,29 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('login_choice');
                       }}
-                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2.5 min-h-[58px] sm:min-h-[64px] md:min-h-[72px] lg:min-h-[78px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#143b7d] to-[#0f2b5c] hover:from-[#1a4a9c] hover:to-[#0d2d5e] text-white border-2 border-[#d4af37]/60 hover:border-[#d4af37] transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-2 sm:gap-2.5 md:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
-                        <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-[#d4af37] text-[#0f2b5c] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0 font-black">
+                        <LogIn className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 pr-16 sm:pr-20 flex flex-col justify-center">
-                        <span className="text-xs sm:text-sm font-black text-amber-200 group-hover:text-white truncate block">
+                      <div className="flex-1 min-w-0 pr-14 sm:pr-16 md:pr-20 flex flex-col justify-center">
+                        <span className="text-xs sm:text-xs md:text-sm font-black text-amber-200 group-hover:text-white truncate block">
                           Masuk ke Akun
                         </span>
-                        <p className="text-[9px] sm:text-[10.5px] text-blue-100 font-medium leading-tight mt-0.5 line-clamp-2">
+                        <p className="text-[8.5px] sm:text-[9.5px] md:text-[10.5px] text-blue-100 font-medium leading-tight mt-0.5 line-clamp-2">
                           Login/Masuk ke akun yang sudah terdaftar
                         </p>
                       </div>
                       {/* Pinned Corner Badge */}
-                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-[#d4af37] text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-normal">
+                      <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 text-[7px] sm:text-[7.5px] md:text-[8px] font-black bg-[#d4af37] text-[#0f2b5c] px-1.5 sm:px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-xs tracking-normal">
                         Login
                       </span>
                     </button>
 
                     {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
-                    <div className="relative flex items-center justify-center py-0.5 sm:py-1">
+                    <div className="relative flex items-center justify-center py-0.5 sm:py-0.5 md:py-1">
                       <div className="flex-grow border-t border-slate-300"></div>
-                      <div className="flex-shrink mx-2 sm:mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[8.5px] sm:text-[10px] uppercase tracking-widest px-2.5 py-0.2 sm:px-3 sm:py-0.5 rounded-full border border-slate-300 shadow-2xs">
+                      <div className="flex-shrink mx-2 sm:mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[8px] sm:text-[8.5px] md:text-[10px] uppercase tracking-widest px-2.5 py-0.2 sm:px-3 sm:py-0.5 rounded-full border border-slate-300 shadow-2xs">
                         <span>ATAU</span>
                       </div>
                       <div className="flex-grow border-t border-slate-300"></div>
@@ -1291,24 +1310,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         setErrorMessage('');
                         setView('guest');
                       }}
-                      className="relative w-full group text-left px-3 py-2 sm:px-3.5 sm:py-2.5 h-[72px] sm:h-[78px] rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2.5 sm:gap-3 hover:scale-[1.01] active:scale-[0.99]"
+                      className="relative w-full group text-left px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2.5 min-h-[58px] sm:min-h-[64px] md:min-h-[72px] lg:min-h-[78px] rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2 sm:gap-2.5 md:gap-3 hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                        <Globe2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                        <Globe2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" />
                       </div>
-                      <div className="flex-1 min-w-0 pr-20 sm:pr-24 flex flex-col justify-center">
-                        <span className="text-xs sm:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] truncate block">
+                      <div className="flex-1 min-w-0 pr-16 sm:pr-20 md:pr-24 flex flex-col justify-center">
+                        <span className="text-xs sm:text-xs md:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] truncate block">
                           Lanjutkan Sebagai Tamu
                         </span>
-                        <p className="text-[9px] sm:text-[10.5px] text-slate-700 font-medium leading-tight mt-0.5 line-clamp-2">
+                        <p className="text-[8.5px] sm:text-[9.5px] md:text-[10.5px] text-slate-700 font-medium leading-tight mt-0.5 line-clamp-2">
                           Akses publik instan untuk membaca grafik & data PSKS tanpa password.
                         </p>
                       </div>
                       {/* Pinned Corner Badge */}
-                      <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 text-[7.5px] sm:text-[8px] font-black bg-amber-200/90 text-[#0f2b5c] px-2 py-0.5 rounded-full uppercase border border-amber-300 whitespace-nowrap shadow-xs tracking-normal">
+                      <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 text-[7px] sm:text-[7.5px] md:text-[8px] font-black bg-amber-200/90 text-[#0f2b5c] px-1.5 sm:px-2 py-0.5 rounded-full uppercase border border-amber-300 whitespace-nowrap shadow-xs tracking-normal">
                         Tanpa Login
                       </span>
                     </button>
+
 
                   </div>
                 )}
@@ -2811,6 +2831,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 © Dinas Sosial Provinsi Jawa Barat ( Developer By Ilham Fazril ) Hak Cipta Dilindungi Undang-Undang
               </div>
             </div>
+
+            </div> {/* Close Layer 2 Wrapper */}
 
           </div>
 

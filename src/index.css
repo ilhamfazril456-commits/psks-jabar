@@ -35,6 +35,42 @@
   will-change: transform;
 }
 
+/* Option B: Iris / Center Circle Opening Animation (Geulis Jabar Gate) */
+@keyframes irisExpandIn {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0.92;
+  }
+  100% {
+    clip-path: circle(150% at 50% 50%);
+    opacity: 1;
+  }
+}
+
+.animate-iris-expand {
+  animation: irisExpandIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: clip-path;
+}
+
+@keyframes irisLogoPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+
+.animate-iris-logo-exit {
+  animation: irisLogoPulse 0.55s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
 @keyframes scaleUp {
   0% {
     transform: scale(0.93);
