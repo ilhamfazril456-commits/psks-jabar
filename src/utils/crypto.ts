@@ -4,8 +4,9 @@ import CryptoJS from 'crypto-js';
 const SALT_ROUNDS = 10;
 
 // Internal master encryption secret for PII fields (NIK & No WhatsApp)
-// Prevents plaintext exposure in Firestore Console, Supabase Table Editor, or database dumps
+// Supports custom secret key via environment variables (VITE_PII_SECRET_KEY, PII_SECRET_KEY, SESSION_SECRET)
 const PII_SECRET_KEY =
+  (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_PII_SECRET_KEY || import.meta.env?.VITE_SESSION_SECRET)) ||
   (typeof process !== 'undefined' && (process.env?.PII_SECRET_KEY || process.env?.SESSION_SECRET)) ||
   'PSKS_JABAR_AES256_PII_SECRET_KEY_998822';
 

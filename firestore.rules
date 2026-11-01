@@ -22,24 +22,40 @@ service cloud.firestore {
     }
 
     // 3. User, Admin, Superadmin, & Dev Accounts
-    match /user_accounts/{userId} {
+    match /dev_accounts/{devId} {
       allow read: if true;
-      allow write: if isValidId(userId);
-    }
-
-    match /admin_accounts/{accountId} {
-      allow read: if true;
-      allow write: if isValidId(accountId);
+      allow create, delete: if false; // Developer root account cannot be created or deleted via client SDK
+      allow update: if isValidId(devId) &&
+        !('passwordPolos' in request.resource.data) &&
+        !('superadminPin' in request.resource.data) &&
+        !('developerPin' in request.resource.data);
     }
 
     match /superadmin_accounts/{superadminId} {
       allow read: if true;
-      allow write: if isValidId(superadminId);
+      allow create, delete: if false; // Superadmin account cannot be wiped or created from client SDK
+      allow update: if isValidId(superadminId) &&
+        !('passwordPolos' in request.resource.data) &&
+        !('superadminPin' in request.resource.data) &&
+        !('developerPin' in request.resource.data);
     }
 
-    match /dev_accounts/{devId} {
+    match /admin_accounts/{accountId} {
       allow read: if true;
-      allow write: if isValidId(devId);
+      allow create, update: if isValidId(accountId) &&
+        !('passwordPolos' in request.resource.data) &&
+        !('superadminPin' in request.resource.data) &&
+        !('developerPin' in request.resource.data);
+      allow delete: if isValidId(accountId) && accountId != 'adm-dev' && accountId != 'adm-super';
+    }
+
+    match /user_accounts/{userId} {
+      allow read: if true;
+      allow create, update: if isValidId(userId) &&
+        !('passwordPolos' in request.resource.data) &&
+        !('superadminPin' in request.resource.data) &&
+        !('developerPin' in request.resource.data);
+      allow delete: if isValidId(userId);
     }
 
     // 4. Global App Settings: Protected against deletion & secret PIN tampering

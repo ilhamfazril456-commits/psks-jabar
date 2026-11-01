@@ -21,7 +21,18 @@ function verifySessionToken(token: string): VerifiedSessionPayload | null {
   const [data, signature] = parts;
   if (!data || !signature) return null;
   const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
-  if (signature !== expectedSig) return null;
+  
+  // Timing-safe signature comparison to prevent timing side-channel attacks
+  try {
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
   try {
     const payload: VerifiedSessionPayload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
     if (payload.expiresAt && Date.now() > payload.expiresAt) return null;
