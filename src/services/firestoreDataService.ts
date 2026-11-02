@@ -990,6 +990,65 @@ export async function setFirestoreDoc(
       } catch (checkErr) {
         supabaseError = checkErr;
       }
+    } else if (collectionName === 'psks_records') {
+      try {
+        const token =
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+          '';
+        const resp = await fetch('/api/psks/save-record', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({ id: docId, data }),
+        });
+        if (resp.ok) {
+          supabaseOk = true;
+        } else {
+          // Direct fallback if API returns error
+          const row = mapDocToSupabaseRow(collectionName, docId, data);
+          const res = await supabase.from('psks_records').upsert(row);
+          if (!res.error) supabaseOk = true;
+          else supabaseError = res.error;
+        }
+      } catch {
+        const row = mapDocToSupabaseRow(collectionName, docId, data);
+        const res = await supabase.from('psks_records').upsert(row);
+        if (!res.error) supabaseOk = true;
+        else supabaseError = res.error;
+      }
+    } else if (collectionName === 'app_settings') {
+      try {
+        const token =
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+          '';
+        const resp = await fetch('/api/settings/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({ id: docId, data }),
+        });
+        if (resp.ok) {
+          supabaseOk = true;
+        } else {
+          const row = mapDocToSupabaseRow(collectionName, docId, data);
+          const res = await supabase.from('app_settings').upsert(row);
+          if (!res.error) supabaseOk = true;
+          else supabaseError = res.error;
+        }
+      } catch {
+        const row = mapDocToSupabaseRow(collectionName, docId, data);
+        const res = await supabase.from('app_settings').upsert(row);
+        if (!res.error) supabaseOk = true;
+        else supabaseError = res.error;
+      }
     } else {
       const row = mapDocToSupabaseRow(collectionName, docId, data);
       let chosenTable = isAccountCol ? targetTable : collectionName;
@@ -1051,6 +1110,35 @@ export async function batchSetFirestoreDocs(
 ): Promise<void> {
   if (!docs || docs.length === 0) return;
 
+  if (collectionName === 'psks_records') {
+    try {
+      const token =
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+        '';
+      const CHUNK_SIZE = 300;
+      let completed = 0;
+      for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
+        const chunk = docs.slice(i, i + CHUNK_SIZE);
+        await fetch('/api/psks/batch-save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({ docs: chunk }),
+        });
+        completed += chunk.length;
+        if (onProgress) {
+          onProgress(completed, docs.length);
+        }
+      }
+      passiveFirestoreBackup('batchSet', collectionName, docs);
+      return;
+    } catch {}
+  }
+
   const rows = docs.map((d) => mapDocToSupabaseRow(collectionName, d.id, d.data));
   const CHUNK_SIZE = 300;
   let completed = 0;
@@ -1078,9 +1166,25 @@ export async function deleteFirestoreDoc(
   docId: string
 ): Promise<void> {
   try {
-    await supabase.from(collectionName).delete().eq('id', docId);
-    if (collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
-      await supabase.from('admin_accounts').delete().eq('id', docId);
+    if (collectionName === 'psks_records') {
+      const token =
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+        '';
+      await fetch('/api/psks/delete-record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-session-token': token,
+        },
+        body: JSON.stringify({ id: docId }),
+      });
+    } else {
+      await supabase.from(collectionName).delete().eq('id', docId);
+      if (collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
+        await supabase.from('admin_accounts').delete().eq('id', docId);
+      }
     }
   } catch {}
 
@@ -1097,6 +1201,35 @@ export async function batchDeleteFirestoreDocs(
   onProgress?: (completed: number, total: number) => void
 ): Promise<void> {
   if (!docIds || docIds.length === 0) return;
+
+  if (collectionName === 'psks_records') {
+    try {
+      const token =
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+        '';
+      const CHUNK_SIZE = 300;
+      let completed = 0;
+      for (let i = 0; i < docIds.length; i += CHUNK_SIZE) {
+        const chunk = docIds.slice(i, i + CHUNK_SIZE);
+        await fetch('/api/psks/batch-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({ ids: chunk }),
+        });
+        completed += chunk.length;
+        if (onProgress) {
+          onProgress(completed, docIds.length);
+        }
+      }
+      passiveFirestoreBackup('batchDelete', collectionName, docIds);
+      return;
+    } catch {}
+  }
 
   const CHUNK_SIZE = 300;
   let completed = 0;

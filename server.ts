@@ -924,25 +924,6 @@ async function startServer() {
         isValid = true;
       } else if (matchedAccount.passwordHash) {
         isValid = comparePassword(pClean, matchedAccount.passwordHash);
-      } else if (matchedAccount.passwordPolos) {
-        // Upgrade legacy unhashed account to bcrypt hash on first successful login
-        if (pClean === matchedAccount.passwordPolos) {
-          isValid = true;
-          const upgradedHash = hashPassword(pClean);
-          try {
-            const { doc, setDoc } = await import('firebase/firestore');
-            const { db } = await import('./src/lib/firebase');
-            const targetCollection = (matchedAccount as any).collectionSource || (matchedAccount.role === 'user' ? 'user_accounts' : matchedAccount.role === 'developer' ? 'dev_accounts' : matchedAccount.role === 'superadmin' ? 'superadmin_accounts' : 'admin_accounts');
-            await setDoc(doc(db, targetCollection, matchedAccount.id), { passwordHash: upgradedHash, passwordPolos: '' }, { merge: true });
-          } catch {}
-          try {
-            const sbTable = (matchedAccount as any).sbTableSource || (matchedAccount.role === 'user' ? 'user_accounts' : matchedAccount.role === 'developer' ? 'dev_accounts' : matchedAccount.role === 'superadmin' ? 'superadmin_accounts' : 'admin_accounts');
-            await supabase.from(sbTable).update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
-            if (sbTable !== 'admin_accounts') {
-              await supabase.from('admin_accounts').update({ passwordHash: upgradedHash, passwordPolos: null }).eq('id', matchedAccount.id);
-            }
-          } catch {}
-        }
       }
 
       if (!isValid) {
@@ -1225,6 +1206,226 @@ async function startServer() {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: 'Gagal menjalankan pemisahan akun: ' + (err?.message || err) });
+    }
+  });
+
+  // Middleware Otorisasi: Wajib Admin Terautentikasi (Admin Wilayah, Superadmin, atau Developer)
+  function requireAuthenticatedStaff(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers['authorization'] || '';
+    const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    const token = tokenFromHeader || (req.headers['x-session-token'] as string) || (req.body && req.body.sessionToken);
+
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'Akses ditolak: Token autentikasi sesi tidak ditemukan.' });
+    }
+
+    const session = verifySessionToken(token);
+    if (!session) {
+      return res.status(401).json({ success: false, error: 'Akses ditolak: Token sesi tidak sah atau kedaluwarsa.' });
+    }
+
+    if (!['admin', 'superadmin', 'developer'].includes(session.role)) {
+      return res.status(403).json({ success: false, error: 'Akses ditolak: Otoritas tidak mencukupi untuk mengelola data PSKS.' });
+    }
+
+    (req as any).user = session;
+    next();
+  }
+
+  // 1. Endpoint Simpan/Update Record PSKS Aman di Server (Zero Client Direct Write)
+  app.post('/api/psks/save-record', requireAuthenticatedStaff, async (req, res) => {
+    try {
+      const { id, data } = req.body;
+      const user = (req as any).user;
+
+      if (!id || !data || typeof data !== 'object') {
+        return res.status(400).json({ success: false, message: 'ID dokumen dan data record wajib diisi.' });
+      }
+
+      // Validasi Otoritas Wilayah (Admin Wilayah hanya boleh mengedit wilayahnya sendiri)
+      if (user.role === 'admin') {
+        const targetWilayah = (data.wilayah || '').toLowerCase().trim();
+        const userWilayah = (user.wilayahTugas || '').toLowerCase().trim();
+        if (targetWilayah && userWilayah && !targetWilayah.includes(userWilayah) && !userWilayah.includes(targetWilayah)) {
+          return res.status(403).json({ success: false, message: `Akses ditolak: Anda hanya berwenang mengelola data wilayah ${user.wilayahTugas}.` });
+        }
+      }
+
+      // Enkripsi PII (NIK & Kontak) dengan AES-256 sebelum disimpan ke database
+      const rawNik = (data.nik || '').toString().trim();
+      const rawHp = (data.hp || data.noWhatsapp || '').toString().trim();
+      const encNik = rawNik ? (rawNik.startsWith('ENC::') ? rawNik : encryptSensitiveData(rawNik)) : '';
+      const encHp = rawHp ? (rawHp.startsWith('ENC::') ? rawHp : encryptSensitiveData(rawHp)) : '';
+
+      const sanitizedData = {
+        ...data,
+        nik: encNik,
+        hp: encHp,
+        updatedAt: new Date().toISOString(),
+        lastUpdatedBy: user.username,
+      };
+
+      // Simpan ke Supabase via server
+      const { error: sbErr } = await supabase.from('psks_records').upsert({
+        id,
+        pillarId: sanitizedData.pillarId || '',
+        wilayah: sanitizedData.wilayah || '',
+        nama: sanitizedData.nama || '',
+        status: sanitizedData.status || '',
+        kec: sanitizedData.kec || '',
+        kelDesa: sanitizedData.kelDesa || '',
+        orderIndex: typeof sanitizedData.orderIndex === 'number' ? sanitizedData.orderIndex : 0,
+        updatedAt: sanitizedData.updatedAt,
+        data: sanitizedData,
+      }, { onConflict: 'id' });
+
+      if (sbErr) {
+        console.warn('[Server Save PSKS Record Supabase Notice]:', sbErr);
+      }
+
+      // Backup ke Firestore
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        await setDoc(doc(db, 'psks_records', id), sanitizedData, { merge: true });
+      } catch (fsErr) {
+        console.warn('[Server Save PSKS Record Firestore Notice]:', fsErr);
+      }
+
+      return res.json({ success: true, message: `Data PSKS (${id}) berhasil disimpan dengan aman!` });
+    } catch (err: any) {
+      console.error('[Server Save PSKS Record Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan data ke database server.' });
+    }
+  });
+
+  // 2. Endpoint Hapus Record PSKS Aman di Server (Zero Client Direct Delete)
+  app.post('/api/psks/delete-record', requireAuthenticatedStaff, async (req, res) => {
+    try {
+      const { id, wilayah } = req.body;
+      const user = (req as any).user;
+
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'ID dokumen wajib diisi.' });
+      }
+
+      // Validasi Otoritas Wilayah
+      if (user.role === 'admin' && wilayah) {
+        const targetWilayah = (wilayah || '').toLowerCase().trim();
+        const userWilayah = (user.wilayahTugas || '').toLowerCase().trim();
+        if (targetWilayah && userWilayah && !targetWilayah.includes(userWilayah) && !userWilayah.includes(targetWilayah)) {
+          return res.status(403).json({ success: false, message: `Akses ditolak: Anda hanya berwenang menghapus data wilayah ${user.wilayahTugas}.` });
+        }
+      }
+
+      // Hapus dari Supabase via server
+      await supabase.from('psks_records').delete().eq('id', id);
+
+      // Hapus dari Firestore
+      try {
+        const { doc, deleteDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        await deleteDoc(doc(db, 'psks_records', id));
+      } catch {}
+
+      return res.json({ success: true, message: `Data PSKS (${id}) berhasil dihapus dari database!` });
+    } catch (err: any) {
+      console.error('[Server Delete PSKS Record Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menghapus data dari database server.' });
+    }
+  });
+
+  // 3. Endpoint Batch Simpan Record PSKS Aman di Server
+  app.post('/api/psks/batch-save', requireAuthenticatedStaff, async (req, res) => {
+    try {
+      const { docs } = req.body;
+      if (!Array.isArray(docs) || docs.length === 0) {
+        return res.status(400).json({ success: false, message: 'Daftar dokumen tidak boleh kosong.' });
+      }
+
+      const rows = docs.map((item: any) => {
+        const d = item.data || {};
+        const rawNik = (d.nik || '').toString().trim();
+        const rawHp = (d.hp || d.noWhatsapp || '').toString().trim();
+        const encNik = rawNik ? (rawNik.startsWith('ENC::') ? rawNik : encryptSensitiveData(rawNik)) : '';
+        const encHp = rawHp ? (rawHp.startsWith('ENC::') ? rawHp : encryptSensitiveData(rawHp)) : '';
+        const sData = { ...d, nik: encNik, hp: encHp, updatedAt: new Date().toISOString() };
+
+        return {
+          id: item.id,
+          pillarId: sData.pillarId || '',
+          wilayah: sData.wilayah || '',
+          nama: sData.nama || '',
+          status: sData.status || '',
+          kec: sData.kec || '',
+          kelDesa: sData.kelDesa || '',
+          orderIndex: typeof sData.orderIndex === 'number' ? sData.orderIndex : 0,
+          updatedAt: sData.updatedAt,
+          data: sData,
+        };
+      });
+
+      // Simpan batch ke Supabase per 300 chunk
+      const CHUNK = 300;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const chunk = rows.slice(i, i + CHUNK);
+        await supabase.from('psks_records').upsert(chunk, { onConflict: 'id' });
+      }
+
+      return res.json({ success: true, count: rows.length, message: `${rows.length} data PSKS berhasil disimpan secara massal!` });
+    } catch (err: any) {
+      console.error('[Server Batch Save PSKS Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menyimpan data massal ke database server.' });
+    }
+  });
+
+  // 4. Endpoint Batch Hapus Record PSKS Aman di Server
+  app.post('/api/psks/batch-delete', requireAuthenticatedStaff, async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: 'Daftar ID tidak boleh kosong.' });
+      }
+
+      const CHUNK = 300;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        await supabase.from('psks_records').delete().in('id', chunk);
+      }
+
+      return res.json({ success: true, count: ids.length, message: `${ids.length} data PSKS berhasil dihapus secara massal!` });
+    } catch (err: any) {
+      console.error('[Server Batch Delete PSKS Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal menghapus data massal dari database server.' });
+    }
+  });
+
+  // 5. Endpoint Update Pengaturan Aplikasi (app_settings) - Wajib Superadmin / Developer
+  app.post('/api/settings/update', requireAdminOrDev, async (req, res) => {
+    try {
+      const { id, data } = req.body;
+      if (!id || !data || typeof data !== 'object') {
+        return res.status(400).json({ success: false, message: 'ID dan data pengaturan wajib diisi.' });
+      }
+
+      // Pastikan kredensial rahasia (seperti PIN mentah atau password) tidak tertanam di data publik
+      const sanitized = { ...data };
+      delete sanitized.superadminPin;
+      delete sanitized.developerPin;
+      delete sanitized.passwordPolos;
+
+      await supabase.from('app_settings').upsert({ id, data: sanitized }, { onConflict: 'id' });
+
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        await setDoc(doc(db, 'app_settings', id), sanitized, { merge: true });
+      } catch {}
+
+      return res.json({ success: true, message: 'Pengaturan sistem berhasil diperbarui dengan aman!' });
+    } catch (err: any) {
+      console.error('[Server Update Settings Error]:', err);
+      return res.status(500).json({ success: false, message: 'Gagal memperbarui pengaturan sistem.' });
     }
   });
 

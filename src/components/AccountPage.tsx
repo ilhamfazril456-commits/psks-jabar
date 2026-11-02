@@ -392,7 +392,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     // Verifikasi kata sandi lama via Bcrypt Hash
     const matchesOld = targetAccount.passwordHash
       ? comparePassword(oldTrim, targetAccount.passwordHash)
-      : (targetAccount.passwordPolos && targetAccount.passwordPolos === oldTrim);
+      : false;
 
     if (!matchesOld) {
       setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');

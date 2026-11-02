@@ -21,22 +21,21 @@ export function hashPassword(plainText: string): string {
 /**
  * Compare a plain text password attempt with a stored bcrypt hash (or fallback plain text).
  */
-export function comparePassword(plainText: string, storedHashOrPlain?: string): boolean {
-  if (!plainText || !storedHashOrPlain) return false;
+export function comparePassword(plainText: string, storedHash?: string): boolean {
+  if (!plainText || !storedHash) return false;
 
   // Check if stored string is a valid bcrypt hash format ($2a$, $2b$, or $2y$)
-  const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedHashOrPlain);
+  const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedHash);
 
   if (isBcryptHash) {
     try {
-      return bcrypt.compareSync(plainText, storedHashOrPlain);
+      return bcrypt.compareSync(plainText, storedHash);
     } catch {
       return false;
     }
   }
 
-  // Legacy fallback if hash is missing
-  return plainText === storedHashOrPlain;
+  return false;
 }
 
 /**

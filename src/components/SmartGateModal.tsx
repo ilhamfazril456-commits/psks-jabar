@@ -314,15 +314,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     }
   }, [adminAccounts, registrationTicket]);
 
-  // Live synchronizer: keep local registration ticket aligned with latest password and verification status
+  // Live synchronizer: keep local registration ticket aligned with latest verification status & region
   useEffect(() => {
     if (liveRegisteredAccount && registrationTicket) {
-      const livePass = liveRegisteredAccount.passwordPolos;
-      if (livePass && livePass !== registrationTicket.passwordPolos) {
+      if (liveRegisteredAccount.wilayahTugas && liveRegisteredAccount.wilayahTugas !== registrationTicket.wilayah) {
         const updatedTicket = {
           ...registrationTicket,
-          passwordPolos: livePass,
-          wilayah: liveRegisteredAccount.wilayahTugas || registrationTicket.wilayah,
+          passwordPolos: '••••••••',
+          wilayah: liveRegisteredAccount.wilayahTugas,
         };
         setRegistrationTicket(updatedTicket);
         try {
@@ -1003,8 +1002,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         isValid = true;
       } else if (matchedAccount.passwordHash) {
         isValid = comparePassword(pInput, matchedAccount.passwordHash);
-      } else if (matchedAccount.passwordPolos) {
-        isValid = (pInput === matchedAccount.passwordPolos);
       }
 
       if (isValid) {

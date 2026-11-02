@@ -40,17 +40,17 @@ function signSessionToken(payload: {
   return `ses_${data}.${signature}`;
 }
 
-function comparePassword(plainText: string, storedHashOrPlain?: string): boolean {
-  if (!plainText || !storedHashOrPlain) return false;
-  const isBcrypt = /^\$2[aby]\$\d{2}\$/.test(storedHashOrPlain);
+function comparePassword(plainText: string, storedHash?: string): boolean {
+  if (!plainText || !storedHash) return false;
+  const isBcrypt = /^\$2[aby]\$\d{2}\$/.test(storedHash);
   if (isBcrypt) {
     try {
-      return bcrypt.compareSync(plainText, storedHashOrPlain);
+      return bcrypt.compareSync(plainText, storedHash);
     } catch {
       return false;
     }
   }
-  return plainText === storedHashOrPlain;
+  return false;
 }
 
 export default async function handler(req: any, res: any) {
@@ -106,7 +106,6 @@ export default async function handler(req: any, res: any) {
             statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
             wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
             passwordHash: data.passwordHash || restData.passwordHash || '',
-            passwordPolos: restData.passwordPolos || '',
             isFrozen: data.isFrozen === true || restData.isFrozen === true,
             statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
             statusVerval: data.statusVerval || restData.statusVerval || '',
@@ -149,7 +148,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 2. Validate Password
+    // 2. Validate Password (Strictly Bcrypt hash or approved temporary reset ticket)
     const tempResetPass = matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
     let isValid = false;
 
@@ -157,8 +156,6 @@ export default async function handler(req: any, res: any) {
       isValid = true;
     } else if (matchedAccount.passwordHash) {
       isValid = comparePassword(pClean, matchedAccount.passwordHash);
-    } else if (matchedAccount.passwordPolos) {
-      isValid = (pClean === matchedAccount.passwordPolos);
     }
 
     if (!isValid) {
