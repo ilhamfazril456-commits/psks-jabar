@@ -1,6 +1,6 @@
 import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import { OperationType, handleFirestoreError, isQuotaError } from '../lib/firebaseErrors';
-import { encryptSensitiveData, hashSearchableField } from '../utils/crypto';
+import { encryptSensitiveData, decryptSensitiveData, hashSearchableField } from '../utils/crypto';
 
 let firestoreModulePromise: Promise<{
   firestore: typeof import('firebase/firestore');
@@ -129,6 +129,34 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
       isActive: row.isActive !== false,
       createdAt: row.createdAt || '',
       updatedAt: row.updatedAt || '',
+    };
+  }
+
+  if (collectionName === 'registration_submissions') {
+    const restData = row.data && typeof row.data === 'object' ? row.data : {};
+    const rawNik = row.nik || restData.nik || '';
+    const rawHp = row.hp || restData.hp || '';
+    const decNik = rawNik ? decryptSensitiveData(rawNik) : '';
+    const decHp = rawHp ? decryptSensitiveData(rawHp) : '';
+
+    const rawRecordData = row.recordData || restData.recordData || {};
+    const safeRecordData = typeof rawRecordData === 'object' ? { ...rawRecordData } : {};
+    if (safeRecordData.nik) safeRecordData.nik = decryptSensitiveData(safeRecordData.nik);
+    if (safeRecordData.hp) safeRecordData.hp = decryptSensitiveData(safeRecordData.hp);
+    if (safeRecordData.noWhatsapp) safeRecordData.noWhatsapp = decryptSensitiveData(safeRecordData.noWhatsapp);
+
+    return {
+      id: row.id,
+      ...restData,
+      nama: row.nama || restData.nama || '',
+      nik: decNik,
+      hp: decHp,
+      wilayah: row.wilayah || restData.wilayah || '',
+      kec: row.kec || restData.kec || '',
+      pillarId: row.pillarId || restData.pillarId || '',
+      status: row.status || restData.status || 'PENDING',
+      submittedAt: row.submittedAt || restData.submittedAt || '',
+      recordData: safeRecordData,
     };
   }
 
@@ -267,18 +295,39 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
 
   if (collectionName === 'registration_submissions') {
     const { id: _id, nama, nik, hp, wilayah, kec, pillarId, status, submittedAt, recordData, ...rest } = cleaned;
+    const rawNik = (nik || '').toString().trim();
+    const rawHp = (hp || '').toString().trim();
+    const encNik = rawNik ? (rawNik.startsWith('ENC::') ? rawNik : encryptSensitiveData(rawNik)) : '';
+    const encHp = rawHp ? (rawHp.startsWith('ENC::') ? rawHp : encryptSensitiveData(rawHp)) : '';
+    const nikHash = rawNik ? hashSearchableField(rawNik) : '';
+
+    const safeRecordData = recordData && typeof recordData === 'object' ? { ...recordData } : {};
+    if (safeRecordData.nik && typeof safeRecordData.nik === 'string' && !safeRecordData.nik.startsWith('ENC::')) {
+      safeRecordData.nik = encryptSensitiveData(safeRecordData.nik.trim());
+    }
+    if (safeRecordData.hp && typeof safeRecordData.hp === 'string' && !safeRecordData.hp.startsWith('ENC::')) {
+      safeRecordData.hp = encryptSensitiveData(safeRecordData.hp.trim());
+    }
+    if (safeRecordData.noWhatsapp && typeof safeRecordData.noWhatsapp === 'string' && !safeRecordData.noWhatsapp.startsWith('ENC::')) {
+      safeRecordData.noWhatsapp = encryptSensitiveData(safeRecordData.noWhatsapp.trim());
+    }
+
     return {
       id: docId,
       nama: nama || '',
-      nik: nik || '',
-      hp: hp || '',
+      nik: encNik,
+      hp: encHp,
       wilayah: wilayah || '',
       kec: kec || '',
       pillarId: pillarId || '',
       status: status || 'PENDING',
       submittedAt: submittedAt || new Date().toISOString(),
-      recordData: recordData || {},
-      data: rest,
+      recordData: safeRecordData,
+      data: {
+        ...rest,
+        ...(encNik ? { nik: encNik, nikHash } : {}),
+        ...(encHp ? { hp: encHp } : {}),
+      },
     };
   }
 
@@ -550,9 +599,11 @@ export function subscribeToCollection(
   // 1. Initial bulk fetch from Supabase
   refreshCollection();
 
-  // 2. High-frequency polling safety sync for critical Supabase collections (1.2s interval)
+  // 2. Bandwidth-efficient fallback sync (60s interval instead of aggressive 1.2s polling to protect Supabase Egress quota)
   if (
     collectionName === 'admin_accounts' ||
+    collectionName === 'user_accounts' ||
+    collectionName === 'superadmin_accounts' ||
     collectionName === 'registration_submissions' ||
     collectionName === 'app_settings'
   ) {
@@ -560,7 +611,7 @@ export function subscribeToCollection(
       if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
         refreshCollection();
       }
-    }, 1200);
+    }, 60000); // 60 seconds safe interval: saves 98% bandwidth while realtime handles instant push
   }
 
   // 3. Concurrent Real-time Firestore onSnapshot listener for instant sub-second trigger

@@ -2,6 +2,13 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
+import {
+  setDiskominfoCorsHeaders,
+  getClientIp,
+  checkRateLimit,
+  recordFailedRateLimitAttempt,
+  clearRateLimit,
+} from '../securityHelper';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zwjbjmafxixudhlvaxef.supabase.co';
 const SUPABASE_KEY =
@@ -47,17 +54,25 @@ function comparePassword(plainText: string, storedHashOrPlain?: string): boolean
 }
 
 export default async function handler(req: any, res: any) {
-  // CORS configuration
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  // Enforce Diskominfo-compliant restricted CORS
+  const isHandled = setDiskominfoCorsHeaders(req, res);
+  if (isHandled) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ valid: false, message: 'Method Not Allowed' });
+  }
+
+  const clientIp = getClientIp(req);
+
+  // Anti Brute-Force Rate Limiting (Diskominfo Standard: Max 5 attempts per 5 mins per IP)
+  const rateLimit = checkRateLimit('login', clientIp, 5, 5 * 60 * 1000, 5 * 60 * 1000);
+  if (!rateLimit.allowed) {
+    return res.status(429).json({
+      valid: false,
+      locked: true,
+      lockoutRemaining: rateLimit.waitSeconds,
+      message: `⚠️ Terlalu banyak percobaan login gagal dari alamat IP ini. Akses dibekukan sementara selama ${rateLimit.waitSeconds} detik demi standar keamanan Diskominfo.`,
+    });
   }
 
   try {
@@ -110,7 +125,21 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!matchedAccount) {
-      return res.status(401).json({ valid: false, notFound: true, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });
+      const failResult = recordFailedRateLimitAttempt('login', clientIp, 5, 5 * 60 * 1000);
+      if (failResult.locked) {
+        return res.status(429).json({
+          valid: false,
+          locked: true,
+          lockoutRemaining: failResult.waitSeconds,
+          message: '⚠️ 5 kali percobaan login gagal berturut-turut! Akses login dibekukan sementara selama 5 menit demi keamanan.',
+        });
+      }
+      return res.status(401).json({
+        valid: false,
+        notFound: true,
+        remainingAttempts: failResult.remaining,
+        message: `Kombinasi Nama Pengguna atau Kata Sandi salah. Sisa kesempatan: ${failResult.remaining} kali.`,
+      });
     }
 
     if (matchedAccount.isFrozen === true || matchedAccount.statusAkun === 'DIBEKUKAN' || matchedAccount.statusActive === 'FROZEN') {
@@ -133,8 +162,24 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!isValid) {
-      return res.status(401).json({ valid: false, message: 'Kombinasi Nama Pengguna atau Kata Sandi salah.' });
+      const failResult = recordFailedRateLimitAttempt('login', clientIp, 5, 5 * 60 * 1000);
+      if (failResult.locked) {
+        return res.status(429).json({
+          valid: false,
+          locked: true,
+          lockoutRemaining: failResult.waitSeconds,
+          message: '⚠️ 5 kali percobaan login gagal berturut-turut! Akses login dibekukan sementara selama 5 menit demi keamanan.',
+        });
+      }
+      return res.status(401).json({
+        valid: false,
+        remainingAttempts: failResult.remaining,
+        message: `Kombinasi Nama Pengguna atau Kata Sandi salah. Sisa kesempatan: ${failResult.remaining} kali.`,
+      });
     }
+
+    // Successful login: clear failed attempts
+    clearRateLimit('login', clientIp);
 
     // 3. User verification status check
     if (matchedAccount.role === 'user') {

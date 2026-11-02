@@ -78,7 +78,38 @@ service cloud.firestore {
       allow create, update, delete: if isValidId(recordId);
     }
 
-    // 7. Public Informational Content (Regional Logos & Portal FAQs)
+    match /psks_records_meta/{metaId} {
+      allow read: if true;
+      allow create, update: if isValidId(metaId);
+      allow delete: if false;
+    }
+
+    // 7. Pendaftaran Mandiri Anggota PSKS (Registration Submissions)
+    match /registration_submissions/{submissionId} {
+      allow read: if true;
+      allow create, update: if isValidId(submissionId);
+      allow delete: if isValidId(submissionId);
+    }
+
+    // 8. Manajemen Agenda & Tugas Wilayah
+    match /task_items/{taskId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(taskId);
+    }
+
+    // 9. Repositori Dokumen & Surat Tugas
+    match /document_repository/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    // 10. Kotak Pesan Internal Petugas & Notifikasi
+    match /admin_messages/{messageId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(messageId);
+    }
+
+    // 11. Public Informational Content (Regional Logos & Portal FAQs)
     match /psks_regional_logos/{logoId} {
       allow read: if true;
       allow create, update, delete: if isValidId(logoId);
@@ -89,7 +120,7 @@ service cloud.firestore {
       allow create, update, delete: if isValidId(faqId);
     }
 
-    // 8. AI Dynamic Knowledge Base & Brain Storage
+    // 12. AI Dynamic Knowledge Base & Brain Storage
     match /ai_knowledge/{docId} {
       allow read: if true;
       allow create, update, delete: if isValidId(docId);
@@ -110,12 +141,12 @@ service cloud.firestore {
       allow create, update, delete: if isValidId(docId);
     }
 
-    // 9. Video Background Sync
+    // 13. Video Background Sync
     match /sync_video/{videoId} {
       allow read, write: if isValidId(videoId);
     }
 
-    // 10. Default Deny Catch-All: Block any unlisted or arbitrary paths
+    // 14. Default Deny Catch-All: Block any unlisted or arbitrary paths
     match /{document=**} {
       allow read, write: if false;
     }

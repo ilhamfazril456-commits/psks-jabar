@@ -1,36 +1,42 @@
 import crypto from 'crypto';
+import {
+  setDiskominfoCorsHeaders,
+  getClientIp,
+  checkRateLimit,
+} from '../securityHelper';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
 const SUPERADMIN_SECRET_TOKEN = 'ENC::SA-8F2B9D4C1E';
 const DEVELOPER_SECRET_TOKEN = 'ENC::DEV-7A3C5F9B2D';
 
-function signSessionToken(payload: {
-  id: string;
-  username: string;
-  role: string;
-  namaAdmin: string;
-  wilayahTugas: string;
-  statusActive: string;
-}): string {
-  const issuedAt = Date.now();
-  const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000;
-  const fullPayload = { ...payload, issuedAt, expiresAt };
-  const data = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
-  return `ses_${data}.${signature}`;
+/**
+ * Generates a short-lived cryptographically signed challenge token (2 minutes expiry)
+ * requiring 2FA PIN verification before granting full session access.
+ */
+function signCardChallengeToken(role: 'superadmin' | 'developer'): string {
+  const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes challenge window
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const payload = JSON.stringify({ role, nonce, expiresAt });
+  const data = Buffer.from(payload).toString('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(`card_${data}`).digest('base64url');
+  return `ch_${data}.${sig}`;
 }
 
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  const isHandled = setDiskominfoCorsHeaders(req, res);
+  if (isHandled) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ valid: false, message: 'Method Not Allowed' });
+  }
+
+  const clientIp = getClientIp(req);
+  const rateLimit = checkRateLimit('qr_scan', clientIp, 15, 60 * 1000, 60 * 1000);
+  if (!rateLimit.allowed) {
+    return res.status(429).json({
+      valid: false,
+      message: `⚠️ Terlalu banyak percobaan pemindaian kartu dalam 1 menit. Coba lagi dalam ${rateLimit.waitSeconds} detik.`,
+    });
   }
 
   try {
@@ -42,51 +48,75 @@ export default async function handler(req: any, res: any) {
     const cleanPayload = payload.trim();
     const upperPayload = cleanPayload.toUpperCase();
 
+    // 1. Check Superadmin Card (Permanent physical card token)
     if (
       cleanPayload === SUPERADMIN_SECRET_TOKEN ||
       upperPayload === SUPERADMIN_SECRET_TOKEN.toUpperCase() ||
       upperPayload.includes('SA-8F2B9D4C1E')
     ) {
-      const sessionToken = signSessionToken({
-        id: 'adm-super',
-        username: 'superadmin',
-        role: 'superadmin',
-        namaAdmin: 'Superadmin Jabar',
-        wilayahTugas: 'PROVINSI JAWA BARAT',
-        statusActive: 'SAH_TERDAFTAR',
-      });
+      const challengeToken = signCardChallengeToken('superadmin');
       return res.status(200).json({
         valid: true,
+        requiresPin: true,
         role: 'superadmin',
         nama: 'Superadmin Jabar',
         wilayah: 'PROVINSI JAWA BARAT',
-        sessionToken,
-        message: 'Akses Diterima! Selamat Datang Superadmin Provinsi Jawa Barat.',
+        challengeToken,
+        message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
       });
     }
 
+    // 2. Check Developer Card (Permanent physical card token)
     if (
       cleanPayload === DEVELOPER_SECRET_TOKEN ||
       upperPayload === DEVELOPER_SECRET_TOKEN.toUpperCase() ||
       upperPayload.includes('DEV-7A3C5F9B2D')
     ) {
-      const sessionToken = signSessionToken({
-        id: 'adm-dev',
-        username: 'ilhamfazril',
-        role: 'developer',
-        namaAdmin: 'Ilham Fazril',
-        wilayahTugas: 'Pusat Developer Jabar',
-        statusActive: 'SAH_TERDAFTAR',
-      });
+      const challengeToken = signCardChallengeToken('developer');
       return res.status(200).json({
         valid: true,
+        requiresPin: true,
         role: 'developer',
         nama: 'Ilham Fazril',
         wilayah: 'Pusat Developer Jabar',
-        sessionToken,
-        message: 'Akses Diterima! Selamat Datang Developer Utama PSKS Jabar.',
+        challengeToken,
+        message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
       });
     }
+
+    // 3. JSON Wrapper Check (Containing permanent tokens)
+    try {
+      const json = JSON.parse(cleanPayload);
+      if (json && (json.token || json.access_key || json.code || json.key)) {
+        const token = (json.token || json.access_key || json.code || json.key || '').toString();
+        const tokenUpper = token.toUpperCase();
+
+        if (token === SUPERADMIN_SECRET_TOKEN || tokenUpper.includes('SA-8F2B9D4C1E')) {
+          const challengeToken = signCardChallengeToken('superadmin');
+          return res.status(200).json({
+            valid: true,
+            requiresPin: true,
+            role: 'superadmin',
+            nama: 'Superadmin Jabar',
+            wilayah: 'PROVINSI JAWA BARAT',
+            challengeToken,
+            message: 'Kartu Akses Fisik Superadmin Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
+          });
+        }
+        if (token === DEVELOPER_SECRET_TOKEN || tokenUpper.includes('DEV-7A3C5F9B2D')) {
+          const challengeToken = signCardChallengeToken('developer');
+          return res.status(200).json({
+            valid: true,
+            requiresPin: true,
+            role: 'developer',
+            nama: 'Ilham Fazril',
+            wilayah: 'Pusat Developer Jabar',
+            challengeToken,
+            message: 'Kartu Akses Fisik Developer Terverifikasi! Silakan masukkan 6 Digit PIN Otoritas.',
+          });
+        }
+      }
+    } catch {}
 
     return res.status(200).json({
       valid: false,

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { setDiskominfoCorsHeaders } from '../securityHelper';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
 
@@ -43,13 +44,8 @@ function verifySessionToken(token: string): VerifiedSessionPayload | null {
 }
 
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  const isHandled = setDiskominfoCorsHeaders(req, res);
+  if (isHandled) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ valid: false, message: 'Method Not Allowed' });

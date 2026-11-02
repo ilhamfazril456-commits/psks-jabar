@@ -32,6 +32,7 @@ import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { compareRecordsChronological } from './utils/regionSort';
+import { decryptSensitiveData } from './utils/crypto';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
 const MaintenanceOverlay = React.lazy(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
@@ -1961,11 +1962,31 @@ export default function App() {
           docs.forEach(({ id: docId, data }) => {
             if (!data || typeof data !== 'object') return;
             const sub = data as any;
+            const rawNik = typeof sub.nik === 'string' ? sub.nik : (sub.recordData?.nik || '');
+            const rawHp = typeof sub.hp === 'string' ? sub.hp : (sub.recordData?.hp || sub.recordData?.noWhatsapp || '');
+            const safeNik = rawNik ? decryptSensitiveData(rawNik) : '';
+            const safeHp = rawHp ? decryptSensitiveData(rawHp) : '';
+
+            const safeRecordData = sub.recordData ? {
+              ...sub.recordData,
+              nik: sub.recordData.nik ? decryptSensitiveData(sub.recordData.nik) : safeNik,
+              hp: sub.recordData.hp ? decryptSensitiveData(sub.recordData.hp) : safeHp,
+            } : {
+              wilayah: typeof sub.wilayah === 'string' ? sub.wilayah : 'Kota Bandung',
+              kec: typeof sub.kec === 'string' ? sub.kec : '',
+              nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar',
+              nik: safeNik,
+              sertifikasi: '',
+              hp: safeHp,
+              status: 'Aktif',
+            };
+
             loaded.push({
+              ...sub,
               id: docId,
               nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar Baru',
-              nik: typeof sub.nik === 'string' ? sub.nik : '',
-              hp: typeof sub.hp === 'string' ? sub.hp : '',
+              nik: safeNik,
+              hp: safeHp,
               wilayah: typeof sub.wilayah === 'string' ? sub.wilayah : 'Kota Bandung',
               kec: typeof sub.kec === 'string' ? sub.kec : (typeof sub.kecamatan === 'string' ? sub.kecamatan : ''),
               pillarId: (typeof sub.pillarId === 'string' && sub.pillarId) ? sub.pillarId : 'peksos',
@@ -1974,16 +1995,7 @@ export default function App() {
               submittedByRole: typeof sub.submittedByRole === 'string' ? sub.submittedByRole : 'user',
               submittedAt: sub.submittedAt || new Date().toISOString(),
               submittedAtFormatted: typeof sub.submittedAtFormatted === 'string' ? sub.submittedAtFormatted : '',
-              recordData: sub.recordData || {
-                wilayah: typeof sub.wilayah === 'string' ? sub.wilayah : 'Kota Bandung',
-                kec: typeof sub.kec === 'string' ? sub.kec : '',
-                nama: typeof sub.nama === 'string' ? sub.nama : 'Pendaftar',
-                nik: typeof sub.nik === 'string' ? sub.nik : '',
-                sertifikasi: '',
-                hp: typeof sub.hp === 'string' ? sub.hp : '',
-                status: 'Aktif',
-              },
-              ...sub,
+              recordData: safeRecordData,
             } as PillarRegistrationSubmission);
           });
           loaded.sort((a, b) => {
