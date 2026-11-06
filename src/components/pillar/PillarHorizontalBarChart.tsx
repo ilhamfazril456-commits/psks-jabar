@@ -97,7 +97,37 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
   onSelectRegion,
 }) => {
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleContainerMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobile) return;
+    if (!chartContainerRef.current) return;
+    const rect = chartContainerRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  const handleContainerMouseLeave = () => {
+    if (!isMobile) {
+      setActiveRegion(null);
+      setMousePos(null);
+    }
+  };
 
   const unit = PILLAR_UNITS[pillarId] || 'Data';
   const colorScheme = PILLAR_GRADIENTS[pillarId] || {
@@ -161,7 +191,9 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
   return (
     <div
       ref={chartContainerRef}
-      className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-6 border border-slate-200 shadow-xs mb-6 sm:mb-8"
+      className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-6 border border-slate-200 shadow-xs mb-6 sm:mb-8 relative overflow-visible select-none"
+      onMouseMove={handleContainerMouseMove}
+      onMouseLeave={handleContainerMouseLeave}
     >
       {/* Header Grafik */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -230,10 +262,10 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
                   if (onSelectRegion) onSelectRegion(region);
                 }}
               >
-                {/* KOTAK MELAYANG LICIN (Tooltip) */}
-                {isHovered && (
+                {/* KOTAK MELAYANG (Khusus Layar Sentuh Mobile / HP) */}
+                {isMobile && isHovered && (
                   <div
-                    className={`absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150 left-1/2 -translate-x-1/2 ${
+                    className={`absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150 left-2 sm:left-4 ${
                       idx === 0 ? 'top-full mt-2' : '-top-20 sm:-top-22'
                     }`}
                   >
@@ -347,10 +379,10 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
                 if (onSelectRegion) onSelectRegion(region);
               }}
             >
-              {/* KOTAK MELAYANG LICIN (Tooltip saat Hover / Touch) */}
-              {isHovered && (
+              {/* KOTAK MELAYANG (Khusus Layar Sentuh Mobile / HP) */}
+              {isMobile && isHovered && (
                 <div
-                  className={`absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150 left-1/2 -translate-x-1/2 ${
+                  className={`absolute z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150 left-2 sm:left-4 ${
                     idx === 0 ? 'top-full mt-2' : '-top-16 sm:-top-18'
                   }`}
                 >
@@ -406,6 +438,89 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
           );
         })}
       </div>
+
+      {/* KOTAK MELAYANG LAPTOP / DESKTOP: Melayang bebas mengikuti kursor mouse, keluar dari area batang, 100% licin & anti-tumpang tindih */}
+      {!isMobile && activeRegion && mousePos && (() => {
+        const counts = getEffectiveCounts(activeRegion);
+        const idx = chartRegions.indexOf(activeRegion);
+        const contribution = totalAccumulated > 0 ? ((counts.total / totalAccumulated) * 100).toFixed(1) : '0';
+        const containerW = chartContainerRef.current?.clientWidth || 700;
+        const containerH = chartContainerRef.current?.clientHeight || 600;
+
+        const cardW = pillarId === 'peksos' ? 220 : 210;
+        const cardH = pillarId === 'peksos' ? 130 : 95;
+
+        // X: Geser ke luar area kursor, otomatis berbalik ke kiri jika mendekati tepi kanan
+        const posX = mousePos.x + cardW + 20 > containerW
+          ? Math.max(10, mousePos.x - cardW - 14)
+          : mousePos.x + 18;
+
+        // Y: Geser ke atas kursor jika mendekati tepi bawah
+        const posY = mousePos.y + cardH + 15 > containerH
+          ? Math.max(10, mousePos.y - cardH - 8)
+          : Math.max(10, mousePos.y - 25);
+
+        return (
+          <div
+            className="pointer-events-none absolute z-50 transition-transform duration-75 ease-out select-none"
+            style={{
+              width: `${cardW}px`,
+              transform: `translate3d(${posX}px, ${posY}px, 0)`,
+              left: 0,
+              top: 0,
+              willChange: 'transform',
+            }}
+          >
+            <div className="bg-slate-900/95 text-white backdrop-blur-md px-3.5 py-2.5 rounded-xl shadow-2xl border border-slate-700/80 text-xs text-left ring-4 ring-black/10">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5 mb-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-200 truncate">
+                  <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="truncate">{activeRegion}</span>
+                </div>
+                <span className="text-[10px] font-semibold text-slate-400 font-mono shrink-0">
+                  #{idx + 1}
+                </span>
+              </div>
+
+              {pillarId === 'peksos' ? (
+                <div className="space-y-1 font-semibold text-[11px]">
+                  <div className="flex items-center justify-between text-blue-300">
+                    <span>Pemerintah:</span>
+                    <span className="font-mono font-bold">
+                      {counts.gov.toLocaleString('id-ID')} Orang
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-amber-300">
+                    <span>Masyarakat:</span>
+                    <span className="font-mono font-bold">
+                      {counts.swasta.toLocaleString('id-ID')} Orang
+                    </span>
+                  </div>
+                  <div className="pt-1 border-t border-slate-800 flex items-center justify-between font-bold text-white">
+                    <span>Total Peksos:</span>
+                    <span className="font-mono font-black text-amber-400">
+                      {counts.total.toLocaleString('id-ID')} Orang
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-3 font-bold">
+                    <span className="text-slate-300 font-medium">Kuantitas:</span>
+                    <span className={`font-mono font-black text-sm ${colorScheme.text}`}>
+                      {counts.total.toLocaleString('id-ID')} {unit}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-1 text-left flex items-center justify-between">
+                    <span>Kontribusi Se-Jabar:</span>
+                    <span className="font-mono text-slate-300 font-bold">{contribution}%</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
