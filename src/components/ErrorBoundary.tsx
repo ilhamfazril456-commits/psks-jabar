@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, RotateCcw } from 'lucide-react';
+import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -13,13 +13,14 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorCount: number;
+  isChunkStale: boolean;
 }
 
 /**
  * Resilient ErrorBoundary
- * Menangani galat rendering dengan tenang dan stabil.
- * Mencegah loop refresh / kedipan cepat (infinite flickering loop)
- * dengan membatasi percobaan pemulihan otomatis maksimal 1 kali dan menyediakan tombol pemulihan.
+ * Menangani galat rendering dengan tenang, stabil, dan profesional.
+ * Secara otomatis mendeteksi stale chunk akibat deployment baru Vercel
+ * dan memuat ulang halaman secara mulus tanpa menampilkan pesan error teknis mentah.
  */
 export class ErrorBoundary extends Component<Props, State> {
   private autoRecoveryTimer: any = null;
@@ -28,14 +29,48 @@ export class ErrorBoundary extends Component<Props, State> {
     hasError: false,
     error: null,
     errorCount: 0,
+    isChunkStale: false,
   };
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+    const msg = (error?.message || String(error || '')).toLowerCase();
+    const isChunkStale =
+      msg.includes('dynamically imported module') ||
+      msg.includes('failed to fetch dynamically imported module') ||
+      msg.includes('loading chunk') ||
+      msg.includes('error loading') ||
+      msg.includes('unexpected token');
+
+    return { hasError: true, error, isChunkStale };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary caught error]:', error?.message || error, error?.stack);
+
+    const msg = (error?.message || String(error || '')).toLowerCase();
+    const isChunkStale =
+      msg.includes('dynamically imported module') ||
+      msg.includes('failed to fetch dynamically imported module') ||
+      msg.includes('loading chunk') ||
+      msg.includes('error loading');
+
+    // Jika error terjadi akibat deployment baru (stale chunk yang 404 di Vercel),
+    // otomatis refresh halaman secara mulus dalam 500ms agar user langsung dapat versi terbaru.
+    if (isChunkStale) {
+      console.warn('[ErrorBoundary] Stale chunk detected from deployment. Auto-reloading seamlessly...');
+      const reloadKey = 'psks_chunk_reload_lock';
+      const last = typeof window !== 'undefined' ? sessionStorage.getItem(reloadKey) : null;
+      const now = Date.now();
+      if (!last || now - parseInt(last, 10) > 10000) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(reloadKey, String(now));
+          setTimeout(() => {
+            window.location.reload();
+          }, 400);
+          return;
+        }
+      }
+    }
 
     // Kirim laporan galat ke server untuk diagnosa cepat
     try {
@@ -52,8 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
     } catch {}
 
     // Cegah loop kedipan: HANYA coba auto-recovery 1 kali jika errorCount === 0 dengan jeda 800ms
-    // Jika sudah pernah error (> 0), JANGAN di-reset otomatis agar layar TIDAK berkedip-kedip.
-    if (this.state.errorCount === 0) {
+    if (this.state.errorCount === 0 && !isChunkStale) {
       if (this.autoRecoveryTimer) clearTimeout(this.autoRecoveryTimer);
       this.autoRecoveryTimer = setTimeout(() => {
         this.setState((prev) => ({
@@ -75,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
         (key, idx) => key !== prevProps.resetKeys?.[idx]
       );
       if (hasChanged) {
-        this.setState({ hasError: false, error: null, errorCount: 0 });
+        this.setState({ hasError: false, error: null, errorCount: 0, isChunkStale: false });
       }
     }
   }
@@ -88,7 +122,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleReset = () => {
     if (this.autoRecoveryTimer) clearTimeout(this.autoRecoveryTimer);
-    this.setState({ hasError: false, error: null, errorCount: 0 });
+    this.setState({ hasError: false, error: null, errorCount: 0, isChunkStale: false });
     if (this.props.onReset) {
       this.props.onReset();
     }
@@ -96,6 +130,35 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      // 1. Tampilan Khusus Pembaruan Versi Baru (Stale Chunk Recovery)
+      if (this.state.isChunkStale) {
+        return (
+          <div className="min-h-[50vh] w-full p-6 flex flex-col items-center justify-center text-center bg-gradient-to-b from-emerald-50/50 to-slate-50 rounded-2xl border border-emerald-200 my-4 shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-3 shadow-inner">
+              <Sparkles className="w-7 h-7 text-emerald-700 animate-pulse" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 mb-1">
+              Pembaruan Versi Aplikasi PSKS Jawa Barat
+            </h3>
+            <p className="text-xs text-slate-600 max-w-md mb-4 leading-relaxed">
+              Terdapat pembaruan data dan modul aplikasi terbaru. Sistem sedang menyinkronkan tampilan secara otomatis untuk kenyamanan Anda.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') window.location.reload();
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#043e2e] hover:bg-[#065e44] text-white text-xs font-bold cursor-pointer shadow-md transition-all active:scale-95"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Segarkan Sekarang</span>
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       // Jika masih dalam percobaan recovery pertama, tampilkan pesan singkat tanpa kedipan
       if (this.state.errorCount === 0) {
         return (
@@ -117,11 +180,6 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-xs text-slate-600 font-medium">
               {this.props.fallbackTitle || 'Data visual sedang disinkronkan.'}
             </p>
-            {this.state.error?.message && (
-              <p className="text-[11px] text-slate-400 font-mono max-w-md truncate">
-                {this.state.error.message}
-              </p>
-            )}
             <button
               type="button"
               onClick={this.handleReset}
@@ -134,7 +192,7 @@ export class ErrorBoundary extends Component<Props, State> {
         );
       }
 
-      // Layar Penuh / Default Fallback yang tenang, stabil, dan TIDAK BERKEDIP
+      // Layar Penuh / Default Fallback yang tenang, stabil, rapi, dan TANPA teks mentah teknis
       return (
         <div className="min-h-[50vh] w-full p-6 flex flex-col items-center justify-center text-center bg-slate-50/80 rounded-2xl border border-slate-200 my-4 shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-3 shadow-inner">
@@ -143,14 +201,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <h3 className="text-base font-bold text-slate-800 mb-1">
             {this.props.fallbackTitle || 'Penyelarasan Tampilan Sistem'}
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mb-3">
-            Terdapat penyesuaian data baru pada tampilan ini. Sistem telah menghentikan kedipan layar secara otomatis.
+          <p className="text-xs text-slate-500 max-w-md mb-4 leading-relaxed">
+            Terdapat penyesuaian visual pada tampilan ini. Sistem telah mengamankan sesi Anda agar tetap stabil dan nyaman digunakan.
           </p>
-          {this.state.error?.message && (
-            <div className="text-[11px] font-mono text-red-600/80 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 mb-4 max-w-lg overflow-x-auto text-left">
-              {this.state.error.message}
-            </div>
-          )}
           <div className="flex items-center gap-2">
             <button
               type="button"

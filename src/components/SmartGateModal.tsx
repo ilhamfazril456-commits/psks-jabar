@@ -39,10 +39,11 @@ import {
 } from 'lucide-react';
 
 import { CaptchaWidget } from './CaptchaWidget';
-const PrivacyTermsModal = React.lazy(() => import('./PrivacyTermsModal').then(m => ({ default: m.PrivacyTermsModal })));
-const RegisterSuccessModal = React.lazy(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
-const QRCardScannerModal = React.lazy(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
-const PrintableQRCardModal = React.lazy(() => import('./PrintableQRCardModal').then(m => ({ default: m.PrintableQRCardModal })));
+import { lazyWithRetry } from '../utils/lazyRetry';
+const PrivacyTermsModal = lazyWithRetry(() => import('./PrivacyTermsModal').then(m => ({ default: m.PrivacyTermsModal })));
+const RegisterSuccessModal = lazyWithRetry(() => import('./WelcomePopups').then(m => ({ default: m.RegisterSuccessModal })));
+const QRCardScannerModal = lazyWithRetry(() => import('./QRCardScannerModal').then(m => ({ default: m.QRCardScannerModal })));
+const PrintableQRCardModal = lazyWithRetry(() => import('./PrintableQRCardModal').then(m => ({ default: m.PrintableQRCardModal })));
 import { AuthorityPinVerificationModal } from './AuthorityPinVerificationModal';
 import {
   getStableDeviceId,

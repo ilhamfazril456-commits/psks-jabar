@@ -34,8 +34,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { compareRecordsChronological } from './utils/regionSort';
 import { decryptSensitiveData } from './utils/crypto';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
-const FloatingWhatsApp = React.lazy(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
-const MaintenanceOverlay = React.lazy(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
+import { lazyWithRetry } from './utils/lazyRetry';
+
+const FloatingWhatsApp = lazyWithRetry(() => import('./components/FloatingWhatsApp').then(m => ({ default: m.FloatingWhatsApp })));
+const MaintenanceOverlay = lazyWithRetry(() => import('./components/MaintenanceOverlay').then(m => ({ default: m.MaintenanceOverlay })));
 
 // Dynamic module loaders with non-blocking prefetching capability
 export const loadHomePSKSAnalytics = () => import('./components/HomePSKSAnalytics');
@@ -44,39 +46,39 @@ export const loadContactPage = () => import('./components/ContactPage');
 export const loadAccountPage = () => import('./components/AccountPage');
 export const loadAdminRegistrationManager = () => import('./components/AdminRegistrationManager');
 
-// Code-split heavy subpages, analytics, and admin panels to optimize PageSpeed and initial load
-const HomePSKSAnalytics = React.lazy(() => loadHomePSKSAnalytics().then(m => ({ default: m.HomePSKSAnalytics })));
-const Section11Admin = React.lazy(() => import('./components/Section11Admin').then(m => ({ default: m.Section11Admin })));
-const JabarRegionalMap = React.lazy(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
-const AdminRegistrationManager = React.lazy(() => loadAdminRegistrationManager().then(m => ({ default: m.AdminRegistrationManager })));
-const PillarDetailView = React.lazy(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
-const ProfilePage = React.lazy(() => loadProfilePage().then(m => ({ default: m.ProfilePage })));
-const ContactPage = React.lazy(() => loadContactPage().then(m => ({ default: m.ContactPage })));
-const AccountPage = React.lazy(() => loadAccountPage().then(m => ({ default: m.AccountPage })));
-const AdminManagementPage = React.lazy(() => import('./components/AdminManagementPage').then(m => ({ default: m.AdminManagementPage })));
-const AdminMonitoringPage = React.lazy(() => import('./components/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
-const SuperadminSettingsPage = React.lazy(() => import('./components/SuperadminSettingsPage').then(m => ({ default: m.SuperadminSettingsPage })));
-const InboxModal = React.lazy(() => import('./components/InboxModal').then(m => ({ default: m.InboxModal })));
-const AIAssistantWidget = React.lazy(() => import('./components/AIAssistantWidget').then(m => ({ default: m.AIAssistantWidget })));
-const DeveloperControlPanel = React.lazy(() => import('./components/DeveloperControlPanel').then(m => ({ default: m.DeveloperControlPanel })));
-const MaintenanceManagementPage = React.lazy(() => import('./components/MaintenanceManagementPage').then(m => ({ default: m.MaintenanceManagementPage })));
-const ActivityLogPage = React.lazy(() => import('./components/ActivityLogPage').then(m => ({ default: m.ActivityLogPage })));
-const UserManagementPage = React.lazy(() => import('./components/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
-const TaskManagerPage = React.lazy(() => import('./components/TaskManagerPage').then(m => ({ default: m.TaskManagerPage })));
-const AnnouncementManagementPage = React.lazy(() => import('./components/AnnouncementManagementPage').then(m => ({ default: m.AnnouncementManagementPage })));
-const AnnouncementDetailPage = React.lazy(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
-const FloatingWaManagerPage = React.lazy(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
-const UserRegistrationHistoryPage = React.lazy(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
-const FAQManagementPage = React.lazy(() => import('./components/FAQManagementPage').then(m => ({ default: m.FAQManagementPage })));
-const PortalFaqSection = React.lazy(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
-const DocumentRepositoryPage = React.lazy(() => import('./components/DocumentRepositoryPage').then(m => ({ default: m.DocumentRepositoryPage })));
-const PublicDocumentRepoSection = React.lazy(() => import('./components/PublicDocumentRepoSection').then(m => ({ default: m.PublicDocumentRepoSection })));
-const BackgroundLogoManagementPage = React.lazy(() => import('./components/BackgroundLogoManagementPage').then(m => ({ default: m.BackgroundLogoManagementPage })));
-const ProfileKadinasManagementPage = React.lazy(() => import('./components/ProfileKadinasManagementPage').then(m => ({ default: m.ProfileKadinasManagementPage })));
-const SocialMediaManagementPage = React.lazy(() => import('./components/SocialMediaManagementPage').then(m => ({ default: m.SocialMediaManagementPage })));
-const RegionalLogoManagementPage = React.lazy(() => import('./components/RegionalLogoManagementPage').then(m => ({ default: m.RegionalLogoManagementPage })));
-const PinSecurityManagementPage = React.lazy(() => import('./components/PinSecurityManagementPage').then(m => ({ default: m.PinSecurityManagementPage })));
-const WebsiteInfoManagementPage = React.lazy(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
+// Code-split heavy subpages, analytics, and admin panels to optimize PageSpeed and initial load with auto-recovery
+const HomePSKSAnalytics = lazyWithRetry(() => loadHomePSKSAnalytics().then(m => ({ default: m.HomePSKSAnalytics })));
+const Section11Admin = lazyWithRetry(() => import('./components/Section11Admin').then(m => ({ default: m.Section11Admin })));
+const JabarRegionalMap = lazyWithRetry(() => import('./components/JabarRegionalMap').then(m => ({ default: m.JabarRegionalMap })));
+const AdminRegistrationManager = lazyWithRetry(() => loadAdminRegistrationManager().then(m => ({ default: m.AdminRegistrationManager })));
+const PillarDetailView = lazyWithRetry(() => import('./components/PillarDetailView').then(m => ({ default: m.PillarDetailView })));
+const ProfilePage = lazyWithRetry(() => loadProfilePage().then(m => ({ default: m.ProfilePage })));
+const ContactPage = lazyWithRetry(() => loadContactPage().then(m => ({ default: m.ContactPage })));
+const AccountPage = lazyWithRetry(() => loadAccountPage().then(m => ({ default: m.AccountPage })));
+const AdminManagementPage = lazyWithRetry(() => import('./components/AdminManagementPage').then(m => ({ default: m.AdminManagementPage })));
+const AdminMonitoringPage = lazyWithRetry(() => import('./components/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
+const SuperadminSettingsPage = lazyWithRetry(() => import('./components/SuperadminSettingsPage').then(m => ({ default: m.SuperadminSettingsPage })));
+const InboxModal = lazyWithRetry(() => import('./components/InboxModal').then(m => ({ default: m.InboxModal })));
+const AIAssistantWidget = lazyWithRetry(() => import('./components/AIAssistantWidget').then(m => ({ default: m.AIAssistantWidget })));
+const DeveloperControlPanel = lazyWithRetry(() => import('./components/DeveloperControlPanel').then(m => ({ default: m.DeveloperControlPanel })));
+const MaintenanceManagementPage = lazyWithRetry(() => import('./components/MaintenanceManagementPage').then(m => ({ default: m.MaintenanceManagementPage })));
+const ActivityLogPage = lazyWithRetry(() => import('./components/ActivityLogPage').then(m => ({ default: m.ActivityLogPage })));
+const UserManagementPage = lazyWithRetry(() => import('./components/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const TaskManagerPage = lazyWithRetry(() => import('./components/TaskManagerPage').then(m => ({ default: m.TaskManagerPage })));
+const AnnouncementManagementPage = lazyWithRetry(() => import('./components/AnnouncementManagementPage').then(m => ({ default: m.AnnouncementManagementPage })));
+const AnnouncementDetailPage = lazyWithRetry(() => import('./components/AnnouncementDetailPage').then(m => ({ default: m.AnnouncementDetailPage })));
+const FloatingWaManagerPage = lazyWithRetry(() => import('./components/FloatingWaManagerPage').then(m => ({ default: m.FloatingWaManagerPage })));
+const UserRegistrationHistoryPage = lazyWithRetry(() => import('./components/UserRegistrationHistoryPage').then(m => ({ default: m.UserRegistrationHistoryPage })));
+const FAQManagementPage = lazyWithRetry(() => import('./components/FAQManagementPage').then(m => ({ default: m.FAQManagementPage })));
+const PortalFaqSection = lazyWithRetry(() => import('./components/PortalFaqSection').then(m => ({ default: m.PortalFaqSection })));
+const DocumentRepositoryPage = lazyWithRetry(() => import('./components/DocumentRepositoryPage').then(m => ({ default: m.DocumentRepositoryPage })));
+const PublicDocumentRepoSection = lazyWithRetry(() => import('./components/PublicDocumentRepoSection').then(m => ({ default: m.PublicDocumentRepoSection })));
+const BackgroundLogoManagementPage = lazyWithRetry(() => import('./components/BackgroundLogoManagementPage').then(m => ({ default: m.BackgroundLogoManagementPage })));
+const ProfileKadinasManagementPage = lazyWithRetry(() => import('./components/ProfileKadinasManagementPage').then(m => ({ default: m.ProfileKadinasManagementPage })));
+const SocialMediaManagementPage = lazyWithRetry(() => import('./components/SocialMediaManagementPage').then(m => ({ default: m.SocialMediaManagementPage })));
+const RegionalLogoManagementPage = lazyWithRetry(() => import('./components/RegionalLogoManagementPage').then(m => ({ default: m.RegionalLogoManagementPage })));
+const PinSecurityManagementPage = lazyWithRetry(() => import('./components/PinSecurityManagementPage').then(m => ({ default: m.PinSecurityManagementPage })));
+const WebsiteInfoManagementPage = lazyWithRetry(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
 import { subscribeToRegionalLogos, getLocalCachedRegionalLogos } from './services/regionalLogoService';
 import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
@@ -93,13 +95,13 @@ import { Inbox, ArrowRight, ClipboardList, Lock, LogIn, Check } from 'lucide-rea
 import { isSubmissionPendingWilayah } from './utils/submissionStatus';
 import { safeSetItem, safeGetItem, safeRemoveItem } from './utils/safeStorage';
 
-const LoginSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
-const LogoutConfirmModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
-const LogoutSuccessModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutSuccessModal })));
-const AccountDeletedRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountDeletedRemoteModal })));
-const AccountEditedRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountEditedRemoteModal })));
-const AccountFrozenRemoteModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountFrozenRemoteModal })));
-const MultipleSessionWarningModal = React.lazy(() => import('./components/WelcomePopups').then(m => ({ default: m.MultipleSessionWarningModal })));
+const LoginSuccessModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.LoginSuccessModal })));
+const LogoutConfirmModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutConfirmModal })));
+const LogoutSuccessModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.LogoutSuccessModal })));
+const AccountDeletedRemoteModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountDeletedRemoteModal })));
+const AccountEditedRemoteModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountEditedRemoteModal })));
+const AccountFrozenRemoteModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.AccountFrozenRemoteModal })));
+const MultipleSessionWarningModal = lazyWithRetry(() => import('./components/WelcomePopups').then(m => ({ default: m.MultipleSessionWarningModal })));
 
 import {
   subscribeToDoc,

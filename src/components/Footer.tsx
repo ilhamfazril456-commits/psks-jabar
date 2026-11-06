@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Globe, ZoomIn, ZoomOut, ExternalLink, RotateCcw, ShieldCheck, Scale } from 'lucide-react';
 import { OfficialPsksLogo } from './OfficialPsksLogo';
+import { lazyWithRetry } from '../utils/lazyRetry';
 
-const PrivacyTermsModal = React.lazy(() =>
+const PrivacyTermsModal = lazyWithRetry(() =>
   import('./PrivacyTermsModal').then((m) => ({ default: m.PrivacyTermsModal }))
 );
 
