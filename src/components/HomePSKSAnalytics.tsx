@@ -90,17 +90,17 @@ export function useFastAnimatedCounter(targetValue: number, durationMs: number =
   return displayValue;
 }
 
-// Visual color palette paired with West Java aesthetic
+// Visual color palette harmonized with West Java identity & user-specified pillar palette
 const PILLAR_COLORS: Record<string, { hex: string; bg: string; text: string }> = {
   peksos: { hex: '#059669', bg: 'bg-emerald-500', text: 'text-emerald-700' },
-  psm: { hex: '#2563eb', bg: 'bg-blue-600', text: 'text-blue-700' },
-  tagana: { hex: '#d97706', bg: 'bg-amber-600', text: 'text-amber-700' },
-  lks: { hex: '#7c3aed', bg: 'bg-purple-600', text: 'text-purple-700' },
-  karangtaruna: { hex: '#0891b2', bg: 'bg-cyan-600', text: 'text-cyan-700' },
-  lk3: { hex: '#e11d48', bg: 'bg-rose-600', text: 'text-rose-700' },
-  pensos: { hex: '#4f46e5', bg: 'bg-indigo-600', text: 'text-indigo-700' },
-  tksk: { hex: '#b45309', bg: 'bg-amber-700', text: 'text-amber-800' },
-  badanusaha: { hex: '#0284c7', bg: 'bg-sky-600', text: 'text-sky-700' },
+  psm: { hex: '#f97316', bg: 'bg-orange-500', text: 'text-orange-700' }, // Oranye
+  tagana: { hex: '#dc2626', bg: 'bg-red-600', text: 'text-red-700' }, // Merah
+  lks: { hex: '#2563eb', bg: 'bg-blue-600', text: 'text-blue-700' }, // Biru
+  karangtaruna: { hex: '#4f46e5', bg: 'bg-indigo-600', text: 'text-indigo-700' },
+  lk3: { hex: '#9333ea', bg: 'bg-purple-600', text: 'text-purple-700' },
+  pensos: { hex: '#f472b6', bg: 'bg-pink-400', text: 'text-pink-700' }, // Pink muda
+  tksk: { hex: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-700' }, // Biru tosca
+  badanusaha: { hex: '#84cc16', bg: 'bg-lime-500', text: 'text-lime-700' }, // Hijau muda
   slrt_puskesos: { hex: '#047857', bg: 'bg-emerald-700', text: 'text-emerald-800' },
 };
 
@@ -129,6 +129,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   const [sortBy, setSortBy] = useState<'COUNT' | 'MAP'>('MAP');
   const [mobileTab, setMobileTab] = useState<'DONUT' | 'BAR'>('DONUT');
   const [activeDonutIndex, setActiveDonutIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [isMobileScreen, setIsMobileScreen] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 640 : false;
   });
@@ -143,7 +144,6 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
 
   const donutContainerRef = useRef<HTMLDivElement>(null);
   const mobileCardRef = useRef<HTMLDivElement>(null);
-  const desktopCardRef = useRef<HTMLDivElement>(null);
 
   // Auto-close donut detail card when clicking outside donut ring (khususnya pada sentuhan mobile)
   useEffect(() => {
@@ -153,9 +153,8 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // If clicked inside mobile card or desktop card, do not close
+      // If clicked inside mobile card, do not close
       if (mobileCardRef.current && mobileCardRef.current.contains(target)) return;
-      if (desktopCardRef.current && desktopCardRef.current.contains(target)) return;
 
       // If clicked on a pie sector / cell path, do not close (let cell handle it)
       if (
@@ -222,23 +221,23 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
   // Fast animated climb for accumulation total
   const animatedTotalAllPillars = useFastAnimatedCounter(totalAllPillars, 650);
 
-  // Determine if active slice is positioned on the left or right side of the donut to float the card on the opposite side
-  const activePositionOnRight = useMemo(() => {
-    if (activeDonutIndex === null || activeDonutIndex < 0 || activeDonutIndex >= pillarDistributionData.length) {
-      return false;
+  // Handler interaksi mouse halus untuk tooltip melayang bebas pada layar laptop/desktop
+  const handleDonutMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobileScreen) return;
+    if (!donutContainerRef.current) return;
+    const rect = donutContainerRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
+  const handleDonutMouseLeave = () => {
+    if (!isMobileScreen) {
+      setActiveDonutIndex(null);
+      setMousePos(null);
     }
-    let cumulative = 0;
-    for (let i = 0; i < activeDonutIndex; i++) {
-      cumulative += pillarDistributionData[i]?.count || 0;
-    }
-    const currentCount = pillarDistributionData[activeDonutIndex]?.count || 0;
-    const midCount = cumulative + currentCount / 2;
-    const total = totalAllPillars > 0 ? totalAllPillars : 1;
-    const fraction = midCount / total; // 0 to 1
-    // If slice center is in the left arc (0.25 to 0.75), float card on RIGHT.
-    // Otherwise in the right arc, float card on LEFT.
-    return fraction >= 0.25 && fraction <= 0.75;
-  }, [activeDonutIndex, pillarDistributionData, totalAllPillars]);
+  };
 
   // 2. Calculate Regional Bar Chart Data (27 Kab/Kota)
   const mapOrderIndex = useMemo(() => {
@@ -452,38 +451,29 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                 </span>
               </div>
 
-              {/* Recharts Donut Visual - Clean Fixed Center, Side Floating Inspector on Desktop (Zero Collision) */}
+              {/* Recharts Donut Visual - 100% Licin, Celah Rapat Elegan, Center Hub Dinamis & Tooltip Melayang Bebas */}
               <div
                 ref={donutContainerRef}
-                className="relative h-[270px] sm:h-[310px] w-full flex items-center justify-center select-none"
-                onMouseLeave={(e) => {
-                  if (typeof window !== 'undefined' && window.innerWidth >= 640) {
-                    const related = e.relatedTarget as Node | null;
-                    if (desktopCardRef.current && related && desktopCardRef.current.contains(related)) {
-                      return;
-                    }
-                    setActiveDonutIndex(null);
-                  }
-                }}
+                className="relative h-[290px] sm:h-[320px] w-full flex items-center justify-center select-none overflow-visible"
+                onMouseMove={handleDonutMouseMove}
+                onMouseLeave={handleDonutMouseLeave}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <RePieChart
                     key={`piechart-${totalAllPillars}-${pillarDistributionData.length}`}
-                    margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
                   >
                     <Pie
                       data={pillarDistributionData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={74}
-                      outerRadius={112}
-                      paddingAngle={3}
+                      innerRadius={isMobileScreen ? 68 : 78}
+                      outerRadius={isMobileScreen ? 108 : 122}
+                      paddingAngle={1}
                       dataKey="count"
                       isAnimationActive={false}
                       onMouseEnter={(_, index) => {
-                        if (typeof window !== 'undefined' && window.innerWidth >= 640) {
-                          setActiveDonutIndex(index);
-                        }
+                        setActiveDonutIndex(index);
                       }}
                       onClick={(_, index) => {
                         setActiveDonutIndex((prev) => (prev === index ? null : index));
@@ -495,11 +485,11 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                           <Cell
                             key={`cell-${entry.id}`}
                             fill={entry.color}
-                            stroke={isHovered ? '#043e2e' : '#ffffff'}
-                            strokeWidth={isHovered ? 3.5 : 1.5}
-                            className="transition-all duration-200 cursor-pointer outline-none"
+                            stroke="#ffffff"
+                            strokeWidth={isHovered ? 2.5 : 1.5}
+                            className="cursor-pointer outline-none transition-all duration-150"
                             style={{
-                              filter: isHovered ? 'drop-shadow(0px 4px 10px rgba(0,0,0,0.28))' : 'none',
+                              transform: isHovered ? 'scale(1.035)' : 'scale(1)',
                               transformOrigin: 'center center',
                             }}
                           />
@@ -509,12 +499,12 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                   </RePieChart>
                 </ResponsiveContainer>
 
-                {/* Donut Center Display - Static, Clean, Non-Colliding Accumulation Hub (Klik untuk menutup keterangan jika aktif) */}
+                {/* Donut Center Display - Dynamic Interactive Hub (Nol Tabrakan, Teks Bersih & Mulus) */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-                  <div 
-                    className="w-[120px] h-[120px] sm:w-[130px] sm:h-[130px] rounded-full flex flex-col items-center justify-center bg-white/95 shadow-sm border border-slate-200/90 p-2 text-center pointer-events-auto cursor-pointer"
+                  <div
+                    className="w-[124px] h-[124px] sm:w-[136px] sm:h-[136px] rounded-full flex flex-col items-center justify-center bg-white/95 shadow-sm border border-slate-200/90 p-2 text-center pointer-events-auto cursor-pointer transition-all duration-200 hover:scale-102"
                     onMouseEnter={() => {
-                      if (typeof window !== 'undefined' && window.innerWidth >= 640) {
+                      if (!isMobileScreen) {
                         setActiveDonutIndex(null);
                       }
                     }}
@@ -522,102 +512,100 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       e.stopPropagation();
                       setActiveDonutIndex(null);
                     }}
+                    title="Klik untuk melihat total keseluruhan"
                   >
-                    <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-0.5">
-                      Total PSKS
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-black text-[#043e2e] tracking-tight font-mono leading-none my-0.5 max-w-[105px] truncate">
-                      {animatedTotalAllPillars.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 uppercase tracking-wider leading-none mt-0.5">
-                      10 Pilar Jabar
-                    </span>
+                    {activeDonutIndex !== null && pillarDistributionData[activeDonutIndex] ? (
+                      <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-150">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0 shadow-xs"
+                            style={{ backgroundColor: pillarDistributionData[activeDonutIndex].color }}
+                          />
+                          <span className="text-[10px] font-black text-slate-800 uppercase tracking-tight max-w-[95px] truncate">
+                            {pillarDistributionData[activeDonutIndex].shortName}
+                          </span>
+                        </div>
+                        <span className="text-xl sm:text-2xl font-black text-[#0f2b5c] font-mono leading-none my-0.5 max-w-[105px] truncate">
+                          {pillarDistributionData[activeDonutIndex].count.toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 uppercase tracking-wider leading-none mt-0.5">
+                          {pillarDistributionData[activeDonutIndex].percent}% Total
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center animate-in fade-in duration-150">
+                        <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-0.5">
+                          Total PSKS
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-black text-[#043e2e] tracking-tight font-mono leading-none my-0.5 max-w-[105px] truncate">
+                          {animatedTotalAllPillars.toLocaleString('id-ID')}
+                        </span>
+                        <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 uppercase tracking-wider leading-none mt-0.5">
+                          10 Pilar Jabar
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* DESKTOP ONLY FLOATING CARD (JANGAN UBAH DEVICE LAIN / TETAP SEPERTI SEMULA PADA LAPTOP & DESKTOP): Melayang pada sisi donat */}
-                {activeDonutIndex !== null && pillarDistributionData[activeDonutIndex] && (() => {
+                {/* DESKTOP CURSOR-FOLLOWING TOOLTIP: Bergerak bebas mengikuti kursor mouse, 100% licin & tidak menutupi irisan */}
+                {!isMobileScreen && activeDonutIndex !== null && mousePos && pillarDistributionData[activeDonutIndex] && (() => {
                   const activePillar = pillarDistributionData[activeDonutIndex];
+                  const containerW = donutContainerRef.current?.clientWidth || 320;
+                  const containerH = donutContainerRef.current?.clientHeight || 320;
+
+                  const cardW = 190;
+                  const cardH = 110;
+
+                  // Posisi X cerdas: jika kursor mendekati sisi kanan, geser tooltip ke kiri kursor
+                  const posX = mousePos.x + cardW + 18 > containerW
+                    ? Math.max(10, mousePos.x - cardW - 14)
+                    : mousePos.x + 16;
+
+                  // Posisi Y cerdas: jika kursor mendekati bawah, geser tooltip ke atas kursor
+                  const posY = mousePos.y + cardH + 18 > containerH
+                    ? Math.max(10, mousePos.y - cardH - 8)
+                    : Math.max(10, mousePos.y - 30);
+
                   return (
                     <div
-                      ref={desktopCardRef}
-                      className={`hidden sm:block absolute z-30 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 sm:p-3 shadow-2xl border border-slate-700/80 transition-all duration-200 animate-fadeIn ${
-                        activePositionOnRight
-                          ? 'sm:top-3 sm:w-[195px] sm:right-2 sm:left-auto sm:translate-x-0'
-                          : 'sm:top-3 sm:w-[195px] sm:left-2 sm:right-auto sm:translate-x-0'
-                      }`}
-                      onMouseEnter={() => {
-                        // Keep open when cursor is hovering over floating card
+                      className="pointer-events-none absolute z-40 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-2.5 shadow-2xl border border-slate-700/80 transition-transform duration-75 ease-out select-none"
+                      style={{
+                        width: `${cardW}px`,
+                        transform: `translate3d(${posX}px, ${posY}px, 0)`,
+                        left: 0,
+                        top: 0,
+                        willChange: 'transform',
                       }}
-                      onMouseLeave={(e) => {
-                        if (typeof window !== 'undefined' && window.innerWidth >= 640) {
-                          const related = e.relatedTarget as Node | null;
-                          if (donutContainerRef.current && related && donutContainerRef.current.contains(related)) {
-                            return;
-                          }
-                          setActiveDonutIndex(null);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
                     >
-                      {/* Header with color dot, short name, and close button */}
-                      <div className="flex items-start justify-between gap-1 mb-1">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
-                            style={{ backgroundColor: activePillar.color }}
-                          />
-                          <span className="text-[11px] font-black text-amber-300 truncate uppercase tracking-tight">
-                            {activePillar.shortName}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveDonutIndex(null);
-                          }}
-                          className="text-slate-400 hover:text-white p-0.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                          title="Tutup"
-                          aria-label="Tutup"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="flex items-center gap-1.5 mb-1 pb-1 border-b border-slate-800">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                          style={{ backgroundColor: activePillar.color }}
+                        />
+                        <span className="text-[11px] font-black text-amber-300 truncate uppercase tracking-tight">
+                          {activePillar.shortName}
+                        </span>
                       </div>
 
-                      <p className="text-[10px] text-slate-300 line-clamp-2 mb-2 leading-tight">
+                      <p className="text-[9.5px] text-slate-300 line-clamp-1 mb-1.5 leading-tight">
                         {activePillar.name}
                       </p>
 
-                      {/* Metrics breakdown */}
-                      <div className="bg-slate-800/80 rounded-xl p-2 border border-slate-700/60 mb-2 space-y-1">
-                        <div className="flex items-center justify-between text-[10.5px]">
+                      <div className="space-y-1 bg-slate-800/80 rounded-xl p-1.5 border border-slate-700/60">
+                        <div className="flex items-center justify-between text-[10px]">
                           <span className="text-slate-400 font-medium">Terdata:</span>
                           <span className="font-mono font-black text-emerald-400">
                             {activePillar.count.toLocaleString('id-ID')} {activePillar.unit}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-[10.5px]">
-                          <span className="text-slate-400 font-medium">Porsi:</span>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-400 font-medium">Porsi Sebaran:</span>
                           <span className="font-mono font-black text-amber-300 bg-amber-400/20 px-1.5 py-0.2 rounded border border-amber-400/30">
                             {activePillar.percent}%
                           </span>
                         </div>
                       </div>
-
-                      {/* Action button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePillarClick(activePillar.id);
-                        }}
-                        className="w-full py-1.5 px-2 rounded-xl text-slate-950 font-black text-[10px] sm:text-[10.5px] flex items-center justify-center gap-1 shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
-                        style={{ backgroundColor: activePillar.color }}
-                      >
-                        <span>Lihat Data Pilar</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
                     </div>
                   );
                 })()}
