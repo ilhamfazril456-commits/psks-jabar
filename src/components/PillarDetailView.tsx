@@ -598,6 +598,36 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
   const govCount = filteredByRoleRecords.filter((r) => isPeksosGov(r)).length;
   const swastaCount = filteredByRoleRecords.filter((r) => !isPeksosGov(r)).length;
 
+  // Real-time reactive calculation for regional isolation numbers across all 27 Kab/Kota and 10 pillars
+  const totalJabarPillarCount = useMemo(() => {
+    let sumFromRegions = 0;
+    if (regionalSummary && typeof regionalSummary === 'object') {
+      Object.values(regionalSummary).forEach((regItem) => {
+        sumFromRegions += regItem?.byPillar?.[pillarId] || 0;
+      });
+    }
+    const candidates = [
+      summaryCount || 0,
+      sumFromRegions,
+      Array.isArray(dataRecords) ? dataRecords.length : 0,
+    ];
+    return Math.max(...candidates);
+  }, [summaryCount, regionalSummary, pillarId, dataRecords]);
+
+  const normalizedUserRegion = useMemo(() => {
+    return matchJabarRegion(session.wilayah) || session.wilayah || '';
+  }, [session.wilayah]);
+
+  const userRegionCount = useMemo(() => {
+    const userWil = normalizedUserRegion;
+    const countFromSummary = regionalSummary?.[userWil]?.byPillar?.[pillarId] || 0;
+    return Math.max(filteredByRoleRecords.length, countFromSummary);
+  }, [filteredByRoleRecords.length, regionalSummary, normalizedUserRegion, pillarId]);
+
+  const hiddenCount = useMemo(() => {
+    return Math.max(0, totalJabarPillarCount - userRegionCount);
+  }, [totalJabarPillarCount, userRegionCount]);
+
   const handleOpenModal = () => {
     setEditingRecord(null);
     setFormData(getInitialFormData());
@@ -1854,21 +1884,32 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           chartVisible={chartVisible}
         />
 
-        {/* 4. Regional Isolation Banner */}
+        {/* 4. Regional Isolation Banner (Universal across all 27 Kab/Kota & 10 Pillars, Real-time Reactive) */}
         {session.role !== 'superadmin' &&
           session.role !== 'developer' &&
           !session.isDeveloper &&
           session.wilayah &&
-          session.wilayah !== 'Prov. Jabar' && (
-          <div className="bg-slate-100 border border-dashed border-red-400 rounded-2xl p-5 mb-8 text-center relative overflow-hidden">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">
+          session.wilayah !== 'Prov. Jabar' &&
+          session.wilayah !== 'PROVINSI JAWA BARAT' &&
+          session.wilayah !== 'Semua Wilayah' && (
+          <div className="bg-red-50/70 border border-dashed border-red-400 rounded-2xl p-5 mb-8 text-center relative overflow-hidden shadow-xs">
+            <div className="flex flex-col items-center gap-2.5 max-w-2xl mx-auto">
+              <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold shadow-xs">
                 <Lock className="w-5 h-5" />
               </div>
-              <h4 className="text-sm font-extrabold text-red-900">
-                Anda tidak dapat mengakses Wilayah lain
+              <h4 className="text-sm sm:text-base font-extrabold text-red-950 leading-relaxed">
+                Anda hanya diperbolehkan mengakses{' '}
+                <span className="text-red-700 font-black underline decoration-red-400 underline-offset-2">
+                  {userRegionCount.toLocaleString('id-ID')}
+                </span>{' '}
+                anggota pada wilayah{' '}
+                <span className="text-red-900 font-black">{session.wilayah}</span>,{' '}
+                <span className="text-red-700 font-black">
+                  {hiddenCount.toLocaleString('id-ID')}
+                </span>{' '}
+                disembunyikan, anda tidak dapat mengakses wilayah lain
               </h4>
-              <span className="text-[11px] font-bold uppercase tracking-wider bg-red-200/80 text-red-800 px-3 py-1 rounded-full border border-red-300">
+              <span className="text-[11px] font-bold uppercase tracking-wider bg-red-200/80 text-red-800 px-3.5 py-1 rounded-full border border-red-300 shadow-2xs">
                 Hak Akses Tersegmentasi Daerah Tugas ({session.wilayah})
               </span>
             </div>
