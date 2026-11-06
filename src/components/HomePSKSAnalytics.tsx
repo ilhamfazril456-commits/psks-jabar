@@ -187,7 +187,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
     };
   }, [activeDonutIndex]);
 
-  // 1. Calculate Donut Chart Data (Distribution across 10 Pillars)
+  // 1. Calculate Donut Chart Data (Distribution across 10 Pillars with Perceptual Arc Floor)
   const pillarDistributionData = useMemo(() => {
     if (!allPillarData || typeof allPillarData !== 'object') return [];
 
@@ -208,10 +208,66 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
     const total = list.reduce((acc, curr) => acc + curr.count, 0);
     const safeTotal = total > 0 ? total : 1;
 
-    return list.map((item) => ({
-      ...item,
-      percent: total > 0 ? Math.round((item.count / safeTotal) * 100) : 0,
-    }));
+    // Hitung persentase riil murni untuk data, tooltip & center hub
+    const withRealPercent = list.map((item) => {
+      const rawPercent = total > 0 ? (item.count / safeTotal) * 100 : 0;
+      let displayPercent = '0%';
+      if (rawPercent > 0 && rawPercent < 0.1) {
+        displayPercent = '< 0.1%';
+      } else if (rawPercent > 0 && rawPercent < 1) {
+        displayPercent = `${rawPercent.toFixed(1)}%`;
+      } else {
+        displayPercent = `${Math.round(rawPercent)}%`;
+      }
+
+      return {
+        ...item,
+        percent: Math.round(rawPercent),
+        displayPercent,
+        rawFraction: total > 0 ? item.count / safeTotal : 0,
+      };
+    });
+
+    // IMPLEMENTASI SOLUSI 1: Perceptual Arc Floor
+    // Jaminan sudut visual minimal ~4.5° - 6.5° per pilar aktif agar Peksos, TKSK, Badan Usaha, Pensos, LK3 tidak tenggelam
+    const MIN_ARC_FRACTION = 0.014; // ~5 derajat visual minimal
+    let totalAssignedFloor = 0;
+    let bigPillarsRawSum = 0;
+
+    withRealPercent.forEach((it) => {
+      if (it.count === 0) return;
+      if (it.rawFraction < MIN_ARC_FRACTION) {
+        // Skala bertingkat halus agar pilar 71 lebih lebar dari 17 & 6
+        const microScale = Math.min(0.009, (it.count / 250) * 0.009);
+        const floorVal = MIN_ARC_FRACTION + microScale;
+        totalAssignedFloor += floorVal;
+      } else {
+        bigPillarsRawSum += it.rawFraction;
+      }
+    });
+
+    const remainingFractionForBig = Math.max(0.2, 1 - totalAssignedFloor);
+
+    return withRealPercent.map((it) => {
+      if (it.count === 0) {
+        return { ...it, visualWeight: 0 };
+      }
+
+      let visualFraction: number;
+      if (it.rawFraction < MIN_ARC_FRACTION) {
+        const microScale = Math.min(0.009, (it.count / 250) * 0.009);
+        visualFraction = MIN_ARC_FRACTION + microScale;
+      } else {
+        // Distribusikan sisa persentase secara proporsional kepada pilar-pilar besar
+        const proportionOfBig = bigPillarsRawSum > 0 ? it.rawFraction / bigPillarsRawSum : 0;
+        visualFraction = proportionOfBig * remainingFractionForBig;
+      }
+
+      return {
+        ...it,
+        visualWeight: Math.round(visualFraction * 10000), // Digunakan Recharts untuk menggambar busur donat
+      };
+    });
   }, [allPillarData, summaryCounts]);
 
   const totalAllPillars = useMemo(() => {
@@ -470,7 +526,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       innerRadius={isMobileScreen ? 68 : 78}
                       outerRadius={isMobileScreen ? 108 : 122}
                       paddingAngle={1}
-                      dataKey="count"
+                      dataKey="visualWeight"
                       isAnimationActive={false}
                       onMouseEnter={(_, index) => {
                         setActiveDonutIndex(index);
@@ -489,7 +545,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                             strokeWidth={isHovered ? 2.5 : 1.5}
                             className="cursor-pointer outline-none transition-all duration-150"
                             style={{
-                              transform: isHovered ? 'scale(1.035)' : 'scale(1)',
+                              transform: isHovered ? 'scale(1.045)' : 'scale(1)',
                               transformOrigin: 'center center',
                             }}
                           />
@@ -529,7 +585,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                           {pillarDistributionData[activeDonutIndex].count.toLocaleString('id-ID')}
                         </span>
                         <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 uppercase tracking-wider leading-none mt-0.5">
-                          {pillarDistributionData[activeDonutIndex].percent}% Total
+                          {(pillarDistributionData[activeDonutIndex] as any).displayPercent || `${pillarDistributionData[activeDonutIndex].percent}%`} Total
                         </span>
                       </div>
                     ) : (
@@ -602,7 +658,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="text-slate-400 font-medium">Porsi Sebaran:</span>
                           <span className="font-mono font-black text-amber-300 bg-amber-400/20 px-1.5 py-0.2 rounded border border-amber-400/30">
-                            {activePillar.percent}%
+                            {(activePillar as any).displayPercent || `${activePillar.percent}%`}
                           </span>
                         </div>
                       </div>
@@ -663,7 +719,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                       <div className="flex flex-col items-end">
                         <span className="text-[10px] text-slate-400 font-medium">Porsi Sebaran:</span>
                         <span className="font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-md border border-amber-400/30 text-xs mt-0.5">
-                          {activePillar.percent}%
+                          {(activePillar as any).displayPercent || `${activePillar.percent}%`}
                         </span>
                       </div>
                     </div>
