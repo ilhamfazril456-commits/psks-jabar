@@ -30,29 +30,34 @@ const PILLAR_UNITS: Record<string, string> = {
 // Gradasi warna tematik sesuai identitas masing-masing 10 pilar
 const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string }> = {
   psm: {
-    bar: 'from-[#b8901c] to-[#d4af37]',
-    glow: 'ring-amber-400/40',
-    text: 'text-amber-400',
-  },
-  tagana: {
-    bar: 'from-orange-600 to-amber-500',
+    bar: 'from-orange-500 to-amber-500',
     glow: 'ring-orange-400/40',
     text: 'text-orange-400',
+  },
+  tagana: {
+    bar: 'from-red-600 to-rose-600',
+    glow: 'ring-red-400/40',
+    text: 'text-red-400',
   },
   karang_taruna: {
     bar: 'from-blue-600 to-indigo-700',
     glow: 'ring-blue-400/40',
     text: 'text-blue-400',
   },
+  karangtaruna: {
+    bar: 'from-blue-600 to-indigo-700',
+    glow: 'ring-blue-400/40',
+    text: 'text-blue-400',
+  },
   tksk: {
-    bar: 'from-sky-600 to-blue-700',
-    glow: 'ring-sky-400/40',
-    text: 'text-sky-400',
+    bar: 'from-teal-400 to-cyan-500',
+    glow: 'ring-cyan-400/40',
+    text: 'text-cyan-400',
   },
   lks: {
-    bar: 'from-amber-600 to-yellow-500',
-    glow: 'ring-amber-400/40',
-    text: 'text-amber-400',
+    bar: 'from-blue-600 to-sky-500',
+    glow: 'ring-blue-400/40',
+    text: 'text-blue-400',
   },
   lk3: {
     bar: 'from-purple-600 via-violet-600 to-indigo-700',
@@ -60,14 +65,19 @@ const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string
     text: 'text-purple-400',
   },
   pensos: {
-    bar: 'from-teal-600 to-emerald-700',
-    glow: 'ring-emerald-400/40',
-    text: 'text-emerald-400',
+    bar: 'from-pink-400 to-rose-300',
+    glow: 'ring-pink-300/40',
+    text: 'text-pink-400',
   },
   badan_usaha: {
-    bar: 'from-indigo-600 to-purple-700',
-    glow: 'ring-purple-400/40',
-    text: 'text-purple-400',
+    bar: 'from-lime-400 to-emerald-400',
+    glow: 'ring-lime-300/40',
+    text: 'text-lime-400',
+  },
+  badanusaha: {
+    bar: 'from-lime-400 to-emerald-400',
+    glow: 'ring-lime-300/40',
+    text: 'text-lime-400',
   },
   slrt_puskesos: {
     bar: 'from-emerald-600 via-teal-600 to-emerald-800',
@@ -91,9 +101,9 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
 
   const unit = PILLAR_UNITS[pillarId] || 'Data';
   const colorScheme = PILLAR_GRADIENTS[pillarId] || {
-    bar: 'from-[#b8901c] to-[#d4af37]',
-    glow: 'ring-amber-400/40',
-    text: 'text-amber-400',
+    bar: 'from-orange-500 to-amber-500',
+    glow: 'ring-orange-400/40',
+    text: 'text-orange-400',
   };
 
   // Helper untuk mendapatkan nilai total akurat per wilayah (menggabungkan data lokal & regional summary)
