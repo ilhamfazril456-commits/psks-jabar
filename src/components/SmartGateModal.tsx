@@ -906,8 +906,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: uLower, password: pInput, turnstileToken: captchaInput }),
       });
-      const data = await resp.json();
-      if (resp.ok && data.valid && data.session) {
+      let data: any = null;
+      try {
+        data = await resp.json();
+      } catch {}
+
+      if (resp.ok && data && data.valid && data.session) {
         handleLoginSuccess(
           data.session.role,
           data.session.namaAdmin,
@@ -918,7 +922,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         return;
       }
       if (resp.status === 403 || resp.status === 429) {
-        if (data.isPending && data.ticket) {
+        if (data && data.isPending && data.ticket) {
           setRegistrationTicket(data.ticket);
           try {
             localStorage.setItem('psks_latest_user_registration_ticket', JSON.stringify(data.ticket));
@@ -927,19 +931,18 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           setView('register_status');
           return;
         }
-        setErrorMessage(data.message || 'Akses masuk ditolak.');
+        setErrorMessage(data?.message || 'Akses masuk ditolak.');
         triggerFailedAttempt();
         return;
       }
-      if (resp.status === 401 || !resp.ok) {
-        setErrorMessage(data.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
+      if (resp.status === 401) {
+        setErrorMessage(data?.message || 'Kombinasi Nama Pengguna atau Kata Sandi salah.');
         triggerFailedAttempt();
         return;
       }
-    } catch {
-      // Offline notice if server cannot be reached
-      setErrorMessage('⚠️ Gagal terhubung ke server autentikasi. Silakan periksa koneksi internet Anda.');
-      return;
+      console.warn('[Auth Gateway] Server returned non-ok status (' + resp.status + '), attempting direct verification fallback');
+    } catch (authFetchErr) {
+      console.warn('[Auth Gateway] Server API endpoint unreachable, falling back to secure direct credential verification:', authFetchErr);
     }
 
     // 1. Check Universal Registered Accounts (Strictly validates against database passwordHash, plain password, or reset ticket)

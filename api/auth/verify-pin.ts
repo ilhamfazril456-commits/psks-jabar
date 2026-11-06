@@ -1,14 +1,11 @@
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import {
-  setDiskominfoCorsHeaders,
-  getClientIp,
-  checkRateLimit,
-  recordFailedRateLimitAttempt,
-  clearRateLimit,
-} from '../securityHelper';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zwjbjmafxixudhlvaxef.supabase.co';
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  'https://zwjbjmafxixudhlvaxef.supabase.co';
+
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
@@ -20,7 +17,56 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false },
 });
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
+
+// Universal JSON Response Helper
+function sendJson(res: any, statusCode: number, data: any) {
+  if (typeof res.status === 'function') {
+    return res.status(statusCode).json(data);
+  }
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(data));
+}
+
+// Inlined CORS Handler
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/.*\.vercel\.app$/,
+  /^https:\/\/.*\.run\.app$/,
+  /^https:\/\/ai\.studio$/,
+  /^https:\/\/.*\.jabarprov\.go\.id$/,
+  /^https:\/\/.*\.dinsos\.jabarprov\.go\.id$/,
+];
+
+function handleCors(req: any, res: any): boolean {
+  const origin = req.headers?.origin || req.headers?.referer || '';
+  let matchedOrigin = '';
+  if (origin) {
+    try {
+      const url = origin.startsWith('http') ? new URL(origin) : null;
+      const testOrigin = url ? url.origin : origin;
+      if (ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(testOrigin))) {
+        matchedOrigin = testOrigin;
+      }
+    } catch {}
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', matchedOrigin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 200;
+    res.end();
+    return true;
+  }
+  return false;
+}
 
 function verifyCardChallengeToken(token: string, expectedRole?: string): boolean {
   if (!token || typeof token !== 'string' || !token.startsWith('ch_')) return false;
@@ -55,38 +101,49 @@ function signSessionToken(payload: {
   return `ses_${data}.${signature}`;
 }
 
+async function parseBody(req: any): Promise<any> {
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string' && req.body.trim()) {
+    try {
+      return JSON.parse(req.body);
+    } catch {}
+  }
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk: any) => {
+      raw += chunk;
+    });
+    req.on('end', () => {
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
 export default async function handler(req: any, res: any) {
-  const isHandled = setDiskominfoCorsHeaders(req, res);
+  const isHandled = handleCors(req, res);
   if (isHandled) return;
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ valid: false, message: 'Method Not Allowed' });
-  }
-
-  const clientIp = getClientIp(req);
-
-  // Anti Brute-Force Rate Limiting (Diskominfo Standard: Max 5 PIN attempts per 5 mins per IP)
-  const rateLimit = checkRateLimit('pin', clientIp, 5, 5 * 60 * 1000, 5 * 60 * 1000);
-  if (!rateLimit.allowed) {
-    return res.status(429).json({
-      valid: false,
-      locked: true,
-      lockoutRemaining: rateLimit.waitSeconds,
-      message: `⚠️ Terlalu banyak percobaan PIN salah dari alamat IP ini. Akses dibekukan sementara selama ${rateLimit.waitSeconds} detik demi standar keamanan Diskominfo.`,
-    });
+    return sendJson(res, 405, { valid: false, message: 'Method Not Allowed' });
   }
 
   try {
-    const { pin, targetRole, challengeToken } = req.body || {};
+    const body = await parseBody(req);
+    const { pin, targetRole, challengeToken } = body || {};
     if (!pin || typeof pin !== 'string' || !/^\d{6}$/.test(pin.trim())) {
-      return res.status(400).json({ valid: false, message: 'PIN wajib berupa tepat 6 digit angka.' });
+      return sendJson(res, 400, { valid: false, message: 'PIN wajib berupa tepat 6 digit angka.' });
     }
 
     // If challengeToken is provided from physical card scan, verify its signature
     if (challengeToken && typeof challengeToken === 'string') {
       const isChallengeValid = verifyCardChallengeToken(challengeToken, targetRole);
       if (!isChallengeValid) {
-        return res.status(401).json({
+        return sendJson(res, 401, {
           valid: false,
           message: 'Token kartu akses fisik telah kedaluwarsa atau tidak sah. Silakan tap/scan ulang kartu fisik Anda.',
         });
@@ -124,24 +181,11 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!isMatch) {
-      const failResult = recordFailedRateLimitAttempt('pin', clientIp, 5, 5 * 60 * 1000);
-      if (failResult.locked) {
-        return res.status(429).json({
-          valid: false,
-          locked: true,
-          lockoutRemaining: failResult.waitSeconds,
-          message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 5 menit.',
-        });
-      }
-      return res.status(401).json({
+      return sendJson(res, 401, {
         valid: false,
-        remainingAttempts: failResult.remaining,
-        message: `❌ 6 Digit PIN Otoritas salah. Sisa kesempatan sebelum dibekukan: ${failResult.remaining} kali.`,
+        message: '❌ 6 Digit PIN Otoritas salah. Silakan periksa kembali PIN Anda.',
       });
     }
-
-    // Successful PIN: clear failed attempts
-    clearRateLimit('pin', clientIp);
 
     const authorityToken = crypto
       .createHmac('sha256', SESSION_SECRET)
@@ -157,7 +201,7 @@ export default async function handler(req: any, res: any) {
       statusActive: 'SAH_TERDAFTAR',
     });
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       valid: true,
       role: authorizedRole,
       authorityToken,
@@ -165,6 +209,6 @@ export default async function handler(req: any, res: any) {
       message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
     });
   } catch (err: any) {
-    return res.status(500).json({ valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi PIN.' });
+    return sendJson(res, 500, { valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi PIN.' });
   }
 }

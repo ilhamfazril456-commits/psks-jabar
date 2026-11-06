@@ -1,5 +1,40 @@
 import { GoogleGenAI } from '@google/genai';
-import { setDiskominfoCorsHeaders } from '../securityHelper';
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/.*\.vercel\.app$/,
+  /^https:\/\/.*\.run\.app$/,
+  /^https:\/\/ai\.studio$/,
+  /^https:\/\/.*\.jabarprov\.go\.id$/,
+  /^https:\/\/.*\.dinsos\.jabarprov\.go\.id$/,
+];
+
+function setDiskominfoCorsHeaders(req: any, res: any): boolean {
+  const origin = req.headers?.origin || req.headers?.referer || '';
+  let matchedOrigin = '';
+  if (origin) {
+    try {
+      const url = origin.startsWith('http') ? new URL(origin) : null;
+      const testOrigin = url ? url.origin : origin;
+      if (ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(testOrigin))) {
+        matchedOrigin = testOrigin;
+      }
+    } catch {}
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', matchedOrigin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 200;
+    res.end();
+    return true;
+  }
+  return false;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
