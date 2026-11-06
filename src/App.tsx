@@ -3456,18 +3456,36 @@ export default function App() {
       return updated;
     });
 
-    // Realtime regional distribution update
-    const updatedWithBatch = {
-      ...allPillarData,
-      [pillarKey]: [...(allPillarData[pillarKey] || []), ...newRecordsWithId],
-    };
-    const nextRegionsWithBatch = computeRegionalSummaryFromPillars(updatedWithBatch);
-    setRegionalSummary(nextRegionsWithBatch);
-    saveRegionalSummary(nextRegionsWithBatch);
+    // Realtime regional distribution update (incrementally adds each batch record to its region)
+    let nextRegionsWithBatch: RegionalSummaryMap = regionalSummary;
+    setRegionalSummary((prev) => {
+      const next: RegionalSummaryMap = JSON.parse(JSON.stringify(prev || {}));
+      KAB_KOTA_ONLY.forEach((reg) => {
+        if (!next[reg]) next[reg] = { total: 0, byPillar: {} };
+      });
+
+      for (const rec of newRecordsWithId) {
+        const reg = normalizeRegionName(rec.wilayah || session.wilayah || 'Kota Bandung');
+        if (next[reg]) {
+          next[reg].total = (next[reg].total || 0) + 1;
+          const byP = next[reg].byPillar || {};
+          byP[pillarKey] = (byP[pillarKey] || 0) + 1;
+          next[reg].byPillar = byP;
+        }
+      }
+
+      nextRegionsWithBatch = next;
+      saveRegionalSummary(next);
+      try {
+        localStorage.setItem('psks_regional_distribution', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
 
     // Realtime summary count increment & sync to Firestore meta
     setPillarSummaryCounts((prev) => {
-      const next = { ...prev, [pillarKey]: (prev[pillarKey] || allPillarData[pillarKey]?.length || 0) + newRecordsWithId.length };
+      const currentPillarCount = prev[pillarKey] || allPillarData[pillarKey]?.length || 0;
+      const next = { ...prev, [pillarKey]: currentPillarCount + newRecordsWithId.length };
       try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
       setFirestoreDoc('psks_records_meta', 'summary', {
         counts: next,

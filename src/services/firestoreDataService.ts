@@ -1110,51 +1110,49 @@ export async function batchSetFirestoreDocs(
 ): Promise<void> {
   if (!docs || docs.length === 0) return;
 
-  if (collectionName === 'psks_records') {
-    try {
-      const token =
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
-        (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
-        '';
-      const CHUNK_SIZE = 300;
-      let completed = 0;
-      for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
-        const chunk = docs.slice(i, i + CHUNK_SIZE);
-        await fetch('/api/psks/batch-save', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'x-session-token': token,
-          },
-          body: JSON.stringify({ docs: chunk }),
-        });
-        completed += chunk.length;
-        if (onProgress) {
-          onProgress(completed, docs.length);
-        }
-      }
-      passiveFirestoreBackup('batchSet', collectionName, docs);
-      return;
-    } catch {}
-  }
-
   const rows = docs.map((d) => mapDocToSupabaseRow(collectionName, d.id, d.data));
-  const CHUNK_SIZE = 300;
+  const CHUNK_SIZE = 150;
   let completed = 0;
 
+  // 1. PRIMARY AUTHORITATIVE PERSISTENCE: Directly upsert into Supabase (Permanent PostgreSQL Storage)
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
     try {
-      await supabase.from(collectionName).upsert(chunk);
-    } catch {}
+      const { error } = await supabase.from(collectionName).upsert(chunk);
+      if (error) {
+        console.warn(`[Supabase Batch Upsert] Notice on chunk ${i}:`, error.message);
+      }
+    } catch (upsertErr) {
+      console.warn(`[Supabase Batch Upsert] Exception on chunk ${i}:`, upsertErr);
+    }
     completed += chunk.length;
     if (onProgress) {
       onProgress(completed, rows.length);
     }
   }
 
-  // Silent passive background sync to Firestore
+  // 2. SERVERLESS ENDPOINT MIRRORING (Vercel / Express backend)
+  if (collectionName === 'psks_records') {
+    try {
+      const token =
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('session_token')) ||
+        (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) ||
+        '';
+      if (token) {
+        fetch('/api/psks/batch-save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({ docs: docs.slice(0, 500) }),
+        }).catch(() => {});
+      }
+    } catch {}
+  }
+
+  // 3. Silent passive background backup to Firestore
   passiveFirestoreBackup('batchSet', collectionName, docs);
 }
 
