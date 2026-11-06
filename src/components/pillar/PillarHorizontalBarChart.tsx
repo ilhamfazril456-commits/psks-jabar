@@ -40,14 +40,14 @@ const PILLAR_GRADIENTS: Record<string, { bar: string; glow: string; text: string
     text: 'text-red-400',
   },
   karang_taruna: {
-    bar: 'from-blue-600 to-indigo-700',
-    glow: 'ring-blue-400/40',
-    text: 'text-blue-400',
+    bar: 'from-amber-400 via-yellow-400 to-amber-500',
+    glow: 'ring-yellow-400/50',
+    text: 'text-amber-400',
   },
   karangtaruna: {
-    bar: 'from-blue-600 to-indigo-700',
-    glow: 'ring-blue-400/40',
-    text: 'text-blue-400',
+    bar: 'from-amber-400 via-yellow-400 to-amber-500',
+    glow: 'ring-yellow-400/50',
+    text: 'text-amber-400',
   },
   tksk: {
     bar: 'from-teal-400 to-cyan-500',

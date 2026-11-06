@@ -96,7 +96,7 @@ const PILLAR_COLORS: Record<string, { hex: string; bg: string; text: string }> =
   psm: { hex: '#f97316', bg: 'bg-orange-500', text: 'text-orange-700' }, // Oranye
   tagana: { hex: '#dc2626', bg: 'bg-red-600', text: 'text-red-700' }, // Merah
   lks: { hex: '#2563eb', bg: 'bg-blue-600', text: 'text-blue-700' }, // Biru
-  karangtaruna: { hex: '#4f46e5', bg: 'bg-indigo-600', text: 'text-indigo-700' },
+  karangtaruna: { hex: '#facc15', bg: 'bg-yellow-400', text: 'text-yellow-700' }, // Kuning cerah
   lk3: { hex: '#9333ea', bg: 'bg-purple-600', text: 'text-purple-700' },
   pensos: { hex: '#f472b6', bg: 'bg-pink-400', text: 'text-pink-700' }, // Pink muda
   tksk: { hex: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-700' }, // Biru tosca
