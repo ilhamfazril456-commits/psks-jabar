@@ -1067,13 +1067,21 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [previewPage, setPreviewPage] = useState<number>(1);
   const [forceTargetRegion, setForceTargetRegion] = useState<string>('');
+  const isPrivileged = session?.role === 'superadmin' || session?.role === 'developer';
+  const [forcedKeaktifan, setForcedKeaktifan] = useState<'auto' | 'Aktif' | 'Tidak Aktif'>('auto');
+  const [peksosMode, setPeksosMode] = useState<'column' | 'pemerintah' | 'masyarakat'>('column');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isCancelledRef = useRef<boolean>(false);
 
   // Target fields SPESIFIK & SESUAI PERSIS dengan tabel pilar yang sedang dibuka
+  // Khusus Superadmin & Developer: seluruh field fleksibel dan tidak diwajibkan (bebas dikosongkan)
   const targetFields = useMemo(() => {
-    return PILLAR_FIELD_DEFINITIONS[pillarId] || PILLAR_FIELD_DEFINITIONS.peksos;
-  }, [pillarId]);
+    const raw = PILLAR_FIELD_DEFINITIONS[pillarId] || PILLAR_FIELD_DEFINITIONS.peksos;
+    if (isPrivileged) {
+      return raw.map((f) => ({ ...f, required: false }));
+    }
+    return raw;
+  }, [pillarId, isPrivileged]);
 
   // Cuplikan contoh isi nyata untuk setiap kolom di Excel (sampel nilai unik)
   const columnSampleValues = useMemo(() => {
@@ -1625,7 +1633,13 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
       targetFields.forEach((field) => {
         const rawVal = getVal(field.key);
         if (field.key === 'nik' || field.key === 'nomorInduk') {
-          record[field.key] = sanitizeNIK(rawVal) || `${Date.now()}${String(index).padStart(4, '0')}`;
+          const cleaned = sanitizeNIK(rawVal);
+          if (isPrivileged) {
+            // Superadmin & Developer: jika dikosongkan tetap kosong, tidak memaksa generate angka palsu/dummy
+            record[field.key] = cleaned || '';
+          } else {
+            record[field.key] = cleaned || `${Date.now()}${String(index).padStart(4, '0')}`;
+          }
         } else if (field.key === 'wilayah' || field.key === 'wilayahKerja') {
           if (forceTargetRegion) {
             record[field.key] = forceTargetRegion;
@@ -1674,6 +1688,54 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
           record[field.key] = String(rawVal || '').trim();
         }
       });
+
+      // Pengaturan Status Keaktifan (Khusus Superadmin/Developer dengan opsi override, atau auto)
+      if (forcedKeaktifan === 'Aktif') {
+        record.status = 'Aktif';
+        record.statusAktif = 'Aktif';
+        record.statusKeaktifan = 'Aktif';
+      } else if (forcedKeaktifan === 'Tidak Aktif') {
+        record.status = 'Tidak Aktif';
+        record.statusAktif = 'Tidak Aktif';
+        record.statusKeaktifan = 'Tidak Aktif';
+      } else {
+        const rawKeaktifan = getVal('statusKeaktifan') || getVal('statusAktif') || getVal('status');
+        if (rawKeaktifan) {
+          const kLow = String(rawKeaktifan).toLowerCase().trim();
+          const isAktif = kLow.includes('aktif') && !kLow.includes('tidak') && !kLow.includes('non');
+          const finalStatus = isAktif ? 'Aktif' : (kLow.includes('tidak') || kLow.includes('non') ? 'Tidak Aktif' : 'Aktif');
+          record.status = finalStatus;
+          record.statusAktif = finalStatus;
+          record.statusKeaktifan = finalStatus;
+        } else {
+          record.status = 'Aktif';
+          record.statusAktif = 'Aktif';
+          record.statusKeaktifan = 'Aktif';
+        }
+      }
+
+      // Pengaturan Khusus Pilar Peksos: Pemerintah vs Masyarakat (Opsi Cepat Otoritas)
+      if (pillarId === 'peksos') {
+        if (peksosMode === 'pemerintah') {
+          record.statusPeksos = 'Pemerintah';
+        } else if (peksosMode === 'masyarakat') {
+          record.statusPeksos = 'Masyarakat';
+        } else {
+          const rawPeksos = getVal('statusPeksos');
+          if (rawPeksos) {
+            const pLow = String(rawPeksos).toLowerCase().trim();
+            if (pLow.includes('pemerintah') || pLow.includes('asn') || pLow.includes('pns')) {
+              record.statusPeksos = 'Pemerintah';
+            } else if (pLow.includes('masyarakat') || pLow.includes('swasta') || pLow.includes('non asn')) {
+              record.statusPeksos = 'Masyarakat';
+            } else {
+              record.statusPeksos = String(rawPeksos).trim();
+            }
+          } else {
+            record.statusPeksos = record.statusPeksos || 'Masyarakat';
+          }
+        }
+      }
 
       // Jika pilar LKS: sinkronisasi nomor tanda daftar ke sertifikasi & nik agar konsisten di semua tampilan
       if (pillarId === 'lks') {
@@ -1744,7 +1806,7 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
 
       return true;
     });
-  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah, selectedSheet, rawWorkbook, forceTargetRegion]);
+  }, [dataRows, excelHeaders, columnMapping, pillarId, targetFields, session.wilayah, selectedSheet, rawWorkbook, forceTargetRegion, isPrivileged, forcedKeaktifan, peksosMode]);
 
   // Ringkasan persebaran wilayah/kota yang berhasil terpetakan
   const detectedRegionsSummary = useMemo(() => {
@@ -2094,6 +2156,144 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                 )}
               </div>
 
+              {/* FITUR KHUSUS SUPERADMIN & DEVELOPER: KONTROL STATUS KEAKTIFAN */}
+              {isPrivileged && (
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-amber-300" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-black uppercase text-emerald-950 tracking-wider block">
+                            Status Keaktifan Data Import (Hak Akses Otoritas):
+                          </span>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-700 text-white shadow-2xs">
+                            {session.role.toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-xs text-emerald-900 font-medium">
+                          Pilih apakah seluruh baris di file ini di-import sebagai anggota aktif atau tidak aktif:
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 w-full sm:w-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setForcedKeaktifan('auto')}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          forcedKeaktifan === 'auto'
+                            ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
+                            : 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100/60'
+                        }`}
+                      >
+                        ⚡ Otomatis (File)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForcedKeaktifan('Aktif')}
+                        className={`px-3 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+                          forcedKeaktifan === 'Aktif'
+                            ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-2 ring-emerald-400'
+                            : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100/60'
+                        }`}
+                      >
+                        ✅ Kunci: Aktif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForcedKeaktifan('Tidak Aktif')}
+                        className={`px-3 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+                          forcedKeaktifan === 'Tidak Aktif'
+                            ? 'bg-rose-600 text-white border-rose-700 shadow-xs ring-2 ring-rose-400'
+                            : 'bg-white text-rose-800 border-rose-200 hover:bg-rose-50'
+                        }`}
+                      >
+                        🛑 Kunci: Tidak Aktif
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-emerald-900 font-bold bg-white/90 px-3.5 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span>
+                      {forcedKeaktifan === 'auto' && 'Status keaktifan akan dibaca otomatis dari kolom file Excel (default Aktif jika kolom kosong).'}
+                      {forcedKeaktifan === 'Aktif' && 'Seluruh data anggota hasil import ini dipastikan 100% berstatus "Aktif".'}
+                      {forcedKeaktifan === 'Tidak Aktif' && 'Seluruh data anggota hasil import ini dipastikan 100% berstatus "Tidak Aktif".'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* FITUR KHUSUS PILAR PEKSOS: PILIHAN STATUS PEKSOS PEMERINTAH / MASYARAKAT */}
+              {pillarId === 'peksos' && (
+                <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-2 border-indigo-400 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-700 text-white flex items-center justify-center font-black shadow-xs shrink-0">
+                        <Table className="w-5 h-5 text-indigo-200" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-black uppercase text-indigo-950 tracking-wider block">
+                            Kategori Status Peksos (Pemerintah / Masyarakat):
+                          </span>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-700 text-white shadow-2xs">
+                            PILIHAN CEPAT
+                          </span>
+                        </div>
+                        <span className="text-xs text-indigo-900 font-medium">
+                          Pilih dari judul kolom tabel Excel atau langsung kunci status untuk seluruh baris di file ini:
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPeksosMode('column')}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          peksosMode === 'column'
+                            ? 'bg-indigo-700 text-white border-indigo-800 shadow-xs'
+                            : 'bg-white text-indigo-900 border-indigo-300 hover:bg-indigo-100/60'
+                        }`}
+                      >
+                        📋 Dari Judul Kolom Excel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPeksosMode('pemerintah')}
+                        className={`px-3 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+                          peksosMode === 'pemerintah'
+                            ? 'bg-blue-700 text-white border-blue-800 shadow-xs ring-2 ring-blue-400'
+                            : 'bg-white text-blue-900 border-blue-300 hover:bg-blue-100/60'
+                        }`}
+                      >
+                        🏛️ Peksos Pemerintah
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPeksosMode('masyarakat')}
+                        className={`px-3 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer ${
+                          peksosMode === 'masyarakat'
+                            ? 'bg-teal-700 text-white border-teal-800 shadow-xs ring-2 ring-teal-400'
+                            : 'bg-white text-teal-900 border-teal-300 hover:bg-teal-100/60'
+                        }`}
+                      >
+                        👥 Peksos Masyarakat
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-indigo-950 font-bold bg-white/90 px-3.5 py-1.5 rounded-xl border border-indigo-300 flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                    <span>
+                      {peksosMode === 'column' && 'Status peksos dibaca dari kolom yang Anda petakan pada tabel pemetaan di bawah.'}
+                      {peksosMode === 'pemerintah' && 'Seluruh data di file Excel ini 100% dipastikan berstatus "Pekerja Sosial Pemerintah (Pemerintah)".'}
+                      {peksosMode === 'masyarakat' && 'Seluruh data di file Excel ini 100% dipastikan berstatus "Pekerja Sosial Masyarakat (Masyarakat)".'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Panduan Pemetaan yang Jelas */}
               <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-3.5 text-xs text-amber-950 flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
@@ -2194,9 +2394,14 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                               <span className="text-xs sm:text-sm font-black text-slate-900">
                                 {field.label}
                               </span>
-                              {field.required && (
+                              {field.required && !isPrivileged && (
                                 <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-300 shrink-0">
                                   Wajib
+                                </span>
+                              )}
+                              {isPrivileged && (field.key === 'nik' || field.key === 'nomorInduk') && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                                  Bisa Dikosongkan
                                 </span>
                               )}
                             </div>
@@ -2210,33 +2415,49 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                             <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
                               <span>Pilih Posisi Kolom di Excel:</span>
                             </div>
-                            <select
-                              value={selectedColKey}
-                              onChange={(e) => handleMappingChange(field.key, e.target.value)}
-                              className={`w-full text-xs font-bold p-2.5 rounded-xl border transition-all focus:outline-none ${
-                                isMatched
-                                  ? 'bg-white border-emerald-500 text-emerald-950 focus:ring-2 focus:ring-emerald-500/20 shadow-xs'
-                                  : field.required
-                                  ? 'bg-white border-amber-400 text-amber-950 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-white border-slate-300 text-slate-700'
-                              }`}
-                            >
-                              <option value="">-- [ Kosongkan / Lewati Kolom Ini ] --</option>
-                              {(field.key === 'wilayah' || field.key === 'wilayahKerja') && (
-                                <option value="__SHEET_NAME__" className="font-extrabold text-emerald-900 bg-emerald-50">
-                                  🏷️ [Otomatis dari Nama Sheet/Kota (Cianjur, Tasik, KBB, dll)]
-                                </option>
-                              )}
-                              {excelHeaders.map((header, hIdx) => {
-                                const colKey = `col_${hIdx}`;
-                                const sample = columnSampleValues[colKey]?.[0] || columnSampleValues[header]?.[0] || '';
-                                return (
-                                  <option key={colKey} value={colKey}>
-                                    📋 Kolom {hIdx + 1}: "{header}" {sample ? `(Contoh: "${sample.slice(0, 30)}")` : ''}
+                            {field.key === 'statusPeksos' && peksosMode !== 'column' ? (
+                              <div className="p-2.5 rounded-xl bg-indigo-50 border-2 border-indigo-300 text-indigo-950 font-black text-xs flex items-center justify-between shadow-2xs">
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                                  Kunci: {peksosMode === 'pemerintah' ? 'Peksos Pemerintah' : 'Peksos Masyarakat'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setPeksosMode('column')}
+                                  className="text-[10px] text-indigo-700 underline font-bold hover:text-indigo-900 cursor-pointer ml-2"
+                                >
+                                  Pilih Kolom Excel
+                                </button>
+                              </div>
+                            ) : (
+                              <select
+                                value={selectedColKey}
+                                onChange={(e) => handleMappingChange(field.key, e.target.value)}
+                                className={`w-full text-xs font-bold p-2.5 rounded-xl border transition-all focus:outline-none ${
+                                  isMatched
+                                    ? 'bg-white border-emerald-500 text-emerald-950 focus:ring-2 focus:ring-emerald-500/20 shadow-xs'
+                                    : field.required && !isPrivileged
+                                    ? 'bg-white border-amber-400 text-amber-950 focus:ring-2 focus:ring-amber-500/20'
+                                    : 'bg-white border-slate-300 text-slate-700'
+                                }`}
+                              >
+                                <option value="">-- [ Kosongkan / Lewati Kolom Ini ] --</option>
+                                {(field.key === 'wilayah' || field.key === 'wilayahKerja') && (
+                                  <option value="__SHEET_NAME__" className="font-extrabold text-emerald-900 bg-emerald-50">
+                                    🏷️ [Otomatis dari Nama Sheet/Kota (Cianjur, Tasik, KBB, dll)]
                                   </option>
-                                );
-                              })}
-                            </select>
+                                )}
+                                {excelHeaders.map((header, hIdx) => {
+                                  const colKey = `col_${hIdx}`;
+                                  const sample = columnSampleValues[colKey]?.[0] || columnSampleValues[header]?.[0] || '';
+                                  return (
+                                    <option key={colKey} value={colKey}>
+                                      📋 Kolom {hIdx + 1}: "{header}" {sample ? `(Contoh: "${sample.slice(0, 30)}")` : ''}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            )}
                           </div>
                         </div>
 
@@ -2609,7 +2830,15 @@ export const PillarExcelImportModal: React.FC<PillarExcelImportModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  disabled={!columnMapping['nama'] && !columnMapping['namaLks'] && !columnMapping['namaKarangTaruna'] && !columnMapping['namaLk3'] && !columnMapping['namaBadanUsaha'] && !columnMapping['namaSlrt']}
+                  disabled={
+                    !isPrivileged &&
+                    !columnMapping['nama'] &&
+                    !columnMapping['namaLks'] &&
+                    !columnMapping['namaKarangTaruna'] &&
+                    !columnMapping['namaLk3'] &&
+                    !columnMapping['namaBadanUsaha'] &&
+                    !columnMapping['namaSlrt']
+                  }
                   className="px-6 py-2.5 bg-[#043e2e] hover:bg-[#065e44] text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-600/40 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>Lanjut ke Pratinjau Tabel</span>
