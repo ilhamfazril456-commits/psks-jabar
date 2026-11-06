@@ -60,7 +60,7 @@ interface SmartGateModalProps {
   onClose: () => void;
   targetPillarTitle?: string;
   onConfirmGuestRegion: (region: string) => void;
-  onPerformLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', nama: string, wilayah: string, username?: string, userId?: string) => void;
+  onPerformLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', nama: string, wilayah: string, username?: string, userId?: string, sessionToken?: string) => void;
   adminAccounts: AdminAccount[];
   onRegisterAccount?: (newAccount: Omit<AdminAccount, 'id'>) => Promise<void> | void;
   onUpdateAccountLocal?: (account: AdminAccount) => void;
@@ -202,6 +202,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     wilayah: string;
     username?: string;
     userId?: string;
+    sessionToken?: string;
   } | null>(null);
 
   // Input & Scroll Refs
@@ -215,13 +216,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     nama: string,
     wilayah: string,
     username?: string,
-    userId?: string
+    userId?: string,
+    sessionToken?: string
   ) => {
     setIsLoggingIn(true);
     setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
     setErrorMessage('');
 
-    onPerformLogin(role, nama, wilayah, username, userId);
+    onPerformLogin(role, nama, wilayah, username, userId, sessionToken);
 
     setTimeout(() => {
       setFailedAttempts(0);
@@ -884,7 +886,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       nama: string,
       wilayah: string,
       username?: string,
-      userId?: string
+      userId?: string,
+      token?: string
     ) => {
       // Privileged Access Management: Superadmin and Developer MUST pass 6-digit PIN verification
       if (role === 'superadmin' || role === 'developer') {
@@ -894,10 +897,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           wilayah,
           username,
           userId,
+          sessionToken: token,
         });
         return;
       }
-      executeDirectLoginSuccess(role, nama, wilayah, username, userId);
+      executeDirectLoginSuccess(role, nama, wilayah, username, userId, token);
     };
 
     // 0. Primary Secure Server-Side Login (Protects Passwords & Hashes from Client-Side Exposure)
@@ -918,7 +922,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           data.session.namaAdmin,
           data.session.wilayahTugas,
           data.session.username,
-          data.session.id
+          data.session.id,
+          data.session.sessionToken
         );
         return;
       }
@@ -2915,7 +2920,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           onSuccess={() => {
             const auth = pendingPrivilegedAuth;
             setPendingPrivilegedAuth(null);
-            executeDirectLoginSuccess(auth.role, auth.nama, auth.wilayah, auth.username, auth.userId);
+            executeDirectLoginSuccess(auth.role, auth.nama, auth.wilayah, auth.username, auth.userId, auth.sessionToken);
           }}
           onCancel={() => {
             setPendingPrivilegedAuth(null);

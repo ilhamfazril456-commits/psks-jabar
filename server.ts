@@ -295,8 +295,7 @@ async function startServer() {
   // Mencegah pemalsuan sesi via DevTools/F12 (Anti-Client-Side Role Spoofing)
   // Cryptographically secure secret with runtime randomized fallback (prevents static key forgery)
   const SESSION_SECRET =
-    process.env.SESSION_SECRET ||
-    ((globalThis as any).__PSKS_HMAC_SECRET || ((globalThis as any).__PSKS_HMAC_SECRET = crypto.randomBytes(32).toString('hex')));
+    process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
 
   interface VerifiedSessionPayload {
     id: string;

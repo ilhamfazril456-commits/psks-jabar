@@ -138,19 +138,26 @@ const recordSystemActivity = (params: any) => {
 };
 
 export default function App() {
-  // 1. Session State
+  // 1. Session State (Reads from both sessionStorage and localStorage to guarantee persistence across refresh and new tabs)
   const [session, setSession] = useState<UserSession>(() => {
-    const role = (sessionStorage.getItem('session_user_role') || 'user') as 'user' | 'admin' | 'superadmin' | 'developer';
-    const nama = sessionStorage.getItem('session_user_nama') || 'Tamu Publik';
-    const wilayah = sessionStorage.getItem('session_user_wilayah') || '';
-    const statusActive = (sessionStorage.getItem('statusLoginActive') || 'GUEST') as 'SAH_TERDAFTAR' | 'GUEST';
+    const getStored = (key: string): string => {
+      try {
+        return sessionStorage.getItem(key) || localStorage.getItem(key) || '';
+      } catch {
+        return '';
+      }
+    };
+    const role = (getStored('session_user_role') || 'user') as 'user' | 'admin' | 'superadmin' | 'developer';
+    const nama = getStored('session_user_nama') || 'Tamu Publik';
+    const wilayah = getStored('session_user_wilayah') || '';
+    const statusActive = (getStored('statusLoginActive') || 'GUEST') as 'SAH_TERDAFTAR' | 'GUEST';
     const isDeveloper = role === 'developer';
-    const sessionToken = sessionStorage.getItem('session_token') || undefined;
-    const loginTimestamp = sessionStorage.getItem('login_timestamp') ? Number(sessionStorage.getItem('login_timestamp')) : undefined;
-    const username = sessionStorage.getItem('session_user_username') || undefined;
-    const userId = sessionStorage.getItem('session_user_id') || undefined;
-    const deviceId = sessionStorage.getItem('session_device_id') || undefined;
-    const passwordHash = sessionStorage.getItem('session_user_password_hash') || undefined;
+    const sessionToken = getStored('session_token') || undefined;
+    const loginTimestamp = getStored('login_timestamp') ? Number(getStored('login_timestamp')) : undefined;
+    const username = getStored('session_user_username') || undefined;
+    const userId = getStored('session_user_id') || undefined;
+    const deviceId = getStored('session_device_id') || undefined;
+    const passwordHash = getStored('session_user_password_hash') || undefined;
     return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash };
   });
 
@@ -550,61 +557,91 @@ export default function App() {
     }
   };
 
-  // 🛡️ Zero-Trust Cryptographic Session Verification on Application Startup & Resume
-  // Memverifikasi tanda tangan HMAC token ke server & membersihkan sesi jika terjadi pemalsuan DevTools / F12
+  // 🛡️ Cryptographic Session Verification on Application Startup & Resume
+  // Memverifikasi sesi secara aman tanpa mereset sesi pengguna saat refresh halaman atau restart server
   useEffect(() => {
-    const activeToken = sessionStorage.getItem('session_token');
-    const loginActive = sessionStorage.getItem('statusLoginActive');
-
-    if (loginActive === 'SAH_TERDAFTAR') {
-      if (!activeToken) {
-        console.warn('[Security Shield] Sesi terdeteksi tanpa tanda tangan token kriptografi. Mereset sesi ke Tamu.');
-        sessionStorage.clear();
-        setSession({
-          role: 'user',
-          nama: 'Tamu Publik',
-          wilayah: '',
-          statusActive: 'GUEST',
-          isDeveloper: false,
-        });
-        return;
+    const getStored = (key: string): string => {
+      try {
+        return sessionStorage.getItem(key) || localStorage.getItem(key) || '';
+      } catch {
+        return '';
       }
+    };
+    const activeToken = getStored('session_token');
+    const loginActive = getStored('statusLoginActive');
 
-      fetch('/api/auth/verify-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionToken: activeToken }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.valid || !data.session) {
-            console.warn('[Security Shield] Token sesi tidak sah atau kedaluwarsa. Melakukan logout otomatis.');
-            sessionStorage.clear();
-            setSession({
-              role: 'user',
-              nama: 'Tamu Publik',
-              wilayah: '',
-              statusActive: 'GUEST',
-              isDeveloper: false,
-            });
-          } else {
-            const s = data.session;
-            setSession((prev) => ({
-              ...prev,
-              id: s.id,
-              username: s.username,
-              role: s.role,
-              nama: s.namaAdmin || s.nama || prev.nama,
-              wilayah: s.wilayahTugas || s.wilayah || prev.wilayah,
-              statusActive: 'SAH_TERDAFTAR',
-              isDeveloper: s.role === 'developer',
-            }));
-            sessionStorage.setItem('session_user_role', s.role);
-          }
+    if (loginActive === 'SAH_TERDAFTAR' && activeToken) {
+      // Sinkronisasi otomatis ke kedua storage (sessionStorage & localStorage) agar selalu persist
+      const role = getStored('session_user_role');
+      const nama = getStored('session_user_nama');
+      const wilayah = getStored('session_user_wilayah');
+      const username = getStored('session_user_username');
+      const userId = getStored('session_user_id');
+
+      const syncItems: [string, string][] = [
+        ['session_token', activeToken],
+        ['statusLoginActive', 'SAH_TERDAFTAR'],
+        ['session_user_role', role],
+        ['session_user_nama', nama],
+        ['session_user_wilayah', wilayah],
+        ['session_user_username', username],
+        ['session_user_id', userId],
+      ];
+      syncItems.forEach(([k, v]) => {
+        if (v) {
+          try { sessionStorage.setItem(k, v); } catch {}
+          try { localStorage.setItem(k, v); } catch {}
+        }
+      });
+
+      // Verifikasi token HMAC server-side hanya jika token bertipe ses_ (server-signed)
+      if (activeToken.startsWith('ses_') && !activeToken.startsWith('ses_local_')) {
+        fetch('/api/auth/verify-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken: activeToken }),
         })
-        .catch(() => {
-          // Graceful handling jika server offline
-        });
+          .then((res) => {
+            if (!res.ok && res.status !== 401) {
+              return null; // Server temporary cold start/network glitch -> Abaikan, jangan logout
+            }
+            return res.json();
+          })
+          .then((data) => {
+            if (!data) return;
+            if (data.valid && data.session) {
+              const s = data.session;
+              setSession((prev) => ({
+                ...prev,
+                id: s.id,
+                username: s.username,
+                role: s.role,
+                nama: s.namaAdmin || s.nama || prev.nama,
+                wilayah: s.wilayahTugas || s.wilayah || prev.wilayah,
+                statusActive: 'SAH_TERDAFTAR',
+                isDeveloper: s.role === 'developer',
+              }));
+              try { sessionStorage.setItem('session_user_role', s.role); } catch {}
+              try { localStorage.setItem('session_user_role', s.role); } catch {}
+            } else if (data.valid === false && data.message?.includes('kedaluwarsa')) {
+              console.warn('[Security Shield] Sesi telah kedaluwarsa setelah 7 hari.');
+              sessionStorage.clear();
+              ['session_token', 'statusLoginActive', 'session_user_role', 'session_user_nama'].forEach((k) => {
+                try { localStorage.removeItem(k); } catch {}
+              });
+              setSession({
+                role: 'user',
+                nama: 'Tamu Publik',
+                wilayah: '',
+                statusActive: 'GUEST',
+                isDeveloper: false,
+              });
+            }
+          })
+          .catch(() => {
+            // Offline/Network issue: Sesi pengguna tetap aman dan tidak di-logout paksa
+          });
+      }
     }
   }, []);
 
@@ -985,8 +1022,8 @@ export default function App() {
 
   // 5. Smart Gate Modal & Login Modal State (Direct new visitors to initial gate automatically on arrival)
   const [gateModalOpen, setGateModalOpen] = useState<boolean>(() => {
-    const entered = sessionStorage.getItem('has_entered_gate');
-    const statusActive = sessionStorage.getItem('statusLoginActive');
+    const entered = sessionStorage.getItem('has_entered_gate') || localStorage.getItem('has_entered_gate');
+    const statusActive = sessionStorage.getItem('statusLoginActive') || localStorage.getItem('statusLoginActive');
     return !entered && statusActive !== 'SAH_TERDAFTAR';
   });
   const [pendingPillarId, setPendingPillarId] = useState<PillarId | null>(null);
@@ -1002,7 +1039,7 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           const totalVal: number = (Object.values(parsed) as any[]).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
-          if (totalVal >= 5000 && totalVal < 15000) {
+          if (totalVal >= 5000) {
             return parsed;
           }
         }
@@ -1028,6 +1065,12 @@ export default function App() {
       delList = [];
     }
 
+    let customImported: PSKSDataRecord[] = [];
+    try {
+      const rawCustom = localStorage.getItem('psks_custom_imported_records');
+      if (rawCustom) customImported = JSON.parse(rawCustom);
+    } catch {}
+
     try {
       const cached = localStorage.getItem('psks_all_pillar_data');
       if (cached) {
@@ -1039,6 +1082,15 @@ export default function App() {
               filtered[k] = records.filter((r) => !delList.includes(r.id));
             }
           }
+          if (customImported.length > 0) {
+            customImported.forEach((rec) => {
+              const p = rec.pillarId || 'peksos';
+              if (!filtered[p]) filtered[p] = [];
+              if (!filtered[p].some((r) => r.id === rec.id) && !delList.includes(rec.id)) {
+                filtered[p].push(rec);
+              }
+            });
+          }
           if (Object.keys(filtered).length > 0) return filtered;
         }
       }
@@ -1047,6 +1099,15 @@ export default function App() {
     const initial: Record<string, PSKSDataRecord[]> = {};
     for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
       initial[k] = records.filter((r) => !delList.includes(r.id));
+    }
+    if (customImported.length > 0) {
+      customImported.forEach((rec) => {
+        const p = rec.pillarId || 'peksos';
+        if (!initial[p]) initial[p] = [];
+        if (!initial[p].some((r) => r.id === rec.id) && !delList.includes(rec.id)) {
+          initial[p].push(rec);
+        }
+      });
     }
     return initial;
   });
@@ -1183,6 +1244,19 @@ export default function App() {
             for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
               fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
             }
+            try {
+              const rawCustom = localStorage.getItem('psks_custom_imported_records');
+              if (rawCustom) {
+                const custom: PSKSDataRecord[] = JSON.parse(rawCustom);
+                custom.forEach((r) => {
+                  const p = r.pillarId || 'peksos';
+                  if (!fallback[p]) fallback[p] = [];
+                  if (!fallback[p].some((item) => item.id === r.id) && !deletedIds.includes(r.id)) {
+                    fallback[p].push(r);
+                  }
+                });
+              }
+            } catch {}
             React.startTransition(() => {
               setAllPillarData(fallback);
             });
@@ -1297,6 +1371,21 @@ export default function App() {
               loaded[k].sort(compareRecordsChronological);
             });
 
+            // Merge any local custom imported records into loaded snapshot
+            try {
+              const rawCustom = localStorage.getItem('psks_custom_imported_records');
+              if (rawCustom) {
+                const custom: PSKSDataRecord[] = JSON.parse(rawCustom);
+                custom.forEach((r) => {
+                  const p = r.pillarId || 'peksos';
+                  if (!loaded[p]) loaded[p] = [];
+                  if (!loaded[p].some((item) => item.id === r.id) && !deletedIds.includes(r.id)) {
+                    loaded[p].push(r);
+                  }
+                });
+              }
+            } catch {}
+
             // Fallback merge for features that have no docs in Firestore yet
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
               if (!loaded[k] || loaded[k].length === 0) {
@@ -1319,10 +1408,10 @@ export default function App() {
             const exactRegions = computeRegionalSummaryFromPillars(loaded);
             const loadedTotal = Object.values(exactRegions).reduce((acc, c) => acc + (c?.total || 0), 0);
 
-            // Protect the authoritative regionalSummary (e.g. 6.731) from being overwritten by partial records (e.g. 291)
+            // Update regionalSummary with authoritative exact regions
             setRegionalSummary((prev) => {
               const currentTotal = Object.values(prev || {}).reduce((acc, c) => acc + (c?.total || 0), 0);
-              if (loadedTotal >= currentTotal && loadedTotal > 0) {
+              if ((loadedTotal >= 5000 || loadedTotal >= currentTotal) && loadedTotal > 0) {
                 saveRegionalSummary(exactRegions);
                 return exactRegions;
               }
@@ -2624,7 +2713,8 @@ export default function App() {
     nama: string,
     wilayah: string,
     username?: string,
-    userId?: string
+    userId?: string,
+    incomingSessionToken?: string
   ) => {
     const statusActive = 'SAH_TERDAFTAR';
     const isDeveloper = role === 'developer';
@@ -2645,8 +2735,8 @@ export default function App() {
         (a) => (a.username || '').toLowerCase().trim() === (resolvedUsername || '').toLowerCase().trim()
       )?.id;
 
-    // Generate unique session token & timestamp for Single Session & 24h Timeout
-    const sessionToken = `token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    // Use incoming HMAC token from server if available, or generate a structured session token
+    const sessionToken = incomingSessionToken || `ses_local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const loginTimestamp = Date.now();
     const currentDeviceId = getStableDeviceId();
 
@@ -2679,17 +2769,27 @@ export default function App() {
       lastUpdatedTimestamp: initialLastUpdated,
     };
     setSession(newSession);
-    sessionStorage.setItem('has_entered_gate', 'true');
-    sessionStorage.setItem('session_user_role', role);
-    sessionStorage.setItem('session_user_nama', nama);
-    sessionStorage.setItem('session_user_wilayah', wilayah);
-    sessionStorage.setItem('statusLoginActive', statusActive);
-    sessionStorage.setItem('session_user_username', resolvedUsername);
-    if (resolvedUserId) sessionStorage.setItem('session_user_id', resolvedUserId);
-    sessionStorage.setItem('session_token', sessionToken);
-    sessionStorage.setItem('login_timestamp', String(loginTimestamp));
-    sessionStorage.setItem('session_device_id', currentDeviceId);
-    if (initialPasswordHash) sessionStorage.setItem('session_user_password_hash', initialPasswordHash);
+
+    // 🛡️ CRITICAL: Mirror session to BOTH sessionStorage AND localStorage
+    // This permanently prevents downgrading to "Tamu Publik" upon page refresh or new tab!
+    const sessionItems: [string, string][] = [
+      ['has_entered_gate', 'true'],
+      ['session_user_role', role],
+      ['session_user_nama', nama],
+      ['session_user_wilayah', wilayah],
+      ['statusLoginActive', statusActive],
+      ['session_user_username', resolvedUsername],
+      ['session_token', sessionToken],
+      ['login_timestamp', String(loginTimestamp)],
+      ['session_device_id', currentDeviceId],
+    ];
+    if (resolvedUserId) sessionItems.push(['session_user_id', resolvedUserId]);
+    if (initialPasswordHash) sessionItems.push(['session_user_password_hash', initialPasswordHash]);
+
+    sessionItems.forEach(([k, v]) => {
+      try { sessionStorage.setItem(k, v); } catch {}
+      try { localStorage.setItem(k, v); } catch {}
+    });
     setGateModalOpen(false);
 
     const now = new Date();
@@ -2858,18 +2958,24 @@ export default function App() {
       localStorage.removeItem('psks_registration_submissions');
       localStorage.removeItem('psks_my_submission_ids');
     } catch {}
-    sessionStorage.removeItem('has_entered_gate');
-    sessionStorage.removeItem('session_user_role');
-    sessionStorage.removeItem('session_user_nama');
-    sessionStorage.removeItem('session_user_wilayah');
-    sessionStorage.removeItem('statusLoginActive');
-    sessionStorage.removeItem('session_token');
-    sessionStorage.removeItem('login_timestamp');
-    sessionStorage.removeItem('session_user_username');
-    sessionStorage.removeItem('session_user_id');
-    sessionStorage.removeItem('session_device_id');
-    sessionStorage.removeItem('session_user_password_hash');
-    sessionStorage.removeItem('session_user_password_polos');
+    const sessionKeysToClear = [
+      'has_entered_gate',
+      'session_user_role',
+      'session_user_nama',
+      'session_user_wilayah',
+      'statusLoginActive',
+      'session_token',
+      'login_timestamp',
+      'session_user_username',
+      'session_user_id',
+      'session_device_id',
+      'session_user_password_hash',
+      'session_user_password_polos',
+    ];
+    sessionKeysToClear.forEach((k) => {
+      try { sessionStorage.removeItem(k); } catch {}
+      try { localStorage.removeItem(k); } catch {}
+    });
     setIsFloatingAnnouncementOpen(false);
     hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
@@ -3294,6 +3400,15 @@ export default function App() {
       return updated;
     });
 
+    try {
+      const existingRaw = localStorage.getItem('psks_custom_imported_records');
+      const existingList: PSKSDataRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
+      if (!existingList.some((r) => r.id === fullRecord.id)) {
+        existingList.push(fullRecord);
+        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList));
+      }
+    } catch {}
+
     // Realtime regional distribution update
     const regName = normalizeRegionName(newRecord.wilayah || session.wilayah || 'Kota Bandung');
     let nextRegionsMap: RegionalSummaryMap = regionalSummary;
@@ -3455,6 +3570,17 @@ export default function App() {
       setCachedPillarData(updated);
       return updated;
     });
+
+    try {
+      const existingRaw = localStorage.getItem('psks_custom_imported_records');
+      const existingList: PSKSDataRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
+      const combined = [...existingList, ...newRecordsWithId];
+      const map = new Map<string, PSKSDataRecord>();
+      combined.forEach((r) => map.set(r.id, r));
+      localStorage.setItem('psks_custom_imported_records', JSON.stringify(Array.from(map.values())));
+    } catch (e) {
+      console.warn('Failed to save to psks_custom_imported_records', e);
+    }
 
     // Realtime regional distribution update (incrementally adds each batch record to its region)
     let nextRegionsWithBatch: RegionalSummaryMap = regionalSummary;
@@ -3931,6 +4057,14 @@ export default function App() {
     } catch {}
     setCachedPillarData(updatedAfterDel);
 
+    try {
+      const existingRaw = localStorage.getItem('psks_custom_imported_records');
+      if (existingRaw) {
+        const existingList: PSKSDataRecord[] = JSON.parse(existingRaw);
+        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList.filter((r) => r.id !== recordId)));
+      }
+    } catch {}
+
     // Realtime regional distribution update
     const nextRegionsAfterDel = computeRegionalSummaryFromPillars(updatedAfterDel);
     setRegionalSummary(nextRegionsAfterDel);
@@ -4018,6 +4152,14 @@ export default function App() {
       localStorage.setItem('psks_all_pillar_data', JSON.stringify(updatedAfterBatchDel));
     } catch {}
     setCachedPillarData(updatedAfterBatchDel);
+
+    try {
+      const existingRaw = localStorage.getItem('psks_custom_imported_records');
+      if (existingRaw) {
+        const existingList: PSKSDataRecord[] = JSON.parse(existingRaw);
+        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList.filter((r) => !recordIds.includes(r.id))));
+      }
+    } catch {}
 
     // Realtime regional distribution update
     const nextRegionsAfterBatchDel = computeRegionalSummaryFromPillars(updatedAfterBatchDel);

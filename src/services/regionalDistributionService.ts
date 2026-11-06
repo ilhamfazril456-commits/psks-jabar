@@ -235,8 +235,8 @@ export function getInitialRegionalSummary(): RegionalSummaryMap {
             totalSum += parsed[reg].total;
           }
         }
-        // If stored data was the old broken 22k baseline or less than 1000, ignore and use calibrated 6.731
-        if (validKeys >= 25 && totalSum >= 5000 && totalSum < 15000) {
+        // Accept valid saved regional distribution (calibrated 6.731 baseline or full 21.963+ database records)
+        if (validKeys >= 25 && totalSum >= 5000) {
           return parsed as RegionalSummaryMap;
         }
       }
