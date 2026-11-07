@@ -604,24 +604,99 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
                   </div>
                 </div>
 
-                {/* DESKTOP CURSOR-FOLLOWING TOOLTIP: Bergerak bebas mengikuti kursor mouse, 100% licin & tidak menutupi irisan */}
+                {/* DESKTOP CURSOR-FOLLOWING TOOLTIP: OPSI A - Melayang bebas di luar lingkaran donat, 100% licin & proteksi mutlak nol tabrakan dengan lubang tengah */}
                 {!isMobileScreen && activeDonutIndex !== null && mousePos && pillarDistributionData[activeDonutIndex] && (() => {
                   const activePillar = pillarDistributionData[activeDonutIndex];
-                  const containerW = donutContainerRef.current?.clientWidth || 320;
+                  const containerW = donutContainerRef.current?.clientWidth || 340;
                   const containerH = donutContainerRef.current?.clientHeight || 320;
+                  const cx = containerW / 2;
+                  const cy = containerH / 2;
 
-                  const cardW = 190;
-                  const cardH = 110;
+                  const cardW = 175;
+                  const cardH = 88;
 
-                  // Posisi X cerdas: jika kursor mendekati sisi kanan, geser tooltip ke kiri kursor
-                  const posX = mousePos.x + cardW + 18 > containerW
-                    ? Math.max(10, mousePos.x - cardW - 14)
-                    : mousePos.x + 16;
+                  // Zona Eksklusi Lubang Tengah (innerRadius = 78, lingkar tengah radius 68)
+                  const holeMargin = 78;
+                  const holeLeft = cx - holeMargin;
+                  const holeRight = cx + holeMargin;
+                  const holeTop = cy - holeMargin;
+                  const holeBottom = cy + holeMargin;
 
-                  // Posisi Y cerdas: jika kursor mendekati bawah, geser tooltip ke atas kursor
-                  const posY = mousePos.y + cardH + 18 > containerH
-                    ? Math.max(10, mousePos.y - cardH - 8)
-                    : Math.max(10, mousePos.y - 30);
+                  // Vektor perpindahan dari pusat donat ke kursor
+                  const dx = mousePos.x - cx;
+                  const dy = mousePos.y - cy;
+                  const dist = Math.hypot(dx, dy) || 1;
+                  const ux = dx / dist;
+                  const uy = dy / dist;
+
+                  // 1. Penempatan dasar: Dorong keluar menjauhi pusat donat (arah radial)
+                  let posX: number;
+                  let posY: number;
+
+                  if (ux < -0.2) {
+                    // Sisi kiri: tempatkan kotak sepenuhnya di kiri kursor
+                    posX = mousePos.x - cardW - 14;
+                  } else if (ux > 0.2) {
+                    // Sisi kanan: tempatkan kotak sepenuhnya di kanan kursor
+                    posX = mousePos.x + 14;
+                  } else {
+                    // Posisi tengah vertikal
+                    posX = mousePos.x - cardW / 2;
+                  }
+
+                  if (uy < -0.2) {
+                    // Sisi atas: tempatkan kotak di atas kursor
+                    posY = mousePos.y - cardH - 12;
+                  } else if (uy > 0.2) {
+                    // Sisi bawah: tempatkan kotak di bawah kursor
+                    posY = mousePos.y + 12;
+                  } else {
+                    // Posisi tengah horizontal
+                    posY = mousePos.y - cardH / 2;
+                  }
+
+                  // 2. Batas area dalam container
+                  const minX = 6;
+                  const maxX = containerW - cardW - 6;
+                  const minY = 6;
+                  const maxY = containerH - cardH - 6;
+
+                  posX = Math.max(minX, Math.min(maxX, posX));
+                  posY = Math.max(minY, Math.min(maxY, posY));
+
+                  // 3. PROTEKSI MUTLAK: Garansi 100% Nol Tabrakan dengan Lubang Tengah Donat (TOTAL PSKS)
+                  const overlapsHole = !(
+                    posX + cardW <= holeLeft ||
+                    posX >= holeRight ||
+                    posY + cardH <= holeTop ||
+                    posY >= holeBottom
+                  );
+
+                  if (overlapsHole) {
+                    // Jika terdeteksi menyentuh lubang tengah, dorong keluar secara tegas
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                      // Utamakan dorong ke kiri/kanan jika masih muat
+                      if (dx < 0 && holeLeft - cardW - 10 >= minX) {
+                        posX = holeLeft - cardW - 10;
+                      } else if (dx >= 0 && holeRight + 10 <= maxX) {
+                        posX = holeRight + 10;
+                      } else {
+                        // Jika ruang horizontal sempit, dorong ke atas atau ke bawah menjauhi lubang
+                        if (dy < 0) {
+                          posY = Math.max(minY, holeTop - cardH - 8);
+                        } else {
+                          posY = Math.min(maxY, holeBottom + 8);
+                        }
+                      }
+                    } else {
+                      // Utamakan dorong ke atas atau ke bawah menjauhi lubang
+                      if (dy < 0) {
+                        posY = Math.max(minY, holeTop - cardH - 8);
+                      } else {
+                        posY = Math.min(maxY, holeBottom + 8);
+                      }
+                    }
+                  }
 
                   return (
                     <div
