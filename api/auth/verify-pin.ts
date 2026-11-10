@@ -124,12 +124,83 @@ async function parseBody(req: any): Promise<any> {
   });
 }
 
+// Anti-Brute-Force Rate Limiting & Lockout Store (5 attempts -> 15-minute / 900-second lockout)
+interface PinRateRecord {
+  attempts: number;
+  firstAttempt: number;
+  lockUntil: number;
+}
+const pinRateLimitMap = new Map<string, PinRateRecord>();
+
+function getClientIp(req: any): string {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  const realIp = req.headers?.['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) {
+    return realIp.trim();
+  }
+  return req.socket?.remoteAddress || '127.0.0.1';
+}
+
+function checkPinRateLimit(ip: string): { locked: boolean; waitSeconds: number; remaining: number } {
+  const now = Date.now();
+  const record = pinRateLimitMap.get(ip);
+  if (!record) {
+    return { locked: false, waitSeconds: 0, remaining: 5 };
+  }
+  if (record.lockUntil > now) {
+    const waitSeconds = Math.ceil((record.lockUntil - now) / 1000);
+    return { locked: true, waitSeconds, remaining: 0 };
+  }
+  // Reset window if 15 minutes passed since first attempt
+  if (now > record.firstAttempt + 15 * 60 * 1000) {
+    pinRateLimitMap.delete(ip);
+    return { locked: false, waitSeconds: 0, remaining: 5 };
+  }
+  const remaining = Math.max(0, 5 - record.attempts);
+  return { locked: false, waitSeconds: 0, remaining };
+}
+
+function recordFailedPinAttempt(ip: string): { locked: boolean; waitSeconds: number; remaining: number } {
+  const now = Date.now();
+  let record = pinRateLimitMap.get(ip);
+  if (!record) {
+    record = { attempts: 0, firstAttempt: now, lockUntil: 0 };
+    pinRateLimitMap.set(ip, record);
+  }
+  record.attempts += 1;
+  if (record.attempts >= 5) {
+    record.lockUntil = now + 15 * 60 * 1000; // 15 menit lockout
+    const waitSeconds = Math.ceil((record.lockUntil - now) / 1000);
+    return { locked: true, waitSeconds, remaining: 0 };
+  }
+  return { locked: false, waitSeconds: 0, remaining: Math.max(0, 5 - record.attempts) };
+}
+
+function clearPinRateLimit(ip: string) {
+  pinRateLimitMap.delete(ip);
+}
+
 export default async function handler(req: any, res: any) {
   const isHandled = handleCors(req, res);
   if (isHandled) return;
 
   if (req.method !== 'POST') {
     return sendJson(res, 405, { valid: false, message: 'Method Not Allowed' });
+  }
+
+  const clientIp = getClientIp(req);
+  const rateCheck = checkPinRateLimit(clientIp);
+
+  if (rateCheck.locked) {
+    return sendJson(res, 429, {
+      valid: false,
+      locked: true,
+      lockoutRemaining: rateCheck.waitSeconds,
+      message: `⚠️ Terlalu banyak percobaan PIN salah. Akses verifikasi PIN dibekukan selama ${Math.ceil(rateCheck.waitSeconds / 60)} menit (${rateCheck.waitSeconds} detik) demi keamanan.`,
+    });
   }
 
   try {
@@ -181,11 +252,25 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!isMatch) {
+      const failRecord = recordFailedPinAttempt(clientIp);
+      if (failRecord.locked) {
+        return sendJson(res, 429, {
+          valid: false,
+          locked: true,
+          lockoutRemaining: failRecord.waitSeconds,
+          message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 15 menit demi mencegah serangan brute force.',
+        });
+      }
       return sendJson(res, 401, {
         valid: false,
-        message: '❌ 6 Digit PIN Otoritas salah. Silakan periksa kembali PIN Anda.',
+        locked: false,
+        remainingAttempts: failRecord.remaining,
+        message: `❌ 6 Digit PIN Otoritas salah. Sisa kesempatan sebelum dibekukan: ${failRecord.remaining} kali.`,
       });
     }
+
+    // Success: clear rate limit counter
+    clearPinRateLimit(clientIp);
 
     const authorityToken = crypto
       .createHmac('sha256', SESSION_SECRET)

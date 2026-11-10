@@ -33,15 +33,37 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   // References to the 6 input elements for smooth auto-focus navigation
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Focus the first empty digit or first input on mount
+  const LOCKOUT_KEY = `psks_pin_lockout_${role}`;
+  const ATTEMPTS_KEY = `psks_pin_attempts_${role}`;
+
+  // Focus the first empty digit or first input on mount & load persistent lockout
   useEffect(() => {
+    try {
+      const storedLockUntil = localStorage.getItem(LOCKOUT_KEY);
+      if (storedLockUntil) {
+        const lockUntilMs = parseInt(storedLockUntil, 10);
+        const diffSec = Math.ceil((lockUntilMs - Date.now()) / 1000);
+        if (diffSec > 0) {
+          setLockoutRemaining(diffSec);
+          setErrorMessage(`⚠️ Sistem otorisasi dibekukan demi mencegah brute force. Coba lagi dalam ${diffSec} detik.`);
+        } else {
+          localStorage.removeItem(LOCKOUT_KEY);
+          localStorage.removeItem(ATTEMPTS_KEY);
+        }
+      }
+      const storedAttempts = localStorage.getItem(ATTEMPTS_KEY);
+      if (storedAttempts) {
+        setFailedCount(parseInt(storedAttempts, 10) || 0);
+      }
+    } catch {}
+
     const focusTimer = setTimeout(() => {
       inputRefs.current[0]?.focus();
     }, 120);
     return () => clearTimeout(focusTimer);
-  }, []);
+  }, [role]);
 
-  // Lockout countdown timer
+  // Lockout countdown timer with persistence sync
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (lockoutRemaining > 0) {
@@ -49,6 +71,11 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         setLockoutRemaining((prev) => {
           if (prev <= 1) {
             setErrorMessage(null);
+            try {
+              localStorage.removeItem(LOCKOUT_KEY);
+              localStorage.removeItem(ATTEMPTS_KEY);
+            } catch {}
+            setFailedCount(0);
             return 0;
           }
           return prev - 1;
@@ -58,7 +85,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [lockoutRemaining]);
+  }, [lockoutRemaining, role]);
 
   const handleDigitChange = (index: number, value: string) => {
     if (lockoutRemaining > 0 || isSuccess) return;
@@ -147,6 +174,12 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         setIsSuccess(true);
         setErrorMessage(null);
         setIsVerifying(false);
+        setFailedCount(0);
+
+        try {
+          localStorage.removeItem(LOCKOUT_KEY);
+          localStorage.removeItem(ATTEMPTS_KEY);
+        } catch {}
 
         // Store authoritative sessionToken if issued
         if (data.sessionToken) {
@@ -190,14 +223,34 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
       setIsVerifying(false);
 
       if (data.locked) {
-        setLockoutRemaining(data.lockoutRemaining || 300);
-        setErrorMessage(data.message || '⚠️ Sistem dikunci sementara karena percobaan gagal.');
+        const lockoutSec = data.lockoutRemaining || 900;
+        setLockoutRemaining(lockoutSec);
+        setErrorMessage(data.message || `⚠️ Sistem dikunci selama ${Math.ceil(lockoutSec / 60)} menit karena percobaan gagal.`);
+        try {
+          localStorage.setItem(LOCKOUT_KEY, String(Date.now() + lockoutSec * 1000));
+          localStorage.setItem(ATTEMPTS_KEY, '5');
+        } catch {}
       } else {
-        const newFailed = failedCount + 1;
+        const newFailed = typeof data.remainingAttempts === 'number'
+          ? Math.max(0, 5 - data.remainingAttempts)
+          : failedCount + 1;
         setFailedCount(newFailed);
-        setDigits(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-        setErrorMessage(data.message || '❌ PIN salah.');
+        try {
+          localStorage.setItem(ATTEMPTS_KEY, String(newFailed));
+        } catch {}
+
+        if (newFailed >= 5) {
+          const lockoutSec = 900;
+          setLockoutRemaining(lockoutSec);
+          try {
+            localStorage.setItem(LOCKOUT_KEY, String(Date.now() + lockoutSec * 1000));
+          } catch {}
+          setErrorMessage('⚠️ 5 kali percobaan PIN salah! Sistem otorisasi dibekukan selama 15 menit.');
+        } else {
+          setDigits(['', '', '', '', '', '']);
+          inputRefs.current[0]?.focus();
+          setErrorMessage(data.message || `❌ PIN salah. Sisa kesempatan: ${Math.max(0, 5 - newFailed)} kali.`);
+        }
       }
     } catch {
       setIsVerifying(false);

@@ -5,6 +5,7 @@ import {
   PillarId,
 } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY } from '../data/initialData';
+import { maskNIK, maskPhoneNumber } from '../utils/privacyMask';
 import { BackToHomeButton } from './BackToHomeButton';
 import {
   ClipboardList,
@@ -52,6 +53,15 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
   const [showGuestLoginModal, setShowGuestLoginModal] = useState<boolean>(
     session.statusActive !== 'SAH_TERDAFTAR'
   );
+
+  // Kepatuhan UU PDP No. 27/2022: Hanya Admin Wilayah, Superadmin, dan Developer yang berhak lulus sensor NIK
+  const canViewSensitiveData =
+    session.statusActive !== 'GUEST' &&
+    session.role !== 'user' &&
+    (session.role === 'admin' ||
+      session.role === 'superadmin' ||
+      session.role === 'developer' ||
+      Boolean(session.isDeveloper));
 
   // Filter submissions that belong strictly to the authenticated user
   const userSubmissions = useMemo(() => {
@@ -411,7 +421,7 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mt-1 font-medium">
                             <span className="flex items-center gap-1 font-mono">
                               <User className="w-3.5 h-3.5 text-slate-400" />
-                              NIK: {sub.nik || sub.recordData?.nik || '-'}
+                              NIK: {canViewSensitiveData ? (sub.nik || sub.recordData?.nik || '-') : maskNIK(sub.nik || sub.recordData?.nik)}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3.5 h-3.5 text-amber-600" />
@@ -419,7 +429,7 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
                             </span>
                             <span className="flex items-center gap-1 font-mono">
                               <Phone className="w-3.5 h-3.5 text-slate-400" />
-                              {sub.hp || sub.recordData?.hp || '-'}
+                              {canViewSensitiveData ? (sub.hp || sub.recordData?.hp || '-') : maskPhoneNumber(sub.hp || sub.recordData?.hp)}
                             </span>
                           </div>
                         </div>
@@ -591,7 +601,11 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">NIK</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmission.nik || selectedSubmission.recordData?.nik || '-'}</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {canViewSensitiveData
+                        ? (selectedSubmission.nik || selectedSubmission.recordData?.nik || '-')
+                        : maskNIK(selectedSubmission.nik || selectedSubmission.recordData?.nik)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Kabupaten / Kota</span>
@@ -603,7 +617,11 @@ export const UserRegistrationHistoryPage: React.FC<UserRegistrationHistoryPagePr
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Nomor Handphone</span>
-                    <span className="font-mono font-bold text-slate-900">{selectedSubmission.hp || selectedSubmission.recordData?.hp || '-'}</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {canViewSensitiveData
+                        ? (selectedSubmission.hp || selectedSubmission.recordData?.hp || '-')
+                        : maskPhoneNumber(selectedSubmission.hp || selectedSubmission.recordData?.hp)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-500 font-semibold block">Jenis Kelamin</span>

@@ -47,7 +47,19 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
     session.role === 'developer' ||
     Boolean(session.isDeveloper);
 
-  const isStaffOrAdmin = session.role !== 'user';
+  // Kepatuhan UU PDP No. 27/2022 & Standar Keamanan Data Diskominfo:
+  // Hanya Admin Wilayah ('admin'), Superadmin ('superadmin'), dan Developer ('developer') yang BERHAK LULUS SENSOR.
+  // Tamu Publik ('guest' / statusActive === 'GUEST') dan User Terdaftar ('user') TIDAK BISA melihat NIK secara normal (wajib disensor).
+  const isPrivilegedRole =
+    session.statusActive !== 'GUEST' &&
+    session.role !== 'user' &&
+    (session.role === 'admin' ||
+      session.role === 'superadmin' ||
+      session.role === 'developer' ||
+      Boolean(session.isDeveloper));
+
+  const isStaffOrAdmin = isPrivilegedRole;
+  const canViewSensitiveData = isPrivilegedRole;
 
   // Pastikan array selalu valid (sudah disortir secara presisi di komponen induk)
   const recordsToRender = Array.isArray(displayRecords) ? displayRecords : [];
@@ -142,7 +154,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
   };
 
   const getColSpan = () => {
-    const hasAction = session.role !== 'user';
+    const hasAction = isPrivilegedRole;
     const hasCheckbox = Boolean(showCheckbox && isStaffOrAdmin && onToggleSelectAll);
     const cb = hasCheckbox ? 1 : 0;
     switch (pillarId) {
@@ -265,7 +277,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Email</th>
                 <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status keaktifan</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor kontak</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -286,7 +298,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor SK</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor HP</th>
                 <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status aktif</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -306,7 +318,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Keahlian</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Pelatihan</th>
                 <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status Aktif</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -326,7 +338,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 {!isSuperOrDev && (
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kabupaten/Kota</th>
                 )}
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -346,7 +358,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Ketua</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor SK</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Tahun Berdiri</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -366,7 +378,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kontak</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Jenis layanan</th>
                 <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status aktif</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -384,7 +396,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                   <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Wilayah kerja</th>
                 )}
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Sertifikasi</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -404,7 +416,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Pendidikan</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Nomor HP</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Masa tugas</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -423,7 +435,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bentuk CSR</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Bidang bantuan</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Kontak</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -443,7 +455,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Tahun Berdiri</th>
                 <th className="py-3.5 px-3 font-bold whitespace-nowrap border-r border-blue-800/70">Operator Puskesos</th>
                 <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap border-r border-blue-800/70">Status Aktif</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-3 font-bold text-center whitespace-nowrap">Aksi</th>
                 )}
               </tr>
@@ -457,7 +469,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                 <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Sertifikasi / SK</th>
                 <th className="py-3.5 px-4 font-bold border-r border-blue-800/70">Handphone</th>
                 <th className="py-3.5 px-4 font-bold text-center border-r border-blue-800/70">Status</th>
-                {session.role !== 'user' && (
+                {isPrivilegedRole && (
                   <th className="py-3.5 px-4 font-bold text-center">Aksi</th>
                 )}
               </tr>
@@ -601,7 +613,9 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                       {!isSuperOrDev && (
                         <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-100">{record.wilayah}</td>
                       )}
-                      <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">{record.nomorInduk || '-'}</td>
+                      <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">
+                        {canViewSensitiveData ? (record.nomorInduk || '-') : maskNIK(record.nomorInduk)}
+                      </td>
                       <td className="py-3 px-3 font-mono text-xs text-slate-700 whitespace-nowrap border-r border-slate-100">{record.sertifikat || record.sertifikasi || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.keahlian || '-'}</td>
                       <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap border-r border-slate-100">{record.pelatihan || '-'}</td>
@@ -778,7 +792,7 @@ export const PillarTable: React.FC<PillarTableProps> = React.memo(({
                     </>
                   )}
 
-                  {session.role !== 'user' && (
+                  {isPrivilegedRole && (
                     <td className="py-3 px-3 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         {isSuperOrDev && onEditClick && (

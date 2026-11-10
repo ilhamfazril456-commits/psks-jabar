@@ -397,7 +397,7 @@ async function startServer() {
     record.attempts += 1;
     let locked = false;
     if (record.attempts >= 5) {
-      record.lockUntil = now + 5 * 60 * 1000; // 5 menit lockout
+      record.lockUntil = now + 15 * 60 * 1000; // 15 menit lockout
       locked = true;
     }
     pinRateLimitMap.set(ip, record);
@@ -650,8 +650,8 @@ async function startServer() {
           return res.status(429).json({
             valid: false,
             locked: true,
-            lockoutRemaining: 300,
-            message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 5 menit.',
+            lockoutRemaining: 900,
+            message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 15 menit demi mencegah brute force.',
           });
         }
         return res.status(401).json({

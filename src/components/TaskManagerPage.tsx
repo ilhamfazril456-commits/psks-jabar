@@ -5,6 +5,7 @@ import {
   UserSession,
 } from '../types';
 import { JABAR_REGIONS, PILLARS_CONFIG } from '../data/initialData';
+import { maskNIK } from '../utils/privacyMask';
 import { BackToHomeButton } from './BackToHomeButton';
 import {
   ArrowLeft,
@@ -205,6 +206,15 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
   onRejectSubmission,
   onBatchApproveSubmissions,
 }) => {
+  // Kepatuhan UU PDP No. 27/2022: Hanya Admin Wilayah, Superadmin, dan Developer yang berhak lulus sensor NIK
+  const canViewSensitiveData =
+    session.statusActive !== 'GUEST' &&
+    session.role !== 'user' &&
+    (session.role === 'admin' ||
+      session.role === 'superadmin' ||
+      session.role === 'developer' ||
+      Boolean(session.isDeveloper));
+
   // Navigation State (3-Level Hierarchy)
   const [viewMode, setViewMode] = useState<VerificationViewMode>('REGION_GRID');
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
@@ -1327,7 +1337,9 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
 
                               <td className="p-3">
                                 <div className="font-black text-slate-900 text-xs sm:text-sm">{sub.nama || sub.recordData?.nama || 'Pemohon PSKS'}</div>
-                                <div className="text-[11px] text-slate-500 font-mono">NIK: {sub.nik || sub.recordData?.nik || '-'}</div>
+                                <div className="text-[11px] text-slate-500 font-mono">
+                                  NIK: {canViewSensitiveData ? (sub.nik || sub.recordData?.nik || '-') : maskNIK(sub.nik || sub.recordData?.nik)}
+                                </div>
                                 {sub.submittedByRole === 'admin' && (
                                   <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-black text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
                                     <span>Diajukan Admin Wilayah</span>
@@ -1529,7 +1541,11 @@ export const TaskManagerPage: React.FC<TaskManagerPageProps> = ({
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-slate-400 text-[10px] font-bold uppercase">NIK / No. KTP</div>
-                  <div className="text-sm font-mono font-bold text-slate-900 mt-0.5">{selectedDetailSub.nik || selectedDetailSub.recordData?.nik || '-'}</div>
+                  <div className="text-sm font-mono font-bold text-slate-900 mt-0.5">
+                    {canViewSensitiveData
+                      ? (selectedDetailSub.nik || selectedDetailSub.recordData?.nik || '-')
+                      : maskNIK(selectedDetailSub.nik || selectedDetailSub.recordData?.nik)}
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
