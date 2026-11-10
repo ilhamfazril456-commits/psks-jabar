@@ -1135,7 +1135,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           </div>
 
           {/* ================= RIGHT COLUMN: FORM / MOBILE INTRO SECTION ================= */}
-          <div className="w-full md:w-[62%] lg:w-[60%] bg-white text-slate-800 px-3.5 pt-3 pb-3 sm:px-5 sm:py-3.5 md:px-8 md:py-6 lg:px-12 lg:py-8 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full">
+          <div className="w-full md:w-[62%] lg:w-[60%] bg-white text-slate-800 px-3.5 pt-2 pb-2 sm:px-5 sm:py-2.5 md:px-8 md:py-3.5 lg:px-10 lg:py-4 flex flex-col justify-between relative overflow-hidden flex-1 min-h-0 h-full">
             
             {/* Top Right Subtle Accent Wave */}
             <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-blue-600/5 pointer-events-none" />
@@ -1197,25 +1197,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             }`}>
 
               {/* Co-Branding Dual Logos (Geulis Jabar Style: [PSKS] | [DINSOS JABAR]) */}
-              <div className="flex items-center justify-center gap-4 sm:gap-5 md:gap-6 pt-2 sm:pt-3 mb-3.5 sm:mb-4 md:mb-5 select-none shrink-0">
+              <div className="flex items-center justify-center gap-3.5 sm:gap-4 md:gap-5 pt-1 sm:pt-1.5 md:pt-1 mb-1.5 sm:mb-2 md:mb-2 select-none shrink-0">
                 <img
                   src="/psks_horizontal_logo.webp"
                   alt="Logo Resmi PSKS Jawa Barat"
-                  className="h-8 sm:h-8.5 md:h-8 lg:h-9 w-auto object-contain pointer-events-none"
+                  className="h-6.5 sm:h-7 md:h-7 lg:h-7.5 w-auto object-contain pointer-events-none"
                   loading="eager"
                 />
-                <div className="h-6 w-[1.5px] bg-slate-300 rounded-full" />
+                <div className="h-5 w-[1.5px] bg-slate-300 rounded-full" />
                 <img
                   src="/dinsos_jabar_horizontal_logo.webp"
                   alt="Logo Resmi Dinas Sosial Provinsi Jawa Barat"
-                  className="h-7 sm:h-7.5 md:h-7 lg:h-8 w-auto object-contain pointer-events-none"
+                  className="h-5.5 sm:h-6 md:h-6 lg:h-6.5 w-auto object-contain pointer-events-none"
                   loading="eager"
                 />
               </div>
 
               {/* Header Greeting inside White Area */}
-              <div className="relative z-10 text-center mb-3 sm:mb-3.5 md:mb-4 shrink-0 w-full max-w-xl mx-auto">
-                <h3 className="text-base sm:text-lg md:text-xl font-black text-[#0f2b5c] tracking-tight text-center">
+              <div className="relative z-10 text-center mb-1.5 sm:mb-2 md:mb-2 shrink-0 w-full max-w-xl mx-auto">
+                <h3 className="text-sm sm:text-base md:text-lg font-black text-[#0f2b5c] tracking-tight text-center leading-tight">
                   {view === 'main' && 'Selamat Datang'}
                   {view === 'register' && 'Daftar Akun Baru'}
                   {view === 'login_choice' && 'Pilih Metode Masuk'}
@@ -1225,7 +1225,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   {view === 'forgot_password' && 'Lupa Kata Sandi'}
                   {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
                 </h3>
-                <p className="text-[10.5px] sm:text-xs text-slate-600 font-medium leading-relaxed max-w-[280px] sm:max-w-md mx-auto mt-1">
+                <p className="text-[10px] sm:text-[11px] text-slate-600 font-medium leading-tight max-w-[280px] sm:max-w-md mx-auto mt-0.5">
                   {view === 'main' && 'Pilih jalur akses portal untuk melanjutkan'}
                   {view === 'register' && 'Buat akun user baru untuk akses data wilayah'}
                   {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
@@ -1237,8 +1237,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 </p>
               </div>
 
-              {/* Center Animated Form Container (Strictly fits without scrollbar) */}
-              <div className="relative z-10 flex-1 min-h-0 flex flex-col justify-center overflow-hidden px-0.5 w-full max-w-xl mx-auto">
+              {/* Center Animated Form Container (Responsive scrollable if viewport is compact on laptop) */}
+              <div className="relative z-10 flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden px-1 py-0.5 w-full max-w-xl mx-auto custom-scrollbar">
               
                 {/* ========================================================================= */}
                 {/* LAYAR UTAMA (3 JALUR UTAMA SEJAJAR) */}
@@ -1359,7 +1359,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   <form
                     key="view-register"
                     onSubmit={handleRegisterSubmit}
-                    className="space-y-1.5 sm:space-y-1.5 my-auto animate-scaleUp"
+                    className="w-full space-y-1 sm:space-y-1.5 my-auto animate-scaleUp py-0.5"
                   >
                     {/* Bot Honeypot Trap (Completely hidden from humans, traps automated scrapers & bots) */}
                     <div className="opacity-0 absolute -left-[9999px] -top-[9999px] h-0 w-0 pointer-events-none select-none overflow-hidden" aria-hidden="true" tabIndex={-1}>
@@ -1376,20 +1376,20 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     </div>
 
                     {/* Device / IP Quota Info Badge */}
-                    <div className={`p-2 rounded-xl border flex flex-wrap items-center justify-between gap-1.5 text-[9.5px] font-black ${
+                    <div className={`px-2.5 py-1 sm:py-1.5 rounded-xl border flex items-center justify-between gap-1 text-[8.5px] sm:text-[9px] font-black ${
                       isDeviceQuotaFull 
                         ? 'bg-rose-50 border-rose-300 text-rose-800' 
                         : 'bg-blue-50/90 border-blue-300 text-[#0f2b5c]'
                     }`}>
-                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <Laptop className="w-3.5 h-3.5 text-blue-800 shrink-0" />
                         <span className="whitespace-nowrap">Batas Kuota Pendaftaran:</span>
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[8px] bg-blue-100 text-blue-800 rounded font-semibold">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[7.5px] sm:text-[8px] bg-blue-100 text-blue-800 rounded font-semibold">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                           1 Akun per IP
                         </span>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 shadow-xs ${
+                      <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[8.5px] font-extrabold shrink-0 shadow-xs ${
                         isDeviceQuotaFull
                           ? 'bg-rose-600 text-white'
                           : 'bg-blue-800 text-white'
@@ -1615,11 +1615,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="pt-0.5 space-y-1">
+                    <div className="pt-1 space-y-1">
                       <button
                         type="submit"
                         disabled={isDeviceQuotaFull || isRegistering}
-                        className={`w-full py-1.5 font-black rounded-full text-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                        className={`w-full py-1.5 sm:py-2 font-black rounded-full text-xs shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
                           isDeviceQuotaFull
                             ? 'bg-slate-300 text-slate-700 cursor-not-allowed border border-slate-300'
                             : 'bg-[#0f2b5c] hover:bg-[#143b7d] text-white shadow-blue-950/20 cursor-pointer hover:scale-[1.01] active:scale-[0.99]'
@@ -1644,9 +1644,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                             setErrorMessage('');
                             setView('register_status');
                           }}
-                          className="w-full py-1 text-blue-900 hover:text-blue-950 font-bold text-[9.5px] text-center cursor-pointer hover:underline block"
+                          className="w-full py-0.5 text-blue-900 hover:text-blue-950 font-bold text-[9px] text-center cursor-pointer hover:underline block"
                         >
-                          Sudah pernah mendaftar? Klik di sini untuk pantau status verval akun →
+                          Sudah pernah mendaftar? Klik untuk pantau status verval akun →
                         </button>
                       )}
 
@@ -1656,7 +1656,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                           setErrorMessage('');
                           setView('main');
                         }}
-                        className="w-full py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1"
+                        className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10px] sm:text-[10.5px] transition-colors cursor-pointer flex items-center justify-center gap-1 border border-slate-200/60 shadow-2xs"
                       >
                         <ArrowLeft className="w-3 h-3" />
                         <span>Kembali ke Menu Utama</span>
@@ -2813,7 +2813,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             </div>
 
             {/* Bottom Form Footer Links */}
-            <div className={`relative z-10 pt-2 border-t border-slate-200 flex flex-col gap-1 text-[8.5px] sm:text-[9.5px] text-slate-600 font-semibold shrink-0 pb-1 sm:pb-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`relative z-10 pt-1 sm:pt-1.5 border-t border-slate-200 flex flex-col gap-1 text-[8px] sm:text-[9px] text-slate-600 font-semibold shrink-0 pb-0.5 sm:pb-0 w-full max-w-xl mx-auto ${showMobileIntro && view === 'main' ? 'hidden md:flex' : 'flex'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <button
