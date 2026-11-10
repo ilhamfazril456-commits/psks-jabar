@@ -1,4 +1,4 @@
-export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up' | 'question_inquiry' | 'capability_inquiry' | 'closure';
+export type ConversationalFillerType = 'ack' | 'gratitude' | 'praise' | 'follow_up' | 'question_inquiry' | 'capability_inquiry' | 'closure' | 'confusion';
 
 export interface ConversationalFillerResult {
   isFiller: boolean;
@@ -147,6 +147,14 @@ export function checkConversationalFiller(input: string): ConversationalFillerRe
     return { isFiller: true, fillerType: 'closure' };
   }
 
+  // 6. Confusion, Shock, or Complaint Tokens ("lohh", "loh", "lahh", "lah kok", "kok gitu", "naha kitu", "kok ga nyambung", dll.)
+  if (
+    /^(lo+h+|la+h+|la+h+\s*kok|ko+k+\s*gitu|ko+k+\s*begitu|ko+k+\s*ga\s*nyambung|ko+k+\s*ngaco|salah\s*jawab|bukan\s*itu|naha\s*kitu|naha\s*kieu)(\s+(sih|atuh|euy|min|kang|teh|admin|deh|ya))*$/i.test(c1) ||
+    /^(lo+h+|la+h+|la+h+\s*kok|ko+k+\s*gitu|ko+k+\s*begitu|ko+k+\s*ga\s*nyambung|ko+k+\s*ngaco|salah\s*jawab|bukan\s*itu|naha\s*kitu|naha\s*kieu)(\s+(sih|atuh|euy|min|kang|teh|admin|deh|ya))*$/i.test(c2)
+  ) {
+    return { isFiller: true, fillerType: 'confusion' };
+  }
+
   return { isFiller: false, fillerType: null };
 }
 
@@ -247,6 +255,14 @@ Silakan tanyakan informasi yang sedang Anda butuhkan!`;
   // Percakapan Penutup / Konfirmasi Tidak Ada Pertanyaan Lagi ("tidak ada", "udah cukup", dll.)
   if (fillerType === 'closure') {
     return `Baik, terima kasih banyak! 😊 Jika sewaktu-waktu membutuhkan panduan atau informasi seputar 10 Pilar PSKS dan layanan Dinas Sosial Provinsi Jawa Barat lagi, jangan ragu untuk menyapa kembali ya. Semoga harinya menyenangkan!`;
+  }
+
+  // Kebingungan / Komplain ("lohh", "lah kok", "kok gitu", dll.)
+  if (fillerType === 'confusion') {
+    if (topicContext) {
+      return `Mohon maaf atas kekeliruan respon sebelumnya 🙏. Terkait pembahasan seputar **${topicContext}**, ada informasi spesifik apa yang ingin Anda tanyakan atau perjelas? Saya siap memberikan penjelasan yang tepat dan terperinci.`;
+    }
+    return `Mohon maaf atas kekeliruan respon sebelumnya 🙏. Saya siap membantu Anda memberikan informasi yang tepat seputar 10 Pilar PSKS, data sebaran 27 Kab/Kota, maupun panduan layanan sosial di Jawa Barat. Silakan sampaikan apa yang ingin Anda ketahui!`;
   }
 
   // Conversational Filler / Ack ("ohh", "oke", "siap", "paham", "ngerti", "oh gitu", dll.)

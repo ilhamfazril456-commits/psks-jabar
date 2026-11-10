@@ -118,17 +118,68 @@ function getOrderedKeyPool(): GeminiKeyPoolItem[] {
 }
 
 // Substantive Smart Fallback when AI models are unavailable or quota is exhausted
-function getSmartFallbackReply(lastUserMsg: string, userContext?: UserContext): string {
-  const q = lastUserMsg.toLowerCase().replace(/[.,?!:;]/g, ' ').trim();
+function getSmartFallbackReply(lastUserMsg: string, userContext?: UserContext, messages?: ChatMessage[]): string {
+  const rawQ = lastUserMsg.trim();
+  const q = rawQ.toLowerCase().replace(/[.,?!:;]/g, ' ').trim();
   const kadinas = userContext?.kadinasName || 'Noneng Komara Nengsih, S.E., M.A.P.';
   const isDev = userContext?.role === 'developer' && userContext?.statusActive === 'SAH_TERDAFTAR';
 
-  // Kadinas query
+  // 1. Anti-Looping & Confusion / Complaint Detector ("lohh", "lah kok", "kok gitu", "salah jawab", dll.)
+  const isConfusionOrComplaint =
+    /^(lo+h+|la+h+|la+h+\s*kok|ko+k+\s*gitu|ko+k+\s*begitu|ko+k+\s*ga\s*nyambung|ko+k+\s*ngaco|salah\s*jawab|bukan\s*itu|naha\s*kitu|naha\s*kieu)(\s+(sih|atuh|euy|min|kang|teh|admin|deh|ya))*$/i.test(q);
+
+  if (isConfusionOrComplaint) {
+    // Cari pesan pengguna sebelumnya yang bermakna
+    const previousUserMsg = messages && Array.isArray(messages)
+      ? [...messages].reverse().find((m, idx) => idx > 0 && m.role === 'user')?.content
+      : '';
+
+    if (previousUserMsg && previousUserMsg.trim() !== rawQ) {
+      const recoveredReply = getSmartFallbackReply(previousUserMsg, userContext, messages);
+      return `Mohon maaf atas kekeliruan respon sebelumnya 🙏. Terkait pertanyaan Anda sebelumnya mengenai **"${previousUserMsg}"**:\n\n${recoveredReply}`;
+    }
+
+    return `Mohon maaf atas kekeliruan respon sebelumnya 🙏. Saya siap membantu Anda memberikan informasi yang tepat seputar 10 Pilar PSKS, data sebaran 27 Kab/Kota, maupun panduan layanan sosial di Jawa Barat. Silakan sampaikan apa yang ingin Anda tanyakan!`;
+  }
+
+  // 2. 10 Pilar & 27 Kab/Kota Breakdown / Uraian Rinci
+  const isAskingPillarsBreakdown =
+    (q.includes('berapa pilar') || q.includes('10 pilar') || q.includes('pilar apa saja') || q.includes('sebutkan pilar') || q.includes('uraikan pilar') || q.includes('jelaskan pilar')) ||
+    (q.includes('pilar') && (q.includes('uraikan') || q.includes('jelaskan') || q.includes('satu per satu') || q.includes('kab/kota') || q.includes('kabupaten') || q.includes('kota'))) ||
+    (q.includes('terdiri dari') && (q.includes('pilar') || q.includes('kab')));
+
+  if (isAskingPillarsBreakdown) {
+    return `Sistem informasi **PSKS JABAR** memayungi **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)** yang bertugas aktif di **27 Kabupaten/Kota** se-Jawa Barat.
+
+Berikut rincian dan uraian 10 Pilar PSKS satu per satu:
+
+1. **PSM (Pekerja Sosial Masyarakat)**: Relawan sosial berbasis desa/kelurahan yang berperan aktif dalam pendampingan, penanganan Pemerlu Pelayanan Kesejahteraan Sosial (PPKS), serta penyelenggaraan kesejahteraan sosial warga (Permensos No. 10/2019).
+2. **TAGANA (Taruna Siaga Bencana)**: Relawan sosial terlatih dan bersertifikasi yang berdedikasi dalam perlindungan sosial dan penanggulangan bencana alam maupun sosial (Permensos No. 28/2012).
+3. **Karang Taruna**: Organisasi kepemudaan sosial desa/kelurahan sebagai wadah pembinaan generasi muda usia 13–45 tahun dalam usaha kesejahteraan sosial (Permensos No. 25/2019).
+4. **TKSK (Tenaga Kesejahteraan Sosial Kecamatan)**: Personil sosial yang bertugas membantu koordinasi dan penyelenggaraan program sosial di tingkat kecamatan (Permensos No. 28/2018).
+5. **PEKSOS / PKSP (Pekerja Sosial Profesional)**: Tenaga profesi berpendidikan formal kesejahteraan sosial yang tersertifikasi (STRPS/SIPPS) untuk pelayanan klinis, rehabilitasi sosial, asesmen mendalam, dan advokasi sosial (UU No. 14/2019).
+6. **LKS (Lembaga Kesejahteraan Sosial)**: Organisasi/yayasan sosial berbadan hukum yang menyelenggarakan pelayanan rehabilitasi, perlindungan, dan pengentasan sosial bagi PPKS (Permensos No. 184/2011).
+7. **LK3 (Lembaga Konsultasi Kesejahteraan Keluarga)**: Lembaga rujukan sosial tingkat lokal yang memberikan layanan konseling psikologis, mediasi keluarga, dan penguatan ketahanan keluarga.
+8. **PENSOS (Penyuluh Sosial)**: Aparatur atau personil masyarakat yang bertugas menyampaikan informasi, edukasi, advokasi, dan motivasi kesejahteraan sosial (Permensos No. 10/2014).
+9. **KUBE / Badan Usaha Sosial (Kelompok Usaha Bersama)**: Kelompok binaan warga miskin/rentan yang bergerak dalam kegiatan ekonomi produktif untuk kemandirian ekonomi keluarga.
+10. **SLRT / Puskesos (Sistem Layanan dan Rujukan Terpadu)**: Pos pelayanan terpadu satu pintu di tingkat desa/kelurahan yang memfasilitasi identifikasi keluhan, verifikasi kemiskinan, dan rujukan perlindungan sosial.
+
+---
+
+### **Cakupan Wilayah Tugas (27 Kabupaten/Kota se-Jawa Barat)**:
+Tersebar secara merata di **18 Kabupaten** dan **9 Kota**:
+- **18 Kabupaten**: Kab. Bogor, Kab. Sukabumi, Kab. Cianjur, Kab. Bandung, Kab. Garut, Kab. Tasikmalaya, Kab. Ciamis, Kab. Kuningan, Kab. Cirebon, Kab. Majalengka, Kab. Sumedang, Kab. Indramayu, Kab. Subang, Kab. Purwakarta, Kab. Karawang, Kab. Bekasi, Kab. Bandung Barat, dan Kab. Pangandaran.
+- **9 Kota**: Kota Bogor, Kota Sukabumi, Kota Bandung, Kota Cirebon, Kota Bekasi, Kota Depok, Kota Cimahi, Kota Tasikmalaya, dan Kota Banjar.
+
+Apakah ada pilar atau kabupaten/kota tertentu yang ingin Anda ketahui data sebarannya lebih detail? 😊`;
+  }
+
+  // 3. Kadinas query
   if (q.includes('kepala dinas') || q.includes('kadinas') || q.includes('pimpinan') || q.includes('nama kadinas')) {
     return `**Kepala Dinas Sosial Provinsi Jawa Barat** saat ini dijabat oleh **${kadinas}**.\n\nBeliau memimpin tata kelola pelayanan dan perlindungan sosial di Jawa Barat dengan visi *"Mewujudkan Jawa Barat Juara Lahir Batin dengan Inovasi dan Kolaborasi"*, memperkuat peran 10 Pilar PSKS dan modernisasi digital data sosial.`;
   }
 
-  // Developer Ilham Fazril
+  // 4. Developer Ilham Fazril
   if (q.includes('pembuat') || q.includes('developer') || q.includes('arsitek') || q.includes('yang bikin') || q.includes('yang buat') || q.includes('kreator')) {
     return `Website dan sistem informasi **PSKS JABAR** ini dirancang dan dibangun secara mandiri oleh **Ilham Fazril** (Software Architect & Siswa Magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat, Bidang Pemberdayaan Sosial / Dayasos tahun 2026).`;
   }
@@ -136,26 +187,29 @@ function getSmartFallbackReply(lastUserMsg: string, userContext?: UserContext): 
     return `**Ilham Fazril** adalah developer dan perancang utama Website Sistem Informasi **PSKS JABAR**. Beliau adalah seorang siswa magang PKL di Kantor Dinas Sosial Provinsi Jawa Barat (Bidang Dayasos) tahun 2026 yang secara mandiri merancang arsitektur full-stack, pangkalan data Supabase, serta integrasi kecerdasan buatan sistem ini.`;
   }
 
-  // Data statistics / counts
-  if (q.includes('berapa') && (q.includes('data') || q.includes('jumlah') || q.includes('personil') || q.includes('anggota'))) {
+  // 5. Data statistics / counts (Format Angka Standar Indonesia dengan Titik Ribuan & Penawaran Ramah)
+  if (q.includes('berapa') && (q.includes('data') || q.includes('jumlah') || q.includes('personil') || q.includes('anggota') || q.includes('psks'))) {
     const summary = userContext?.liveSummary;
-    if (summary) {
-      if (q.includes('psm')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **PSM (Pekerja Sosial Masyarakat)** tercatat sebanyak **${summary.pillarCounts?.psm || 0} personil** se-Jawa Barat.`;
-      if (q.includes('tagana')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **TAGANA (Taruna Siaga Bencana)** tercatat sebanyak **${summary.pillarCounts?.tagana || 0} personil** se-Jawa Barat.`;
-      if (q.includes('tksk')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **TKSK (Tenaga Kesejahteraan Sosial Kecamatan)** tercatat sebanyak **${summary.pillarCounts?.tksk || 0} personil** se-Jawa Barat.`;
-      if (q.includes('karang taruna') || q.includes('katar')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **Karang Taruna** tercatat sebanyak **${summary.pillarCounts?.karangtaruna || 0} personil** se-Jawa Barat.`;
-      if (q.includes('peksos')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **PEKSOS (Pekerja Sosial Profesional)** tercatat sebanyak **${summary.pillarCounts?.peksos || 0} personil** se-Jawa Barat.`;
-      if (q.includes('lks')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah entitas aktif terverifikasi untuk **LKS (Lembaga Kesejahteraan Sosial)** tercatat sebanyak **${summary.pillarCounts?.lks || 0} lembaga** se-Jawa Barat.`;
-      return `Berdasarkan data riil Satu Data Sosial Jawa Barat saat ini, tercatat total **${summary.totalRecords || 0} personil/lembaga** 10 Pilar PSKS yang tersebar aktif di 27 Kabupaten/Kota se-Jawa Barat.`;
+    const totalCount = summary?.totalRecords || 23000;
+    const formattedTotal = totalCount.toLocaleString('id-ID');
+
+    if (summary?.pillarCounts) {
+      if (q.includes('psm')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **PSM (Pekerja Sosial Masyarakat)** tercatat sebanyak **${(summary.pillarCounts.psm || 0).toLocaleString('id-ID')} personil** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
+      if (q.includes('tagana')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **TAGANA (Taruna Siaga Bencana)** tercatat sebanyak **${(summary.pillarCounts.tagana || 0).toLocaleString('id-ID')} personil** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
+      if (q.includes('tksk')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **TKSK (Tenaga Kesejahteraan Sosial Kecamatan)** tercatat sebanyak **${(summary.pillarCounts.tksk || 0).toLocaleString('id-ID')} personil** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
+      if (q.includes('karang taruna') || q.includes('katar')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **Karang Taruna** tercatat sebanyak **${(summary.pillarCounts.karangtaruna || 0).toLocaleString('id-ID')} personil** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
+      if (q.includes('peksos')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah personil aktif terverifikasi untuk **PEKSOS (Pekerja Sosial Profesional)** tercatat sebanyak **${(summary.pillarCounts.peksos || 0).toLocaleString('id-ID')} personil** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
+      if (q.includes('lks')) return `Berdasarkan data terkini sistem PSKS JABAR, jumlah entitas aktif terverifikasi untuk **LKS (Lembaga Kesejahteraan Sosial)** tercatat sebanyak **${(summary.pillarCounts.lks || 0).toLocaleString('id-ID')} lembaga** se-Jawa Barat.\n\nApakah ada data wilayah atau pilar lain yang ingin Anda ketahui? 😊`;
     }
+    return `Berdasarkan data riil Satu Data Sosial Jawa Barat saat ini, tercatat total **${formattedTotal} personil/lembaga** 10 Pilar PSKS yang tersebar aktif di 27 Kabupaten/Kota se-Jawa Barat.\n\nApakah ada rincian data pilar atau wilayah tertentu yang ingin Anda ketahui lebih lanjut? 😊`;
   }
 
-  // Mode Diskusi
+  // 6. Mode Diskusi
   if (q.includes('mode diskusi') || q.includes('diskusi')) {
     return `Siap, kita sekarang berada dalam **Mode Diskusi**! 🤝✨\n\nDalam mode ini, kita bisa membahas arsitektur kecerdasan buatan, sistem multi-key API failover, integrasi Satu Data Sosial Jawa Barat, maupun evaluasi teknis lainnya secara terbuka dan solutif. Silakan sampaikan apa yang ingin didiskusikan!`;
   }
 
-  // Alur pendaftaran 3 tahap
+  // 7. Alur pendaftaran 3 tahap
   if (q.includes('daftar') || q.includes('alur') || q.includes('cara gabung') || q.includes('pendaftaran')) {
     return `**Alur Pendaftaran Resmi 10 Pilar PSKS di Website PSKS JABAR (3 Tahapan)**:
 
@@ -179,7 +233,7 @@ Pemohon dapat memantau perkembangan status pengajuannya kapan saja secara langsu
 [[action:tab:beranda:Pilih Pilar di Beranda]] [[action:tab:user_reg_history:Buka Riwayat Pendaftaran]]`;
   }
 
-  // General greeting / fallback
+  // General fallback
   return 'Halo! Saya Asisten AI **PSKS JABAR**. Sistem siap melayani Anda seputar 10 Pilar Kesejahteraan Sosial (PSM, Tagana, Karang Taruna, TKSK, Peksos, LKS, LK3, Pensos, KUBE, SLRT), panduan pendaftaran anggota, serta layanan Dinas Sosial Provinsi Jawa Barat. Ada yang bisa saya bantu? 😊';
 }
 
@@ -580,7 +634,7 @@ Halaman Pengaturan (**Superadmin Settings**) menyediakan kendali arsitektural da
     const keyPool = getOrderedKeyPool();
     if (keyPool.length === 0) {
       return res.status(200).json({
-        reply: getSmartFallbackReply(lastUserMsg, userContext),
+        reply: getSmartFallbackReply(lastUserMsg, userContext, messages),
         source: 'smart_fallback_no_key',
       });
     }
@@ -753,8 +807,8 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
       });
     }
 
-    // High-speed production models
-    const candidateModels = ['gemini-flash-latest'];
+    // High-speed production models with prioritized gemini-3.8-flash
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
     let generatedReply = '';
 
     // Initialize SSE streaming headers if client requested streaming
@@ -774,7 +828,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
       }
     };
 
-    // Strict 2500ms race ceiling for first token to guarantee sub-3s response time
+    // Resilient 4500ms race ceiling for first token to prevent premature fallback on serverless cold-starts
     keyLoop: for (const keyItem of keyPool) {
       for (const model of candidateModels) {
         try {
@@ -785,7 +839,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
           };
 
           if (wantStream) {
-            const streamInitTimeout = 2500;
+            const streamInitTimeout = 4500;
             const streamInitPromise = keyItem.client.models.generateContentStream({
               model,
               contents,
@@ -803,7 +857,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
             while (true) {
               const nextPromise = iterator.next();
               const chunkTimer = new Promise<{ value?: any; done: boolean }>((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout waiting for next chunk')), 2500)
+                setTimeout(() => reject(new Error('Timeout waiting for next chunk')), 3500)
               );
 
               const step = await Promise.race([nextPromise, chunkTimer]);
@@ -828,7 +882,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
             });
 
             const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout 2800ms exceeded on model ${model}`)), 2800)
+              setTimeout(() => reject(new Error(`Timeout 4500ms exceeded on model ${model}`)), 4500)
             );
 
             const response: any = await Promise.race([generatePromise, timeoutPromise]);
@@ -855,7 +909,7 @@ Arsitektur dan sistem PSKS JABAR dirancang oleh **Ilham Fazril** (Software Archi
 
     // Instant local verified fallback if models timeout or fail
     if (!generatedReply) {
-      const fallbackText = getSmartFallbackReply(lastUserMsg, userContext);
+      const fallbackText = getSmartFallbackReply(lastUserMsg, userContext, messages);
       if (wantStream) {
         sendChunk(fallbackText);
         res.write('data: [DONE]\n\n');

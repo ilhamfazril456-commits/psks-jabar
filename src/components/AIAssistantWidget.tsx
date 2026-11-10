@@ -43,7 +43,10 @@ import {
   resolveSensitivePrivacyQuery,
   resolvePinSecurityQuery,
   resolveOffTopicPublicQuery,
+  resolveInappropriateLanguageQuery,
+  resolveCorePSKSBreakdownQuery,
 } from '../data/aiKnowledge';
+import { checkConversationalFiller, formatConversationalFillerReply } from '../utils/aiConversationalHelpers';
 import { resolveDinsosAddressQuery } from '../data/dinsosAddressDirectory';
 import { ensureAIKnowledgeSeeded } from '../services/aiKnowledgeFirestoreService';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY } from '../data/initialData';
@@ -1004,21 +1007,31 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
     // Instant Real-Time Grounding Interceptor (Direct access to allPillarData state & UU PDP Privacy)
     // Delivers sub-50ms instant response without sluggishness, exactly matching user request
     const roleForContext: UserRole = isDeveloperUser ? 'developer' : currentRole;
+    const inappropriateCheck = resolveInappropriateLanguageQuery(textToSend);
     const offTopicCheck = resolveOffTopicPublicQuery(textToSend, roleForContext, isDeveloperUser);
     const pinCheck = resolvePinSecurityQuery(textToSend, roleForContext, session?.nama);
     const privacyCheck = resolveSensitivePrivacyQuery(textToSend);
     const memberCheck = resolveMemberVerificationQuery(textToSend, allPillarData, session?.wilayah);
+    const corePSKSCheck = resolveCorePSKSBreakdownQuery(textToSend, liveMetrics.totalRecords);
     const regionalCheck = resolveRegionalPillarDataQuery(textToSend, allPillarData, session?.wilayah);
 
-    if (offTopicCheck || pinCheck || privacyCheck || memberCheck || regionalCheck) {
-      const instantReply = offTopicCheck || pinCheck || privacyCheck || memberCheck || regionalCheck;
+    // Fast Confusion & Anti-Looping Interceptor ("lohh", "lah kok", "kok gitu", dll.)
+    let confusionReply: string | null = null;
+    const fillerResult = checkConversationalFiller(textToSend);
+    if (fillerResult.isFiller && fillerResult.fillerType === 'confusion') {
+      const prevAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant')?.content || '';
+      confusionReply = formatConversationalFillerReply('confusion', isDeveloperUser, prevAssistantMsg, session?.nama);
+    }
+
+    if (inappropriateCheck || offTopicCheck || pinCheck || privacyCheck || memberCheck || corePSKSCheck || regionalCheck || confusionReply) {
+      const instantReply = inappropriateCheck || offTopicCheck || pinCheck || privacyCheck || memberCheck || corePSKSCheck || regionalCheck || confusionReply;
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         role: 'assistant',
         content: instantReply!,
         timestamp: new Date(),
         isVerified: true,
-        trackingSource: (offTopicCheck || pinCheck || privacyCheck) ? 'verified_exact' : 'state_grounded',
+        trackingSource: (inappropriateCheck || offTopicCheck || pinCheck || privacyCheck || confusionReply) ? 'verified_exact' : 'state_grounded',
       };
 
       setMessages((prev) => [...prev, botMsg]);

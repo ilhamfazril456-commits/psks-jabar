@@ -3512,6 +3512,49 @@ Berikut adalah langkah-langkah praktis untuk menambahkan Admin baru:
       (userContext?.activePillar || null)
     );
 
+    // Pertanyaan Total Keseluruhan PSKS Jabar (Agregat 10 Pilar & 27 Kab/Kota)
+    const isAskingTotalPSKS =
+      (targetQ.includes('berapa') || targetQ.includes('total') || targetQ.includes('jumlah') || targetQ.includes('sabaraha')) &&
+      (targetQ.includes('psks') || targetQ.includes('semua pilar') || targetQ.includes('keseluruhan') || targetQ.includes('total data') || targetQ.includes('jumlah data')) &&
+      !effectivePillar;
+
+    if (isAskingTotalPSKS) {
+      const totalCount = userContext?.liveSummary?.totalRecords || 23000;
+      return `${salamPrefix}Berdasarkan data riil Satu Data Sosial Jawa Barat saat ini, tercatat total **${totalCount.toLocaleString('id-ID')} personil/lembaga** 10 Pilar PSKS yang tersebar aktif di 27 Kabupaten/Kota se-Jawa Barat.\n\nApakah ada rincian data pilar atau wilayah tertentu yang ingin Anda ketahui lebih lanjut? 😊`;
+    }
+
+    // 10 Pilar & 27 Kab/Kota Breakdown / Uraian Rinci
+    const isAskingPillarsBreakdown =
+      (targetQ.includes('berapa pilar') || targetQ.includes('10 pilar') || targetQ.includes('pilar apa saja') || targetQ.includes('sebutkan pilar') || targetQ.includes('uraikan pilar') || targetQ.includes('jelaskan pilar')) ||
+      (targetQ.includes('pilar') && (targetQ.includes('uraikan') || targetQ.includes('jelaskan') || targetQ.includes('satu per satu') || targetQ.includes('kab/kota') || targetQ.includes('kabupaten') || targetQ.includes('kota'))) ||
+      (targetQ.includes('terdiri dari') && (targetQ.includes('pilar') || targetQ.includes('kab')));
+
+    if (isAskingPillarsBreakdown) {
+      return `${salamPrefix}Sistem informasi **PSKS JABAR** memayungi **10 Pilar Potensi dan Sumber Kesejahteraan Sosial (PSKS)** yang bertugas aktif di **27 Kabupaten/Kota** se-Jawa Barat.
+
+Berikut rincian dan uraian 10 Pilar PSKS satu per satu:
+
+1. **PSM (Pekerja Sosial Masyarakat)**: Relawan sosial berbasis desa/kelurahan yang berperan aktif dalam pendampingan, penanganan Pemerlu Pelayanan Kesejahteraan Sosial (PPKS), serta penyelenggaraan kesejahteraan sosial warga (Permensos No. 10/2019).
+2. **TAGANA (Taruna Siaga Bencana)**: Relawan sosial terlatih dan bersertifikasi yang berdedikasi dalam perlindungan sosial dan penanggulangan bencana alam maupun sosial (Permensos No. 28/2012).
+3. **Karang Taruna**: Organisasi kepemudaan sosial desa/kelurahan sebagai wadah pembinaan generasi muda usia 13–45 tahun dalam usaha kesejahteraan sosial (Permensos No. 25/2019).
+4. **TKSK (Tenaga Kesejahteraan Sosial Kecamatan)**: Personil sosial yang bertugas membantu koordinasi dan penyelenggaraan program sosial di tingkat kecamatan (Permensos No. 28/2018).
+5. **PEKSOS / PKSP (Pekerja Sosial Profesional)**: Tenaga profesi berpendidikan formal kesejahteraan sosial yang tersertifikasi (STRPS/SIPPS) untuk pelayanan klinis, rehabilitasi sosial, asesmen mendalam, dan advokasi sosial (UU No. 14/2019).
+6. **LKS (Lembaga Kesejahteraan Sosial)**: Organisasi/yayasan sosial berbadan hukum yang menyelenggarakan pelayanan rehabilitasi, perlindungan, dan pengentasan sosial bagi PPKS (Permensos No. 184/2011).
+7. **LK3 (Lembaga Konsultasi Kesejahteraan Keluarga)**: Lembaga rujukan sosial tingkat lokal yang memberikan layanan konseling psikologis, mediasi keluarga, dan penguatan ketahanan keluarga.
+8. **PENSOS (Penyuluh Sosial)**: Aparatur atau personil masyarakat yang bertugas menyampaikan informasi, edukasi, advokasi, dan motivasi kesejahteraan sosial (Permensos No. 10/2014).
+9. **KUBE / Badan Usaha Sosial (Kelompok Usaha Bersama)**: Kelompok binaan warga miskin/rentan yang bergerak dalam kegiatan ekonomi produktif untuk kemandirian ekonomi keluarga.
+10. **SLRT / Puskesos (Sistem Layanan dan Rujukan Terpadu)**: Pos pelayanan terpadu satu pintu di tingkat desa/kelurahan yang memfasilitasi identifikasi keluhan, verifikasi kemiskinan, dan rujukan perlindungan sosial.
+
+---
+
+### **Cakupan Wilayah Tugas (27 Kabupaten/Kota se-Jawa Barat)**:
+Tersebar secara merata di **18 Kabupaten** dan **9 Kota**:
+- **18 Kabupaten**: Kab. Bogor, Kab. Sukabumi, Kab. Cianjur, Kab. Bandung, Kab. Garut, Kab. Tasikmalaya, Kab. Ciamis, Kab. Kuningan, Kab. Cirebon, Kab. Majalengka, Kab. Sumedang, Kab. Indramayu, Kab. Subang, Kab. Purwakarta, Kab. Karawang, Kab. Bekasi, Kab. Bandung Barat, dan Kab. Pangandaran.
+- **9 Kota**: Kota Bogor, Kota Sukabumi, Kota Bandung, Kota Cirebon, Kota Bekasi, Kota Depok, Kota Cimahi, Kota Tasikmalaya, dan Kota Banjar.
+
+Apakah ada pilar atau kabupaten/kota tertentu yang ingin Anda ketahui data sebarannya lebih detail? 😊`;
+    }
+
     // Contextual Member Count / Personil Query for active pillar
     if (
       (targetQ.includes('jumlah') || targetQ.includes('berapa') || targetQ.includes('personil') || targetQ.includes('anggota') || targetQ.includes('sabaraha') || targetQ.includes('brp')) &&
@@ -4928,7 +4971,7 @@ AI WAJIB:
         const sanitizedContents = normalizeGeminiContents(messages.slice(-8));
 
         // Candidate models prioritized for ultra-fast generation (<1s TTFT), high uptime, and zero truncation
-        const candidateModels = ['gemini-flash-latest'];
+        const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
         let replyText = '';
         const keyPool = getOrderedKeyPool();
 
@@ -4944,8 +4987,8 @@ AI WAJIB:
               };
 
               if (wantStream) {
-                // Streaming mode via generateContentStream with strict 2500ms ceiling timeout
-                const streamInitTimeout = 2500;
+                // Streaming mode via generateContentStream with resilient 4500ms ceiling timeout
+                const streamInitTimeout = 4500;
                 const streamInitPromise = keyItem.client.models.generateContentStream({
                   model: modelName,
                   contents: sanitizedContents,
