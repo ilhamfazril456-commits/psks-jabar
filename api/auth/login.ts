@@ -211,7 +211,7 @@ export default async function handler(req: any, res: any) {
         role: 'developer',
         wilayahTugas: 'Pusat Developer Jabar',
         statusActive: 'SAH_TERDAFTAR',
-        passwordHash: '$2b$10$1Q1LvGPFNqVoo8RyeX/TTuqpJpC8Yvmrax8/S1BgnMWbLOn.fI3D6',
+        passwordHash: '$2b$10$t30kcIcKMvSLvy.UjpqNkec5j52dqLCXX7F6hffvdYyWe7cbYeKji',
         statusAkun: 'AKTIF',
       };
     }

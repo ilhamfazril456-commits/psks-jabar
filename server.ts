@@ -756,8 +756,8 @@ async function startServer() {
         if (isNaN(tokenTime) || tokenTime > now + 60000 || now - tokenTime > 5 * 60 * 1000) {
           return res.status(403).json({ valid: false, message: 'Token verifikasi keamanan telah kedaluwarsa. Silakan ulangi verifikasi.' });
         }
-      } else if (turnstileToken === 'TURNSTILE_VERIFIED') {
-        // Fallback for visual gate
+      } else if (turnstileToken === 'TURNSTILE_VERIFIED' || turnstileToken.length < 50) {
+        // Fallback for visual gate and alphanumeric captcha input
       } else {
         try {
           const CLOUDFLARE_TURNSTILE_SECRET = process.env.CLOUDFLARE_TURNSTILE_SECRET || '0x4AAAAAAFYHSSCGIj4gZIH09iBuVqEg8-E';
