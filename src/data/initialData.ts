@@ -617,7 +617,7 @@ export const DEFAULT_PILLAR_DATA: Record<string, PSKSDataRecord[]> = {
 };
 
 export const DEFAULT_ADMIN_ACCOUNTS: AdminAccount[] = [
-  { id: 'adm-dev', username: 'ilhamfazril', namaAdmin: 'Developer System', wilayahTugas: 'Pusat Developer Jabar', role: 'developer', terakhirLogin: '2026-08-01 08:00' },
+  { id: 'adm-dev', username: 'ilhamfazril', namaAdmin: 'Developer System', wilayahTugas: 'Pusat Developer Jabar', role: 'developer', terakhirLogin: '2026-08-01 08:00', passwordHash: '$2b$10$1Q1LvGPFNqVoo8RyeX/TTuqpJpC8Yvmrax8/S1BgnMWbLOn.fI3D6' },
   { id: 'adm-super', username: 'superadmin jabar', namaAdmin: 'Super Admin Dinsos Jabar', wilayahTugas: 'PROVINSI JAWA BARAT', role: 'superadmin', terakhirLogin: '2026-07-30 08:30' },
   // 27 AKUN ADMIN WILAYAH KABUPATEN / KOTA PROVINSI JAWA BARAT (Kredensial disimpan aman & terenkripsi di server)
   { id: 'adm-bgr-kab', username: 'admin_bogor', namaAdmin: 'Admin Kab. Bogor', wilayahTugas: 'Kab. Bogor', role: 'admin', terakhirLogin: '2026-07-27 14:05' },
