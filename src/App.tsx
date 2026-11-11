@@ -2833,24 +2833,31 @@ export default function App() {
       setFirestoreDoc('admin_accounts', resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
     }
 
-    // DISPATCH KICK SESI LAMA: Berlaku untuk SEMUA ROLE (user terdaftar, admin wilayah, superadmin, developer)
-    // 1. Cross-tab instant kick via BroadcastChannel
-    try {
-      const channel = new BroadcastChannel('psks_auth_channel');
-      channel.postMessage({
-        type: 'CONCURRENT_LOGIN_KICK',
-        targetUsername: resolvedUsername || (matched ? matched.username : ''),
-        targetId: resolvedUserId || (matched ? matched.id : ''),
-        targetRole: role,
-        newSessionToken: sessionToken,
-        timestamp: loginTimestamp,
-      });
-      setTimeout(() => {
-        try {
-          channel.close();
-        } catch {}
-      }, 500);
-    } catch {}
+    // DISPATCH KICK SESI LAMA: Berlaku untuk akun non-superadmin (user terdaftar & admin wilayah)
+    // Khusus Superadmin: Multi-Session diizinkan agar banyak staf di kantor dinas dapat login bersamaan
+    const isSuperadminAccount =
+      role === 'superadmin' ||
+      (resolvedUsername || '').toLowerCase().includes('superadmin') ||
+      resolvedUserId === 'adm-super';
+
+    if (!isSuperadminAccount) {
+      try {
+        const channel = new BroadcastChannel('psks_auth_channel');
+        channel.postMessage({
+          type: 'CONCURRENT_LOGIN_KICK',
+          targetUsername: resolvedUsername || (matched ? matched.username : ''),
+          targetId: resolvedUserId || (matched ? matched.id : ''),
+          targetRole: role,
+          newSessionToken: sessionToken,
+          timestamp: loginTimestamp,
+        });
+        setTimeout(() => {
+          try {
+            channel.close();
+          } catch {}
+        }, 500);
+      } catch {}
+    }
 
     // Bersihkan ID/username akun ini dari deletedAdminIds di state & localStorage agar tidak ada cache penendangan palsu
     const cleanUname = (resolvedUsername || '').toLowerCase().trim();
@@ -3131,39 +3138,46 @@ export default function App() {
         }
 
         // 5. Check Multiple Session Active / Login on another device (Single Session Kick)
-        // Berlaku untuk SEMUA ROLE: user terdaftar, admin wilayah, superadmin, developer
-        const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
-        const localToken = session.sessionToken || sessionStorage.getItem('session_token');
-        const now = Date.now();
+        // Pengecualian Khusus Superadmin: Multi-Session diizinkan penuh untuk operasional staf kantor dinas
+        const isSuperadminSession =
+          session.role === 'superadmin' ||
+          (session.username || '').toLowerCase().includes('superadmin') ||
+          session.userId === 'adm-super';
 
-        // Ambil timestamp login dari data Supabase
-        const remoteLoginTime =
-          typeof (matched as any).loginTimestamp === 'number'
-            ? (matched as any).loginTimestamp
-            : typeof (matched as any).data?.loginTimestamp === 'number'
-            ? (matched as any).data.loginTimestamp
-            : 0;
+        if (!isSuperadminSession) {
+          const loginTime = session.loginTimestamp || Number(sessionStorage.getItem('login_timestamp')) || 0;
+          const localToken = session.sessionToken || sessionStorage.getItem('session_token');
+          const now = Date.now();
 
-        // SYARAT MUTLAK PENENDANGAN (Mencegah salah tendang / false positive):
-        // 1. Wajib sudah melewati masa tenggang 5 detik pertama sejak login di perangkat ini
-        const isPastGracePeriod = loginTime > 0 && now - loginTime > 5000;
+          // Ambil timestamp login dari data Supabase
+          const remoteLoginTime =
+            typeof (matched as any).loginTimestamp === 'number'
+              ? (matched as any).loginTimestamp
+              : typeof (matched as any).data?.loginTimestamp === 'number'
+              ? (matched as any).data.loginTimestamp
+              : 0;
 
-        // 2. Data di Supabase HARUS memiliki waktu login yang LEBIH BARU (+1.5 detik) daripada waktu login perangkat ini
-        // (menandakan ada perangkat/orang lain yang menekan tombol login SETELAH kita masuk)
-        const isNewerLoginFromAnotherDevice = remoteLoginTime > loginTime + 1500;
+          // SYARAT MUTLAK PENENDANGAN (Mencegah salah tendang / false positive):
+          // 1. Wajib sudah melewati masa tenggang 5 detik pertama sejak login di perangkat ini
+          const isPastGracePeriod = loginTime > 0 && now - loginTime > 5000;
 
-        // 3. Token di database Supabase berbeda dengan token sesi lokal kita
-        const isTokenDifferent = Boolean(
-          matched.sessionToken &&
-          localToken &&
-          matched.sessionToken !== localToken
-        );
+          // 2. Data di Supabase HARUS memiliki waktu login yang LEBIH BARU (+1.5 detik) daripada waktu login perangkat ini
+          // (menandakan ada perangkat/orang lain yang menekan tombol login SETELAH kita masuk)
+          const isNewerLoginFromAnotherDevice = remoteLoginTime > loginTime + 1500;
 
-        if (isPastGracePeriod && isNewerLoginFromAnotherDevice && isTokenDifferent) {
-          if (!showMultipleSessionModal) {
-            setShowMultipleSessionModal(true);
+          // 3. Token di database Supabase berbeda dengan token sesi lokal kita
+          const isTokenDifferent = Boolean(
+            matched.sessionToken &&
+            localToken &&
+            matched.sessionToken !== localToken
+          );
+
+          if (isPastGracePeriod && isNewerLoginFromAnotherDevice && isTokenDifferent) {
+            if (!showMultipleSessionModal) {
+              setShowMultipleSessionModal(true);
+            }
+            return;
           }
-          return;
         }
       }
     }
@@ -3228,6 +3242,13 @@ export default function App() {
         if (!data) return;
 
         if (data.type === 'CONCURRENT_LOGIN_KICK') {
+          // Khusus Superadmin: multi-session diizinkan penuh untuk staf kantor dinas, abaikan sinyal tendang
+          const isCurrentSuperadmin =
+            session.role === 'superadmin' ||
+            (session.username || '').toLowerCase().includes('superadmin') ||
+            session.userId === 'adm-super';
+          if (isCurrentSuperadmin) return;
+
           const localToken = session.sessionToken || sessionStorage.getItem('session_token');
           if (!data.newSessionToken || data.newSessionToken === localToken) return;
 
