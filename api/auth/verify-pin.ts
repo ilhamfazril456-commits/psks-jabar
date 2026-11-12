@@ -249,7 +249,7 @@ export default async function handler(req: any, res: any) {
       isMatch = cleanPin === validDeveloperPin;
       authorizedRole = 'developer';
     } else if (targetRole === 'superadmin') {
-      isMatch = cleanPin === validSuperadminPin || cleanPin === validDeveloperPin;
+      isMatch = cleanPin === validSuperadminPin;
       authorizedRole = 'superadmin';
     } else {
       if (cleanPin === validDeveloperPin) {

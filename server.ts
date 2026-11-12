@@ -613,39 +613,49 @@ async function startServer() {
 
       const cleanPin = pin.trim();
 
-      // Ambil konfigurasi PIN terkini dari server store atau database
+      // Prioritas 1: Ambil dari memory terkini server
       let validSuperadminPin = serverPinStore.superadminPin;
       let validDeveloperPin = serverPinStore.developerPin;
 
-      try {
-        const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
-        if (data && data.data) {
-          if (data.data.superadminPin) validSuperadminPin = String(data.data.superadminPin).trim();
-          if (data.data.developerPin) validDeveloperPin = String(data.data.developerPin).trim();
-        }
-      } catch {}
-
+      // Prioritas 2: Sinkronisasi dari Firestore jika tersedia update yang lebih baru
       try {
         const { doc, getDoc } = await import('firebase/firestore');
         const { db } = await import('./src/lib/firebase');
         const snap = await getDoc(doc(db, 'app_settings', 'global'));
         if (snap.exists()) {
           const fsData = snap.data();
-          if (fsData.superadminPin) validSuperadminPin = String(fsData.superadminPin).trim();
-          if (fsData.developerPin) validDeveloperPin = String(fsData.developerPin).trim();
+          if (fsData.superadminPin) {
+            validSuperadminPin = String(fsData.superadminPin).trim();
+            serverPinStore.superadminPin = validSuperadminPin;
+          }
+          if (fsData.developerPin) {
+            validDeveloperPin = String(fsData.developerPin).trim();
+            serverPinStore.developerPin = validDeveloperPin;
+          }
+        }
+      } catch {}
+
+      // Prioritas 3: Supabase fallback jika Firestore belum mengembalikan data
+      try {
+        const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
+        if (data && data.data) {
+          if (!validSuperadminPin && data.data.superadminPin) validSuperadminPin = String(data.data.superadminPin).trim();
+          if (!validDeveloperPin && data.data.developerPin) validDeveloperPin = String(data.data.developerPin).trim();
         }
       } catch {}
 
       let isMatch = false;
       let authorizedRole = '';
 
+      // STRICT VALIDATION: Tidak boleh ada PIN ganda. Setiap role HANYA bisa dibuka oleh PIN aktifnya sendiri!
       if (targetRole === 'developer') {
         isMatch = (cleanPin === validDeveloperPin);
         authorizedRole = 'developer';
       } else if (targetRole === 'superadmin') {
-        isMatch = (cleanPin === validSuperadminPin || cleanPin === validDeveloperPin);
+        isMatch = (cleanPin === validSuperadminPin);
         authorizedRole = 'superadmin';
       } else {
+        // Fallback jika targetRole tidak terdefinisi
         if (cleanPin === validDeveloperPin) {
           isMatch = true;
           authorizedRole = 'developer';
