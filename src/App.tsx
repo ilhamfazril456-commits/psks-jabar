@@ -1618,6 +1618,7 @@ export default function App() {
               wilayahTugas: safeWilayah,
               role: safeRole,
               passwordHash: passHash,
+              passwordEncrypted: accData.passwordEncrypted || (accData as any).data?.passwordEncrypted || defaultMatch?.passwordEncrypted,
               terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
               passwordPolos: '',
               registeredIp: accData.registeredIp || undefined,
@@ -1644,6 +1645,7 @@ export default function App() {
               namaAdmin: def.namaAdmin || '',
               wilayahTugas: def.wilayahTugas || '',
               passwordHash: def.passwordHash || '',
+              passwordEncrypted: def.passwordEncrypted,
             };
             loadedMap.set(def.id, enriched);
           } else {
@@ -1655,6 +1657,7 @@ export default function App() {
               role: existing.role || def.role || 'admin',
               passwordPolos: '',
               passwordHash: existing.passwordHash || def.passwordHash || '',
+              passwordEncrypted: existing.passwordEncrypted || (existing as any).data?.passwordEncrypted || def.passwordEncrypted,
             };
             loadedMap.set(existing.id, sanitized);
           }

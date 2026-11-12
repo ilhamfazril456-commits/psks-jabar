@@ -194,6 +194,7 @@ export interface AdminAccount {
   wilayahTugas: string;
   role: 'user' | 'admin' | 'superadmin' | 'developer';
   passwordPolos?: string;
+  passwordEncrypted?: string;
   passwordHash?: string;
   terakhirLogin?: string;
   sessionToken?: string;

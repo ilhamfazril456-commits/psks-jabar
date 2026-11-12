@@ -1,6 +1,0 @@
-{
-  "summary":  "Dokumentasi implementasi penguatan keamanan Kategori A (Zero-Trust MFA pada kartu SmartCard fisik permanen, isolasi PIN server-authoritative, eliminasi total passwordPolos, proteksi sesi AI Chat, dan hardening Firestore rules).",
-  "updatedAt":  "2026-10-30T06:47:51.309440177Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}

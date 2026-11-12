@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { AdminAccount, UserSession } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
-import { hashPassword } from '../utils/crypto';
-import { ShieldCheck, Lock, KeyRound, ArrowLeft, UserPlus, Sparkles } from 'lucide-react';
+import { hashPassword, encryptSensitiveData, decryptSensitiveData } from '../utils/crypto';
+import { ShieldCheck, Lock, KeyRound, ArrowLeft, UserPlus, Sparkles, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { AdminRegisteredModal, AdminEditedModal, AdminDeleteConfirmModal, AdminDeletedModal, AdminAlreadyExistsModal } from './WelcomePopups';
 import { BackToHomeButton } from './BackToHomeButton';
 
@@ -37,6 +37,82 @@ const validateAdminPassword = (password: string): { isValid: boolean; message: s
   }
   return { isValid: true, message: '' };
 };
+
+const KNOWN_DEFAULT_ADMIN_PASSWORDS: Record<string, string> = {
+  'adm-bgr-kab': 'AdminKabBogor2026',
+  'admin_bogor': 'AdminKabBogor2026',
+  'adm-skb-kab': 'AdminKabSukabumi2026',
+  'admin_sukabumi': 'AdminKabSukabumi2026',
+  'adm-cjr-kab': 'AdminKabCianjur2026',
+  'admin_cianjur': 'AdminKabCianjur2026',
+  'adm-bdg-kab': 'AdminKabBandung2026',
+  'admin_kabbandung': 'AdminKabBandung2026',
+  'adm-grt-kab': 'AdminKabGarut2026',
+  'admin_garut': 'AdminKabGarut2026',
+  'adm-tsk-kab': 'AdminKabTasikmalaya2026',
+  'admin_kabtasik': 'AdminKabTasikmalaya2026',
+  'adm-cms-kab': 'AdminKabCiamis2026',
+  'admin_ciamis': 'AdminKabCiamis2026',
+  'adm-kng-kab': 'AdminKabKuningan2026',
+  'admin_kuningan': 'AdminKabKuningan2026',
+  'adm-crb-kab': 'AdminKabCirebon2026',
+  'admin_kabcirebon': 'AdminKabCirebon2026',
+  'adm-mjl-kab': 'AdminKabMajalengka2026',
+  'admin_majalengka': 'AdminKabMajalengka2026',
+  'adm-smd-kab': 'AdminKabSumedang2026',
+  'admin_sumedang': 'AdminKabSumedang2026',
+  'adm-ind-kab': 'AdminKabIndramayu2026',
+  'admin_indramayu': 'AdminKabIndramayu2026',
+  'adm-sbg-kab': 'AdminKabSubang2026',
+  'admin_subang': 'AdminKabSubang2026',
+  'adm-pwk-kab': 'AdminKabPurwakarta2026',
+  'admin_purwakarta': 'AdminKabPurwakarta2026',
+  'adm-krw-kab': 'AdminKabKarawang2026',
+  'admin_karawang': 'AdminKabKarawang2026',
+  'adm-bks-kab': 'AdminKabBekasi2026',
+  'admin_kabbekasi': 'AdminKabBekasi2026',
+  'adm-kbb-kab': 'AdminKabBandungBarat2026',
+  'admin_kbb': 'AdminKabBandungBarat2026',
+  'adm-pnd-kab': 'AdminKabPangandaran2026',
+  'admin_pangandaran': 'AdminKabPangandaran2026',
+  'adm-bgr-kta': 'AdminKotaBogor2026',
+  'admin_kotabogor': 'AdminKotaBogor2026',
+  'adm-skb-kta': 'AdminKotaSukabumi2026',
+  'admin_kotasukabumi': 'AdminKotaSukabumi2026',
+  'adm-bdg-kta': 'AdminKotaBandung2026',
+  'admin_bandung': 'AdminKotaBandung2026',
+  'adm-crb-kta': 'AdminKotaCirebon2026',
+  'admin_kotacirebon': 'AdminKotaCirebon2026',
+  'adm-bks-kta': 'AdminKotaBekasi2026',
+  'admin_kotabekasi': 'AdminKotaBekasi2026',
+  'adm-dpk-kta': 'AdminKotaDepok2026',
+  'admin_depok': 'AdminKotaDepok2026',
+  'adm-cmh-kta': 'AdminKotaCimahi2026',
+  'admin_cimahi': 'AdminKotaCimahi2026',
+  'adm-tsk-kta': 'AdminKotaTasikmalaya2026',
+  'admin_kotatasik': 'AdminKotaTasikmalaya2026',
+  'adm-bjr-kta': 'AdminKotaBanjar2026',
+  'admin_banjar': 'AdminKotaBanjar2026',
+  'adm-super': 'Super12345jabar',
+  'superadmin jabar': 'Super12345jabar',
+};
+
+function getPlainPassword(item: AdminAccount): string {
+  if (item.passwordEncrypted) {
+    try {
+      const dec = decryptSensitiveData(item.passwordEncrypted);
+      if (dec) return dec;
+    } catch {}
+  }
+  if (item.passwordPolos && item.passwordPolos !== '••••••••') {
+    return item.passwordPolos;
+  }
+  const idMatch = KNOWN_DEFAULT_ADMIN_PASSWORDS[item.id];
+  if (idMatch) return idMatch;
+  const unameMatch = KNOWN_DEFAULT_ADMIN_PASSWORDS[(item.username || '').toLowerCase().trim()];
+  if (unameMatch) return unameMatch;
+  return '';
+}
 
 export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
   session,
@@ -143,6 +219,26 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
   // Modal Already Exists State
   const [alreadyExistsUser, setAlreadyExistsUser] = useState<string | null>(null);
 
+  // Password Visibility Toggle & Copy State (Khusus Superadmin & Developer)
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedAccountId, setCopiedAccountId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (accountId: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [accountId]: !prev[accountId],
+    }));
+  };
+
+  const handleCopyPassword = (accountId: string, pass: string) => {
+    if (!pass) return;
+    try {
+      navigator.clipboard.writeText(pass);
+      setCopiedAccountId(accountId);
+      setTimeout(() => setCopiedAccountId(null), 2000);
+    } catch {}
+  };
+
   // 1. MASTER ADD ENGINE
   const handleCreateAdmin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +286,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
       wilayahTugas: wilayahIn,
       role: assignedRole,
       passwordHash: hashPassword(sandiIn),
+      passwordEncrypted: encryptSensitiveData(sandiIn),
       terakhirLogin: 'Baru dibuat',
     });
 
@@ -280,6 +377,7 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
           role: lockedRole,
           wilayahTugas: normalizedWilayah,
           passwordHash: hashPassword(sandiNew),
+          passwordEncrypted: encryptSensitiveData(sandiNew),
           lastUpdatedTimestamp: Date.now(),
           lastEditedBy: session?.username || session?.nama,
           lastEditedByRole: session?.role,
@@ -563,11 +661,12 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                     const isDevAccount = item.id === 'adm-dev' || item.role === 'developer' || uLower === 'ilhamfazril';
                     const isSuperAccount = item.id === 'adm-super' || item.role === 'superadmin' || uLower.includes('superadmin');
                     
-                    // Password masking rule:
-                    // By default passwords are plain text / uncensored.
-                    // EXCEPTION: If current logged-in user is Superadmin (NOT developer), mask superadmin's OWN password.
-                    // If current user is Developer, ALL passwords are raw plain text visible without censorship.
-                    const isPasswordMasked = !isCurrentUserDeveloper && isSuperAccount;
+                    // Password visibility rule:
+                    // Developer account password is confidential and only visible to Developer.
+                    // Regional admin accounts & superadmin accounts can be viewed by Superadmin & Developer.
+                    const isPasswordMasked = isDevAccount && !isCurrentUserDeveloper;
+                    const plainPass = isPasswordMasked ? '' : getPlainPassword(item);
+                    const isVisible = Boolean(visiblePasswords[item.id]);
 
                     return (
                       <tr key={item.id} className="hover:bg-amber-500/5 transition-colors">
@@ -589,18 +688,73 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-[#b8901c]">
-                          <div className="flex flex-col gap-0.5">
-                            <span>
-                              {isPasswordMasked
-                                ? '••••••••'
-                                : 'Tersimpan Terenkripsi (Hash)'}
-                            </span>
-                            <span className="text-[9px] font-sans font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded w-max flex items-center gap-1">
-                              <ShieldCheck className="w-2.5 h-2.5 text-emerald-600 inline" />
-                              Bcrypt Hash Active
-                            </span>
-                          </div>
+                        <td className="py-3 px-4 font-mono">
+                          {isPasswordMasked ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-bold text-slate-400 tracking-wider">••••••••••••</span>
+                              <span className="text-[9px] font-sans font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-max">
+                                🔒 Hak Akses Privat Developer
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`font-mono text-xs px-2.5 py-1 rounded-md border transition-all ${
+                                  isVisible
+                                    ? 'bg-amber-50 border-amber-300 text-amber-950 font-black select-all tracking-normal shadow-2xs'
+                                    : 'bg-slate-100 border-slate-200 text-slate-600 font-bold tracking-widest'
+                                }`}>
+                                  {isVisible
+                                    ? (plainPass || 'Belum Terdekripsi')
+                                    : '••••••••••••'}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => togglePasswordVisibility(item.id)}
+                                  title={isVisible ? 'Sembunyikan Sandi' : 'Lihat Sandi Polos'}
+                                  className="p-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer border border-slate-200 shadow-2xs"
+                                >
+                                  {isVisible ? (
+                                    <EyeOff className="w-3.5 h-3.5 text-slate-700" />
+                                  ) : (
+                                    <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                  )}
+                                </button>
+
+                                {isVisible && plainPass && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyPassword(item.id, plainPass)}
+                                    title="Salin Kata Sandi"
+                                    className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-bold shadow-2xs"
+                                  >
+                                    {copiedAccountId === item.id ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>Tersalin!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3 text-emerald-700" />
+                                        <span>Salin</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-sans font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                  <ShieldCheck className="w-2.5 h-2.5 text-emerald-600 inline" />
+                                  AES-256 (Aman DB)
+                                </span>
+                                <span className="text-[9px] font-sans font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                                  Bcrypt Hash
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center gap-2">
