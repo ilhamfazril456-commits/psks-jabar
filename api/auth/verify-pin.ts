@@ -229,8 +229,18 @@ export default async function handler(req: any, res: any) {
       if (data && data.data) currentSettings = data.data;
     } catch {}
 
-    const validSuperadminPin = (currentSettings?.superadminPin || '150109').trim();
-    const validDeveloperPin = (currentSettings?.developerPin || '150109').trim();
+    try {
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/lib/firebase');
+      const snap = await getDoc(doc(db, 'app_settings', 'global'));
+      if (snap.exists()) {
+        const fsData = snap.data();
+        currentSettings = { ...currentSettings, ...fsData };
+      }
+    } catch {}
+
+    const validSuperadminPin = (currentSettings?.superadminPin || '123456').trim();
+    const validDeveloperPin = (currentSettings?.developerPin || '992211').trim();
 
     let isMatch = false;
     let authorizedRole = '';

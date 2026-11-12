@@ -625,6 +625,17 @@ async function startServer() {
         }
       } catch {}
 
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        const snap = await getDoc(doc(db, 'app_settings', 'global'));
+        if (snap.exists()) {
+          const fsData = snap.data();
+          if (fsData.superadminPin) validSuperadminPin = String(fsData.superadminPin).trim();
+          if (fsData.developerPin) validDeveloperPin = String(fsData.developerPin).trim();
+        }
+      } catch {}
+
       let isMatch = false;
       let authorizedRole = '';
 
@@ -724,6 +735,19 @@ async function startServer() {
         await supabase.from('app_settings').upsert({ id: 'global', data: updatePayload }, { onConflict: 'id' });
       } catch (dbErr) {
         console.warn('[Server Pin Update DB notice]:', dbErr);
+      }
+
+      // Sync securely to Firestore
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        const pinField = pinType === 'developer' ? 'developerPin' : 'superadminPin';
+        await setDoc(doc(db, 'app_settings', 'global'), {
+          [pinField]: cleanPin,
+          pinSecurityUpdatedAt: Date.now(),
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn('[Server Pin Update Firestore notice]:', fsErr);
       }
 
       return res.json({

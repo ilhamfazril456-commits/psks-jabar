@@ -99,6 +99,7 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
       const updated: AppSettings = {
         ...appSettings,
+        superadminPin: cleanPin,
         pinSecurityUpdatedAt: Date.now(),
       };
       await onSaveSettings(updated);
@@ -142,6 +143,7 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
       const updated: AppSettings = {
         ...appSettings,
+        developerPin: cleanPin,
         pinSecurityUpdatedAt: Date.now(),
       };
       await onSaveSettings(updated);

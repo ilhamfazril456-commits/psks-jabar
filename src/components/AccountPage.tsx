@@ -323,6 +323,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       if (onSaveAppSettings && appSettings) {
         await onSaveAppSettings({
           ...appSettings,
+          superadminPin: cleanPin,
           pinSecurityUpdatedAt: Date.now(),
         });
       }
