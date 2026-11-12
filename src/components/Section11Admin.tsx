@@ -30,12 +30,14 @@ import {
   Info,
   Building2,
   Key,
+  Sliders,
 } from 'lucide-react';
 
 interface Section11AdminProps {
   session: UserSession;
   appSettings?: AppSettings;
   onOpenAccountConsole: () => void;
+  onOpenSuperadminManageConsole?: () => void;
   onOpenMonitoringConsole: () => void;
   onOpenActivityLogConsole?: () => void;
   onOpenMaintenanceConsole: () => void;
@@ -59,6 +61,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   session,
   appSettings,
   onOpenAccountConsole,
+  onOpenSuperadminManageConsole,
   onOpenMonitoringConsole,
   onOpenActivityLogConsole,
   onOpenMaintenanceConsole,
@@ -77,8 +80,11 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
   submissions = [],
   pendingCount,
 }) => {
+  const isDeveloper = session.role === 'developer' || session.isDeveloper === true;
+  const devOffset = isDeveloper ? 1 : 0;
+
   const isMasterAdmin =
-    (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) &&
+    (session.role === 'superadmin' || isDeveloper) &&
     session.statusActive === 'SAH_TERDAFTAR';
 
   const pendingSuperadminCount = React.useMemo(() => {
@@ -181,7 +187,56 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
             </button>
           </div>
 
-          {/* FITUR 2: AKUN USER (Theme: Deep Blue & Indigo) */}
+          {/* FITUR 2 (KHUSUS DEVELOPER): MANAJEMEN SUPERADMIN PROVINSI (Theme: Royal Navy & Emerald Gold) */}
+          {isDeveloper && (
+            <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-emerald-50/30 rounded-xl sm:rounded-2xl border-2 border-emerald-400/90 hover:border-emerald-600 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
+              {/* Top Accent Gradient Bar */}
+              <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-emerald-600 via-teal-400 to-[#0f2b5c] absolute top-0 left-0" />
+
+              <div>
+                {/* Icon Box & Badge Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#043e2e] to-[#0f2b5c] text-amber-300 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform duration-300 border border-emerald-400/40 shrink-0">
+                    <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                  </div>
+                  <span className="bg-emerald-100 text-emerald-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300 shadow-2xs leading-none">
+                    FITUR 2
+                  </span>
+                </div>
+
+                {/* Title & Description */}
+                <h4 className="text-[11px] sm:text-base font-black text-emerald-950 mb-1 sm:mb-2 group-hover:text-emerald-800 transition-colors leading-snug">
+                  Manajemen Superadmin
+                </h4>
+                <p className="text-[9px] sm:text-xs text-slate-600 font-medium leading-tight sm:leading-relaxed mb-2.5 sm:mb-4 line-clamp-3 sm:line-clamp-none">
+                  Konsol khusus Developer untuk mengelola akun Superadmin, kredensial, dan konfigurasi hak akses pilar PSKS Jabar.
+                </p>
+
+                {/* Highlight Bullets */}
+                <div className="space-y-1 sm:space-y-1.5 mb-3 sm:mb-4 pt-2 border-t border-slate-100 hidden xs:block">
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0" />
+                    <span>Hak Akses 10 Pilar</span>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-xs text-slate-700 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 hidden sm:block" />
+                    <span>Kelola Password & PIN</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={onOpenSuperadminManageConsole}
+                className="w-full bg-gradient-to-r from-[#043e2e] to-[#0f2b5c] hover:from-[#06533e] hover:to-[#143b7d] text-amber-300 font-extrabold py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl shadow-md hover:shadow-emerald-950/20 transition-all duration-200 flex items-center justify-between group/btn text-[9px] sm:text-xs tracking-wide cursor-pointer border border-emerald-400/30"
+              >
+                <span className="truncate">Konsol Superadmin</span>
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 group-hover/btn:translate-x-1 transition-transform duration-200 shrink-0 ml-1" />
+              </button>
+            </div>
+          )}
+
+          {/* FITUR 2 / 3: AKUN USER (Theme: Deep Blue & Indigo) */}
           <div className="group relative bg-gradient-to-b from-white via-slate-50/50 to-blue-50/30 rounded-xl sm:rounded-2xl border border-blue-200 hover:border-blue-400 p-2.5 sm:p-5 shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col justify-between text-left overflow-hidden hover:-translate-y-1">
             {/* Top Accent Gradient Bar */}
             <div className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-blue-600 via-sky-400 to-indigo-700 absolute top-0 left-0" />
@@ -193,7 +248,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
                 </div>
                 <span className="bg-blue-100 text-blue-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-blue-200 shadow-2xs leading-none">
-                  FITUR 2
+                  FITUR {2 + devOffset}
                 </span>
               </div>
 
@@ -245,7 +300,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                 </div>
                 <span className="bg-teal-100 text-teal-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-teal-200 shadow-2xs flex items-center gap-1 leading-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse hidden sm:inline-block" />
-                  FITUR 3
+                  FITUR {3 + devOffset}
                 </span>
               </div>
 
@@ -292,7 +347,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <History className="w-4 h-4 sm:w-5 sm:h-5 text-amber-200" />
                 </div>
                 <span className="bg-amber-100 text-amber-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-300 shadow-2xs leading-none">
-                  FITUR 4
+                  FITUR {4 + devOffset}
                 </span>
               </div>
 
@@ -362,7 +417,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-purple-200" />
                 </div>
                 <span className="bg-purple-100 text-purple-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-purple-200 shadow-2xs leading-none">
-                  FITUR 5
+                  FITUR {5 + devOffset}
                 </span>
               </div>
 
@@ -409,7 +464,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-100" />
                 </div>
                 <span className="bg-orange-100 text-orange-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-orange-200 shadow-2xs leading-none">
-                  FITUR 6
+                  FITUR {6 + devOffset}
                 </span>
               </div>
 
@@ -456,7 +511,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-100" />
                 </div>
                 <span className="bg-emerald-100 text-emerald-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-300 shadow-2xs leading-none">
-                  FITUR 7
+                  FITUR {7 + devOffset}
                 </span>
               </div>
 
@@ -503,7 +558,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-rose-200" />
                 </div>
                 <span className="bg-rose-100 text-rose-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-rose-200 shadow-2xs leading-none">
-                  FITUR 8
+                  FITUR {8 + devOffset}
                 </span>
               </div>
 
@@ -550,7 +605,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-teal-200" />
                 </div>
                 <span className="bg-teal-100 text-teal-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-teal-200 shadow-2xs leading-none">
-                  FITUR 9
+                  FITUR {9 + devOffset}
                 </span>
               </div>
 
@@ -597,7 +652,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <FileDown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <span className="bg-amber-100 text-[#0f2b5c] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-300 shadow-2xs leading-none">
-                  FITUR 10
+                  FITUR {10 + devOffset}
                 </span>
               </div>
 
@@ -642,7 +697,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <span className="bg-emerald-100 text-[#043e2e] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-200 shadow-2xs leading-none">
-                  FITUR 11
+                  FITUR {11 + devOffset}
                 </span>
               </div>
 
@@ -684,7 +739,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <span className="bg-amber-100 text-[#0f2b5c] text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-200 shadow-2xs leading-none">
-                  FITUR 12
+                  FITUR {12 + devOffset}
                 </span>
               </div>
 
@@ -726,7 +781,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-200" />
                 </div>
                 <span className="bg-cyan-100 text-cyan-900 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-cyan-200 shadow-2xs leading-none">
-                  FITUR 13
+                  FITUR {13 + devOffset}
                 </span>
               </div>
 
@@ -768,7 +823,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                   <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
                 </div>
                 <span className="bg-amber-100 text-amber-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-amber-300 shadow-2xs leading-none">
-                  FITUR 14
+                  FITUR {14 + devOffset}
                 </span>
               </div>
 
@@ -811,7 +866,7 @@ export const Section11Admin: React.FC<Section11AdminProps> = ({
                     <Key className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300" />
                   </div>
                   <span className="bg-indigo-100 text-indigo-950 text-[7px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider border border-indigo-300 shadow-2xs leading-none">
-                    FITUR 15
+                    FITUR {15 + devOffset}
                   </span>
                 </div>
 

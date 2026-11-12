@@ -56,6 +56,8 @@ const ProfilePage = lazyWithRetry(() => loadProfilePage().then(m => ({ default: 
 const ContactPage = lazyWithRetry(() => loadContactPage().then(m => ({ default: m.ContactPage })));
 const AccountPage = lazyWithRetry(() => loadAccountPage().then(m => ({ default: m.AccountPage })));
 const AdminManagementPage = lazyWithRetry(() => import('./components/AdminManagementPage').then(m => ({ default: m.AdminManagementPage })));
+const SuperadminManagementPage = lazyWithRetry(() => import('./components/SuperadminManagementPage').then(m => ({ default: m.SuperadminManagementPage })));
+const PillarAccessRestrictedModal = lazyWithRetry(() => import('./components/PillarAccessRestrictedModal').then(m => ({ default: m.PillarAccessRestrictedModal })));
 const AdminMonitoringPage = lazyWithRetry(() => import('./components/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
 const SuperadminSettingsPage = lazyWithRetry(() => import('./components/SuperadminSettingsPage').then(m => ({ default: m.SuperadminSettingsPage })));
 const InboxModal = lazyWithRetry(() => import('./components/InboxModal').then(m => ({ default: m.InboxModal })));
@@ -158,7 +160,13 @@ export default function App() {
     const userId = getStored('session_user_id') || undefined;
     const deviceId = getStored('session_device_id') || undefined;
     const passwordHash = getStored('session_user_password_hash') || undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash };
+    let allowedPillars: string[] | undefined = undefined;
+    try {
+      const rawAllowed = getStored('session_user_allowed_pillars');
+      if (rawAllowed) allowedPillars = JSON.parse(rawAllowed);
+    } catch {}
+    const pinOtoritas = getStored('session_user_pin') || undefined;
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash, allowedPillars, pinOtoritas };
   });
 
   // Pending NFC SmartCard 6-Digit PIN Authority Gate State
@@ -853,6 +861,9 @@ export default function App() {
           break;
         case 'admin_manage':
           import('./components/AdminManagementPage');
+          break;
+        case 'superadmin_manage':
+          import('./components/SuperadminManagementPage');
           break;
         case 'admin_monitor':
           import('./components/AdminMonitoringPage');
@@ -2302,6 +2313,7 @@ export default function App() {
   const [contactSubView, setContactSubView] = useState<'medsos' | 'lokasi'>('medsos');
   const [accountSubView, setAccountSubView] = useState<'profil' | 'ubah_password' | 'ubah_pin'>('profil');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
+  const [restrictedPillarTarget, setRestrictedPillarTarget] = useState<PillarId | null>(null);
   const dashboardScrollYRef = useRef<number>(0);
   const shouldRestoreDashboardScrollRef = useRef<boolean>(false);
 
@@ -2518,7 +2530,16 @@ export default function App() {
 
     // 4. Update state directly for instantaneous 0ms tab navigation
     if (targetTab === 'pillar_detail') {
-      if (options?.pillarId) setActivePillar(options.pillarId);
+      const targetPillar = options?.pillarId;
+      if (targetPillar && session.role === 'superadmin') {
+        const allowed = session.allowedPillars || ['all'];
+        const isAll = allowed.includes('all') || allowed.includes('*');
+        if (!isAll && !allowed.includes(targetPillar)) {
+          setRestrictedPillarTarget(targetPillar);
+          return;
+        }
+      }
+      if (targetPillar) setActivePillar(targetPillar);
     } else {
       setActivePillar(null);
     }
@@ -2556,7 +2577,19 @@ export default function App() {
 
   // Handlers using unified navigateToTab
   const handleSelectPillar = (pillarId: PillarId) => {
+    if (session.role === 'superadmin') {
+      const allowed = session.allowedPillars || ['all'];
+      const isAll = allowed.includes('all') || allowed.includes('*');
+      if (!isAll && !allowed.includes(pillarId)) {
+        setRestrictedPillarTarget(pillarId);
+        return;
+      }
+    }
     navigateToTab('pillar_detail', { pillarId });
+  };
+
+  const handleOpenSuperadminManageConsole = () => {
+    navigateToTab('superadmin_manage');
   };
 
   const handleOpenAccountConsole = () => {
@@ -2757,6 +2790,9 @@ export default function App() {
     const initialPasswordHash = matched?.passwordHash || '';
     const initialLastUpdated = matched?.lastUpdatedTimestamp || loginTimestamp;
 
+    const resolvedAllowedPillars = matched?.allowedPillars || (role === 'superadmin' ? ['all'] : undefined);
+    const resolvedPinOtoritas = matched?.pinOtoritas;
+
     const newSession: UserSession = { 
       role, 
       nama, 
@@ -2770,6 +2806,8 @@ export default function App() {
       deviceId: currentDeviceId,
       passwordHash: initialPasswordHash,
       lastUpdatedTimestamp: initialLastUpdated,
+      allowedPillars: resolvedAllowedPillars,
+      pinOtoritas: resolvedPinOtoritas,
     };
     setSession(newSession);
 
@@ -2788,6 +2826,8 @@ export default function App() {
     ];
     if (resolvedUserId) sessionItems.push(['session_user_id', resolvedUserId]);
     if (initialPasswordHash) sessionItems.push(['session_user_password_hash', initialPasswordHash]);
+    if (resolvedAllowedPillars) sessionItems.push(['session_user_allowed_pillars', JSON.stringify(resolvedAllowedPillars)]);
+    if (resolvedPinOtoritas) sessionItems.push(['session_user_pin', resolvedPinOtoritas]);
 
     sessionItems.forEach(([k, v]) => {
       try { sessionStorage.setItem(k, v); } catch {}
@@ -4946,6 +4986,7 @@ export default function App() {
                   appSettings={appSettings}
                   submissions={submissions}
                   onOpenAccountConsole={handleOpenAccountConsole}
+                  onOpenSuperadminManageConsole={handleOpenSuperadminManageConsole}
                   onOpenMonitoringConsole={handleOpenMonitoringConsole}
                   onOpenActivityLogConsole={handleOpenActivityLogConsole}
                   onOpenMaintenanceConsole={handleOpenMaintenanceConsole}
@@ -5124,6 +5165,17 @@ export default function App() {
             onAddAdminAccount={handleAddAdminAccount}
             onUpdateAdminAccount={handleUpdateAdminAccount}
             onDeleteAdminAccount={handleDeleteAdminAccount}
+            onBackToHome={handleBackToHome}
+          />
+        )}
+
+        {currentTab === 'superadmin_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'developer' || session.isDeveloper === true) && (
+          <SuperadminManagementPage
+            session={session}
+            adminAccounts={adminAccounts}
+            onAddSuperadmin={handleAddAdminAccount}
+            onUpdateSuperadmin={handleUpdateAdminAccount}
+            onDeleteSuperadmin={handleDeleteAdminAccount}
             onBackToHome={handleBackToHome}
           />
         )}
@@ -5594,6 +5646,20 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Modal Terkunci Akses Pilar PSKS (Bagi Superadmin dengan hak akses terbatas yang disetel Developer) */}
+      <React.Suspense fallback={null}>
+        <PillarAccessRestrictedModal
+          isOpen={!!restrictedPillarTarget}
+          pillarId={restrictedPillarTarget}
+          session={session}
+          onClose={() => setRestrictedPillarTarget(null)}
+          onBackToHome={() => {
+            setRestrictedPillarTarget(null);
+            handleBackToHome();
+          }}
+        />
+      </React.Suspense>
 
       {/* Footer is placed strictly inside the beranda container to prevent any footer flash on feature transitions */}
     </div>

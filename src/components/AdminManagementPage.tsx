@@ -130,64 +130,26 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'regional' | 'super'>('all');
   const [newAdminRole, setNewAdminRole] = useState<'admin' | 'superadmin'>('admin');
 
-  // Filter & order accounts according to authorization rules - strictly ADMIN ONLY (no user accounts)
+  // Filter & order accounts: Strictly Regional Kab/Kota Admin Accounts (Akun Superadmin dikelola di Konsol Manajemen Superadmin)
   const { allGrouped, displayedAccounts, counts } = useMemo(() => {
-    // 1. Purge legacy test admin_ilham and strictly exclude user accounts
-    let list = adminAccounts
-      .filter((a) => (a.username || '').toLowerCase() !== 'admin_ilham')
-      .filter((a) => a.role !== 'user');
-
-    // 2. Hide developer AND superadmin accounts if current user is not developer
-    // Superadmin will strictly see and supervise the 27 Regional Kab/Kota admin accounts
-    if (!isCurrentUserDeveloper) {
-      list = list.filter((a) => {
-        const uLower = (a.username || '').toLowerCase().trim();
-        const isDev = a.id === 'adm-dev' || a.role === 'developer' || uLower === 'ilhamfazril';
-        const isSuper = a.id === 'adm-super' || a.role === 'superadmin' || uLower.includes('superadmin');
-        return !isDev && !isSuper;
-      });
-    }
-
-    // 3. Separate top authority accounts (Dev & Superadmin) and regional accounts
-    const devAccounts: typeof list = [];
-    const superAccounts: typeof list = [];
-    const regionalAccounts: typeof list = [];
-
-    list.forEach((acc) => {
-      const uLower = (acc.username || '').toLowerCase().trim();
-      const isDev = acc.id === 'adm-dev' || acc.role === 'developer' || uLower === 'ilhamfazril';
-      const isSuper = acc.id === 'adm-super' || acc.role === 'superadmin' || uLower.includes('superadmin');
-
-      if (isDev) {
-        devAccounts.push(acc);
-      } else if (isSuper) {
-        superAccounts.push(acc);
-      } else {
-        regionalAccounts.push(acc);
-      }
+    const regionalAccounts = adminAccounts.filter((a) => {
+      const uLower = (a.username || '').toLowerCase().trim();
+      const isDev = a.id === 'adm-dev' || a.role === 'developer' || uLower === 'ilhamfazril' || uLower === 'admin_ilham';
+      const isSuper = a.id === 'adm-super' || a.role === 'superadmin' || uLower.includes('superadmin');
+      const isUser = a.role === 'user';
+      return !isDev && !isSuper && !isUser;
     });
 
-    const all = isCurrentUserDeveloper
-      ? [...devAccounts, ...superAccounts, ...regionalAccounts]
-      : regionalAccounts;
-
-    let filtered = all;
-    if (accountRoleFilter === 'regional') {
-      filtered = regionalAccounts;
-    } else if (accountRoleFilter === 'super') {
-      filtered = isCurrentUserDeveloper ? [...devAccounts, ...superAccounts] : regionalAccounts;
-    }
-
     return {
-      allGrouped: all,
-      displayedAccounts: filtered,
+      allGrouped: regionalAccounts,
+      displayedAccounts: regionalAccounts,
       counts: {
-        all: all.length,
+        all: regionalAccounts.length,
         regional: regionalAccounts.length,
-        super: devAccounts.length + superAccounts.length,
+        super: 0,
       },
     };
-  }, [adminAccounts, isCurrentUserDeveloper, accountRoleFilter]);
+  }, [adminAccounts]);
 
   // Superadmin Management State
   const [newAdminUser, setNewAdminUser] = useState('');
@@ -597,51 +559,15 @@ export const AdminManagementPage: React.FC<AdminManagementPageProps> = ({
               </div>
             </div>
 
-            {/* Role Filter Tabs */}
-            {isCurrentUserDeveloper ? (
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="text-xs font-bold text-slate-500 mr-1">Kategori:</span>
-                <button
-                  type="button"
-                  onClick={() => setAccountRoleFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer transition-all ${
-                    accountRoleFilter === 'all'
-                      ? 'bg-[#043e2e] text-[#f3e5ab] shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Semua Akun ({counts.all})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccountRoleFilter('regional')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer transition-all ${
-                    accountRoleFilter === 'regional'
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  🏢 Admin 27 Kab/Kota ({counts.regional})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccountRoleFilter('super')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold cursor-pointer transition-all ${
-                    accountRoleFilter === 'super'
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  👑 Superadmin & Dev ({counts.super})
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold bg-[#043e2e] text-[#f3e5ab] shadow-sm">
-                  🏢 Data Kredensial 27 Admin Kabupaten / Kota Jawa Barat ({counts.regional})
-                </span>
-              </div>
-            )}
+            {/* Regional Admin Accounts Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold bg-[#043e2e] text-[#f3e5ab] shadow-sm">
+                🏢 Data Kredensial 27 Admin Kabupaten / Kota Jawa Barat ({counts.regional})
+              </span>
+              <span className="text-[11px] text-slate-500 font-semibold">
+                *Akun Superadmin dikelola khusus di Fitur Manajemen Superadmin
+              </span>
+            </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-200 mt-2">
               <table className="w-full text-left border-collapse text-xs sm:text-sm">

@@ -18,6 +18,9 @@ export interface UserSession {
   passwordHash?: string;
   passwordPolos?: string;
   lastUpdatedTimestamp?: number;
+  allowedPillars?: string[];
+  pinOtoritas?: string;
+  pinEncrypted?: string;
 }
 
 export interface SocialLinks {
@@ -229,6 +232,9 @@ export interface AdminAccount {
   lastEditedBy?: string;
   lastEditedByRole?: string;
   isSelfUpdate?: boolean;
+  allowedPillars?: string[];
+  pinOtoritas?: string;
+  pinEncrypted?: string;
 }
 
 export interface ResetPasswordTicket {

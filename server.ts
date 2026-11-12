@@ -306,6 +306,8 @@ async function startServer() {
     statusActive: string;
     issuedAt: number;
     expiresAt: number;
+    allowedPillars?: string[];
+    pinOtoritas?: string;
   }
 
   // Server-Side Session Revocation Blacklist (Mencegah token lama tetap dapat dipakai setelah logout)
@@ -549,6 +551,8 @@ async function startServer() {
           namaAdmin: verified.namaAdmin,
           wilayahTugas: verified.wilayahTugas,
           statusActive: verified.statusActive,
+          allowedPillars: verified.allowedPillars,
+          pinOtoritas: verified.pinOtoritas,
           sessionToken,
         },
       });
@@ -845,6 +849,9 @@ async function startServer() {
               nik: data.nik || restData.nik || '',
               nikHash: data.nikHash || restData.nikHash || '',
               noWhatsapp: data.noWhatsapp || restData.noWhatsapp || '',
+              allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : (Array.isArray(restData.allowedPillars) ? restData.allowedPillars : ['all']),
+              pinOtoritas: data.pinOtoritas || restData.pinOtoritas || '',
+              pinEncrypted: data.pinEncrypted || restData.pinEncrypted || '',
             };
             break;
           }
@@ -882,6 +889,9 @@ async function startServer() {
                 isFrozen: data.isFrozen === true,
                 statusAkun: data.statusAkun || 'AKTIF',
                 resetTicket: data.resetTicket || null,
+                allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : ['all'],
+                pinOtoritas: data.pinOtoritas || '',
+                pinEncrypted: data.pinEncrypted || '',
               };
               break;
             }
@@ -908,6 +918,9 @@ async function startServer() {
                 isFrozen: data.isFrozen === true,
                 statusAkun: data.statusAkun || 'AKTIF',
                 resetTicket: data.resetTicket || null,
+                allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : ['all'],
+                pinOtoritas: data.pinOtoritas || '',
+                pinEncrypted: data.pinEncrypted || '',
               };
               break;
             }
@@ -1008,6 +1021,10 @@ async function startServer() {
           : matchedAccount.wilayahTugas || 'Jawa Barat';
 
       // 5. Generate cryptographically signed session token (HMAC-SHA256)
+      const finalAllowedPillars = Array.isArray(matchedAccount.allowedPillars)
+        ? matchedAccount.allowedPillars
+        : (finalRole === 'superadmin' ? ['all'] : undefined);
+
       const sessionToken = signSessionToken({
         id: matchedAccount.id,
         username: matchedAccount.username,
@@ -1015,6 +1032,8 @@ async function startServer() {
         namaAdmin: matchedAccount.namaAdmin,
         wilayahTugas: finalWilayah,
         statusActive: matchedAccount.statusActive,
+        allowedPillars: finalAllowedPillars,
+        pinOtoritas: matchedAccount.pinOtoritas,
       });
 
       // 6. Return strictly sanitized payload (NEVER return passwordHash or passwordPolos)
@@ -1027,6 +1046,8 @@ async function startServer() {
           role: finalRole,
           wilayahTugas: finalWilayah,
           statusActive: matchedAccount.statusActive,
+          allowedPillars: finalAllowedPillars,
+          pinOtoritas: matchedAccount.pinOtoritas,
           sessionToken,
         },
         message: `Otentikasi berhasil! Selamat datang, ${matchedAccount.namaAdmin}.`,
