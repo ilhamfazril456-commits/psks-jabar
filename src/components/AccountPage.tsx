@@ -81,7 +81,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   const [captchaInput, setCaptchaInput] = useState('');
   const [currentCaptchaCode, setCurrentCaptchaCode] = useState('');
   const [captchaError, setCaptchaError] = useState(false);
-  const [modalStep, setModalStep] = useState<'main' | 'user_region' | 'dinas_method_choice' | 'dinas_login'>('main');
+  const [modalStep, setModalStep] = useState<'dinas_method_choice' | 'dinas_login'>('dinas_method_choice');
   
   // Keep selectedRegionInput in sync with active session.wilayah
   useEffect(() => {
@@ -233,7 +233,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   useEffect(() => {
     if (openLoginOnMount) {
       setIsLoginModalOpen(true);
-      setModalStep('main');
+      setModalStep('dinas_method_choice');
     }
   }, [openLoginOnMount]);
 
@@ -739,11 +739,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return `${menit} menit ${detik} detik`;
     }
     return `${detik} detik`;
-  };
-
-  const handleGuestLogin = () => {
-    onLogin('user', 'Tamu Publik', selectedRegionInput || 'KOTA BANDUNG');
-    setIsLoginModalOpen(false);
   };
 
   const handleFormLogin = async (e: React.FormEvent) => {
@@ -1764,80 +1759,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                   </div>
                 )}
 
-                {/* STEP 1: Main View - Only 2 Clean Choice Cards */}
-                {modalStep === 'main' && (
-                  <div className="space-y-3.5 py-1">
-                    <p className="text-center text-xs font-semibold text-slate-600 mb-3">
-                      Pilih metode masuk untuk mengakses Layanan & Pusat Akun PSKS Jabar:
-                    </p>
-
-                    {/* Choice 1: Lanjutkan Sebagai User */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErrorMessage('');
-                        setModalStep('user_region');
-                      }}
-                      className="w-full text-left p-4.5 rounded-2xl border-2 border-emerald-300 hover:border-emerald-600 bg-emerald-50/70 hover:bg-emerald-100/70 transition-all shadow-sm group cursor-pointer flex items-center gap-4"
-                    >
-                      <div className="w-12 h-12 rounded-2xl bg-[#043e2e] text-amber-300 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                        <User className="w-6 h-6 text-amber-300" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-black text-sm text-[#043e2e] m-0">
-                            1. Lanjutkan sebagai User
-                          </h3>
-                          <span className="text-[10px] font-extrabold bg-emerald-200 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full">
-                            Publik
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 mt-1 leading-snug">
-                          Akses cepat membaca data publik wilayah tanpa memerlukan kata sandi.
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Choice 2: Login Ke Akun Dinas */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErrorMessage('');
-                        setModalStep('dinas_method_choice');
-                      }}
-                      className="w-full text-left p-4.5 rounded-2xl border-2 border-[#d4af37] hover:border-amber-600 bg-amber-50/70 hover:bg-amber-100/70 transition-all shadow-sm group cursor-pointer flex items-center gap-4"
-                    >
-                      <div className="w-12 h-12 rounded-2xl bg-[#043e2e] border border-[#d4af37]/60 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                        <Lock className="w-6 h-6 text-[#d4af37]" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-black text-sm text-[#043e2e] m-0">
-                            2. Login ke Akun Dinas
-                          </h3>
-                          <span className="text-[10px] font-extrabold bg-[#d4af37] text-slate-950 px-2.5 py-0.5 rounded-full">
-                            Resmi
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 mt-1 leading-snug">
-                          Otorisasi khusus Admin Wilayah, Superadmin & Developer (Via Akun / Smart Card QR).
-                        </p>
-                      </div>
-                    </button>
-
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsLoginModalOpen(false)}
-                        className="w-full py-3 rounded-2xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer border border-slate-300"
-                      >
-                        Batal
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 2: DINAS METHOD CHOICE */}
+                {/* STEP 1: REGISTERED CREDENTIALS & SMART CARD METHOD CHOICE */}
                 {modalStep === 'dinas_method_choice' && (
                   <div className="space-y-4 animate-fadeIn">
                     <div className="text-center border-b border-slate-200 pb-3">
@@ -1950,66 +1872,16 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => setModalStep('main')}
+                        onClick={() => setIsLoginModalOpen(false)}
                         className="w-full py-3 rounded-2xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer flex items-center justify-center gap-2 border border-slate-300"
                       >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Kembali ke Pilihan Akses Utama</span>
+                        <span>Batal</span>
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* STEP 2A: User Region Selection */}
-                {modalStep === 'user_region' && (
-                  <div className="space-y-4 animate-fadeIn">
-                    <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 text-center">
-                      <h3 className="font-bold text-xs text-[#043e2e] flex items-center justify-center gap-2">
-                        <User className="w-4 h-4 text-[#d4af37]" />
-                        <span>Mode Tamu Pengunjung Publik</span>
-                      </h3>
-                      <p className="text-xs text-slate-600 mt-1">
-                        Pilih Kabupaten / Kota tugas untuk melanjutkan sebagai User Pengunjung:
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Pilih Wilayah Kabupaten / Kota
-                      </label>
-                      <select
-                        value={selectedRegionInput}
-                        onChange={(e) => setSelectedRegionInput(e.target.value)}
-                        className="w-full bg-slate-50 border-2 border-slate-300 rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                      >
-                        {KAB_KOTA_ONLY.map((k) => (
-                          <option key={k} value={k}>
-                            {k}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setModalStep('main')}
-                        className="flex-1 py-3 rounded-2xl text-xs font-extrabold bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 transition-all cursor-pointer"
-                      >
-                        ← Kembali
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGuestLogin}
-                        className="flex-[1.5] py-3 rounded-2xl text-xs font-extrabold bg-[#043e2e] hover:bg-[#065e44] text-white shadow-lg transition-all cursor-pointer"
-                      >
-                        Konfirmasi & Masuk User →
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 2B: Dinas Login Form */}
+                {/* STEP 2: Dinas Login Form */}
                 {modalStep === 'dinas_login' && (
                   <form onSubmit={handleFormLogin} className="space-y-4 animate-fadeIn">
                     <div>

@@ -59,7 +59,7 @@ interface SmartGateModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetPillarTitle?: string;
-  onConfirmGuestRegion: (region: string) => void;
+  onConfirmGuestRegion?: (region: string) => void;
   onPerformLogin: (
     role: 'user' | 'admin' | 'superadmin' | 'developer',
     nama: string,
@@ -95,10 +95,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   // 'login_choice' -> Jalur 2 (Pilihan Metode Masuk: Manual / Smart Card)
   // 'login_manual' -> Jalur 2: Pilihan A (Login Manual Form)
   // 'login_smart_card' -> Jalur 2: Pilihan B (Layar Transisi & Animasi Smart Card)
-  // 'guest' -> Jalur 3 (Akses Tamu Publik & Pilih Wilayah)
   // 'forgot_password' -> Formulir Lupa Kata Sandi (Pemulihan Akun via NIK & WA)
   // 'forgot_password_status' -> Pantau Status Tiket Pemulihan Akun Realtime
-  const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'guest' | 'forgot_password' | 'forgot_password_status'>('main');
+  const [view, setView] = useState<'main' | 'register' | 'register_status' | 'login_choice' | 'login_manual' | 'login_smart_card' | 'forgot_password' | 'forgot_password_status'>('main');
 
   // Khusus Tampilan Layar HP: Lapisan Pertama (Intro Selamat Datang & Tombol MULAI)
   // Ketika tombol MULAI ditekan, berlanjut ke Lapisan Kedua dengan animasi Iris / Center Circle Reveal (Opsi B)
@@ -115,7 +114,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
   };
 
   // Wilayah selection states - defaults to empty string so user consciously selects
-  const [selectedGuestRegion, setSelectedGuestRegion] = useState<string>('');
   const [selectedRegisterRegion, setSelectedRegisterRegion] = useState<string>('');
 
   // Registration Form States
@@ -441,7 +439,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       setRegConfirmPassword('');
       setRegSuccess(false);
       setRegisteredUserData(null);
-      setSelectedGuestRegion('');
       setSelectedRegisterRegion('');
     }
   }, [isOpen]);
@@ -480,30 +477,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       );
     });
     return matchKey ? map[matchKey] === true : false;
-  };
-
-  // --- JALUR 3: AKSES TAMU SUBMIT ---
-  const handleGuestSubmit = () => {
-    if (!selectedGuestRegion || selectedGuestRegion === '') {
-      setErrorMessage('⚠️ Silakan pilih salah satu Wilayah Kabupaten / Kota terlebih dahulu untuk melanjutkan!');
-      return;
-    }
-
-    // Pengecekan Maintenance untuk Akses Tamu Publik
-    if (appSettings) {
-      const isGlobalUserMaintenance = !!appSettings.maintenanceUser;
-      const isWilayahMaintenance = isWilayahMatch(selectedGuestRegion, appSettings.maintenanceUserWilayah);
-      if (isGlobalUserMaintenance || isWilayahMaintenance) {
-        const msg = appSettings.maintenanceMsgUser || 'Mohon maaf, sistem informasi portal publik sedang dalam tahap pemeliharaan rutin (Maintenance).';
-        setErrorMessage(`⚠️ PEMELIHARAAN SISTEM (MAINTENANCE AKTIF):\n\n${msg}\n\nAkses Tamu Publik untuk wilayah "${selectedGuestRegion}" ditutup sementara waktu demi peningkatan layanan.`);
-        return;
-      }
-    }
-
-    setErrorMessage('');
-    onConfirmGuestRegion(selectedGuestRegion);
-    setView('main');
-    onClose();
   };
 
   // --- JALUR 1: REGISTRASI AKUN USER ---
@@ -1285,7 +1258,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   {view === 'login_choice' && 'Pilih Metode Masuk'}
                   {view === 'login_manual' && 'Masuk Akun'}
                   {view === 'login_smart_card' && 'Smart Card Login'}
-                  {view === 'guest' && 'Akses Tamu Publik'}
                   {view === 'forgot_password' && 'Lupa Kata Sandi'}
                   {view === 'forgot_password_status' && 'Status Pemulihan Akun'}
                 </h3>
@@ -1295,7 +1267,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                   {view === 'login_choice' && 'Pilih metode otentikasi masuk ke akun Anda'}
                   {view === 'login_manual' && 'Masukkan kredensial akun terdaftar Anda'}
                   {view === 'login_smart_card' && 'Otorisasi instan menggunakan Smart Card'}
-                  {view === 'guest' && 'Pilih wilayah Jawa Barat untuk akses mode tamu'}
                   {view === 'forgot_password' && 'Verifikasi NIK dan WhatsApp resmi untuk reset sandi'}
                   {view === 'forgot_password_status' && 'Pantau persetujuan tiket reset sandi secara realtime'}
                 </p>
@@ -1376,43 +1347,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                         Login
                       </span>
                     </button>
-
-                    {/* PEMISAH ELEGAN DENGAN TEKS 'ATAU' */}
-                    <div className="relative flex items-center justify-center py-0.5 sm:py-0.5 md:py-1">
-                      <div className="flex-grow border-t border-slate-300"></div>
-                      <div className="flex-shrink mx-2 sm:mx-3 flex items-center gap-1 bg-slate-200 text-slate-800 font-black text-[8px] sm:text-[8.5px] md:text-[10px] uppercase tracking-widest px-2.5 py-0.2 sm:px-3 sm:py-0.5 rounded-full border border-slate-300 shadow-2xs">
-                        <span>ATAU</span>
-                      </div>
-                      <div className="flex-grow border-t border-slate-300"></div>
-                    </div>
-
-                    {/* JALUR 3: TOMBOL LANJUTKAN SEBAGAI TAMU */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErrorMessage('');
-                        setView('guest');
-                      }}
-                      className="relative w-full group text-left px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2.5 min-h-[58px] sm:min-h-[64px] md:min-h-[72px] lg:min-h-[78px] rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-amber-50/70 border-2 border-dashed border-slate-300 hover:border-amber-400 transition-all duration-200 shadow-xs cursor-pointer flex items-center gap-2 sm:gap-2.5 md:gap-3 hover:scale-[1.01] active:scale-[0.99]"
-                    >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-slate-200 group-hover:bg-amber-200 text-slate-700 group-hover:text-[#0f2b5c] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                        <Globe2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0 pr-16 sm:pr-20 md:pr-24 flex flex-col justify-center">
-                        <span className="text-xs sm:text-xs md:text-sm font-black text-slate-800 group-hover:text-[#0f2b5c] truncate block">
-                          Lanjutkan Sebagai Tamu
-                        </span>
-                        <p className="text-[8.5px] sm:text-[9.5px] md:text-[10.5px] text-slate-700 font-medium leading-tight mt-0.5 line-clamp-2">
-                          Akses publik instan untuk membaca grafik & data PSKS tanpa password.
-                        </p>
-                      </div>
-                      {/* Pinned Corner Badge */}
-                      <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 text-[7px] sm:text-[7.5px] md:text-[8px] font-black bg-amber-200/90 text-[#0f2b5c] px-1.5 sm:px-2 py-0.5 rounded-full uppercase border border-amber-300 whitespace-nowrap shadow-xs tracking-normal">
-                        Tanpa Login
-                      </span>
-                    </button>
-
-
                   </div>
                 )}
 
@@ -2776,98 +2710,6 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                       >
                         <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
                         <span>Kembali ke Pilihan Masuk</span>
-                      </button>
-                    </div>
-
-                  </div>
-                )}
-
-                {/* ========================================================================= */}
-                {/* JALUR 3: TAMPILAN AKSES TAMU (PILIH 27 WILAYAH) */}
-                {/* ========================================================================= */}
-                {view === 'guest' && (
-                  <div
-                    key="view-guest"
-                    className="space-y-2.5 my-auto animate-scaleUp"
-                  >
-                    
-                    <div className="text-center">
-                      <div className="inline-flex items-center gap-1 bg-amber-100 border border-amber-300 text-[#0f2b5c] text-[9.5px] font-black px-2.5 py-0.5 rounded-full mb-1">
-                        <Globe2 className="w-3 h-3 text-[#0f2b5c]" />
-                        <span>AKSES PUBLIK TANPA LOGIN</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-semibold">
-                        Pilih Kabupaten/Kota di Jawa Barat untuk membaca data:
-                      </p>
-                    </div>
-
-                    {/* Alert if not selected */}
-                    {errorMessage && (
-                      <div className="p-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-[10.5px] font-bold flex items-center gap-1.5 shadow-xs">
-                        <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                        <span>{errorMessage}</span>
-                      </div>
-                    )}
-
-                    {/* Dropdown 27 Wilayah Jawa Barat */}
-                    <div>
-                      <label className="block text-[10px] font-black text-[#0f2b5c] uppercase mb-0.5 flex items-center justify-between">
-                        <span>Pilih Wilayah Kabupaten / Kota</span>
-                        <span className="text-[8.5px] text-blue-800 font-black">27 Wilayah Jabar</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedGuestRegion}
-                          onChange={(e) => {
-                            setSelectedGuestRegion(e.target.value);
-                            setErrorMessage('');
-                          }}
-                          className={`w-full bg-blue-50/60 focus:bg-white border rounded-full px-3 py-2 text-xs font-black focus:outline-none transition-all cursor-pointer appearance-none shadow-xs ${
-                            selectedGuestRegion === ''
-                              ? 'border-amber-500 text-slate-700'
-                              : 'border-blue-600 text-[#0f2b5c]'
-                          }`}
-                        >
-                          <option value="" disabled>
-                            -- Silakan Pilih Wilayah Kabupaten / Kota --
-                          </option>
-                          {KAB_KOTA_ONLY.map((kota) => (
-                            <option key={kota} value={kota}>
-                              {kota}
-                            </option>
-                          ))}
-                        </select>
-                        <Globe2 className="w-3.5 h-3.5 text-blue-700 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      {selectedGuestRegion !== '' && (
-                        <div className="mt-1 p-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-[10.5px] font-bold flex items-center gap-1.5">
-                          <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
-                          <span>Wilayah Terpilih: <strong>{selectedGuestRegion}</strong></span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="pt-0.5 space-y-1">
-                      <button
-                        type="button"
-                        onClick={handleGuestSubmit}
-                        className="w-full py-2 bg-[#0f2b5c] hover:bg-[#143b7d] text-white font-black rounded-full text-xs shadow-sm shadow-blue-950/20 transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#d4af37]" />
-                        <span>Masuk Sebagai Tamu</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setErrorMessage('');
-                          setView('main');
-                        }}
-                        className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-full text-[10.5px] transition-colors cursor-pointer flex items-center justify-center gap-1"
-                      >
-                        <ArrowLeft className="w-3 h-3" />
-                        <span>Kembali ke Menu Utama</span>
                       </button>
                     </div>
 
