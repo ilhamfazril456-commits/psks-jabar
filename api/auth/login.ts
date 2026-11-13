@@ -1,75 +1,16 @@
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
-import { createClient } from '@supabase/supabase-js';
+import {
+  DEFAULT_ROOT_ACCOUNTS,
+  comparePassword,
+  decryptSensitiveData,
+  getClientIp,
+  getServerFirestore,
+  handleCors,
+  parseBody,
+  sendJson,
+  signSessionToken,
+  supabase,
+} from '../_authHelper';
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  'https://zwjbjmafxixudhlvaxef.supabase.co';
-
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_PUBLISHABLE_KEY ||
-  'sb_publishable_-Q49NtwnUsY9oF3jpRXEmw_J82UN4Uy';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false },
-});
-
-const SESSION_SECRET =
-  process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
-
-// Universal JSON Response Helper for Vercel Serverless / Node.js HTTP
-function sendJson(res: any, statusCode: number, data: any) {
-  if (typeof res.status === 'function') {
-    return res.status(statusCode).json(data);
-  }
-  res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(data));
-}
-
-// Inlined Diskominfo-compliant restricted CORS
-const ALLOWED_ORIGIN_PATTERNS = [
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  /^https:\/\/.*\.vercel\.app$/,
-  /^https:\/\/.*\.run\.app$/,
-  /^https:\/\/ai\.studio$/,
-  /^https:\/\/.*\.jabarprov\.go\.id$/,
-  /^https:\/\/.*\.dinsos\.jabarprov\.go\.id$/,
-];
-
-function handleCors(req: any, res: any): boolean {
-  const origin = req.headers?.origin || req.headers?.referer || '';
-  let matchedOrigin = '';
-  if (origin) {
-    try {
-      const url = origin.startsWith('http') ? new URL(origin) : null;
-      const testOrigin = url ? url.origin : origin;
-      if (ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(testOrigin))) {
-        matchedOrigin = testOrigin;
-      }
-    } catch {}
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', matchedOrigin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return true;
-  }
-  return false;
-}
-
-// IP-based Rate Limiter (Max 15 attempts per minute to prevent brute-force)
 const loginAttempts = new Map<string, { count: number; firstTime: number }>();
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -79,50 +20,18 @@ function checkRateLimit(ip: string): boolean {
     return true;
   }
   entry.count++;
-  return entry.count <= 15;
-}
-
-function signSessionToken(payload: {
-  id: string;
-  username: string;
-  role: string;
-  namaAdmin: string;
-  wilayahTugas: string;
-  statusActive: string;
-}): string {
-  const issuedAt = Date.now();
-  const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000;
-  const fullPayload = { ...payload, issuedAt, expiresAt };
-  const data = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
-  return `ses_${data}.${signature}`;
-}
-
-function comparePassword(plainText: string, storedHash?: string): boolean {
-  if (!plainText || !storedHash) return false;
-  const isBcrypt = /^\$2[aby]\$\d{2}\$/.test(storedHash);
-  if (isBcrypt) {
-    try {
-      return bcrypt.compareSync(plainText, storedHash);
-    } catch {
-      return false;
-    }
-  }
-  return false;
+  return entry.count <= 60;
 }
 
 export default async function handler(req: any, res: any) {
   try {
-    // 1. Handle CORS Preflight
-    if (handleCors(req, res)) return;
+    if (handleCors(req, res, 'GET, POST, OPTIONS')) return;
 
     if (req.method !== 'POST') {
       return sendJson(res, 405, { valid: false, message: 'Method Not Allowed' });
     }
 
-    const forwarded = req.headers?.['x-forwarded-for'];
-    const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress || '127.0.0.1';
-
+    const clientIp = getClientIp(req);
     if (!checkRateLimit(clientIp)) {
       return sendJson(res, 429, {
         valid: false,
@@ -130,15 +39,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 2. Safe Body Parsing
-    let body = req.body;
-    if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body);
-      } catch {
-        return sendJson(res, 400, { valid: false, message: 'Format data JSON tidak valid.' });
-      }
-    }
+    const body = await parseBody(req);
     const { username, password } = body || {};
 
     if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
@@ -148,22 +49,38 @@ export default async function handler(req: any, res: any) {
     const uClean = username.trim().toLowerCase();
     const pClean = password.trim();
 
-    // 3. Query Supabase across segregated tables
-    let matchedAccount: any = null;
-    const sbTablesToCheck = ['superadmin_accounts', 'dev_accounts', 'admin_accounts', 'user_accounts'];
+    const loginCandidates: Array<any> = [];
+    const sbTablesToCheck = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
+
     for (const t of sbTablesToCheck) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from(t)
           .select('*')
-          .or(`username.ilike.${uClean},id.eq.${uClean}`)
+          .ilike('username', uClean)
+          .limit(1)
           .maybeSingle();
+
+        if (error || !data) {
+          const byId = await supabase.from(t).select('*').eq('id', uClean).limit(1).maybeSingle();
+          if (!byId.error && byId.data) {
+            data = byId.data;
+            error = null;
+          }
+        }
 
         if (!error && data) {
           const restData = data.data && typeof data.data === 'object' ? data.data : {};
-          matchedAccount = {
+          const pinEnc = data.pinEncrypted || restData.pinEncrypted || '';
+          const decPin = pinEnc ? decryptSensitiveData(String(pinEnc)) : '';
+          const resolvedPin = (/^\d{6}$/.test(decPin) ? decPin : '') || data.pinOtoritas || restData.pinOtoritas || '';
+          const passHash = data.passwordHash || restData.passwordHash || '';
+          if (!passHash && !pinEnc && !data.username && !restData.username) continue;
+          loginCandidates.push({
             id: data.id,
             sbTableSource: t,
+            sourcePriority: t === 'admin_accounts' ? 1 : 2,
+            lastUpdatedTimestamp: Number(data.lastUpdatedTimestamp || restData.lastUpdatedTimestamp || 0),
             username: data.username || restData.username || data.id,
             namaAdmin: data.namaAdmin || restData.namaAdmin || data.username,
             role:
@@ -178,42 +95,117 @@ export default async function handler(req: any, res: any) {
                 : 'admin'),
             statusActive: data.statusActive || restData.statusActive || 'SAH_TERDAFTAR',
             wilayahTugas: data.wilayahTugas || restData.wilayahTugas || '',
-            passwordHash: data.passwordHash || restData.passwordHash || '',
-            isFrozen: data.isFrozen === true || restData.isFrozen === true,
-            statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
-            statusVerval: data.statusVerval || restData.statusVerval || '',
+            passwordHash: passHash,
+            statusVerval: data.statusVerval || restData.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
             alasanPenolakan: data.alasanPenolakan || restData.alasanPenolakan || '',
             noRegistrasi: data.noRegistrasi || restData.noRegistrasi || '',
+            isFrozen: data.isFrozen === true || restData.isFrozen === true,
+            statusAkun: data.statusAkun || restData.statusAkun || 'AKTIF',
             resetTicket: data.resetTicket || restData.resetTicket || null,
-          };
-          break;
+            allowedPillars: Array.isArray(data.allowedPillars)
+              ? data.allowedPillars
+              : Array.isArray(restData.allowedPillars)
+              ? restData.allowedPillars
+              : ['all'],
+            allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan)
+              ? data.allowedKepahlawanan
+              : Array.isArray(restData.allowedKepahlawanan)
+              ? restData.allowedKepahlawanan
+              : ['all'],
+            pinOtoritas: resolvedPin,
+            pinEncrypted: pinEnc,
+          });
         }
       } catch {}
     }
 
-    // 3b. Emergency Fallback for Superadmin if Supabase table is cold/unreachable
-    if (!matchedAccount && (uClean === 'superadmin jabar' || uClean === 'superadmin' || uClean === 'adm-super')) {
-      matchedAccount = {
-        id: 'adm-super',
-        username: 'superadmin jabar',
-        namaAdmin: 'Super Admin Dinsos Jabar',
-        role: 'superadmin',
-        wilayahTugas: 'PROVINSI JAWA BARAT',
-        statusActive: 'SAH_TERDAFTAR',
-        passwordHash: '$2b$10$B7ARJFwaXeU8CWUqGfu2ye5nsB3xNCxDsWFIz//n3aoanD4uNGr1u', // Super12345jabar
-        statusAkun: 'AKTIF',
-      };
-    } else if (!matchedAccount && (uClean === 'ilhamfazril' || uClean === 'adm-dev')) {
-      matchedAccount = {
-        id: 'adm-dev',
-        username: 'ilhamfazril',
-        namaAdmin: 'Developer System',
-        role: 'developer',
-        wilayahTugas: 'Pusat Developer Jabar',
-        statusActive: 'SAH_TERDAFTAR',
-        passwordHash: '$2b$10$t30kcIcKMvSLvy.UjpqNkec5j52dqLCXX7F6hffvdYyWe7cbYeKji',
-        statusAkun: 'AKTIF',
-      };
+    try {
+      const { firestore, db } = await getServerFirestore();
+      for (const colName of sbTablesToCheck) {
+        let foundInCol = false;
+        const mapFsCandidate = (docId: string, data: any) => {
+          const pinEnc = data.pinEncrypted || '';
+          const decPin = pinEnc ? decryptSensitiveData(String(pinEnc)) : '';
+          const resolvedPin = (/^\d{6}$/.test(decPin) ? decPin : '') || data.pinOtoritas || '';
+          const passHash = data.passwordHash || '';
+          if (!passHash && !pinEnc && !data.username) return;
+          foundInCol = true;
+          loginCandidates.push({
+            id: docId,
+            collectionSource: colName,
+            sourcePriority: colName === 'admin_accounts' ? 1 : 2,
+            lastUpdatedTimestamp: Number(data.lastUpdatedTimestamp || 0),
+            username: data.username || docId,
+            namaAdmin: data.namaAdmin || data.username || docId,
+            role:
+              data.role ||
+              (colName === 'dev_accounts'
+                ? 'developer'
+                : colName === 'superadmin_accounts'
+                ? 'superadmin'
+                : colName === 'user_accounts'
+                ? 'user'
+                : 'admin'),
+            statusActive: data.statusActive || 'SAH_TERDAFTAR',
+            wilayahTugas: data.wilayahTugas || '',
+            passwordHash: passHash,
+            statusVerval: data.statusVerval || (data.statusActive === 'PENDING_VERIFIKASI' ? 'MENUNGGU_VERIFIKASI' : ''),
+            alasanPenolakan: data.alasanPenolakan || '',
+            noRegistrasi: data.noRegistrasi || '',
+            isFrozen: data.isFrozen === true,
+            statusAkun: data.statusAkun || 'AKTIF',
+            resetTicket: data.resetTicket || null,
+            allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : ['all'],
+            allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan) ? data.allowedKepahlawanan : ['all'],
+            pinOtoritas: resolvedPin,
+            pinEncrypted: pinEnc,
+          });
+        };
+
+        const directDoc = await firestore.getDoc(firestore.doc(db, colName, uClean));
+        if (directDoc.exists()) mapFsCandidate(directDoc.id, directDoc.data());
+
+        const q = firestore.query(firestore.collection(db, colName), firestore.where('username', '==', uClean));
+        const snap = await firestore.getDocs(q);
+        if (!snap.empty) {
+          const d = snap.docs[0];
+          mapFsCandidate(d.id, d.data());
+        }
+
+        if (!foundInCol && (colName === 'dev_accounts' || colName === 'superadmin_accounts')) {
+          const allSnap = await firestore.getDocs(firestore.collection(db, colName));
+          allSnap.forEach((docSnap) => {
+            const d = docSnap.data();
+            if (String(d.username || '').toLowerCase().trim() === uClean || docSnap.id.toLowerCase() === uClean) {
+              mapFsCandidate(docSnap.id, d);
+            }
+          });
+        }
+      }
+    } catch {}
+
+    loginCandidates.sort((a, b) => {
+      if ((b.lastUpdatedTimestamp || 0) !== (a.lastUpdatedTimestamp || 0)) {
+        return (b.lastUpdatedTimestamp || 0) - (a.lastUpdatedTimestamp || 0);
+      }
+      return (b.sourcePriority || 0) - (a.sourcePriority || 0);
+    });
+
+    let matchedAccount: any = loginCandidates[0] || null;
+
+    if (!matchedAccount) {
+      const def = DEFAULT_ROOT_ACCOUNTS.find(
+        (a) => a.username.toLowerCase().trim() === uClean || a.id.toLowerCase().trim() === uClean
+      );
+      if (def) {
+        matchedAccount = {
+          ...def,
+          statusActive: 'SAH_TERDAFTAR',
+          statusAkun: 'AKTIF',
+          allowedPillars: def.role === 'superadmin' ? ['all'] : undefined,
+          allowedKepahlawanan: def.role === 'superadmin' ? ['all'] : undefined,
+        };
+      }
     }
 
     if (!matchedAccount) {
@@ -231,13 +223,9 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 4. Validate Password against Bcrypt cryptographic hash
     const tempResetPass =
-      matchedAccount.resetTicket?.status === 'DISETUJUI'
-        ? matchedAccount.resetTicket?.temporaryPassword
-        : '';
+      matchedAccount.resetTicket?.status === 'DISETUJUI' ? matchedAccount.resetTicket?.temporaryPassword : '';
     let isValid = false;
-
     if (tempResetPass && pClean === tempResetPass) {
       isValid = true;
     } else if (matchedAccount.passwordHash) {
@@ -251,11 +239,9 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 5. User account verification status check
     if (matchedAccount.role === 'user') {
       const isPending =
-        matchedAccount.statusVerval === 'MENUNGGU_VERIFIKASI' ||
-        matchedAccount.statusActive === 'PENDING_VERIFIKASI';
+        matchedAccount.statusVerval === 'MENUNGGU_VERIFIKASI' || matchedAccount.statusActive === 'PENDING_VERIFIKASI';
       const isRejected =
         matchedAccount.statusVerval === 'DITOLAK' || matchedAccount.statusActive === 'DITOLAK';
 
@@ -263,7 +249,7 @@ export default async function handler(req: any, res: any) {
         return sendJson(res, 403, {
           valid: false,
           isPending: true,
-          message: '⏳ AKUN MENUNGGU VERIFIKASI: Pendaftaran akun Anda sedang dalam proses verifikasi oleh Superadmin Dinsos Jabar.',
+          message: '⏳ AKUN MENUNGGU VERIFIKASI: Pendaftaran akun Anda sedang dalam proses verifikasi oleh Superadmin Dinas Sosial Provinsi Jawa Barat.',
           ticket: {
             username: matchedAccount.username,
             wilayah: matchedAccount.wilayahTugas,
@@ -295,7 +281,17 @@ export default async function handler(req: any, res: any) {
         ? 'Pusat Developer Jabar'
         : matchedAccount.wilayahTugas || 'Jawa Barat';
 
-    // 6. Generate HMAC session token
+    const finalAllowedPillars = Array.isArray(matchedAccount.allowedPillars)
+      ? matchedAccount.allowedPillars
+      : finalRole === 'superadmin'
+      ? ['all']
+      : undefined;
+    const finalAllowedKepahlawanan = Array.isArray(matchedAccount.allowedKepahlawanan)
+      ? matchedAccount.allowedKepahlawanan
+      : finalRole === 'superadmin'
+      ? ['all']
+      : undefined;
+
     const sessionToken = signSessionToken({
       id: matchedAccount.id,
       username: matchedAccount.username,
@@ -303,6 +299,9 @@ export default async function handler(req: any, res: any) {
       namaAdmin: matchedAccount.namaAdmin,
       wilayahTugas: finalWilayah,
       statusActive: matchedAccount.statusActive,
+      allowedPillars: finalAllowedPillars,
+      allowedKepahlawanan: finalAllowedKepahlawanan,
+      pinOtoritas: matchedAccount.pinOtoritas,
     });
 
     return sendJson(res, 200, {
@@ -314,12 +313,15 @@ export default async function handler(req: any, res: any) {
         role: finalRole,
         wilayahTugas: finalWilayah,
         statusActive: matchedAccount.statusActive,
+        allowedPillars: finalAllowedPillars,
+        allowedKepahlawanan: finalAllowedKepahlawanan,
+        pinOtoritas: matchedAccount.pinOtoritas,
         sessionToken,
       },
       message: `Otentikasi berhasil! Selamat datang, ${matchedAccount.namaAdmin}.`,
     });
   } catch (err: any) {
-    console.error('[Login API Fatal Error]:', err);
+    console.error('[Vercel Login API Fatal Error]:', err);
     return sendJson(res, 500, {
       valid: false,
       message: 'Terjadi kesalahan sistem server saat memproses login.',

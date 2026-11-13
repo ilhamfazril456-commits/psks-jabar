@@ -1,130 +1,19 @@
 import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import {
+  SESSION_SECRET,
+  comparePassword,
+  extractPersonalPin,
+  findActiveSuperadminByPin,
+  findPrivilegedAccount,
+  getClientIp,
+  handleCors,
+  parseBody,
+  resolveGlobalPinsFromDatabases,
+  sendJson,
+  signSessionToken,
+  verifyCardChallengeToken,
+} from '../_authHelper';
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  'https://zwjbjmafxixudhlvaxef.supabase.co';
-
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_PUBLISHABLE_KEY ||
-  'sb_publishable_-Q49NtwnUsY9oF3jpRXEmw_J82UN4Uy';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false },
-});
-
-const SESSION_SECRET =
-  process.env.SESSION_SECRET || 'psks_jabar_production_auth_secret_2026_super_secure_key';
-
-// Universal JSON Response Helper
-function sendJson(res: any, statusCode: number, data: any) {
-  if (typeof res.status === 'function') {
-    return res.status(statusCode).json(data);
-  }
-  res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(data));
-}
-
-// Inlined CORS Handler
-const ALLOWED_ORIGIN_PATTERNS = [
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  /^https:\/\/.*\.vercel\.app$/,
-  /^https:\/\/.*\.run\.app$/,
-  /^https:\/\/ai\.studio$/,
-  /^https:\/\/.*\.jabarprov\.go\.id$/,
-  /^https:\/\/.*\.dinsos\.jabarprov\.go\.id$/,
-];
-
-function handleCors(req: any, res: any): boolean {
-  const origin = req.headers?.origin || req.headers?.referer || '';
-  let matchedOrigin = '';
-  if (origin) {
-    try {
-      const url = origin.startsWith('http') ? new URL(origin) : null;
-      const testOrigin = url ? url.origin : origin;
-      if (ALLOWED_ORIGIN_PATTERNS.some((p) => p.test(testOrigin))) {
-        matchedOrigin = testOrigin;
-      }
-    } catch {}
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', matchedOrigin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return true;
-  }
-  return false;
-}
-
-function verifyCardChallengeToken(token: string, expectedRole?: string): boolean {
-  if (!token || typeof token !== 'string' || !token.startsWith('ch_')) return false;
-  const parts = token.slice(3).split('.');
-  if (parts.length !== 2) return false;
-  const [data, sig] = parts;
-  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(`card_${data}`).digest('base64url');
-  if (sig !== expectedSig) return false;
-  try {
-    const payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
-    if (payload.expiresAt && Date.now() > payload.expiresAt) return false;
-    if (expectedRole && payload.role !== expectedRole) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function signSessionToken(payload: {
-  id: string;
-  username: string;
-  role: string;
-  namaAdmin: string;
-  wilayahTugas: string;
-  statusActive: string;
-}): string {
-  const issuedAt = Date.now();
-  const expiresAt = issuedAt + 7 * 24 * 60 * 60 * 1000;
-  const fullPayload = { ...payload, issuedAt, expiresAt };
-  const data = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
-  return `ses_${data}.${signature}`;
-}
-
-async function parseBody(req: any): Promise<any> {
-  if (req.body && typeof req.body === 'object') return req.body;
-  if (typeof req.body === 'string' && req.body.trim()) {
-    try {
-      return JSON.parse(req.body);
-    } catch {}
-  }
-  return new Promise((resolve) => {
-    let raw = '';
-    req.on('data', (chunk: any) => {
-      raw += chunk;
-    });
-    req.on('end', () => {
-      try {
-        resolve(raw ? JSON.parse(raw) : {});
-      } catch {
-        resolve({});
-      }
-    });
-    req.on('error', () => resolve({}));
-  });
-}
-
-// Anti-Brute-Force Rate Limiting & Lockout Store (5 attempts -> 15-minute / 900-second lockout)
 interface PinRateRecord {
   attempts: number;
   firstAttempt: number;
@@ -132,85 +21,66 @@ interface PinRateRecord {
 }
 const pinRateLimitMap = new Map<string, PinRateRecord>();
 
-function getClientIp(req: any): string {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  const realIp = req.headers?.['x-real-ip'];
-  if (typeof realIp === 'string' && realIp.trim()) {
-    return realIp.trim();
-  }
-  return req.socket?.remoteAddress || '127.0.0.1';
-}
-
-function checkPinRateLimit(ip: string): { locked: boolean; waitSeconds: number; remaining: number } {
+function checkPinRateLimit(key: string): { locked: boolean; waitSeconds: number; remaining: number } {
   const now = Date.now();
-  const record = pinRateLimitMap.get(ip);
-  if (!record) {
-    return { locked: false, waitSeconds: 0, remaining: 5 };
-  }
+  const record = pinRateLimitMap.get(key);
+  if (!record) return { locked: false, waitSeconds: 0, remaining: 5 };
   if (record.lockUntil > now) {
-    const waitSeconds = Math.ceil((record.lockUntil - now) / 1000);
-    return { locked: true, waitSeconds, remaining: 0 };
+    return { locked: true, waitSeconds: Math.ceil((record.lockUntil - now) / 1000), remaining: 0 };
   }
-  // Reset window if 15 minutes passed since first attempt
   if (now > record.firstAttempt + 15 * 60 * 1000) {
-    pinRateLimitMap.delete(ip);
+    pinRateLimitMap.delete(key);
     return { locked: false, waitSeconds: 0, remaining: 5 };
-  }
-  const remaining = Math.max(0, 5 - record.attempts);
-  return { locked: false, waitSeconds: 0, remaining };
-}
-
-function recordFailedPinAttempt(ip: string): { locked: boolean; waitSeconds: number; remaining: number } {
-  const now = Date.now();
-  let record = pinRateLimitMap.get(ip);
-  if (!record) {
-    record = { attempts: 0, firstAttempt: now, lockUntil: 0 };
-    pinRateLimitMap.set(ip, record);
-  }
-  record.attempts += 1;
-  if (record.attempts >= 5) {
-    record.lockUntil = now + 15 * 60 * 1000; // 15 menit lockout
-    const waitSeconds = Math.ceil((record.lockUntil - now) / 1000);
-    return { locked: true, waitSeconds, remaining: 0 };
   }
   return { locked: false, waitSeconds: 0, remaining: Math.max(0, 5 - record.attempts) };
 }
 
-function clearPinRateLimit(ip: string) {
-  pinRateLimitMap.delete(ip);
+function recordFailedPinAttempt(key: string): { locked: boolean; waitSeconds: number; remaining: number } {
+  const now = Date.now();
+  let record = pinRateLimitMap.get(key);
+  if (!record) {
+    record = { attempts: 0, firstAttempt: now, lockUntil: 0 };
+    pinRateLimitMap.set(key, record);
+  }
+  record.attempts += 1;
+  if (record.attempts >= 5) {
+    record.lockUntil = now + 15 * 60 * 1000;
+    return { locked: true, waitSeconds: 900, remaining: 0 };
+  }
+  return { locked: false, waitSeconds: 0, remaining: Math.max(0, 5 - record.attempts) };
+}
+
+function clearPinRateLimit(key: string) {
+  pinRateLimitMap.delete(key);
 }
 
 export default async function handler(req: any, res: any) {
-  const isHandled = handleCors(req, res);
-  if (isHandled) return;
+  if (handleCors(req, res, 'POST, OPTIONS')) return;
 
   if (req.method !== 'POST') {
     return sendJson(res, 405, { valid: false, message: 'Method Not Allowed' });
   }
 
-  const clientIp = getClientIp(req);
-  const rateCheck = checkPinRateLimit(clientIp);
-
-  if (rateCheck.locked) {
-    return sendJson(res, 429, {
-      valid: false,
-      locked: true,
-      lockoutRemaining: rateCheck.waitSeconds,
-      message: `⚠️ Terlalu banyak percobaan PIN salah. Akses verifikasi PIN dibekukan selama ${Math.ceil(rateCheck.waitSeconds / 60)} menit (${rateCheck.waitSeconds} detik) demi keamanan.`,
-    });
-  }
-
   try {
     const body = await parseBody(req);
-    const { pin, targetRole, challengeToken } = body || {};
+    const { pin, targetRole, challengeToken, username, userId, nama } = body || {};
+    const ip = getClientIp(req);
+    const rateLimitKey = `${ip}:${String(targetRole || 'any').toLowerCase().trim()}:${String(username || userId || 'card').toLowerCase().trim()}`;
+
+    const rateCheck = checkPinRateLimit(rateLimitKey);
+    if (rateCheck.locked) {
+      return sendJson(res, 429, {
+        valid: false,
+        locked: true,
+        lockoutRemaining: rateCheck.waitSeconds,
+        message: `⚠️ Terlalu banyak percobaan PIN salah. Akses PIN dikunci sementara demi keamanan. Coba lagi dalam ${rateCheck.waitSeconds} detik.`,
+      });
+    }
+
     if (!pin || typeof pin !== 'string' || !/^\d{6}$/.test(pin.trim())) {
       return sendJson(res, 400, { valid: false, message: 'PIN wajib berupa tepat 6 digit angka.' });
     }
 
-    // If challengeToken is provided from physical card scan, verify its signature
     if (challengeToken && typeof challengeToken === 'string') {
       const isChallengeValid = verifyCardChallengeToken(challengeToken, targetRole);
       if (!isChallengeValid) {
@@ -222,53 +92,103 @@ export default async function handler(req: any, res: any) {
     }
 
     const cleanPin = pin.trim();
+    const globalPins = await resolveGlobalPinsFromDatabases();
+    const isGlobalSuperMatch =
+      cleanPin === globalPins.superadminPin ||
+      Boolean(globalPins.superadminPinHash && comparePassword(cleanPin, globalPins.superadminPinHash));
+    const isGlobalDevMatch =
+      cleanPin === globalPins.developerPin ||
+      Boolean(globalPins.developerPinHash && comparePassword(cleanPin, globalPins.developerPinHash));
 
-    let currentSettings: any = null;
-    try {
-      const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
-      if (data && data.data) currentSettings = data.data;
-    } catch {}
+    const hasExplicitIdentity = Boolean(
+      (typeof userId === 'string' && userId.trim().length > 0) ||
+      (typeof username === 'string' && username.trim().length > 0)
+    );
 
-    try {
-      const { doc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('../../src/lib/firebase');
-      const snap = await getDoc(doc(db, 'app_settings', 'global'));
-      if (snap.exists()) {
-        const fsData = snap.data();
-        currentSettings = { ...currentSettings, ...fsData };
-      }
-    } catch {}
+    const lookupIdentifiers = hasExplicitIdentity
+      ? [userId, username].filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+      : [nama].filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
 
-    const validSuperadminPin = (currentSettings?.superadminPin || '123456').trim();
-    const validDeveloperPin = (currentSettings?.developerPin || '992211').trim();
+    let matchedAcc = await findPrivilegedAccount(lookupIdentifiers, targetRole);
+
+    if (matchedAcc && (matchedAcc.isFrozen || matchedAcc.statusAkun === 'DIBEKUKAN' || matchedAcc.statusActive === 'FROZEN')) {
+      return sendJson(res, 403, {
+        valid: false,
+        message: '❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan oleh Administrator.',
+      });
+    }
+
+    const personalPin = extractPersonalPin(matchedAcc);
+    const personalPinHashMatch = Boolean(matchedAcc?.pinHash && comparePassword(cleanPin, matchedAcc.pinHash));
+    const hasPersonalPin = Boolean(personalPin || matchedAcc?.pinHash);
+    const accTs = Number(matchedAcc?.lastUpdatedTimestamp || 0);
+    const isGlobalNewerThanAcc = globalPins.updatedAt > accTs;
+    const isRootDevAcc =
+      !matchedAcc || matchedAcc.id === 'adm-dev' || String(matchedAcc.username || '').toLowerCase() === 'ilhamfazril';
+    const isRootSuperAcc =
+      !matchedAcc ||
+      matchedAcc.id === 'adm-super' ||
+      ['superadmin', 'superadmin jabar', 'superadmin_jabar'].includes(String(matchedAcc.username || '').toLowerCase());
 
     let isMatch = false;
     let authorizedRole = '';
+    let usedPin = cleanPin;
 
     if (targetRole === 'developer') {
-      isMatch = cleanPin === validDeveloperPin;
+      const personalMatches = cleanPin === personalPin || personalPinHashMatch;
+      isMatch = hasPersonalPin
+        ? personalMatches || (isRootDevAcc && isGlobalNewerThanAcc && isGlobalDevMatch)
+        : isGlobalDevMatch;
+      if (!isMatch && !hasExplicitIdentity && isGlobalDevMatch) {
+        isMatch = true;
+      }
       authorizedRole = 'developer';
     } else if (targetRole === 'superadmin') {
-      isMatch = cleanPin === validSuperadminPin;
+      if (hasExplicitIdentity) {
+        const personalMatches = cleanPin === personalPin || personalPinHashMatch;
+        isMatch = hasPersonalPin
+          ? personalMatches || (isRootSuperAcc && isGlobalNewerThanAcc && isGlobalSuperMatch)
+          : isGlobalSuperMatch;
+      } else {
+        if (hasPersonalPin && (cleanPin === personalPin || personalPinHashMatch)) {
+          isMatch = true;
+        } else if (isGlobalSuperMatch) {
+          isMatch = true;
+        } else {
+          const matchedSuperByPin = await findActiveSuperadminByPin(cleanPin);
+          if (matchedSuperByPin) {
+            matchedAcc = matchedSuperByPin;
+            isMatch = true;
+          }
+        }
+      }
       authorizedRole = 'superadmin';
     } else {
-      if (cleanPin === validDeveloperPin) {
+      const superMatch = hasPersonalPin ? cleanPin === personalPin || personalPinHashMatch : isGlobalSuperMatch;
+      if (isGlobalDevMatch) {
         isMatch = true;
         authorizedRole = 'developer';
-      } else if (cleanPin === validSuperadminPin) {
+      } else if (superMatch) {
         isMatch = true;
         authorizedRole = 'superadmin';
+      } else if (!hasExplicitIdentity) {
+        const matchedSuperByPin = await findActiveSuperadminByPin(cleanPin);
+        if (matchedSuperByPin) {
+          matchedAcc = matchedSuperByPin;
+          isMatch = true;
+          authorizedRole = 'superadmin';
+        }
       }
     }
 
     if (!isMatch) {
-      const failRecord = recordFailedPinAttempt(clientIp);
+      const failRecord = recordFailedPinAttempt(rateLimitKey);
       if (failRecord.locked) {
         return sendJson(res, 429, {
           valid: false,
           locked: true,
           lockoutRemaining: failRecord.waitSeconds,
-          message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 15 menit demi mencegah serangan brute force.',
+          message: '⚠️ 5 kali percobaan PIN salah berturut-turut! Sistem otorisasi dibekukan selama 15 menit demi mencegah brute force.',
         });
       }
       return sendJson(res, 401, {
@@ -279,31 +199,69 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Success: clear rate limit counter
-    clearPinRateLimit(clientIp);
+    clearPinRateLimit(rateLimitKey);
+
+    let finalAcc = matchedAcc;
+    if (!finalAcc) {
+      finalAcc = await findPrivilegedAccount(
+        authorizedRole === 'developer' ? ['adm-dev', 'ilhamfazril'] : ['adm-super', 'superadmin jabar', 'superadmin'],
+        authorizedRole
+      );
+    }
+
+    const resolvedId = finalAcc?.id || (authorizedRole === 'developer' ? 'adm-dev' : 'adm-super');
+    const resolvedUsername = finalAcc?.username || (authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin jabar');
+    const resolvedNama =
+      finalAcc?.namaAdmin || nama || (authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar');
+    const resolvedWilayah =
+      finalAcc?.wilayahTugas || (authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT');
+    const resolvedAllowedPillars =
+      authorizedRole === 'superadmin'
+        ? Array.isArray(finalAcc?.allowedPillars)
+          ? finalAcc.allowedPillars
+          : ['all']
+        : undefined;
+    const resolvedAllowedKepahlawanan =
+      authorizedRole === 'superadmin'
+        ? Array.isArray(finalAcc?.allowedKepahlawanan)
+          ? finalAcc.allowedKepahlawanan
+          : ['all']
+        : undefined;
+    const resolvedPinOtoritas = extractPersonalPin(finalAcc) || usedPin;
 
     const authorityToken = crypto
       .createHmac('sha256', SESSION_SECRET)
-      .update(`${authorizedRole}_${Date.now() + 30 * 60 * 1000}`)
+      .update(`${authorizedRole}_${resolvedId}_${Date.now() + 30 * 60 * 1000}`)
       .digest('hex');
 
     const sessionToken = signSessionToken({
-      id: authorizedRole === 'developer' ? 'adm-dev' : 'adm-super',
-      username: authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin',
-      role: authorizedRole,
-      namaAdmin: authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar',
-      wilayahTugas: authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT',
+      id: resolvedId,
+      username: resolvedUsername,
+      role: authorizedRole as 'developer' | 'superadmin',
+      namaAdmin: resolvedNama,
+      wilayahTugas: resolvedWilayah,
       statusActive: 'SAH_TERDAFTAR',
+      allowedPillars: resolvedAllowedPillars,
+      allowedKepahlawanan: resolvedAllowedKepahlawanan,
+      pinOtoritas: resolvedPinOtoritas,
     });
 
     return sendJson(res, 200, {
       valid: true,
       role: authorizedRole,
+      id: resolvedId,
+      username: resolvedUsername,
       authorityToken,
       sessionToken,
+      nama: resolvedNama,
+      wilayah: resolvedWilayah,
+      allowedPillars: resolvedAllowedPillars,
+      allowedKepahlawanan: resolvedAllowedKepahlawanan,
+      pinOtoritas: resolvedPinOtoritas,
       message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
     });
   } catch (err: any) {
+    console.error('[Vercel Verify PIN Error]:', err);
     return sendJson(res, 500, { valid: false, message: 'Terjadi kesalahan sistem saat memvalidasi PIN.' });
   }
 }

@@ -59,6 +59,22 @@
   ],
   "rewrites": [
     {
+      "source": "/api/auth/update-password",
+      "destination": "/api/gateway?action=update-password"
+    },
+    {
+      "source": "/api/developer/save-superadmin",
+      "destination": "/api/gateway?action=save-superadmin"
+    },
+    {
+      "source": "/api/settings/update",
+      "destination": "/api/gateway?action=settings-update"
+    },
+    {
+      "source": "/api/client-ip",
+      "destination": "/api/gateway?action=client-ip"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
