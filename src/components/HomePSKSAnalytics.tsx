@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserSession } from '../types';
 import { PILLARS_CONFIG, KAB_KOTA_ONLY } from '../data/initialData';
-import { isRealDataLoaded } from '../services/regionalDistributionService';
+import { isRealDataLoaded, normalizeRegionName } from '../services/regionalDistributionService';
 import {
   ResponsiveContainer,
   BarChart,
@@ -102,18 +102,6 @@ const PILLAR_COLORS: Record<string, { hex: string; bg: string; text: string }> =
   tksk: { hex: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-700' }, // Biru tosca
   badanusaha: { hex: '#84cc16', bg: 'bg-lime-500', text: 'text-lime-700' }, // Hijau muda
   slrt_puskesos: { hex: '#047857', bg: 'bg-emerald-700', text: 'text-emerald-800' },
-};
-
-// Normalize region naming to match 27 Kab/Kota strictly
-const normalizeRegion = (raw: string): string => {
-  const s = (raw || '').trim();
-  if (!s || s === 'Prov. Jabar' || s === 'Semua Wilayah') return 'Kota Bandung';
-  const direct = KAB_KOTA_ONLY.find((k) => k.toLowerCase() === s.toLowerCase());
-  if (direct) return direct;
-  const partial = KAB_KOTA_ONLY.find((k) => s.toLowerCase().includes(k.replace(/kab\.|kota\s/i, '').trim().toLowerCase()));
-  if (partial) return partial;
-  if (s.startsWith('Kabupaten ')) return s.replace('Kabupaten ', 'Kab. ');
-  return s;
 };
 
 export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
@@ -309,11 +297,40 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
     });
 
     const summaryTotal = Object.values(regionalSummary || {}).reduce((acc, curr) => acc + (curr?.total || 0), 0);
+    const summaryCountsTotal = Object.values(summaryCounts || {}).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
     const pillarTotal = Object.values(allPillarData || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
+    const hasFullLiveRecords = isRealDataLoaded(allPillarData) && pillarTotal >= 1000;
+    const isRegionalSummaryConsistent =
+      Boolean(regionalSummary) &&
+      Object.keys(regionalSummary || {}).length >= 27 &&
+      summaryTotal > 0 &&
+      (summaryCountsTotal === 0 || summaryTotal === summaryCountsTotal);
 
-    // If regionalSummary represents the comprehensive official dataset (e.g. 6.731 Live Firestore),
-    // immediately use accurate regionalSummary to avoid dropping to partial records
-    if (regionalSummary && Object.keys(regionalSummary).length > 0 && (summaryTotal >= pillarTotal || pillarTotal < 1000)) {
+    // Prefer computing directly from full live records whenever available (or when regionalSummary lags/drifts),
+    // fallback to authoritative regionalSummary while initial hydration is in flight.
+    if (hasFullLiveRecords && (!isRegionalSummaryConsistent || pillarTotal === summaryTotal)) {
+      if (selectedPillarFilter === 'ALL') {
+        Object.entries(allPillarData).forEach(([_, records]) => {
+          if (!Array.isArray(records)) return;
+          records.forEach((rec) => {
+            if (!rec || typeof rec !== 'object') return;
+            const wil = normalizeRegionName(rec.wilayah || '');
+            if (countsMap[wil] !== undefined) {
+              countsMap[wil] += 1;
+            }
+          });
+        });
+      } else {
+        const records = Array.isArray(allPillarData[selectedPillarFilter]) ? allPillarData[selectedPillarFilter] : [];
+        records.forEach((rec) => {
+          if (!rec || typeof rec !== 'object') return;
+          const wil = normalizeRegionName(rec.wilayah || '');
+          if (countsMap[wil] !== undefined) {
+            countsMap[wil] += 1;
+          }
+        });
+      }
+    } else if (regionalSummary && Object.keys(regionalSummary).length > 0 && summaryTotal > 0) {
       KAB_KOTA_ONLY.forEach((wil) => {
         const item = regionalSummary[wil];
         if (item) {
@@ -330,7 +347,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
           if (!Array.isArray(records)) return;
           records.forEach((rec) => {
             if (!rec || typeof rec !== 'object') return;
-            const wil = normalizeRegion(rec.wilayah || '');
+            const wil = normalizeRegionName(rec.wilayah || '');
             if (countsMap[wil] !== undefined) {
               countsMap[wil] += 1;
             }
@@ -340,7 +357,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
         const records = Array.isArray(allPillarData[selectedPillarFilter]) ? allPillarData[selectedPillarFilter] : [];
         records.forEach((rec) => {
           if (!rec || typeof rec !== 'object') return;
-          const wil = normalizeRegion(rec.wilayah || '');
+          const wil = normalizeRegionName(rec.wilayah || '');
           if (countsMap[wil] !== undefined) {
             countsMap[wil] += 1;
           }
@@ -353,7 +370,7 @@ export const HomePSKSAnalytics: React.FC<HomePSKSAnalyticsProps> = ({
         session.wilayah &&
         session.wilayah !== 'Prov. Jabar' &&
         session.wilayah !== 'Semua Wilayah' &&
-        normalizeRegion(session.wilayah) === wilayah;
+        normalizeRegionName(session.wilayah) === wilayah;
 
       // Nama ringkas tanpa kata 'Kabupaten' / 'Kab.' khusus sumbu X di HP agar tidak bertumpuk
       const mobileWilayah = wilayah

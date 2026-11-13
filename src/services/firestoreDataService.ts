@@ -517,45 +517,115 @@ export function subscribeToDoc(
 }
 
 /**
- * High-speed concurrent loader for collections (supports loading all 21.963 records in ~2 seconds)
+ * High-speed deterministic loader for collections (fetches exact live row count with ordered paging & completeness verification)
  */
 async function loadAllSupabaseCollectionRows(collectionName: string): Promise<any[]> {
   if (collectionName === 'psks_records') {
     const PAGE_SIZE = 1000;
-    const TOTAL_ESTIMATE = 23000;
-    const pageRanges: number[] = [];
+    const SELECT_COLS = 'id, pillarId, wilayah, nama, status, kec, kelDesa, orderIndex, createdAt, updatedAt, data';
 
-    for (let from = 0; from < TOTAL_ESTIMATE; from += PAGE_SIZE) {
-      pageRanges.push(from);
-    }
-
-    try {
-      const results = await Promise.all(
-        pageRanges.map(async (from) => {
-          const { data } = await supabase
+    const fetchPageWithRetry = async (from: number, to: number, maxRetries = 3): Promise<any[]> => {
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const { data, error } = await supabase
             .from('psks_records')
-            .select('id, pillarId, wilayah, nama, status, kec, kelDesa, orderIndex, createdAt, updatedAt, data')
-            .range(from, from + PAGE_SIZE - 1);
-          return data || [];
-        })
-      );
+            .select(SELECT_COLS)
+            .order('id', { ascending: true })
+            .range(from, to);
 
-      const allRows: any[] = [];
-      for (const chunk of results) {
-        if (Array.isArray(chunk)) {
-          allRows.push(...chunk);
+          if (!error && Array.isArray(data)) {
+            return data;
+          }
+          lastErr = error || new Error(`Empty response for range ${from}-${to}`);
+        } catch (err) {
+          lastErr = err;
+        }
+        if (attempt < maxRetries) {
+          await new Promise((res) => setTimeout(res, 300 * attempt));
         }
       }
-      if (allRows.length > 0) return allRows;
+      throw lastErr || new Error(`Failed loading psks_records range ${from}-${to}`);
+    };
+
+    const getExactCount = async (): Promise<number | null> => {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const { count, error } = await supabase
+            .from('psks_records')
+            .select('id', { count: 'exact', head: true });
+          if (!error && typeof count === 'number') {
+            return count;
+          }
+        } catch {}
+        await new Promise((res) => setTimeout(res, 250));
+      }
+      return null;
+    };
+
+    try {
+      const exactCount = await getExactCount();
+      const targetEstimate = exactCount && exactCount > 0 ? exactCount : 24000;
+      const pageStarts: number[] = [];
+      for (let from = 0; from < targetEstimate; from += PAGE_SIZE) {
+        pageStarts.push(from);
+      }
+
+      const rowMap = new Map<string, any>();
+      const CONCURRENCY = 5;
+
+      for (let i = 0; i < pageStarts.length; i += CONCURRENCY) {
+        const batchStarts = pageStarts.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(
+          batchStarts.map((from) => fetchPageWithRetry(from, from + PAGE_SIZE - 1))
+        );
+        for (const chunk of batchResults) {
+          for (const row of chunk) {
+            if (row && row.id) rowMap.set(row.id, row);
+          }
+        }
+        // If no exactCount was available and a chunk returned fewer than PAGE_SIZE rows, stop early
+        if (exactCount === null && batchResults.some((c) => c.length < PAGE_SIZE)) {
+          break;
+        }
+      }
+
+      // Catch any newly added rows beyond initial estimate
+      let nextFrom = pageStarts.length * PAGE_SIZE;
+      while (true) {
+        const tailChunk = await fetchPageWithRetry(nextFrom, nextFrom + PAGE_SIZE - 1);
+        for (const row of tailChunk) {
+          if (row && row.id) rowMap.set(row.id, row);
+        }
+        if (tailChunk.length < PAGE_SIZE) break;
+        nextFrom += PAGE_SIZE;
+      }
+
+      // Guard against silent partial reads (e.g. mobile network drop returning 11.000 of 23.929)
+      if (typeof exactCount === 'number' && exactCount > 0 && rowMap.size < exactCount) {
+        const latestCount = await getExactCount();
+        const requiredCount = typeof latestCount === 'number' && latestCount > 0 ? latestCount : exactCount;
+        if (rowMap.size < requiredCount) {
+          throw new Error(`Incomplete psks_records snapshot: fetched ${rowMap.size} of ${requiredCount}`);
+        }
+      }
+
+      if (rowMap.size > 0 || exactCount === 0) {
+        return Array.from(rowMap.values());
+      }
     } catch (err) {
-      console.warn('Supabase records chunk load notice:', err);
+      console.warn('Supabase psks_records load failed completeness check:', err);
+      throw err;
     }
   }
 
   try {
     const { data, error } = await supabase.from(collectionName).select('*');
     if (!error && data) return data;
-  } catch {}
+    if (error && collectionName === 'psks_records') throw error;
+  } catch (err) {
+    if (collectionName === 'psks_records') throw err;
+  }
 
   // Fallback to Firestore if table doesn't exist in Supabase
   try {

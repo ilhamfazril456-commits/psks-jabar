@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { PSKSDataRecord } from '../types';
 import { KAB_KOTA_ONLY, PILLARS_CONFIG } from '../data/initialData';
 import { PILLAR_ICON_MAP } from './PillarsGrid';
-import { isRealDataLoaded } from '../services/regionalDistributionService';
+import { isRealDataLoaded, normalizeRegionName } from '../services/regionalDistributionService';
 import {
   MapPin,
   Search,
@@ -425,11 +425,40 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
     });
 
     const summaryTotal = Object.values(regionalSummary || {}).reduce((acc, curr) => acc + (curr?.total || 0), 0);
+    const summaryCountsTotal = Object.values(pillarSummaryCounts || {}).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
     const pillarTotal = Object.values(allPillarData || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
+    const hasFullLiveRecords = isRealDataLoaded(allPillarData) && pillarTotal >= 1000;
+    const isRegionalSummaryConsistent =
+      Boolean(regionalSummary) &&
+      Object.keys(regionalSummary || {}).length >= 27 &&
+      summaryTotal > 0 &&
+      (summaryCountsTotal === 0 || summaryTotal === summaryCountsTotal);
 
-    // Prefer the authoritative regionalSummary (e.g. 6.731 Live Firestore) whenever available,
-    // preventing the map from flickering to incomplete partial records (e.g. 291)
-    if (regionalSummary && Object.keys(regionalSummary).length > 0 && (summaryTotal >= pillarTotal || pillarTotal < 1000)) {
+    // Prefer computing directly from full live records whenever available (or when summary lags/drifts),
+    // fallback to authoritative regionalSummary while initial hydration is in flight.
+    if (hasFullLiveRecords && (!isRegionalSummaryConsistent || pillarTotal === summaryTotal)) {
+      Object.entries(allPillarData).forEach(([pillarKey, records]) => {
+        if (pillarFilter !== 'ALL' && pillarKey !== pillarFilter) return;
+        if (!Array.isArray(records)) return;
+
+        records.forEach((record) => {
+          if (!record || typeof record !== 'object') return;
+          const matchedRegion = normalizeRegionName(record.wilayah || '');
+
+          if (matchedRegion && stats[matchedRegion]) {
+            stats[matchedRegion].total = (stats[matchedRegion].total || 0) + 1;
+            if (!stats[matchedRegion].byPillar) {
+              stats[matchedRegion].byPillar = {};
+            }
+            stats[matchedRegion].byPillar[pillarKey] = (stats[matchedRegion].byPillar[pillarKey] || 0) + 1;
+          }
+        });
+      });
+
+      return stats;
+    }
+
+    if (regionalSummary && Object.keys(regionalSummary).length > 0 && summaryTotal > 0) {
       KAB_KOTA_ONLY.forEach((region) => {
         const item = regionalSummary[region];
         if (item) {
@@ -454,11 +483,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
 
       records.forEach((record) => {
         if (!record || typeof record !== 'object') return;
-        const rawWil = (record.wilayah || '').trim();
-        const matchedRegion =
-          KAB_KOTA_ONLY.find((k) => k.toLowerCase() === rawWil.toLowerCase()) ||
-          KAB_KOTA_ONLY.find((k) => rawWil.toLowerCase().includes(k.replace(/kab\.|kota\s/i, '').trim().toLowerCase())) ||
-          'Kota Bandung';
+        const matchedRegion = normalizeRegionName(record.wilayah || '');
 
         if (matchedRegion && stats[matchedRegion]) {
           stats[matchedRegion].total = (stats[matchedRegion].total || 0) + 1;
@@ -471,7 +496,7 @@ export const JabarRegionalMap: React.FC<JabarRegionalMapProps> = ({
     });
 
     return stats;
-  }, [allPillarData, pillarFilter, regionalSummary]);
+  }, [allPillarData, pillarFilter, regionalSummary, pillarSummaryCounts]);
 
   // Overall Statistics
   const grandTotalCount = useMemo(() => {

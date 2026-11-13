@@ -139,6 +139,26 @@ const recordSystemActivity = (params: any) => {
   }).catch(() => {});
 };
 
+const SYNC_CACHE_VERSION = '20261113_exact_23929_v2';
+try {
+  if (typeof window !== 'undefined' && localStorage.getItem('psks_sync_cache_version') !== SYNC_CACHE_VERSION) {
+    localStorage.removeItem('psks_all_pillar_data');
+    localStorage.removeItem('psks_summary_counts');
+    localStorage.removeItem('psks_regional_distribution');
+    localStorage.removeItem('psks_custom_imported_records');
+    localStorage.removeItem('psks_cache_timestamp');
+    localStorage.setItem('psks_sync_cache_version', SYNC_CACHE_VERSION);
+  }
+} catch {}
+
+const computePillarCountsFromData = (data: Record<string, PSKSDataRecord[]>): Record<string, number> => {
+  const counts: Record<string, number> = {};
+  Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+    counts[k] = Array.isArray(data?.[k]) ? data[k].length : 0;
+  });
+  return counts;
+};
+
 export default function App() {
   // 1. Session State (Reads from both sessionStorage and localStorage to guarantee persistence across refresh and new tabs)
   const [session, setSession] = useState<UserSession>(() => {
@@ -1063,65 +1083,70 @@ export default function App() {
     return getInitialRegionalSummary();
   });
 
-  const [isPillarRecordsLoaded, setIsPillarRecordsLoaded] = useState<boolean>(() => {
-    return !!localStorage.getItem('psks_all_pillar_data');
-  });
+  const [isPillarRecordsLoaded, setIsPillarRecordsLoaded] = useState<boolean>(false);
 
   const [allPillarData, setAllPillarData] = useState<Record<string, PSKSDataRecord[]>>(() => {
-    const rawDeleted = localStorage.getItem('psks_deleted_ids');
-    let delList: string[] = [];
-    try {
-      if (rawDeleted) delList = JSON.parse(rawDeleted);
-    } catch {
-      delList = [];
-    }
-
-    let customImported: PSKSDataRecord[] = [];
-    try {
-      const rawCustom = localStorage.getItem('psks_custom_imported_records');
-      if (rawCustom) customImported = JSON.parse(rawCustom);
-    } catch {}
-
-    try {
-      const cached = localStorage.getItem('psks_all_pillar_data');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed && typeof parsed === 'object') {
-          const filtered: Record<string, PSKSDataRecord[]> = {};
-          for (const [k, records] of Object.entries(parsed)) {
-            if (Array.isArray(records)) {
-              filtered[k] = records.filter((r) => !delList.includes(r.id));
-            }
-          }
-          if (customImported.length > 0) {
-            customImported.forEach((rec) => {
-              const p = rec.pillarId || 'peksos';
-              if (!filtered[p]) filtered[p] = [];
-              if (!filtered[p].some((r) => r.id === rec.id) && !delList.includes(rec.id)) {
-                filtered[p].push(rec);
-              }
-            });
-          }
-          if (Object.keys(filtered).length > 0) return filtered;
-        }
-      }
-    } catch {}
-
     const initial: Record<string, PSKSDataRecord[]> = {};
     for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
-      initial[k] = records.filter((r) => !delList.includes(r.id));
-    }
-    if (customImported.length > 0) {
-      customImported.forEach((rec) => {
-        const p = rec.pillarId || 'peksos';
-        if (!initial[p]) initial[p] = [];
-        if (!initial[p].some((r) => r.id === rec.id) && !delList.includes(rec.id)) {
-          initial[p].push(rec);
-        }
-      });
+      initial[k] = records;
     }
     return initial;
   });
+
+  const allPillarDataRef = useRef(allPillarData);
+  useEffect(() => {
+    allPillarDataRef.current = allPillarData;
+  }, [allPillarData]);
+
+  const deletedIdsRef = useRef(deletedIds);
+  useEffect(() => {
+    deletedIdsRef.current = deletedIds;
+  }, [deletedIds]);
+
+  const hasFetchedCloudRecordsRef = useRef(false);
+  const localSummaryWriteUntilRef = useRef(0);
+  const lastRemoteSummaryMetaRef = useRef<{ total: number; updatedAt: number; signature: string } | null>(null);
+  const [cloudRefreshNonce, setCloudRefreshNonce] = useState(0);
+
+  const syncDerivedSummaries = useCallback((
+    updatedData: Record<string, PSKSDataRecord[]>,
+    lastPillarUpdated?: string,
+    persistToCloud = true
+  ) => {
+    const exactCounts = computePillarCountsFromData(updatedData);
+    const exactRegions = computeRegionalSummaryFromPillars(updatedData);
+
+    setCachedPillarData(updatedData);
+    try {
+      localStorage.removeItem('psks_all_pillar_data');
+      localStorage.setItem('psks_summary_counts', JSON.stringify(exactCounts));
+    } catch {}
+
+    setPillarSummaryCounts(exactCounts);
+    setRegionalSummary(exactRegions);
+    saveRegionalSummary(exactRegions);
+
+    if (persistToCloud) {
+      localSummaryWriteUntilRef.current = Date.now() + 8000;
+      const now = Date.now();
+      const payload: Record<string, any> = {
+        counts: exactCounts,
+        regions: exactRegions,
+        updatedAt: now,
+      };
+      if (lastPillarUpdated) {
+        payload.lastPillarUpdated = lastPillarUpdated;
+      }
+      lastRemoteSummaryMetaRef.current = {
+        total: Object.values(exactCounts).reduce((a, b) => a + b, 0),
+        updatedAt: now,
+        signature: JSON.stringify({ counts: exactCounts, regions: exactRegions }),
+      };
+      setFirestoreDoc('psks_records_meta', 'summary', payload, { merge: true }).catch(() => {});
+    }
+
+    return { exactCounts, exactRegions };
+  }, []);
 
   // Real-time Global Deletions Listener: Synchronizes deleted records across all devices immediately
   useEffect(() => {
@@ -1133,6 +1158,7 @@ export default function App() {
           if (serverDeletedIds.length > 0) {
             setDeletedIds((prev) => {
               const merged = Array.from(new Set([...prev, ...serverDeletedIds]));
+              deletedIdsRef.current = merged;
               try {
                 localStorage.setItem('psks_deleted_ids', JSON.stringify(merged));
               } catch {}
@@ -1140,24 +1166,21 @@ export default function App() {
             });
 
             // Immediately purge deleted records from allPillarData state on this device
-            setAllPillarData((prev) => {
-              let hasChanges = false;
-              const updated: Record<string, PSKSDataRecord[]> = {};
-              for (const [k, records] of Object.entries(prev)) {
-                const filtered = records.filter((r) => !serverDeletedIds.includes(r.id));
-                if (filtered.length !== records.length) {
-                  hasChanges = true;
-                }
-                updated[k] = filtered;
+            const currentData = allPillarDataRef.current;
+            let hasChanges = false;
+            const updated: Record<string, PSKSDataRecord[]> = {};
+            for (const [k, records] of Object.entries(currentData)) {
+              const filtered = records.filter((r) => !serverDeletedIds.includes(r.id));
+              if (filtered.length !== records.length) {
+                hasChanges = true;
               }
-              if (hasChanges) {
-                try {
-                  localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-                } catch {}
-                return updated;
-              }
-              return prev;
-            });
+              updated[k] = filtered;
+            }
+            if (hasChanges) {
+              allPillarDataRef.current = updated;
+              setAllPillarData(updated);
+              syncDerivedSummaries(updated, undefined, false);
+            }
           }
         }
       });
@@ -1168,22 +1191,29 @@ export default function App() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [syncDerivedSummaries]);
 
-  // IndexedDB Cache Hydration: Restores thousands of records reliably without 5MB localStorage limits
+  // IndexedDB Cache Hydration: Restores full 23.929+ records reliably without 5MB localStorage limits
   useEffect(() => {
     getCachedPillarData().then((cached) => {
-      if (cached && typeof cached === 'object' && Object.keys(cached).length > 0) {
-        setAllPillarData((prev) => {
-          if (!isRealDataLoaded(prev)) {
-            const computedReg = computeRegionalSummaryFromPillars(cached);
-            setRegionalSummary(computedReg);
-            saveRegionalSummary(computedReg);
-            setIsPillarRecordsLoaded(true);
-            return cached;
+      if (cached && typeof cached === 'object' && isRealDataLoaded(cached)) {
+        const currentTotal = Object.values(allPillarDataRef.current || {}).reduce((acc, r) => acc + (Array.isArray(r) ? r.length : 0), 0);
+        const cachedTotal = Object.values(cached).reduce((acc, r) => acc + (Array.isArray(r) ? r.length : 0), 0);
+        if (!isRealDataLoaded(allPillarDataRef.current) || cachedTotal > currentTotal) {
+          allPillarDataRef.current = cached;
+          setAllPillarData(cached);
+          setIsPillarRecordsLoaded(true);
+
+          const exactCounts = computePillarCountsFromData(cached);
+          const exactRegions = computeRegionalSummaryFromPillars(cached);
+          // Only overwrite summary from IDB if cloud summary has not already reported a newer count
+          if (!lastRemoteSummaryMetaRef.current) {
+            setPillarSummaryCounts(exactCounts);
+            try { localStorage.setItem('psks_summary_counts', JSON.stringify(exactCounts)); } catch {}
+            setRegionalSummary(exactRegions);
+            saveRegionalSummary(exactRegions);
           }
-          return prev;
-        });
+        }
       }
     }).catch(() => {});
   }, []);
@@ -1191,27 +1221,60 @@ export default function App() {
   // Real-time Global Summary Counter & Regional Distribution Listener: Synchronizes accurate counts and map data across all devices in < 100ms
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
+    let refreshTimer: any = null;
     try {
       unsubscribe = subscribeToDoc('psks_records_meta', 'summary', (data, exists) => {
         if (exists && data) {
           setIsSummarySynced(true);
+          const normalizedCounts: Record<string, number> = {};
           if (data.counts && typeof data.counts === 'object') {
-            const sCounts = data.counts as Record<string, number>;
+            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+              const rawVal = (data.counts as Record<string, any>)[k];
+              if (rawVal !== undefined) {
+                normalizedCounts[k] = Number(rawVal) || 0;
+              }
+            });
             setPillarSummaryCounts((prev) => {
-              const merged = { ...prev, ...sCounts };
+              const next = Object.keys(normalizedCounts).length === Object.keys(DEFAULT_PILLAR_DATA).length
+                ? normalizedCounts
+                : { ...prev, ...normalizedCounts };
               try {
-                localStorage.setItem('psks_summary_counts', JSON.stringify(merged));
+                localStorage.setItem('psks_summary_counts', JSON.stringify(next));
               } catch {}
-              return merged;
+              return next;
             });
           }
+
           if (data.regions && typeof data.regions === 'object') {
             const sRegions = data.regions as RegionalSummaryMap;
             setRegionalSummary((prev) => {
-              const merged = { ...prev, ...sRegions };
-              saveRegionalSummary(merged);
-              return merged;
+              const next: RegionalSummaryMap = { ...prev };
+              for (const [k, v] of Object.entries(sRegions)) {
+                if (v && typeof v === 'object') next[k] = v;
+              }
+              saveRegionalSummary(next);
+              return next;
             });
+          }
+
+          const remoteTotal = Object.values(normalizedCounts).reduce((a, b) => a + b, 0);
+          const remoteUpdatedAt = Number(data.updatedAt || 0);
+          const signature = JSON.stringify({ counts: data.counts || {}, regions: data.regions || {} });
+          const prevSig = lastRemoteSummaryMetaRef.current?.signature;
+          lastRemoteSummaryMetaRef.current = { total: remoteTotal, updatedAt: remoteUpdatedAt, signature };
+
+          // Trigger a live background reload of psks_records if another device modified data remotely
+          if (Date.now() > localSummaryWriteUntilRef.current && hasFetchedCloudRecordsRef.current) {
+            const loadedTotal = Object.values(allPillarDataRef.current || {}).reduce(
+              (acc, list) => acc + (Array.isArray(list) ? list.length : 0),
+              0
+            );
+            if ((remoteTotal > 0 && remoteTotal !== loadedTotal) || (prevSig && prevSig !== signature && data.lastPillarUpdated)) {
+              if (refreshTimer) clearTimeout(refreshTimer);
+              refreshTimer = setTimeout(() => {
+                setCloudRefreshNonce((n) => n + 1);
+              }, 700);
+            }
           }
         }
       });
@@ -1220,23 +1283,38 @@ export default function App() {
     }
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       if (unsubscribe) unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    // SMART CACHE & SUMMARY PATTERN FOR WEST JAVA PUBLIC TRAFFIC
-    // Public visitors use cached/aggregated data to prevent burning reads when idle.
     const isPublicGuest = session.statusActive !== 'SAH_TERDAFTAR';
     if (isPublicGuest && gateModalOpen) {
       return;
     }
-    const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-    const lastFetch = Number(localStorage.getItem('psks_cache_timestamp') || '0');
-    const hasCachedData = isRealDataLoaded(allPillarData);
 
-    // Only skip public background read if real cached data is fresh AND not actively viewing pillar detail
-    if (isPublicGuest && hasCachedData && Date.now() - lastFetch < CACHE_TTL_MS && currentTab !== 'pillar_detail') {
+    const CACHE_TTL_MS = 10 * 60 * 1000;
+    const lastFetch = Number(localStorage.getItem('psks_cache_timestamp') || '0');
+    const hasLoadedReal = isRealDataLoaded(allPillarDataRef.current);
+
+    // Always perform at least one authoritative fetch per browser session;
+    // skip only redundant re-subscribes for idle guests when cache matches remote summary total.
+    const remoteSummaryTotal = lastRemoteSummaryMetaRef.current?.total || 0;
+    const localTotal = Object.values(allPillarDataRef.current || {}).reduce(
+      (acc, r) => acc + (Array.isArray(r) ? r.length : 0),
+      0
+    );
+    const isSummaryMatched = remoteSummaryTotal === 0 || localTotal === remoteSummaryTotal;
+
+    if (
+      isPublicGuest &&
+      hasFetchedCloudRecordsRef.current &&
+      cloudRefreshNonce === 0 &&
+      hasLoadedReal &&
+      isSummaryMatched &&
+      Date.now() - lastFetch < CACHE_TTL_MS
+    ) {
       return;
     }
 
@@ -1245,43 +1323,31 @@ export default function App() {
       unsubscribe = subscribeToCollection(
         'psks_records',
         (docs) => {
-          // Run queue processing if connection restored
+          hasFetchedCloudRecordsRef.current = true;
           if (session.statusActive === 'SAH_TERDAFTAR') {
             processSyncQueue(false);
           }
 
+          const currentDeletedIds = deletedIdsRef.current;
+
           if (!docs || docs.length === 0) {
-            const fallback: Record<string, PSKSDataRecord[]> = {};
-            for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
-              fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
-            }
-            try {
-              const rawCustom = localStorage.getItem('psks_custom_imported_records');
-              if (rawCustom) {
-                const custom: PSKSDataRecord[] = JSON.parse(rawCustom);
-                custom.forEach((r) => {
-                  const p = r.pillarId || 'peksos';
-                  if (!fallback[p]) fallback[p] = [];
-                  if (!fallback[p].some((item) => item.id === r.id) && !deletedIds.includes(r.id)) {
-                    fallback[p].push(r);
-                  }
-                });
-              }
-            } catch {}
-            React.startTransition(() => {
-              setAllPillarData(fallback);
+            const emptySet: Record<string, PSKSDataRecord[]> = {};
+            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
+              emptySet[k] = [];
             });
-            try {
-              localStorage.setItem('psks_all_pillar_data', JSON.stringify(fallback));
-              localStorage.setItem('psks_cache_timestamp', String(Date.now()));
-            } catch {}
+            setIsPillarRecordsLoaded(true);
+            allPillarDataRef.current = emptySet;
+            React.startTransition(() => {
+              setAllPillarData(emptySet);
+            });
+            syncDerivedSummaries(emptySet, undefined, false);
           } else {
             const loaded: Record<string, PSKSDataRecord[]> = {};
             Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => (loaded[k] = []));
 
             docs.forEach(({ id: docId, data }) => {
               if (!data || typeof data !== 'object') return;
-              if (deletedIds.includes(docId)) return;
+              if (currentDeletedIds.includes(docId)) return;
 
               const record = data as PSKSDataRecord & { pillarId?: string };
               const pKey = record.pillarId && DEFAULT_PILLAR_DATA[record.pillarId] ? record.pillarId : 'peksos';
@@ -1303,12 +1369,7 @@ export default function App() {
               });
             });
 
-            // Urutkan data per pilar agar urutan data lama di atas, data baru SELALU di paling bawah
-            Object.keys(loaded).forEach((k) => {
-              loaded[k].sort(compareRecordsChronological);
-            });
-
-            // Hybrid Smart Merge 1: Gabungkan data dari antrean offline (psks_sync_queue) yang belum tersimpan di server
+            // Merge ONLY pending offline sync queue items (never stale custom/dummy caches)
             try {
               const rawQueue = localStorage.getItem('psks_sync_queue');
               if (rawQueue) {
@@ -1320,7 +1381,7 @@ export default function App() {
                       const pKey = rec.pillarId && DEFAULT_PILLAR_DATA[rec.pillarId] ? rec.pillarId : 'peksos';
                       if (!loaded[pKey]) loaded[pKey] = [];
                       const exists = loaded[pKey].some((existing) => existing.id === qItem.docId || existing.id === rec.id);
-                      if (!exists && !deletedIds.includes(qItem.docId)) {
+                      if (!exists && !currentDeletedIds.includes(qItem.docId)) {
                         loaded[pKey].push({
                           ...rec,
                           id: qItem.docId || rec.id,
@@ -1334,177 +1395,81 @@ export default function App() {
               console.warn('Error merging sync queue into realtime snapshot:', err);
             }
 
-            // Hybrid Smart Merge 2: Gabungkan data cache lokal HANYA jika data tersebut tercatat dalam antrean psks_sync_queue (pending upload)
-            // Kritis: Mencegah bangkitnya kembali (resurrection) data yang sudah sah dihapus dari server Firestore
-            try {
-              const rawQueue = localStorage.getItem('psks_sync_queue');
-              const pendingOfflineIds = new Set<string>();
-              if (rawQueue) {
-                const qItems = JSON.parse(rawQueue);
-                if (Array.isArray(qItems)) {
-                  qItems.forEach((q: any) => {
-                    if (q.collection === 'psks_records' && q.type === 'SET' && q.docId) {
-                      pendingOfflineIds.add(q.docId);
-                    }
-                  });
-                }
-              }
-
-              if (pendingOfflineIds.size > 0) {
-                const cachedRaw = localStorage.getItem('psks_all_pillar_data');
-                if (cachedRaw) {
-                  const cachedData = JSON.parse(cachedRaw);
-                  if (cachedData && typeof cachedData === 'object') {
-                    Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
-                      const localList = cachedData[k];
-                      if (Array.isArray(localList)) {
-                        localList.forEach((localRec: any) => {
-                          if (!localRec || !localRec.id) return;
-                          if (deletedIds.includes(localRec.id)) return;
-                          if (!pendingOfflineIds.has(localRec.id)) return; // Kunci: Hanya data yang benar-benar pending upload
-                          if (!loaded[k]) loaded[k] = [];
-                          const exists = loaded[k].some((r) => r.id === localRec.id);
-                          if (!exists) {
-                            loaded[k].push(localRec);
-                          }
-                        });
-                      }
-                    });
-                  }
-                }
-              }
-            } catch (err) {
-              console.warn('Error merging local cache into realtime snapshot:', err);
-            }
-
-            // Urutkan kembali seluruh data setelah penggabungan cerdas: data lama di atas, data baru SELALU di paling bawah
+            // Sort chronologically across every pillar
             Object.keys(loaded).forEach((k) => {
               loaded[k].sort(compareRecordsChronological);
             });
 
-            // Merge any local custom imported records into loaded snapshot
-            try {
-              const rawCustom = localStorage.getItem('psks_custom_imported_records');
-              if (rawCustom) {
-                const custom: PSKSDataRecord[] = JSON.parse(rawCustom);
-                custom.forEach((r) => {
-                  const p = r.pillarId || 'peksos';
-                  if (!loaded[p]) loaded[p] = [];
-                  if (!loaded[p].some((item) => item.id === r.id) && !deletedIds.includes(r.id)) {
-                    loaded[p].push(r);
-                  }
-                });
-              }
-            } catch {}
-
-            // Fallback merge for features that have no docs in Firestore yet
-            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
-              if (!loaded[k] || loaded[k].length === 0) {
-                const defaults = DEFAULT_PILLAR_DATA[k] || [];
-                loaded[k] = defaults.filter((r) => !deletedIds.includes(r.id));
-              }
-            });
-
             setIsPillarRecordsLoaded(true);
+            allPillarDataRef.current = loaded;
             React.startTransition(() => {
               setAllPillarData(loaded);
             });
             try {
-              localStorage.setItem('psks_all_pillar_data', JSON.stringify(loaded));
               localStorage.setItem('psks_cache_timestamp', String(Date.now()));
             } catch {}
-            setCachedPillarData(loaded);
 
-            // Compute regional distribution from loaded raw records
+            // Deterministically update counts & regions from exact authoritative snapshot (no one-way ratchet!)
+            const exactCounts = computePillarCountsFromData(loaded);
             const exactRegions = computeRegionalSummaryFromPillars(loaded);
-            const loadedTotal = Object.values(exactRegions).reduce((acc, c) => acc + (c?.total || 0), 0);
+            const loadedTotal = Object.values(exactCounts).reduce((acc, c) => acc + c, 0);
 
-            // Update regionalSummary with authoritative exact regions
-            setRegionalSummary((prev) => {
-              const currentTotal = Object.values(prev || {}).reduce((acc, c) => acc + (c?.total || 0), 0);
-              if ((loadedTotal >= 5000 || loadedTotal >= currentTotal) && loadedTotal > 0) {
-                saveRegionalSummary(exactRegions);
-                return exactRegions;
-              }
-              if (prev && Object.keys(prev).length > 0) {
-                saveRegionalSummary(prev);
-              }
-              return prev;
-            });
+            syncDerivedSummaries(loaded, undefined, false);
 
-            // Update summary counts from actual loaded records only if individual pillar count increased
-            const realCounts: Record<string, number> = {};
-            Object.keys(DEFAULT_PILLAR_DATA).forEach((k) => {
-              realCounts[k] = loaded[k]?.length || 0;
-            });
-            setPillarSummaryCounts((prev) => {
-              const updated = { ...prev };
-              let hasAnyHigher = false;
-              Object.keys(realCounts).forEach((k) => {
-                if (realCounts[k] > (prev[k] || 0)) {
-                  updated[k] = realCounts[k];
-                  hasAnyHigher = true;
-                }
-              });
-              if (hasAnyHigher) {
-                try {
-                  localStorage.setItem('psks_summary_counts', JSON.stringify(updated));
-                } catch {}
-              }
-              return updated;
-            });
-
-            // Automatically sync to Cloud Firestore meta ONLY if loaded records represent full dataset (>= 6000)
-            if ((session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper) && loadedTotal >= 6000) {
+            // Auto-heal cloud summary meta if authorized and remote differs from exact live DB counts/regions
+            const isAuthorizedEditor =
+              session.statusActive === 'SAH_TERDAFTAR' &&
+              (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper || session.role === 'admin');
+            const currentSig = JSON.stringify({ counts: exactCounts, regions: exactRegions });
+            if (isAuthorizedEditor && loadedTotal > 0 && lastRemoteSummaryMetaRef.current?.signature !== currentSig) {
+              localSummaryWriteUntilRef.current = Date.now() + 8000;
+              lastRemoteSummaryMetaRef.current = {
+                total: loadedTotal,
+                updatedAt: Date.now(),
+                signature: currentSig,
+              };
               setFirestoreDoc('psks_records_meta', 'summary', {
-                counts: realCounts,
+                counts: exactCounts,
                 regions: exactRegions,
                 updatedAt: Date.now(),
               }, { merge: true }).catch(() => {});
             }
           }
 
-          // For public guests, disconnect listener after initial fetch only if NOT actively viewing pillar detail
+          // For public guests on beranda, close heavy collection channel after initial fetch; summary listener stays alive for realtime updates
           if (isPublicGuest && currentTab !== 'pillar_detail' && unsubscribe) {
             unsubscribe();
           }
         },
         (error) => {
-          setIsPillarRecordsLoaded(true);
           handleFirestoreError(error, OperationType.LIST, 'psks_records');
           if (isQuotaError(error)) {
             quotaExceededRef.current = true;
             setIsQuotaExceeded(true);
           }
-          try {
-            const cached = localStorage.getItem('psks_all_pillar_data');
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (parsed && typeof parsed === 'object') {
-                React.startTransition(() => {
-                  setAllPillarData(parsed);
-                });
-                return;
-              }
-            }
-          } catch {}
-
-          const fallback: Record<string, PSKSDataRecord[]> = {};
-          for (const [k, records] of Object.entries(DEFAULT_PILLAR_DATA)) {
-            fallback[k] = records.filter((r) => !deletedIds.includes(r.id));
+          // Preserve IndexedDB / current valid state instead of clobbering with a partial snapshot or 30 dummy records
+          if (isRealDataLoaded(allPillarDataRef.current)) {
+            setIsPillarRecordsLoaded(true);
+            return;
           }
-          React.startTransition(() => {
-            setAllPillarData(fallback);
-          });
+          getCachedPillarData().then((cached) => {
+            if (cached && isRealDataLoaded(cached)) {
+              allPillarDataRef.current = cached;
+              setIsPillarRecordsLoaded(true);
+              React.startTransition(() => {
+                setAllPillarData(cached);
+              });
+            }
+          }).catch(() => {});
         }
       );
-    }, 400);
+    }, 300);
 
     return () => {
       clearTimeout(timer);
       if (unsubscribe) unsubscribe();
     };
-  }, [deletedIds, session.statusActive, gateModalOpen]);
+  }, [session.statusActive, session.role, session.isDeveloper, gateModalOpen, cloudRefreshNonce, syncDerivedSummaries]);
 
   // 3. Admin Accounts List with Firestore Real-time Sync
   // 3. Admin Accounts List with Firestore Real-time Sync (Strictly Restricted to Authorized Superadmin & Developer)
@@ -3438,7 +3403,7 @@ export default function App() {
     const pillarKey = targetPillarId || activePillar;
     if (!pillarKey) return;
     const recordId = `${pillarKey}-${Date.now()}`;
-    const existingList = allPillarData[pillarKey] || [];
+    const existingList = allPillarDataRef.current[pillarKey] || [];
     const maxOrder = existingList.reduce((max, r: any, i) => {
       const ord = typeof r.orderIndex === 'number' ? r.orderIndex : i + 1;
       return Math.max(max, ord);
@@ -3452,59 +3417,13 @@ export default function App() {
       createdAt: (newRecord as any).createdAt || newTimestamp,
     };
 
-    setAllPillarData((prev) => {
-      const updated = {
-        ...prev,
-        [pillarKey]: [...(prev[pillarKey] || []), fullRecord],
-      };
-      try {
-        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-      } catch {}
-      setCachedPillarData(updated);
-      return updated;
-    });
-
-    try {
-      const existingRaw = localStorage.getItem('psks_custom_imported_records');
-      const existingList: PSKSDataRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
-      if (!existingList.some((r) => r.id === fullRecord.id)) {
-        existingList.push(fullRecord);
-        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList));
-      }
-    } catch {}
-
-    // Realtime regional distribution update
-    const regName = normalizeRegionName(newRecord.wilayah || session.wilayah || 'Kota Bandung');
-    let nextRegionsMap: RegionalSummaryMap = regionalSummary;
-    setRegionalSummary((prev) => {
-      const cur = prev[regName] || { total: 0, byPillar: {} };
-      const nextRegions: RegionalSummaryMap = {
-        ...prev,
-        [regName]: {
-          total: cur.total + 1,
-          byPillar: {
-            ...cur.byPillar,
-            [pillarKey]: (cur.byPillar?.[pillarKey] || 0) + 1,
-          },
-        },
-      };
-      nextRegionsMap = nextRegions;
-      saveRegionalSummary(nextRegions);
-      return nextRegions;
-    });
-
-    // Realtime summary count increment & sync to Firestore meta
-    setPillarSummaryCounts((prev) => {
-      const next = { ...prev, [pillarKey]: (prev[pillarKey] || allPillarData[pillarKey]?.length || 0) + 1 };
-      try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', {
-        counts: next,
-        regions: nextRegionsMap,
-        updatedAt: Date.now(),
-        lastPillarUpdated: pillarKey
-      }, { merge: true }).catch(() => {});
-      return next;
-    });
+    const updatedData = {
+      ...allPillarDataRef.current,
+      [pillarKey]: [...existingList, fullRecord],
+    };
+    allPillarDataRef.current = updatedData;
+    setAllPillarData(updatedData);
+    syncDerivedSummaries(updatedData, pillarKey, true);
 
     const pilarName = (pillarKey || 'PSKS').toUpperCase();
     const memberName = newRecord.nama || 'Anggota Baru';
@@ -3544,27 +3463,24 @@ export default function App() {
     if (!pillarKey) return;
 
     let fullUpdatedRecord: PSKSDataRecord | null = null;
-
-    setAllPillarData((prev) => {
-      const currentList = prev[pillarKey] || [];
-      const updatedList = currentList.map((r) => {
-        if (r.id === recordId) {
-          fullUpdatedRecord = { ...r, ...updatedData, id: recordId, pillarId: pillarKey };
-          return fullUpdatedRecord;
-        }
-        return r;
-      });
-      const updated = {
-        ...prev,
-        [pillarKey]: updatedList,
-      };
-      try {
-        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-      } catch {}
-      return updated;
+    const currentList = allPillarDataRef.current[pillarKey] || [];
+    const updatedList = currentList.map((r) => {
+      if (r.id === recordId) {
+        fullUpdatedRecord = { ...r, ...updatedData, id: recordId, pillarId: pillarKey };
+        return fullUpdatedRecord;
+      }
+      return r;
     });
 
     if (!fullUpdatedRecord) return;
+
+    const updatedAll = {
+      ...allPillarDataRef.current,
+      [pillarKey]: updatedList,
+    };
+    allPillarDataRef.current = updatedAll;
+    setAllPillarData(updatedAll);
+    syncDerivedSummaries(updatedAll, pillarKey, true);
 
     const pilarName = (pillarKey || 'PSKS').toUpperCase();
     const memberName = (fullUpdatedRecord as PSKSDataRecord).nama || (fullUpdatedRecord as any).namaLks || (fullUpdatedRecord as any).namaKarangTaruna || (fullUpdatedRecord as any).namaLk3 || (fullUpdatedRecord as any).namaBadanUsaha || (fullUpdatedRecord as any).namaSlrt || 'Anggota';
@@ -3602,7 +3518,7 @@ export default function App() {
     const pillarKey = targetPillarId || activePillar;
     if (!pillarKey || !records.length) return 0;
 
-    const existingList = allPillarData[pillarKey] || [];
+    const existingList = allPillarDataRef.current[pillarKey] || [];
     const maxOrder = existingList.reduce((max, r: any, i) => {
       const ord = typeof r.orderIndex === 'number' ? r.orderIndex : i + 1;
       return Math.max(max, ord);
@@ -3623,68 +3539,13 @@ export default function App() {
       };
     });
 
-    setAllPillarData((prev) => {
-      const updated = {
-        ...prev,
-        [pillarKey]: [...(prev[pillarKey] || []), ...newRecordsWithId],
-      };
-      try {
-        localStorage.setItem('psks_all_pillar_data', JSON.stringify(updated));
-      } catch {}
-      setCachedPillarData(updated);
-      return updated;
-    });
-
-    try {
-      const existingRaw = localStorage.getItem('psks_custom_imported_records');
-      const existingList: PSKSDataRecord[] = existingRaw ? JSON.parse(existingRaw) : [];
-      const combined = [...existingList, ...newRecordsWithId];
-      const map = new Map<string, PSKSDataRecord>();
-      combined.forEach((r) => map.set(r.id, r));
-      localStorage.setItem('psks_custom_imported_records', JSON.stringify(Array.from(map.values())));
-    } catch (e) {
-      console.warn('Failed to save to psks_custom_imported_records', e);
-    }
-
-    // Realtime regional distribution update (incrementally adds each batch record to its region)
-    let nextRegionsWithBatch: RegionalSummaryMap = regionalSummary;
-    setRegionalSummary((prev) => {
-      const next: RegionalSummaryMap = JSON.parse(JSON.stringify(prev || {}));
-      KAB_KOTA_ONLY.forEach((reg) => {
-        if (!next[reg]) next[reg] = { total: 0, byPillar: {} };
-      });
-
-      for (const rec of newRecordsWithId) {
-        const reg = normalizeRegionName(rec.wilayah || session.wilayah || 'Kota Bandung');
-        if (next[reg]) {
-          next[reg].total = (next[reg].total || 0) + 1;
-          const byP = next[reg].byPillar || {};
-          byP[pillarKey] = (byP[pillarKey] || 0) + 1;
-          next[reg].byPillar = byP;
-        }
-      }
-
-      nextRegionsWithBatch = next;
-      saveRegionalSummary(next);
-      try {
-        localStorage.setItem('psks_regional_distribution', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    // Realtime summary count increment & sync to Firestore meta
-    setPillarSummaryCounts((prev) => {
-      const currentPillarCount = prev[pillarKey] || allPillarData[pillarKey]?.length || 0;
-      const next = { ...prev, [pillarKey]: currentPillarCount + newRecordsWithId.length };
-      try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', {
-        counts: next,
-        regions: nextRegionsWithBatch,
-        updatedAt: Date.now(),
-        lastPillarUpdated: pillarKey
-      }, { merge: true }).catch(() => {});
-      return next;
-    });
+    const updatedData = {
+      ...allPillarDataRef.current,
+      [pillarKey]: [...existingList, ...newRecordsWithId],
+    };
+    allPillarDataRef.current = updatedData;
+    setAllPillarData(updatedData);
+    syncDerivedSummaries(updatedData, pillarKey, true);
 
     const pilarName = (pillarKey || 'PSKS').toUpperCase();
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Developer [${session.nama}]`;
@@ -4087,9 +3948,9 @@ export default function App() {
   };
 
   const handleDeleteRecord = async (recordId: string) => {
-    // 0. Find the record being deleted to generate a detailed audit trail
+    const currentData = allPillarDataRef.current;
     let deletedRecord: PSKSDataRecord | undefined;
-    for (const list of Object.values(allPillarData)) {
+    for (const list of Object.values(currentData)) {
       const found = list.find((r) => r.id === recordId);
       if (found) {
         deletedRecord = found;
@@ -4101,8 +3962,8 @@ export default function App() {
     const memberName = deletedRecord?.nama || 'Anggota';
     const memberWilayah = deletedRecord?.wilayah || session.wilayah || 'Jawa Barat';
 
-    // 1. Add to deletedIds list and persist to localStorage
-    const nextDeleted = [...deletedIds, recordId];
+    const nextDeleted = Array.from(new Set([...deletedIdsRef.current, recordId]));
+    deletedIdsRef.current = nextDeleted;
     setDeletedIds(nextDeleted);
     try {
       localStorage.setItem('psks_deleted_ids', JSON.stringify(nextDeleted));
@@ -4110,31 +3971,16 @@ export default function App() {
       console.error('Failed to save deleted ID', e);
     }
 
-    // 2. Remove immediately from allPillarData state
     const updatedAfterDel: Record<string, PSKSDataRecord[]> = {};
-    for (const [k, records] of Object.entries(allPillarData)) {
+    for (const [k, records] of Object.entries(currentData)) {
       updatedAfterDel[k] = records.filter((r) => r.id !== recordId);
     }
+    allPillarDataRef.current = updatedAfterDel;
     setAllPillarData(updatedAfterDel);
-    try {
-      localStorage.setItem('psks_all_pillar_data', JSON.stringify(updatedAfterDel));
-    } catch {}
-    setCachedPillarData(updatedAfterDel);
 
-    try {
-      const existingRaw = localStorage.getItem('psks_custom_imported_records');
-      if (existingRaw) {
-        const existingList: PSKSDataRecord[] = JSON.parse(existingRaw);
-        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList.filter((r) => r.id !== recordId)));
-      }
-    } catch {}
+    const targetPillarKey = deletedRecord?.pillarId || activePillar || 'peksos';
+    syncDerivedSummaries(updatedAfterDel, targetPillarKey, true);
 
-    // Realtime regional distribution update
-    const nextRegionsAfterDel = computeRegionalSummaryFromPillars(updatedAfterDel);
-    setRegionalSummary(nextRegionsAfterDel);
-    saveRegionalSummary(nextRegionsAfterDel);
-
-    // Record audit activity log (bypassed for developer)
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
     recordSystemActivity({
       session,
@@ -4148,7 +3994,6 @@ export default function App() {
       details: `${actorLabel} telah MENGHAPUS anggota Pilar ${pilarName} atas nama [${memberName}] (Wilayah: ${memberWilayah})`,
     });
 
-    // 3. Sync deleted IDs to Firestore metadata so all devices receive the deletion in real-time
     try {
       setFirestoreDoc(
         'psks_records_meta',
@@ -4163,22 +4008,6 @@ export default function App() {
       ).catch(() => {});
     } catch {}
 
-    // Realtime summary count decrement & sync
-    const targetPillarKey = deletedRecord?.pillarId || activePillar || 'peksos';
-    setPillarSummaryCounts((prev) => {
-      const current = prev[targetPillarKey] || allPillarData[targetPillarKey]?.length || 0;
-      const next = { ...prev, [targetPillarKey]: Math.max(0, current - 1) };
-      try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', {
-        counts: next,
-        regions: nextRegionsAfterDel,
-        updatedAt: Date.now(),
-        lastPillarUpdated: targetPillarKey
-      }, { merge: true }).catch(() => {});
-      return next;
-    });
-
-    // 4. Remove from Firestore psks_records
     try {
       await deleteFirestoreDoc('psks_records', recordId);
     } catch (err) {
@@ -4196,9 +4025,10 @@ export default function App() {
   ) => {
     if (!recordIds.length) return;
     const pillarKey = targetPillarId || activePillar;
+    const currentData = allPillarDataRef.current;
 
-    // 1. Add to deletedIds list and persist to localStorage
-    const nextDeleted = Array.from(new Set([...deletedIds, ...recordIds]));
+    const nextDeleted = Array.from(new Set([...deletedIdsRef.current, ...recordIds]));
+    deletedIdsRef.current = nextDeleted;
     setDeletedIds(nextDeleted);
     try {
       localStorage.setItem('psks_deleted_ids', JSON.stringify(nextDeleted));
@@ -4206,34 +4036,17 @@ export default function App() {
       console.error('Failed to save deleted IDs', e);
     }
 
-    // 2. Remove immediately from allPillarData state
     const updatedAfterBatchDel: Record<string, PSKSDataRecord[]> = {};
-    for (const [k, records] of Object.entries(allPillarData)) {
+    for (const [k, records] of Object.entries(currentData)) {
       updatedAfterBatchDel[k] = records.filter((r) => !recordIds.includes(r.id));
     }
+    allPillarDataRef.current = updatedAfterBatchDel;
     setAllPillarData(updatedAfterBatchDel);
-    try {
-      localStorage.setItem('psks_all_pillar_data', JSON.stringify(updatedAfterBatchDel));
-    } catch {}
-    setCachedPillarData(updatedAfterBatchDel);
-
-    try {
-      const existingRaw = localStorage.getItem('psks_custom_imported_records');
-      if (existingRaw) {
-        const existingList: PSKSDataRecord[] = JSON.parse(existingRaw);
-        localStorage.setItem('psks_custom_imported_records', JSON.stringify(existingList.filter((r) => !recordIds.includes(r.id))));
-      }
-    } catch {}
-
-    // Realtime regional distribution update
-    const nextRegionsAfterBatchDel = computeRegionalSummaryFromPillars(updatedAfterBatchDel);
-    setRegionalSummary(nextRegionsAfterBatchDel);
-    saveRegionalSummary(nextRegionsAfterBatchDel);
+    syncDerivedSummaries(updatedAfterBatchDel, pillarKey || undefined, true);
 
     const pilarName = (pillarKey || 'PSKS').toUpperCase();
     const actorLabel = session.role === 'superadmin' ? `Superadmin [${session.nama}]` : `Admin [${session.nama}]`;
 
-    // Record audit activity log
     recordSystemActivity({
       session,
       category: 'PSKS',
@@ -4246,7 +4059,6 @@ export default function App() {
       details: `${actorLabel} telah MENGHAPUS MASSAL ${recordIds.length} anggota Pilar ${pilarName}`,
     });
 
-    // 3. Sync deleted IDs to Firestore metadata so all devices receive the batch deletion in real-time
     try {
       setFirestoreDoc(
         'psks_records_meta',
@@ -4260,20 +4072,6 @@ export default function App() {
         { merge: true }
       ).catch(() => {});
     } catch {}
-
-    // Realtime summary count decrement & sync
-    setPillarSummaryCounts((prev) => {
-      const current = prev[pillarKey] || allPillarData[pillarKey]?.length || 0;
-      const next = { ...prev, [pillarKey]: Math.max(0, current - recordIds.length) };
-      try { localStorage.setItem('psks_summary_counts', JSON.stringify(next)); } catch {}
-      setFirestoreDoc('psks_records_meta', 'summary', {
-        counts: next,
-        regions: nextRegionsAfterBatchDel,
-        updatedAt: Date.now(),
-        lastPillarUpdated: pillarKey
-      }, { merge: true }).catch(() => {});
-      return next;
-    });
 
     try {
       await batchDeleteFirestoreDocs('psks_records', recordIds);

@@ -10,6 +10,7 @@ interface PillarHorizontalBarChartProps {
   regionalSummary?: RegionalSummaryMap;
   maxChartCount?: number;
   chartVisible: boolean;
+  isLoadingRecords?: boolean;
   onSelectRegion?: (regionName: string) => void;
 }
 
@@ -94,6 +95,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
   regionalSummary,
   maxChartCount: customMaxChartCount,
   chartVisible,
+  isLoadingRecords = false,
   onSelectRegion,
 }) => {
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
@@ -136,9 +138,16 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
     text: 'text-orange-400',
   };
 
-  // Helper untuk mendapatkan nilai total akurat per wilayah (menggabungkan data lokal & regional summary)
+  // Helper untuk mendapatkan nilai total akurat per wilayah tanpa double-counting saat data penuh sudah termuat
   const getEffectiveCounts = (region: string) => {
     const local = regionalCounts[region] || { total: 0, gov: 0, swasta: 0 };
+    if (!isLoadingRecords) {
+      return {
+        total: local.total,
+        gov: local.gov,
+        swasta: local.swasta,
+      };
+    }
     const summaryVal = regionalSummary?.[region]?.byPillar?.[pillarId] || 0;
     const total = Math.max(local.total, summaryVal);
     return {
@@ -154,7 +163,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
       const counts = getEffectiveCounts(region);
       return sum + counts.total;
     }, 0);
-  }, [chartRegions, regionalCounts, regionalSummary, pillarId]);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId, isLoadingRecords]);
 
   // Skala maksimum untuk proporsi batang grafik (Dihitung dari nilai tertinggi aktual di Jawa Barat)
   const maxVal = useMemo(() => {
@@ -169,7 +178,7 @@ export const PillarHorizontalBarChart: React.FC<PillarHorizontalBarChartProps> =
       peak = customMaxChartCount;
     }
     return Math.max(peak, 1);
-  }, [chartRegions, regionalCounts, regionalSummary, pillarId, customMaxChartCount]);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId, customMaxChartCount, isLoadingRecords]);
 
   // Auto-dismiss floating tooltip saat klik/sentuh di luar chart pada smartphone
   useEffect(() => {

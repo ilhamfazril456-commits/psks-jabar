@@ -555,8 +555,8 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     let max = 1;
     chartRegions.forEach((r) => {
       const item = regionalCounts[r] || { total: 0, gov: 0, swasta: 0 };
-      const summaryVal = regionalSummary?.[r]?.byPillar?.[pillarId] || 0;
-      const effectiveTotal = Math.max(item.total, summaryVal);
+      const summaryVal = isLoadingRecords ? (regionalSummary?.[r]?.byPillar?.[pillarId] || 0) : 0;
+      const effectiveTotal = isLoadingRecords ? Math.max(item.total, summaryVal) : item.total;
       if (pillarId === 'peksos') {
         if (item.gov > max) max = item.gov;
         if (item.swasta > max) max = item.swasta;
@@ -565,7 +565,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
       }
     });
     return max;
-  }, [chartRegions, regionalCounts, regionalSummary, pillarId]);
+  }, [chartRegions, regionalCounts, regionalSummary, pillarId, isLoadingRecords]);
 
   // Regions for modal dropdown - includes Prov. Jabar for Superadmin & Developer across all pillars
   const regionOptions = useMemo(() => {
@@ -592,7 +592,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
     session.wilayah === 'Prov. Jabar';
 
   const totalCount =
-    isViewingFullScope && summaryCount !== undefined && summaryCount > filteredByRoleRecords.length
+    isLoadingRecords && isViewingFullScope && summaryCount !== undefined
       ? summaryCount
       : filteredByRoleRecords.length;
   const govCount = filteredByRoleRecords.filter((r) => isPeksosGov(r)).length;
@@ -600,29 +600,31 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
 
   // Real-time reactive calculation for regional isolation numbers across all 27 Kab/Kota and 10 pillars
   const totalJabarPillarCount = useMemo(() => {
+    const liveTotal = Array.isArray(dataRecords) ? dataRecords.length : 0;
+    if (!isLoadingRecords) {
+      return liveTotal;
+    }
     let sumFromRegions = 0;
     if (regionalSummary && typeof regionalSummary === 'object') {
       Object.values(regionalSummary).forEach((regItem) => {
         sumFromRegions += regItem?.byPillar?.[pillarId] || 0;
       });
     }
-    const candidates = [
-      summaryCount || 0,
-      sumFromRegions,
-      Array.isArray(dataRecords) ? dataRecords.length : 0,
-    ];
-    return Math.max(...candidates);
-  }, [summaryCount, regionalSummary, pillarId, dataRecords]);
+    return Math.max(summaryCount || 0, sumFromRegions, liveTotal);
+  }, [summaryCount, regionalSummary, pillarId, dataRecords, isLoadingRecords]);
 
   const normalizedUserRegion = useMemo(() => {
     return matchJabarRegion(session.wilayah) || session.wilayah || '';
   }, [session.wilayah]);
 
   const userRegionCount = useMemo(() => {
+    if (!isLoadingRecords) {
+      return filteredByRoleRecords.length;
+    }
     const userWil = normalizedUserRegion;
     const countFromSummary = regionalSummary?.[userWil]?.byPillar?.[pillarId] || 0;
     return Math.max(filteredByRoleRecords.length, countFromSummary);
-  }, [filteredByRoleRecords.length, regionalSummary, normalizedUserRegion, pillarId]);
+  }, [filteredByRoleRecords.length, regionalSummary, normalizedUserRegion, pillarId, isLoadingRecords]);
 
   const hiddenCount = useMemo(() => {
     return Math.max(0, totalJabarPillarCount - userRegionCount);
@@ -1517,6 +1519,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
             regionalCounts={regionalCounts}
             regionalSummary={regionalSummary}
             chartVisible={chartVisible}
+            isLoadingRecords={isLoadingRecords}
             onSelectRegion={(regionName) => {
               setSelectedSlrtRegion(regionName);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1882,6 +1885,7 @@ export const PillarDetailView: React.FC<PillarDetailViewProps> = ({
           regionalSummary={regionalSummary}
           maxChartCount={maxChartCount}
           chartVisible={chartVisible}
+          isLoadingRecords={isLoadingRecords}
         />
 
         {/* 4. Regional Isolation Banner (Universal across all 27 Kab/Kota & 10 Pillars, Real-time Reactive) */}
