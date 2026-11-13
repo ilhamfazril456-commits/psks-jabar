@@ -77,7 +77,7 @@ async function startServer() {
   // 4. user_accounts (khusus akun warga & personil potensi sosial + NIK)
   async function migrateAndSegregateFirestoreAccounts() {
     try {
-      const { collection, getDocs, doc, setDoc, deleteDoc } = await import('firebase/firestore');
+      const { collection, getDocs, getDoc, doc, setDoc, deleteDoc } = await import('firebase/firestore');
       const { db } = await import('./src/lib/firebase');
 
       const adminCol = collection(db, 'admin_accounts');
@@ -90,16 +90,28 @@ async function startServer() {
           const docId = d.id;
           const uname = (data.username || '').toLowerCase().trim();
 
-          const { passwordPolos, ...cleanData } = data;
+          const { passwordPolos: _pp, pinOtoritas: _po, superadminPin: _sp, developerPin: _dp, ...cleanData } = data;
 
           if (role === 'developer' || docId === 'adm-dev' || uname === 'ilhamfazril') {
-            await setDoc(doc(db, 'dev_accounts', docId), { ...cleanData, role: 'developer' }, { merge: true });
-            await deleteDoc(doc(db, 'admin_accounts', docId));
-            console.log(`[Segregation] Akun Developer (${docId}) dipindahkan ke dev_accounts.`);
+            const targetRef = doc(db, 'dev_accounts', docId);
+            const targetSnap = await getDoc(targetRef);
+            if (!targetSnap.exists() && cleanData.username) {
+              await setDoc(targetRef, { ...cleanData, role: 'developer' }, { merge: true });
+            }
+            if (docId !== 'adm-dev') {
+              await deleteDoc(doc(db, 'admin_accounts', docId)).catch(() => {});
+              console.log(`[Segregation] Akun Developer (${docId}) dipindahkan ke dev_accounts.`);
+            }
           } else if (role === 'superadmin' || docId === 'adm-super' || uname.includes('superadmin')) {
-            await setDoc(doc(db, 'superadmin_accounts', docId), { ...cleanData, role: 'superadmin' }, { merge: true });
-            await deleteDoc(doc(db, 'admin_accounts', docId));
-            console.log(`[Segregation] Akun Superadmin (${docId}) dipindahkan ke superadmin_accounts.`);
+            const targetRef = doc(db, 'superadmin_accounts', docId);
+            const targetSnap = await getDoc(targetRef);
+            if (!targetSnap.exists() && cleanData.username) {
+              await setDoc(targetRef, { ...cleanData, role: 'superadmin' }, { merge: true });
+            }
+            if (docId !== 'adm-super') {
+              await deleteDoc(doc(db, 'admin_accounts', docId)).catch(() => {});
+              console.log(`[Segregation] Akun Superadmin (${docId}) dipindahkan ke superadmin_accounts.`);
+            }
           } else if (role === 'user' || docId.startsWith('usr-') || data.nik) {
             const rawNik = data.nik || '';
             const rawWa = data.noWhatsapp || '';
@@ -581,9 +593,162 @@ async function startServer() {
 
   // In-memory Server-Authoritative PIN Store (Isolates secret PINs from public client bundles & public Firestore)
   const serverPinStore = {
-    superadminPin: process.env.SUPERADMIN_PIN || '123456',
-    developerPin: process.env.DEVELOPER_PIN || '992211',
+    superadminPin: process.env.SUPERADMIN_PIN || '150109',
+    developerPin: process.env.DEVELOPER_PIN || '150109',
+    superadminPinHash: '',
+    developerPinHash: '',
+    updatedAt: 0,
   };
+
+  async function resolveGlobalPinsFromDatabases() {
+    let sbUpdatedAt = -1;
+    let sbSuperPin = '';
+    let sbSuperHash = '';
+    let sbDevPin = '';
+    let sbDevHash = '';
+
+    try {
+      const { data } = await supabase.from('app_settings').select('data').eq('id', 'global').maybeSingle();
+      if (data && data.data && typeof data.data === 'object') {
+        const d = data.data as Record<string, any>;
+        sbUpdatedAt = Number(d.pinSecurityUpdatedAt || 0);
+        const decSuper = d.superadminPinEncrypted
+          ? decryptSensitiveData(String(d.superadminPinEncrypted))
+          : String(d.superadminPin || '');
+        const decDev = d.developerPinEncrypted
+          ? decryptSensitiveData(String(d.developerPinEncrypted))
+          : String(d.developerPin || '');
+        if (decSuper && /^\d{6}$/.test(decSuper.trim())) sbSuperPin = decSuper.trim();
+        if (decDev && /^\d{6}$/.test(decDev.trim())) sbDevPin = decDev.trim();
+        if (typeof d.superadminPinHash === 'string' && d.superadminPinHash) sbSuperHash = d.superadminPinHash;
+        if (typeof d.developerPinHash === 'string' && d.developerPinHash) sbDevHash = d.developerPinHash;
+      }
+    } catch {}
+
+    let fsUpdatedAt = -1;
+    let fsSuperPin = '';
+    let fsSuperHash = '';
+    let fsDevPin = '';
+    let fsDevHash = '';
+
+    try {
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+      const snap = await getDoc(doc(db, 'app_settings', 'global'));
+      if (snap.exists()) {
+        const fsData = snap.data() as Record<string, any>;
+        fsUpdatedAt = Number(fsData.pinSecurityUpdatedAt || 0);
+        const decSuper = fsData.superadminPinEncrypted
+          ? decryptSensitiveData(String(fsData.superadminPinEncrypted))
+          : String(fsData.superadminPin || '');
+        const decDev = fsData.developerPinEncrypted
+          ? decryptSensitiveData(String(fsData.developerPinEncrypted))
+          : String(fsData.developerPin || '');
+        if (decSuper && /^\d{6}$/.test(decSuper.trim())) fsSuperPin = decSuper.trim();
+        if (decDev && /^\d{6}$/.test(decDev.trim())) fsDevPin = decDev.trim();
+        if (typeof fsData.superadminPinHash === 'string' && fsData.superadminPinHash) fsSuperHash = fsData.superadminPinHash;
+        if (typeof fsData.developerPinHash === 'string' && fsData.developerPinHash) fsDevHash = fsData.developerPinHash;
+      }
+    } catch {}
+
+    const preferFsSuper = fsSuperPin || fsSuperHash ? fsUpdatedAt > sbUpdatedAt || (!sbSuperPin && !sbSuperHash) : false;
+    const preferFsDev = fsDevPin || fsDevHash ? fsUpdatedAt > sbUpdatedAt || (!sbDevPin && !sbDevHash) : false;
+
+    const resolvedSuperPin = preferFsSuper
+      ? fsSuperPin || sbSuperPin || serverPinStore.superadminPin
+      : sbSuperPin || fsSuperPin || serverPinStore.superadminPin;
+    const resolvedSuperHash = preferFsSuper
+      ? fsSuperHash || sbSuperHash || serverPinStore.superadminPinHash
+      : sbSuperHash || fsSuperHash || serverPinStore.superadminPinHash;
+
+    const resolvedDevPin = preferFsDev
+      ? fsDevPin || sbDevPin || serverPinStore.developerPin
+      : sbDevPin || fsDevPin || serverPinStore.developerPin;
+    const resolvedDevHash = preferFsDev
+      ? fsDevHash || sbDevHash || serverPinStore.developerPinHash
+      : sbDevHash || fsDevHash || serverPinStore.developerPinHash;
+
+    const maxDbUpdatedAt = Math.max(sbUpdatedAt, fsUpdatedAt, serverPinStore.updatedAt);
+    if (/^\d{6}$/.test(resolvedSuperPin)) serverPinStore.superadminPin = resolvedSuperPin;
+    if (/^\d{6}$/.test(resolvedDevPin)) serverPinStore.developerPin = resolvedDevPin;
+    if (resolvedSuperHash) serverPinStore.superadminPinHash = resolvedSuperHash;
+    if (resolvedDevHash) serverPinStore.developerPinHash = resolvedDevHash;
+    if (maxDbUpdatedAt > 0) serverPinStore.updatedAt = maxDbUpdatedAt;
+
+    return {
+      superadminPin: serverPinStore.superadminPin,
+      superadminPinHash: serverPinStore.superadminPinHash,
+      developerPin: serverPinStore.developerPin,
+      developerPinHash: serverPinStore.developerPinHash,
+      updatedAt: serverPinStore.updatedAt,
+    };
+  }
+
+  async function findActiveSuperadminByPin(cleanPin: string) {
+    const mergedMap = new Map<string, any>();
+    const pushRow = (row: any) => {
+      if (!row || !row.id) return;
+      const d = row.data && typeof row.data === 'object' ? row.data : row;
+      const uname = String(row.username || d.username || '').trim();
+      const passHash = String(row.passwordHash || d.passwordHash || '').trim();
+      // Abaikan entri kerangka kosong tanpa kredensial nyata
+      if (uname === row.id && !passHash && !d.pinEncrypted && !d.pinHash) return;
+      const nextTs = Number(row.lastUpdatedTimestamp || d.lastUpdatedTimestamp || 0);
+      const prev = mergedMap.get(row.id);
+      const prevTs = Number(prev?.lastUpdatedTimestamp || 0);
+      if (!prev || nextTs >= prevTs) {
+        mergedMap.set(row.id, {
+          id: row.id,
+          username: uname || row.id,
+          namaAdmin: row.namaAdmin || d.namaAdmin || uname || row.id,
+          wilayahTugas: row.wilayahTugas || d.wilayahTugas || 'PROVINSI JAWA BARAT',
+          isFrozen: row.isFrozen === true || d.isFrozen === true,
+          statusAkun: row.statusAkun || d.statusAkun || 'AKTIF',
+          statusActive: row.statusActive || d.statusActive || 'SAH_TERDAFTAR',
+          allowedPillars: Array.isArray(row.allowedPillars)
+            ? row.allowedPillars
+            : Array.isArray(d.allowedPillars)
+            ? d.allowedPillars
+            : ['all'],
+          allowedKepahlawanan: Array.isArray(row.allowedKepahlawanan)
+            ? row.allowedKepahlawanan
+            : Array.isArray(d.allowedKepahlawanan)
+            ? d.allowedKepahlawanan
+            : ['all'],
+          pinEncrypted: String(row.pinEncrypted || d.pinEncrypted || '').trim(),
+          pinHash: String(row.pinHash || d.pinHash || '').trim(),
+          pinOtoritas: String(row.pinOtoritas || d.pinOtoritas || '').trim(),
+          lastUpdatedTimestamp: nextTs,
+        });
+      }
+    };
+
+    try {
+      const { data } = await supabase.from('superadmin_accounts').select('*');
+      if (Array.isArray(data)) data.forEach(pushRow);
+    } catch {}
+
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+      const snap = await getDocs(collection(db, 'superadmin_accounts'));
+      snap.forEach((docSnap) => pushRow({ id: docSnap.id, ...docSnap.data() }));
+    } catch {}
+
+    const list = Array.from(mergedMap.values()).sort(
+      (a, b) => (b.lastUpdatedTimestamp || 0) - (a.lastUpdatedTimestamp || 0)
+    );
+
+    for (const acc of list) {
+      if (acc.isFrozen || acc.statusAkun === 'DIBEKUKAN' || acc.statusActive === 'FROZEN') continue;
+      const pPin = extractPersonalPin(acc);
+      const pHashMatch = Boolean(acc.pinHash && comparePassword(cleanPin, acc.pinHash));
+      if ((pPin && pPin === cleanPin) || pHashMatch) {
+        return acc;
+      }
+    }
+    return null;
+  }
 
   async function findPrivilegedAccount(identifiers: string[], expectedRole?: 'developer' | 'superadmin' | string) {
     const cleanIds = Array.from(
@@ -785,8 +950,9 @@ async function startServer() {
       const { pin, targetRole, challengeToken, username, userId, nama } = req.body;
       const forwarded = req.headers['x-forwarded-for'];
       const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || 'unknown';
+      const rateLimitKey = `${ip}:${String(targetRole || 'any').toLowerCase().trim()}:${String(username || userId || 'card').toLowerCase().trim()}`;
 
-      const rateCheck = checkPinRateLimit(ip);
+      const rateCheck = checkPinRateLimit(rateLimitKey);
       if (rateCheck.locked) {
         return res.status(429).json({
           valid: false,
@@ -813,55 +979,27 @@ async function startServer() {
 
       const cleanPin = pin.trim();
 
-      // Prioritas 1: Ambil default PIN global dari memory terkini server + Firestore/Supabase app_settings
-      let validSuperadminPin = serverPinStore.superadminPin;
-      let validDeveloperPin = serverPinStore.developerPin;
+      // Prioritas 1: Ambil PIN global terbaru dari Supabase vs Firestore berdasarkan pinSecurityUpdatedAt tertinggi
+      const globalPins = await resolveGlobalPinsFromDatabases();
+      const validSuperadminPin = globalPins.superadminPin;
+      const validSuperadminHash = globalPins.superadminPinHash;
+      const validDeveloperPin = globalPins.developerPin;
+      const validDeveloperHash = globalPins.developerPinHash;
 
-      try {
-        const { data } = await supabase.from('app_settings').select('data').eq('id', 'global').maybeSingle();
-        if (data && data.data) {
-          const decSuper = data.data.superadminPinEncrypted
-            ? decryptSensitiveData(String(data.data.superadminPinEncrypted))
-            : String(data.data.superadminPin || '');
-          const decDev = data.data.developerPinEncrypted
-            ? decryptSensitiveData(String(data.data.developerPinEncrypted))
-            : String(data.data.developerPin || '');
-          if (decSuper && /^\d{6}$/.test(decSuper.trim())) {
-            validSuperadminPin = decSuper.trim();
-            serverPinStore.superadminPin = validSuperadminPin;
-          }
-          if (decDev && /^\d{6}$/.test(decDev.trim())) {
-            validDeveloperPin = decDev.trim();
-            serverPinStore.developerPin = validDeveloperPin;
-          }
-        }
-      } catch {}
+      const isGlobalSuperMatch =
+        cleanPin === validSuperadminPin ||
+        Boolean(validSuperadminHash && comparePassword(cleanPin, validSuperadminHash));
+      const isGlobalDevMatch =
+        cleanPin === validDeveloperPin ||
+        Boolean(validDeveloperHash && comparePassword(cleanPin, validDeveloperHash));
 
-      try {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('./src/lib/firebase');
-        const snap = await getDoc(doc(db, 'app_settings', 'global'));
-        if (snap.exists()) {
-          const fsData = snap.data();
-          const decSuper = fsData.superadminPinEncrypted
-            ? decryptSensitiveData(String(fsData.superadminPinEncrypted))
-            : String(fsData.superadminPin || '');
-          const decDev = fsData.developerPinEncrypted
-            ? decryptSensitiveData(String(fsData.developerPinEncrypted))
-            : String(fsData.developerPin || '');
-          if (decSuper && /^\d{6}$/.test(decSuper.trim())) {
-            validSuperadminPin = decSuper.trim();
-            serverPinStore.superadminPin = validSuperadminPin;
-          }
-          if (decDev && /^\d{6}$/.test(decDev.trim())) {
-            validDeveloperPin = decDev.trim();
-            serverPinStore.developerPin = validDeveloperPin;
-          }
-        }
-      } catch {}
+      const hasExplicitIdentity = Boolean(
+        (typeof userId === 'string' && userId.trim().length > 0) ||
+        (typeof username === 'string' && username.trim().length > 0)
+      );
 
       // Cari akun spesifik (jika username/userId dikirim dari login manual atau profil)
-      const matchedAcc = await findPrivilegedAccount(
+      let matchedAcc = await findPrivilegedAccount(
         [userId, username, nama].filter((v): v is string => typeof v === 'string' && v.trim().length > 0),
         targetRole
       );
@@ -875,39 +1013,65 @@ async function startServer() {
 
       const personalPin = extractPersonalPin(matchedAcc);
       const personalPinHashMatch = Boolean(matchedAcc?.pinHash && comparePassword(cleanPin, matchedAcc.pinHash));
+      const hasPersonalPin = Boolean(personalPin || matchedAcc?.pinHash);
 
       let isMatch = false;
       let authorizedRole = '';
       let usedPin = cleanPin;
 
-      // STRICT PER-ACCOUNT VALIDATION:
-      // Jika akun memiliki PIN pribadi (pinEncrypted / pinHash) di superadmin_accounts / dev_accounts, WAJIB cocok dengan PIN pribadi akun tersebut!
       if (targetRole === 'developer') {
-        const hasPersonalDevPin = Boolean(personalPin || matchedAcc?.pinHash);
-        isMatch = hasPersonalDevPin ? (cleanPin === personalPin || personalPinHashMatch) : cleanPin === validDeveloperPin;
+        isMatch = hasPersonalPin ? (cleanPin === personalPin || personalPinHashMatch) : isGlobalDevMatch;
+        // Jika scan QR/NFC Developer tanpa userId/username dan dev_accounts/adm-dev belum sinkron dengan global terbaru, izinkan juga isGlobalDevMatch
+        if (!isMatch && !hasExplicitIdentity && isGlobalDevMatch) {
+          isMatch = true;
+        }
         authorizedRole = 'developer';
-        usedPin = personalPin || (personalPinHashMatch ? cleanPin : validDeveloperPin);
+        usedPin = cleanPin;
       } else if (targetRole === 'superadmin') {
-        const hasPersonalSuperPin = Boolean(personalPin || matchedAcc?.pinHash);
-        isMatch = hasPersonalSuperPin ? (cleanPin === personalPin || personalPinHashMatch) : cleanPin === validSuperadminPin;
+        if (hasExplicitIdentity) {
+          // Login manual: wajib cocok PIN pribadi akun tsb jika punya, atau PIN global jika belum disetel PIN pribadi
+          isMatch = hasPersonalPin ? (cleanPin === personalPin || personalPinHashMatch) : isGlobalSuperMatch;
+        } else {
+          // Scan Kartu QR / Tap NFC SmartCard (kartu fisik bersama tanpa username):
+          // 1) Cocok dengan PIN akun root / PIN global Superadmin, ATAU
+          // 2) Cocok dengan PIN pribadi salah satu akun Superadmin aktif di superadmin_accounts
+          if (hasPersonalPin && (cleanPin === personalPin || personalPinHashMatch)) {
+            isMatch = true;
+          } else if (isGlobalSuperMatch) {
+            isMatch = true;
+          } else {
+            const matchedSuperByPin = await findActiveSuperadminByPin(cleanPin);
+            if (matchedSuperByPin) {
+              matchedAcc = matchedSuperByPin;
+              isMatch = true;
+            }
+          }
+        }
         authorizedRole = 'superadmin';
-        usedPin = personalPin || (personalPinHashMatch ? cleanPin : validSuperadminPin);
+        usedPin = cleanPin;
       } else {
-        const hasPersonalSuperPin = Boolean(personalPin || matchedAcc?.pinHash);
-        const superMatch = hasPersonalSuperPin ? (cleanPin === personalPin || personalPinHashMatch) : cleanPin === validSuperadminPin;
-        if (cleanPin === validDeveloperPin) {
+        const superMatch = hasPersonalPin ? (cleanPin === personalPin || personalPinHashMatch) : isGlobalSuperMatch;
+        if (isGlobalDevMatch) {
           isMatch = true;
           authorizedRole = 'developer';
-          usedPin = validDeveloperPin;
+          usedPin = cleanPin;
         } else if (superMatch) {
           isMatch = true;
           authorizedRole = 'superadmin';
-          usedPin = personalPin || (personalPinHashMatch ? cleanPin : validSuperadminPin);
+          usedPin = cleanPin;
+        } else if (!hasExplicitIdentity) {
+          const matchedSuperByPin = await findActiveSuperadminByPin(cleanPin);
+          if (matchedSuperByPin) {
+            matchedAcc = matchedSuperByPin;
+            isMatch = true;
+            authorizedRole = 'superadmin';
+            usedPin = cleanPin;
+          }
         }
       }
 
       if (!isMatch) {
-        const record = recordFailedPinAttempt(ip);
+        const record = recordFailedPinAttempt(rateLimitKey);
         if (record.locked) {
           return res.status(429).json({
             valid: false,
@@ -923,7 +1087,7 @@ async function startServer() {
         });
       }
 
-      clearPinRateLimit(ip);
+      clearPinRateLimit(rateLimitKey);
 
       // Pastikan apabila akses dari QR/NFC tanpa userId/username, kita tetap coba cari akun root adm-super / adm-dev agar data lengkap
       let finalAcc = matchedAcc;
@@ -935,7 +1099,7 @@ async function startServer() {
       }
 
       const resolvedId = finalAcc?.id || (authorizedRole === 'developer' ? 'adm-dev' : 'adm-super');
-      const resolvedUsername = finalAcc?.username || (authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin');
+      const resolvedUsername = finalAcc?.username || (authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin jabar');
       const resolvedNama = finalAcc?.namaAdmin || nama || (authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar');
       const resolvedWilayah = finalAcc?.wilayahTugas || (authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT');
       const resolvedAllowedPillars =
@@ -950,7 +1114,7 @@ async function startServer() {
             ? finalAcc.allowedKepahlawanan
             : ['all']
           : undefined;
-      const resolvedPinOtoritas = personalPin || usedPin;
+      const resolvedPinOtoritas = extractPersonalPin(finalAcc) || usedPin;
 
       const authorityToken = crypto
         .createHmac('sha256', SESSION_SECRET)
@@ -1026,10 +1190,20 @@ async function startServer() {
         }
         actorRole = authSession.role;
         actorName = authSession.namaAdmin || authSession.username;
-        targetId = authSession.role === 'developer' ? (userId || authSession.id) : authSession.id;
-        targetUname = authSession.role === 'developer' ? (username || authSession.username) : authSession.username;
+        if (authSession.role === 'developer') {
+          if (requestedRole === 'superadmin') {
+            targetId = userId || 'adm-super';
+            targetUname = username || (userId ? '' : 'superadmin jabar');
+          } else {
+            targetId = userId || authSession.id;
+            targetUname = username || authSession.username;
+          }
+        } else {
+          targetId = authSession.id;
+          targetUname = authSession.username;
+        }
       } else {
-        // Fallback when client token is missing/expired: require valid currentPin matching stored PIN for target account
+        // Fallback when client token is missing/expired: require valid currentPin matching stored PIN for target account or global DB PIN
         const cleanCurrent = typeof currentPin === 'string' ? currentPin.trim() : '';
         if (!/^\d{6}$/.test(cleanCurrent)) {
           return res.status(401).json({ success: false, message: 'Sesi otentikasi tidak valid. Silakan verifikasi ulang.' });
@@ -1040,10 +1214,16 @@ async function startServer() {
         );
         const existingPersonalPin = extractPersonalPin(lookupAcc);
         const matchesHash = Boolean(lookupAcc?.pinHash && comparePassword(cleanCurrent, lookupAcc.pinHash));
-        const globalExpected = requestedRole === 'developer' ? serverPinStore.developerPin : serverPinStore.superadminPin;
-        const verifiedPin = existingPersonalPin
-          ? cleanCurrent === existingPersonalPin || matchesHash
-          : matchesHash || cleanCurrent === globalExpected;
+        const globalPins = await resolveGlobalPinsFromDatabases();
+        const globalExpected = requestedRole === 'developer' ? globalPins.developerPin : globalPins.superadminPin;
+        const globalExpectedHash = requestedRole === 'developer' ? globalPins.developerPinHash : globalPins.superadminPinHash;
+        const globalMatches =
+          cleanCurrent === globalExpected ||
+          Boolean(globalExpectedHash && comparePassword(cleanCurrent, globalExpectedHash));
+        const verifiedPin =
+          existingPersonalPin || lookupAcc?.pinHash
+            ? cleanCurrent === existingPersonalPin || matchesHash || globalMatches
+            : globalMatches;
 
         if (!verifiedPin) {
           return res.status(401).json({ success: false, message: 'Verifikasi sesi/PIN saat ini tidak valid.' });
@@ -1171,9 +1351,12 @@ async function startServer() {
       if (requestedRole === 'developer' || (actorRole === 'developer' && !userId && !username) || isRootAccount) {
         if (requestedRole === 'developer') {
           serverPinStore.developerPin = cleanPin;
+          serverPinStore.developerPinHash = hashedPin;
         } else {
           serverPinStore.superadminPin = cleanPin;
+          serverPinStore.superadminPinHash = hashedPin;
         }
+        serverPinStore.updatedAt = nowMs;
 
         try {
           const { data: existingGlobal } = await supabase
@@ -1200,11 +1383,14 @@ async function startServer() {
         }
 
         try {
-          const { doc, setDoc } = await import('firebase/firestore');
+          const { doc, setDoc, deleteField } = await import('firebase/firestore');
           const { db } = await import('./src/lib/firebase');
           await setDoc(
             doc(db, 'app_settings', 'global'),
             {
+              ...(requestedRole === 'developer'
+                ? { developerPinEncrypted: encPin, developerPinHash: hashedPin, developerPin: deleteField() }
+                : { superadminPinEncrypted: encPin, superadminPinHash: hashedPin, superadminPin: deleteField() }),
               pinSecurityUpdatedAt: nowMs,
             },
             { merge: true }
@@ -1415,6 +1601,8 @@ async function startServer() {
         targetId === 'adm-super' || unameClean === 'superadmin' || unameClean === 'superadmin_jabar' || unameClean === 'superadmin jabar';
       if (isRootSuper) {
         serverPinStore.superadminPin = pinClean;
+        serverPinStore.superadminPinHash = hashedPin;
+        serverPinStore.updatedAt = nowMs;
         try {
           const { data: existingGlobal } = await supabase.from('app_settings').select('data').eq('id', 'global').maybeSingle();
           const baseGlobal = existingGlobal?.data && typeof existingGlobal.data === 'object' ? { ...existingGlobal.data } : {};
@@ -1430,6 +1618,20 @@ async function startServer() {
               },
             },
             { onConflict: 'id' }
+          );
+        } catch {}
+        try {
+          const { doc, setDoc, deleteField } = await import('firebase/firestore');
+          const { db } = await import('./src/lib/firebase');
+          await setDoc(
+            doc(db, 'app_settings', 'global'),
+            {
+              superadminPinEncrypted: encPin,
+              superadminPinHash: hashedPin,
+              superadminPin: deleteField(),
+              pinSecurityUpdatedAt: nowMs,
+            },
+            { merge: true }
           );
         } catch {}
       }
@@ -2558,9 +2760,17 @@ async function startServer() {
       await supabase.from('app_settings').upsert({ id, data: sanitized }, { onConflict: 'id' });
 
       try {
-        const { doc, setDoc } = await import('firebase/firestore');
+        const { doc, setDoc, deleteField } = await import('firebase/firestore');
         const { db } = await import('./src/lib/firebase');
-        await setDoc(doc(db, 'app_settings', id), sanitized, { merge: true });
+        await setDoc(
+          doc(db, 'app_settings', id),
+          {
+            ...sanitized,
+            superadminPin: deleteField(),
+            developerPin: deleteField(),
+          },
+          { merge: true }
+        );
       } catch {}
 
       return res.json({ success: true, message: 'Pengaturan sistem berhasil diperbarui dengan aman!' });

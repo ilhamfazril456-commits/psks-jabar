@@ -33,8 +33,8 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
   const isAuthorized = isDeveloperUser || session.role === 'superadmin';
 
   // Real-time state derived from appSettings with clean defaults
-  const superadminPinCurrent = appSettings.superadminPin || '123456';
-  const developerPinCurrent = appSettings.developerPin || '992211';
+  const superadminPinCurrent = appSettings.superadminPin || '150109';
+  const developerPinCurrent = appSettings.developerPin || '150109';
 
   // Local state for edits
   const [newSuperadminPin, setNewSuperadminPin] = useState(superadminPinCurrent);
@@ -80,16 +80,26 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
     setIsSavingSuperadmin(true);
     try {
-      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
+      const token =
+        session.sessionToken ||
+        sessionStorage.getItem('session_token') ||
+        sessionStorage.getItem('psks_session_token') ||
+        localStorage.getItem('session_token') ||
+        localStorage.getItem('psks_session_token') ||
+        '';
       const res = await fetch('/api/auth/update-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-session-token': token } : {}),
         },
         body: JSON.stringify({
           newPin: cleanPin,
+          currentPin: superadminPinCurrent,
           pinType: 'superadmin',
+          userId: 'adm-super',
+          username: 'superadmin jabar',
+          sessionToken: token,
         }),
       });
       const data = await res.json();
@@ -97,12 +107,17 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
         throw new Error(data.message || 'Gagal menyimpan PIN ke server');
       }
 
+      const nowMs = data.lastUpdatedTimestamp || Date.now();
       const updated: AppSettings = {
         ...appSettings,
         superadminPin: cleanPin,
-        pinSecurityUpdatedAt: Date.now(),
+        pinSecurityUpdatedAt: nowMs,
       };
       await onSaveSettings(updated);
+      try {
+        window.dispatchEvent(new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } }));
+        window.dispatchEvent(new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'app_settings' } }));
+      } catch {}
       setSuccessMessage('✅ PIN Smart Card Superadmin berhasil diperbarui dan aktif realtime di server!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
@@ -124,16 +139,26 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
 
     setIsSavingDeveloper(true);
     try {
-      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
+      const token =
+        session.sessionToken ||
+        sessionStorage.getItem('session_token') ||
+        sessionStorage.getItem('psks_session_token') ||
+        localStorage.getItem('session_token') ||
+        localStorage.getItem('psks_session_token') ||
+        '';
       const res = await fetch('/api/auth/update-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...(token ? { 'Authorization': `Bearer ${token}`, 'x-session-token': token } : {}),
         },
         body: JSON.stringify({
           newPin: cleanPin,
+          currentPin: developerPinCurrent,
           pinType: 'developer',
+          userId: session.userId || 'adm-dev',
+          username: session.username || 'ilhamfazril',
+          sessionToken: token,
         }),
       });
       const data = await res.json();
@@ -141,12 +166,17 @@ export const PinSecurityManagementPage: React.FC<PinSecurityManagementPageProps>
         throw new Error(data.message || 'Gagal menyimpan PIN ke server');
       }
 
+      const nowMs = data.lastUpdatedTimestamp || Date.now();
       const updated: AppSettings = {
         ...appSettings,
         developerPin: cleanPin,
-        pinSecurityUpdatedAt: Date.now(),
+        pinSecurityUpdatedAt: nowMs,
       };
       await onSaveSettings(updated);
+      try {
+        window.dispatchEvent(new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'dev_accounts' } }));
+        window.dispatchEvent(new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'app_settings' } }));
+      } catch {}
       setSuccessMessage('✅ PIN Smart Card Developer berhasil diperbarui dan aktif realtime di server!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {

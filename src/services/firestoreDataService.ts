@@ -400,10 +400,20 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   if (collectionName === 'app_settings' || collectionName === 'psks_records_meta' || collectionName === 'psks_app_settings') {
     const safeSettings = { ...cleaned };
     if (typeof safeSettings.superadminPin === 'string' && /^\d{6}$/.test(safeSettings.superadminPin.trim())) {
-      safeSettings.superadminPinEncrypted = encryptSensitiveData(safeSettings.superadminPin.trim());
+      const cleanSuper = safeSettings.superadminPin.trim();
+      safeSettings.superadminPinEncrypted = encryptSensitiveData(cleanSuper);
+      safeSettings.superadminPinHash = hashPassword(cleanSuper);
+    } else if (safeSettings.superadminPinEncrypted && !safeSettings.superadminPinHash) {
+      const decSuper = decryptSensitiveData(safeSettings.superadminPinEncrypted).trim();
+      if (/^\d{6}$/.test(decSuper)) safeSettings.superadminPinHash = hashPassword(decSuper);
     }
     if (typeof safeSettings.developerPin === 'string' && /^\d{6}$/.test(safeSettings.developerPin.trim())) {
-      safeSettings.developerPinEncrypted = encryptSensitiveData(safeSettings.developerPin.trim());
+      const cleanDev = safeSettings.developerPin.trim();
+      safeSettings.developerPinEncrypted = encryptSensitiveData(cleanDev);
+      safeSettings.developerPinHash = hashPassword(cleanDev);
+    } else if (safeSettings.developerPinEncrypted && !safeSettings.developerPinHash) {
+      const decDev = decryptSensitiveData(safeSettings.developerPinEncrypted).trim();
+      if (/^\d{6}$/.test(decDev)) safeSettings.developerPinHash = hashPassword(decDev);
     }
     delete safeSettings.superadminPin;
     delete safeSettings.developerPin;
@@ -453,10 +463,20 @@ function sanitizeForFirestorePayload(collectionName: string, rawData: Record<str
     delete cleaned._previousUsername;
   } else if (collectionName === 'app_settings') {
     if (typeof cleaned.superadminPin === 'string' && /^\d{6}$/.test(cleaned.superadminPin.trim())) {
-      cleaned.superadminPinEncrypted = encryptSensitiveData(cleaned.superadminPin.trim());
+      const cleanSuper = cleaned.superadminPin.trim();
+      cleaned.superadminPinEncrypted = encryptSensitiveData(cleanSuper);
+      cleaned.superadminPinHash = hashPassword(cleanSuper);
+    } else if (cleaned.superadminPinEncrypted && !cleaned.superadminPinHash) {
+      const decSuper = decryptSensitiveData(cleaned.superadminPinEncrypted).trim();
+      if (/^\d{6}$/.test(decSuper)) cleaned.superadminPinHash = hashPassword(decSuper);
     }
     if (typeof cleaned.developerPin === 'string' && /^\d{6}$/.test(cleaned.developerPin.trim())) {
-      cleaned.developerPinEncrypted = encryptSensitiveData(cleaned.developerPin.trim());
+      const cleanDev = cleaned.developerPin.trim();
+      cleaned.developerPinEncrypted = encryptSensitiveData(cleanDev);
+      cleaned.developerPinHash = hashPassword(cleanDev);
+    } else if (cleaned.developerPinEncrypted && !cleaned.developerPinHash) {
+      const decDev = decryptSensitiveData(cleaned.developerPinEncrypted).trim();
+      if (/^\d{6}$/.test(decDev)) cleaned.developerPinHash = hashPassword(decDev);
     }
     delete cleaned.superadminPin;
     delete cleaned.developerPin;
@@ -477,7 +497,12 @@ async function passiveFirestoreBackup(
     const { firestore, db } = await getFirestoreModule();
     if (action === 'set') {
       const docRef = firestore.doc(db, collectionName, docIdOrDocs);
-      await firestore.setDoc(docRef, sanitizeForFirestorePayload(collectionName, dataOrMerge), { merge: true });
+      const safePayload = sanitizeForFirestorePayload(collectionName, dataOrMerge);
+      if (collectionName === 'app_settings' && docIdOrDocs === 'global') {
+        safePayload.superadminPin = firestore.deleteField();
+        safePayload.developerPin = firestore.deleteField();
+      }
+      await firestore.setDoc(docRef, safePayload, { merge: true });
     } else if (action === 'delete') {
       const docRef = firestore.doc(db, collectionName, docIdOrDocs);
       await firestore.deleteDoc(docRef);
@@ -1219,6 +1244,11 @@ export async function setFirestoreDoc(
         }
 
         if (!existing.data) {
+          // Jangan pernah membuat baris hantu (skeleton ghost account) jika ini hanyalah update status/heartbeat parsial
+          const isSkeletonPartialOnly = !data.username && !data.namaAdmin && !data.passwordHash;
+          if (isSkeletonPartialOnly) {
+            return;
+          }
           // Row does not exist yet in Supabase, perform complete upsert
           const row = mapDocToSupabaseRow(collectionName, docId, data);
           if (row.data && typeof row.data === 'object') {

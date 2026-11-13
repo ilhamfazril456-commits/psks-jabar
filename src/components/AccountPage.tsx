@@ -308,9 +308,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return session.pinOtoritas.trim();
     }
     if (session.role === 'developer') {
-      return appSettings?.developerPin || '992211';
+      return appSettings?.developerPin || '150109';
     }
-    return appSettings?.superadminPin || '123456';
+    return appSettings?.superadminPin || '150109';
   }, [currentUserAccount, session.pinOtoritas, session.role, appSettings?.developerPin, appSettings?.superadminPin]);
 
   // Superadmin / Developer PIN Management State (Dedicated Self-Service PIN Change)

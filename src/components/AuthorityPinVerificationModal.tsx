@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ShieldCheck, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShieldCheck, AlertTriangle, Lock, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { AppSettings } from '../types';
 
 interface AuthorityPinVerificationModalProps {
@@ -33,11 +33,11 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   userId,
   method = 'manual',
   challengeToken,
-  appSettings,
   onSuccess,
   onCancel,
 }) => {
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [showPinDigits, setShowPinDigits] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedCount, setFailedCount] = useState<number>(0);
   const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
@@ -46,9 +46,11 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
 
   // References to the 6 input elements for smooth auto-focus navigation
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const verifyingRef = useRef<boolean>(false);
 
-  const LOCKOUT_KEY = `psks_pin_lockout_${role}`;
-  const ATTEMPTS_KEY = `psks_pin_attempts_${role}`;
+  const accountScope = (userId || username || method || 'global').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  const LOCKOUT_KEY = `psks_pin_lockout_${role}_${accountScope}`;
+  const ATTEMPTS_KEY = `psks_pin_attempts_${role}_${accountScope}`;
 
   // Focus the first empty digit or first input on mount & load persistent lockout
   useEffect(() => {
@@ -75,7 +77,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
       inputRefs.current[0]?.focus();
     }, 120);
     return () => clearTimeout(focusTimer);
-  }, [role]);
+  }, [LOCKOUT_KEY, ATTEMPTS_KEY]);
 
   // Lockout countdown timer with persistence sync
   useEffect(() => {
@@ -99,29 +101,28 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [lockoutRemaining, role]);
+  }, [lockoutRemaining, LOCKOUT_KEY, ATTEMPTS_KEY]);
 
   const handleDigitChange = (index: number, value: string) => {
-    if (lockoutRemaining > 0 || isSuccess) return;
+    if (lockoutRemaining > 0 || isSuccess || verifyingRef.current) return;
 
-    // Only allow numbers
     const cleanVal = value.replace(/\D/g, '');
 
-    // Handle paste of multiple characters
+    // Handle paste or OS OTP autofill of multiple characters
     if (cleanVal.length > 1) {
       const pasteDigits = cleanVal.slice(0, 6).split('');
       const newDigits = [...digits];
+      const startIndex = cleanVal.length >= 6 ? 0 : index;
       pasteDigits.forEach((d, idx) => {
-        if (index + idx < 6) {
-          newDigits[index + idx] = d;
+        if (startIndex + idx < 6) {
+          newDigits[startIndex + idx] = d;
         }
       });
       setDigits(newDigits);
       setErrorMessage(null);
-      const nextIndex = Math.min(index + pasteDigits.length, 5);
+      const nextIndex = Math.min(startIndex + pasteDigits.length, 5);
       inputRefs.current[nextIndex]?.focus();
 
-      // If all 6 digits filled, auto-verify
       if (newDigits.every((d) => d !== '')) {
         validatePin(newDigits.join(''));
       }
@@ -134,25 +135,52 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     setDigits(newDigits);
     setErrorMessage(null);
 
-    // Auto-advance to next input if filled
     if (singleDigit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-verify if all 6 filled
-    if (singleDigit && index === 5 && newDigits.every((d) => d !== '')) {
+    if (singleDigit && newDigits.every((d) => d !== '')) {
+      validatePin(newDigits.join(''));
+    }
+  };
+
+  const handlePaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (lockoutRemaining > 0 || isSuccess || verifyingRef.current) return;
+    const pasted = (e.clipboardData?.getData('text') || '').replace(/\D/g, '');
+    if (!pasted) return;
+    e.preventDefault();
+    const startIndex = pasted.length >= 6 ? 0 : index;
+    const pasteDigits = pasted.slice(0, 6 - startIndex).split('');
+    const newDigits = [...digits];
+    pasteDigits.forEach((d, idx) => {
+      if (startIndex + idx < 6) {
+        newDigits[startIndex + idx] = d;
+      }
+    });
+    setDigits(newDigits);
+    setErrorMessage(null);
+    const nextIndex = Math.min(startIndex + pasteDigits.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+    if (newDigits.every((d) => d !== '')) {
       validatePin(newDigits.join(''));
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (lockoutRemaining > 0) return;
+    if (lockoutRemaining > 0 || isSuccess || verifyingRef.current) return;
 
     if (e.key === 'Backspace') {
-      if (!digits[index] && index > 0) {
-        // Move to previous box on backspace if current is empty
+      e.preventDefault();
+      const newDigits = [...digits];
+      if (newDigits[index]) {
+        newDigits[index] = '';
+        setDigits(newDigits);
+      } else if (index > 0) {
+        newDigits[index - 1] = '';
+        setDigits(newDigits);
         inputRefs.current[index - 1]?.focus();
       }
+      setErrorMessage(null);
     } else if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
     } else if (e.key === 'ArrowRight' && index < 5) {
@@ -166,13 +194,14 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   };
 
   const validatePin = async (pinToTest: string) => {
-    if (lockoutRemaining > 0 || isVerifying || isSuccess) return;
+    if (lockoutRemaining > 0 || verifyingRef.current || isVerifying || isSuccess) return;
 
     if (pinToTest.length !== 6) {
       setErrorMessage('Silakan masukkan 6 digit PIN lengkap.');
       return;
     }
 
+    verifyingRef.current = true;
     setIsVerifying(true);
 
     try {
@@ -193,6 +222,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
       const data = await res.json();
 
       if (data.valid) {
+        verifyingRef.current = false;
         setIsSuccess(true);
         setErrorMessage(null);
         setIsVerifying(false);
@@ -201,6 +231,8 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         try {
           localStorage.removeItem(LOCKOUT_KEY);
           localStorage.removeItem(ATTEMPTS_KEY);
+          localStorage.removeItem(`psks_pin_lockout_${role}`);
+          localStorage.removeItem(`psks_pin_attempts_${role}`);
         } catch {}
 
         // Store authoritative sessionToken if issued
@@ -249,6 +281,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
         return;
       }
 
+      verifyingRef.current = false;
       setIsVerifying(false);
 
       if (data.locked) {
@@ -277,11 +310,12 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
           setErrorMessage('⚠️ 5 kali percobaan PIN salah! Sistem otorisasi dibekukan selama 15 menit.');
         } else {
           setDigits(['', '', '', '', '', '']);
-          inputRefs.current[0]?.focus();
+          setTimeout(() => inputRefs.current[0]?.focus(), 30);
           setErrorMessage(data.message || `❌ PIN salah. Sisa kesempatan: ${Math.max(0, 5 - newFailed)} kali.`);
         }
       }
     } catch {
+      verifyingRef.current = false;
       setIsVerifying(false);
       setErrorMessage('❌ Gagal terhubung ke server autentikasi. Silakan periksa koneksi jaringan Anda.');
     }
@@ -351,15 +385,16 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
                   ref={(el) => {
                     inputRefs.current[idx] = el;
                   }}
-                  type="password"
+                  type={showPinDigits ? 'text' : 'password'}
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={1}
                   disabled={lockoutRemaining > 0 || isVerifying || isSuccess}
                   value={digit}
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
+                  onPaste={(e) => handlePaste(idx, e)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   autoComplete="one-time-code"
+                  aria-label={`Digit PIN ${idx + 1}`}
                   className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl transition-all outline-none select-none
                     ${digit 
                       ? 'bg-blue-50/70 border-2 border-blue-600 text-blue-900 shadow-sm' 
@@ -370,6 +405,17 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
                   `}
                 />
               ))}
+            </div>
+
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowPinDigits((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-blue-700 transition-colors cursor-pointer"
+              >
+                {showPinDigits ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showPinDigits ? 'Sembunyikan Angka PIN' : 'Lihat Angka PIN'}</span>
+              </button>
             </div>
 
             {/* Error / Lockout Status Box */}

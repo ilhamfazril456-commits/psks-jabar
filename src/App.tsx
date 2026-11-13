@@ -1831,7 +1831,7 @@ export default function App() {
 
     const sendHeartbeat = async () => {
       const matched = findMatchedSessionAccount(adminAccountsRef.current);
-      if (!matched) return;
+      if (!matched || !matched.username || matched.username === matched.id) return;
 
       const isVisible = document.visibilityState === 'visible';
       const isRecentActivity = Date.now() - lastInteractionTime < 2 * 60 * 1000; // 2 minutes
@@ -1920,7 +1920,7 @@ export default function App() {
     const handleUnload = () => {
       if (quotaExceededRef.current) return;
       const matched = findMatchedSessionAccount(adminAccountsRef.current);
-      if (!matched) return;
+      if (!matched || !matched.username || matched.username === matched.id) return;
 
       const targetCol = resolveAccountCollection(matched.role);
       const nowIso = new Date().toISOString();
