@@ -14,30 +14,30 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 2. Security Signals: Forensics append-only
+    // 2. Security Signals: Forensics & real-time live signal updates
     match /security_signals/{signalId} {
       allow read: if true;
-      allow create: if isValidId(signalId);
-      allow update, delete: if false;
+      allow create, update: if isValidId(signalId);
+      allow delete: if false;
     }
 
-    // 3. User, Admin, Superadmin, & Dev Accounts
+    // 3. User, Admin, Superadmin, & Dev Accounts (Zero plaintext secrets allowed in Firestore)
     match /dev_accounts/{devId} {
       allow read: if true;
-      allow create, delete: if false; // Developer root account cannot be created or deleted via client SDK
-      allow update: if isValidId(devId) &&
+      allow create, update: if isValidId(devId) &&
         !('passwordPolos' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
+      allow delete: if false; // Developer root account cannot be deleted
     }
 
     match /superadmin_accounts/{superadminId} {
       allow read: if true;
-      allow create, delete: if false; // Superadmin account cannot be wiped or created from client SDK
-      allow update: if isValidId(superadminId) &&
+      allow create, update: if isValidId(superadminId) &&
         !('passwordPolos' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
+      allow delete: if isValidId(superadminId) && superadminId != 'adm-super';
     }
 
     match /admin_accounts/{accountId} {
@@ -121,7 +121,17 @@ service cloud.firestore {
     }
 
     // 12. AI Dynamic Knowledge Base & Brain Storage
+    match /ai_knowledge_base/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
     match /ai_knowledge/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /ai_config/{docId} {
       allow read: if true;
       allow create, update, delete: if isValidId(docId);
     }
@@ -142,6 +152,11 @@ service cloud.firestore {
     }
 
     // 13. Video Background Sync
+    match /system_video_chunks/{chunkId} {
+      allow read: if true;
+      allow create, update, delete: if isValidId(chunkId);
+    }
+
     match /sync_video/{videoId} {
       allow read, write: if isValidId(videoId);
     }

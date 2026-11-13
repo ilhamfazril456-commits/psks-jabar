@@ -604,11 +604,25 @@ async function startServer() {
       for (const ident of cleanIds) {
         const lower = ident.toLowerCase();
         try {
-          const { data, error } = await supabase
+          let { data, error } = await supabase
             .from(table)
             .select('*')
-            .or(`id.eq.${ident},username.ilike.${lower}`)
+            .eq('id', ident)
+            .limit(1)
             .maybeSingle();
+
+          if (error || !data) {
+            const byUname = await supabase
+              .from(table)
+              .select('*')
+              .ilike('username', lower)
+              .limit(1)
+              .maybeSingle();
+            if (!byUname.error && byUname.data) {
+              data = byUname.data;
+              error = null;
+            }
+          }
 
           if (!error && data) {
             const rest = data.data && typeof data.data === 'object' ? data.data : {};
@@ -1019,11 +1033,9 @@ async function startServer() {
         try {
           const { doc, setDoc } = await import('firebase/firestore');
           const { db } = await import('./src/lib/firebase');
-          const pinField = requestedRole === 'developer' ? 'developerPin' : 'superadminPin';
           await setDoc(
             doc(db, 'app_settings', 'global'),
             {
-              [pinField]: cleanPin,
               pinSecurityUpdatedAt: nowMs,
             },
             { merge: true }
@@ -1049,19 +1061,16 @@ async function startServer() {
   app.post('/api/auth/update-password', rateLimitAuth, async (req, res) => {
     try {
       const authHeader = req.headers['authorization'] || '';
-      const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-      const token = tokenFromHeader || (req.headers['x-session-token'] as string) || (req.body && req.body.sessionToken);
+      const tokenFromHeader =
+        typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const token =
+        tokenFromHeader ||
+        (typeof req.headers['x-session-token'] === 'string' ? req.headers['x-session-token'].trim() : '') ||
+        (req.body && typeof req.body.sessionToken === 'string' ? req.body.sessionToken.trim() : '');
 
-      if (!token) {
-        return res.status(401).json({ success: false, message: 'Sesi otentikasi tidak ditemukan. Silakan login ulang.' });
-      }
+      const authSession = token ? verifySessionToken(token) : null;
 
-      const authSession = verifySessionToken(token);
-      if (!authSession) {
-        return res.status(401).json({ success: false, message: 'Token sesi tidak sah atau kedaluwarsa. Silakan login ulang.' });
-      }
-
-      const { oldPassword, newPassword } = req.body || {};
+      const { oldPassword, newPassword, userId: bodyUserId, username: bodyUsername, role: bodyRole } = req.body || {};
       const oldTrim = typeof oldPassword === 'string' ? oldPassword.trim() : '';
       const newTrim = typeof newPassword === 'string' ? newPassword.trim() : '';
 
@@ -1075,29 +1084,25 @@ async function startServer() {
         return res.status(400).json({ success: false, message: '❌ Kata sandi baru tidak boleh sama dengan kata sandi lama!' });
       }
 
-      const cleanRole = (authSession.role || 'user').toLowerCase();
-      if (cleanRole === 'superadmin' || cleanRole === 'developer') {
-        if (newTrim.length < 12) {
-          return res.status(400).json({ success: false, message: '❌ Kata sandi Superadmin/Developer minimal 12 karakter.' });
-        }
-        if (!/[A-Z]/.test(newTrim) || !/[a-z]/.test(newTrim) || !/[0-9]/.test(newTrim)) {
-          return res.status(400).json({
-            success: false,
-            message: '❌ Kata sandi wajib kombinasi huruf besar (A-Z), huruf kecil (a-z), dan angka (0-9).',
-          });
-        }
-      } else if (newTrim.length < 6) {
-        return res.status(400).json({ success: false, message: '❌ Kata sandi baru minimal 6 karakter.' });
+      // Keamanan:
+      // - Bila token HMAC sah: target mutlak dikunci ke identitas authSession (anti pemalsuan ID).
+      // - Bila token lokal (ses_local_...) / kedaluwarsa / kosong: izinkan lookup dari bodyUserId/bodyUsername
+      //   karena kepemilikan akun diverifikasi secara kriptografis lewat comparePassword(oldTrim, currentHash) di DB.
+      const identifiers = authSession
+        ? [authSession.id, authSession.username].filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+        : [bodyUserId, bodyUsername].filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+
+      if (identifiers.length === 0) {
+        return res.status(401).json({ success: false, message: 'Sesi otentikasi tidak ditemukan. Silakan login ulang.' });
       }
 
-      const identifiers = [authSession.id, authSession.username]
-        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+      const hintedRole = ((authSession?.role || bodyRole || '') as string).toLowerCase().trim();
       const preferredTable =
-        cleanRole === 'developer'
+        hintedRole === 'developer'
           ? 'dev_accounts'
-          : cleanRole === 'superadmin'
+          : hintedRole === 'superadmin'
           ? 'superadmin_accounts'
-          : cleanRole === 'user'
+          : hintedRole === 'user'
           ? 'user_accounts'
           : 'admin_accounts';
 
@@ -1117,6 +1122,7 @@ async function startServer() {
               .from(tbl)
               .select('*')
               .eq('id', cleanIdent)
+              .limit(1)
               .maybeSingle();
 
             if (!byIdErr && byId) {
@@ -1129,6 +1135,7 @@ async function startServer() {
               .from(tbl)
               .select('*')
               .ilike('username', lowerIdent)
+              .limit(1)
               .maybeSingle();
 
             if (!byUnameErr && byUname) {
@@ -1139,6 +1146,38 @@ async function startServer() {
           } catch {}
         }
         if (matchedRow) break;
+      }
+
+      // Fallback lookup from Firestore if not present in Supabase
+      if (!matchedRow) {
+        try {
+          const { collection, getDocs, query, where, doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('./src/lib/firebase');
+          for (const colName of tablesToSearch) {
+            for (const ident of identifiers) {
+              const cleanIdent = ident.trim();
+              try {
+                const directSnap = await getDoc(doc(db, colName, cleanIdent));
+                if (directSnap.exists()) {
+                  const d = directSnap.data();
+                  matchedRow = { id: directSnap.id, ...d, data: d };
+                  matchedTable = colName;
+                  break;
+                }
+                const q = query(collection(db, colName), where('username', '==', cleanIdent.toLowerCase()));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                  const dSnap = snap.docs[0];
+                  const d = dSnap.data();
+                  matchedRow = { id: dSnap.id, ...d, data: d };
+                  matchedTable = colName;
+                  break;
+                }
+              } catch {}
+            }
+            if (matchedRow) break;
+          }
+        } catch {}
       }
 
       // Fallback lookup from DEFAULT_ADMIN_ACCOUNTS if root account row hasn't been seeded yet
@@ -1157,11 +1196,63 @@ async function startServer() {
 
       const existingDataObj =
         matchedRow?.data && typeof matchedRow.data === 'object' ? { ...matchedRow.data } : {};
+
+      if (
+        matchedRow?.isFrozen === true ||
+        existingDataObj.isFrozen === true ||
+        matchedRow?.statusAkun === 'DIBEKUKAN' ||
+        existingDataObj.statusAkun === 'DIBEKUKAN' ||
+        matchedRow?.statusActive === 'FROZEN' ||
+        existingDataObj.statusActive === 'FROZEN'
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: '❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan oleh Administrator.',
+        });
+      }
+
       const currentHash: string =
         matchedRow?.passwordHash || existingDataObj.passwordHash || defMatch?.passwordHash || '';
 
       if (!currentHash || !comparePassword(oldTrim, currentHash)) {
         return res.status(401).json({ success: false, message: '❌ Kata sandi saat ini yang Anda masukkan salah!' });
+      }
+
+      const targetId = matchedRow?.id || defMatch?.id || authSession?.id || String(bodyUserId || '').trim();
+      const targetUsername =
+        matchedRow?.username ||
+        existingDataObj.username ||
+        defMatch?.username ||
+        authSession?.username ||
+        String(bodyUsername || '').trim();
+      const rawRole =
+        matchedRow?.role ||
+        existingDataObj.role ||
+        defMatch?.role ||
+        authSession?.role ||
+        hintedRole ||
+        'user';
+      const targetRole =
+        targetId === 'adm-dev' || (targetUsername || '').toLowerCase().trim() === 'ilhamfazril'
+          ? 'developer'
+          : targetId === 'adm-super' ||
+            matchedTable === 'superadmin_accounts' ||
+            (targetUsername || '').toLowerCase().includes('superadmin')
+          ? 'superadmin'
+          : (rawRole as 'user' | 'admin' | 'superadmin' | 'developer');
+
+      if (targetRole === 'superadmin' || targetRole === 'developer') {
+        if (newTrim.length < 12) {
+          return res.status(400).json({ success: false, message: '❌ Kata sandi Superadmin/Developer minimal 12 karakter.' });
+        }
+        if (!/[A-Z]/.test(newTrim) || !/[a-z]/.test(newTrim) || !/[0-9]/.test(newTrim)) {
+          return res.status(400).json({
+            success: false,
+            message: '❌ Kata sandi wajib kombinasi huruf besar (A-Z), huruf kecil (a-z), dan angka (0-9).',
+          });
+        }
+      } else if (newTrim.length < 6) {
+        return res.status(400).json({ success: false, message: '❌ Kata sandi baru minimal 6 karakter.' });
       }
 
       // Cegah penggunaan ulang kata sandi lama maupun riwayat kata sandi sebelumnya
@@ -1180,17 +1271,53 @@ async function startServer() {
       const nowMs = Date.now();
       const updatedPrevHashes = [currentHash, ...prevHashes].slice(0, 5);
 
-      const targetId = matchedRow?.id || defMatch?.id || authSession.id;
-      const targetUsername =
-        matchedRow?.username || existingDataObj.username || defMatch?.username || authSession.username;
       const targetNama =
-        matchedRow?.namaAdmin || existingDataObj.namaAdmin || defMatch?.namaAdmin || authSession.namaAdmin || targetUsername;
-      const targetRole =
-        matchedRow?.role || existingDataObj.role || defMatch?.role || authSession.role;
+        matchedRow?.namaAdmin ||
+        existingDataObj.namaAdmin ||
+        defMatch?.namaAdmin ||
+        authSession?.namaAdmin ||
+        targetUsername;
       const targetWilayah =
-        matchedRow?.wilayahTugas || existingDataObj.wilayahTugas || defMatch?.wilayahTugas || authSession.wilayahTugas || '';
+        targetRole === 'superadmin'
+          ? 'PROVINSI JAWA BARAT'
+          : targetRole === 'developer'
+          ? 'Pusat Developer Jabar'
+          : matchedRow?.wilayahTugas ||
+            existingDataObj.wilayahTugas ||
+            defMatch?.wilayahTugas ||
+            authSession?.wilayahTugas ||
+            '';
       const targetStatusActive =
         matchedRow?.statusActive || existingDataObj.statusActive || 'SAH_TERDAFTAR';
+      const targetAllowedPillars = Array.isArray(matchedRow?.allowedPillars)
+        ? matchedRow.allowedPillars
+        : Array.isArray(existingDataObj.allowedPillars)
+        ? existingDataObj.allowedPillars
+        : targetRole === 'superadmin'
+        ? ['all']
+        : undefined;
+      const targetPinOtoritas =
+        matchedRow?.pinOtoritas || existingDataObj.pinOtoritas || authSession?.pinOtoritas || undefined;
+
+      const saveTable =
+        targetRole === 'developer'
+          ? 'dev_accounts'
+          : targetRole === 'superadmin'
+          ? 'superadmin_accounts'
+          : targetRole === 'user'
+          ? 'user_accounts'
+          : matchedTable;
+
+      const refreshedSessionToken = signSessionToken({
+        id: targetId,
+        username: targetUsername,
+        role: targetRole,
+        namaAdmin: targetNama,
+        wilayahTugas: targetWilayah,
+        statusActive: targetStatusActive,
+        allowedPillars: targetAllowedPillars,
+        pinOtoritas: targetPinOtoritas,
+      });
 
       // ZERO PLAINTEXT GUARANTEE: pastikan passwordPolos tidak pernah ada di JSON/kolom
       delete existingDataObj.passwordPolos;
@@ -1202,6 +1329,7 @@ async function startServer() {
         role: targetRole,
         wilayahTugas: targetWilayah,
         statusActive: targetStatusActive,
+        ...(targetAllowedPillars ? { allowedPillars: targetAllowedPillars } : {}),
         passwordHash: newHash,
         passwordEncrypted: encPassword,
         previousPasswordHashes: updatedPrevHashes,
@@ -1220,12 +1348,12 @@ async function startServer() {
         statusActive: targetStatusActive,
         wilayahTugas: targetWilayah,
         passwordHash: newHash,
-        sessionToken: matchedRow?.sessionToken || '',
+        sessionToken: refreshedSessionToken,
         data: nextDataJson,
       };
 
       const { error: sbSaveErr } = await supabase
-        .from(matchedTable)
+        .from(saveTable)
         .upsert(upsertPayload, { onConflict: 'id' });
 
       if (sbSaveErr) {
@@ -1233,10 +1361,13 @@ async function startServer() {
         return res.status(500).json({ success: false, message: 'Gagal memperbarui kata sandi di database.' });
       }
 
-      // Bersihkan duplikat lama di admin_accounts bila ada untuk adm-super / superadmin agar password lama tidak mungkin bisa login
-      if (matchedTable === 'superadmin_accounts' && targetId) {
+      // Bersihkan duplikat lama di admin_accounts bila akun merupakan superadmin / developer
+      if ((saveTable === 'superadmin_accounts' || saveTable === 'dev_accounts') && targetId) {
         try {
           await supabase.from('admin_accounts').delete().eq('id', targetId);
+          if (targetUsername) {
+            await supabase.from('admin_accounts').delete().ilike('username', targetUsername.toLowerCase().trim());
+          }
         } catch {}
       }
 
@@ -1245,7 +1376,7 @@ async function startServer() {
         const { doc, setDoc } = await import('firebase/firestore');
         const { db } = await import('./src/lib/firebase');
         await setDoc(
-          doc(db, matchedTable, targetId),
+          doc(db, saveTable, targetId),
           {
             id: targetId,
             username: targetUsername,
@@ -1253,6 +1384,7 @@ async function startServer() {
             role: targetRole,
             wilayahTugas: targetWilayah,
             statusActive: targetStatusActive,
+            ...(targetAllowedPillars ? { allowedPillars: targetAllowedPillars } : {}),
             passwordHash: newHash,
             passwordEncrypted: encPassword,
             previousPasswordHashes: updatedPrevHashes,
@@ -1269,6 +1401,9 @@ async function startServer() {
       return res.json({
         success: true,
         updatedAccountId: targetId,
+        username: targetUsername,
+        role: targetRole,
+        sessionToken: refreshedSessionToken,
         passwordHash: newHash,
         passwordEncrypted: encPassword,
         previousPasswordHashes: updatedPrevHashes,
@@ -1330,11 +1465,25 @@ async function startServer() {
       const sbTablesToCheck = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
       for (const t of sbTablesToCheck) {
         try {
-          const { data, error } = await supabase
+          let { data, error } = await supabase
             .from(t)
             .select('*')
-            .or(`username.ilike.${uClean},id.eq.${uClean}`)
+            .ilike('username', uClean)
+            .limit(1)
             .maybeSingle();
+
+          if (error || !data) {
+            const byId = await supabase
+              .from(t)
+              .select('*')
+              .eq('id', uClean)
+              .limit(1)
+              .maybeSingle();
+            if (!byId.error && byId.data) {
+              data = byId.data;
+              error = null;
+            }
+          }
 
           if (!error && data) {
             const restData = data.data && typeof data.data === 'object' ? data.data : {};

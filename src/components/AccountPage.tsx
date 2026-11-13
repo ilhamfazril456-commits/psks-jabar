@@ -507,20 +507,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return;
     }
 
-    // Verifikasi lokal bila hash tersedia (authoritative server verify tetap berjalan di bawah)
-    if (targetAccount.passwordHash) {
-      const matchesOld = comparePassword(oldTrim, targetAccount.passwordHash);
-      if (!matchesOld) {
-        setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
-        return;
-      }
-      const prevHashes = Array.isArray(targetAccount.previousPasswordHashes) ? targetAccount.previousPasswordHashes : [];
-      if (comparePassword(newTrim, targetAccount.passwordHash) || prevHashes.some((h) => comparePassword(newTrim, h))) {
-        setPasswordChangeError('❌ Kata sandi lama tidak boleh digunakan kembali! Gunakan kata sandi baru yang berbeda.');
-        return;
-      }
-    }
-
     setIsSavingPassword(true);
     try {
       const token =
@@ -534,42 +520,53 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       let serverResult: any = null;
       let serverReachable = false;
 
-      if (token) {
-        try {
-          const res = await fetch('/api/auth/update-password', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-              'x-session-token': token,
-            },
-            body: JSON.stringify({
-              oldPassword: oldTrim,
-              newPassword: newTrim,
-              userId: targetAccount.id,
-              username: targetAccount.username,
-            }),
-          });
-          serverReachable = true;
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.success) {
-            setPasswordChangeError(data?.message || '❌ Gagal memperbarui kata sandi di server.');
-            return;
-          }
-          serverResult = data;
-        } catch {
-          serverReachable = false;
+      try {
+        const res = await fetch('/api/auth/update-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-session-token': token } : {}),
+          },
+          body: JSON.stringify({
+            oldPassword: oldTrim,
+            newPassword: newTrim,
+            userId: targetAccount.id || session.userId,
+            username: targetAccount.username || session.username || session.nama,
+            role: targetAccount.role || session.role,
+            sessionToken: token,
+          }),
+        });
+        serverReachable = true;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.success) {
+          setPasswordChangeError(data?.message || '❌ Gagal memperbarui kata sandi di server.');
+          return;
         }
+        serverResult = data;
+      } catch {
+        serverReachable = false;
       }
 
-      if (!serverReachable && !targetAccount.passwordHash) {
-        setPasswordChangeError('❌ Koneksi ke server otentikasi terputus. Silakan coba lagi.');
-        return;
+      if (!serverReachable) {
+        if (!targetAccount.passwordHash) {
+          setPasswordChangeError('❌ Koneksi ke server otentikasi terputus. Silakan coba lagi.');
+          return;
+        }
+        const matchesOld = comparePassword(oldTrim, targetAccount.passwordHash);
+        if (!matchesOld) {
+          setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
+          return;
+        }
+        const prevHashes = Array.isArray(targetAccount.previousPasswordHashes) ? targetAccount.previousPasswordHashes : [];
+        if (comparePassword(newTrim, targetAccount.passwordHash) || prevHashes.some((h) => comparePassword(newTrim, h))) {
+          setPasswordChangeError('❌ Kata sandi lama tidak boleh digunakan kembali! Gunakan kata sandi baru yang berbeda.');
+          return;
+        }
       }
 
       // Enkripsi AES-256 & Bcrypt Hash (ZERO PLAINTEXT: passwordPolos tidak pernah disimpan)
       const newHash = serverResult?.passwordHash || hashPassword(newTrim);
-      const clientEncryptedPassword = encryptSensitiveData(newTrim);
+      const encryptedPassword = serverResult?.passwordEncrypted || encryptSensitiveData(newTrim);
       const updatedPrevHashes: string[] = Array.isArray(serverResult?.previousPasswordHashes)
         ? serverResult.previousPasswordHashes
         : [
@@ -577,15 +574,19 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             ...(Array.isArray(targetAccount.previousPasswordHashes) ? targetAccount.previousPasswordHashes : []),
           ].slice(0, 5);
       const nowMs = serverResult?.lastUpdatedTimestamp || Date.now();
+      const nextSessionToken = serverResult?.sessionToken || session.sessionToken || token;
 
       const updatedAccount: AdminAccount = {
         ...targetAccount,
         id: serverResult?.updatedAccountId || targetAccount.id,
+        username: serverResult?.username || targetAccount.username,
+        role: serverResult?.role || targetAccount.role,
         passwordHash: newHash,
-        passwordEncrypted: clientEncryptedPassword,
+        passwordEncrypted: encryptedPassword,
         previousPasswordHashes: updatedPrevHashes,
         passwordPolos: undefined,
         resetTicket: undefined,
+        ...(nextSessionToken ? { sessionToken: nextSessionToken } : {}),
         lastUpdatedTimestamp: nowMs,
         lastEditedBy: session.username || session.nama,
         lastEditedByRole: session.role,
@@ -595,17 +596,26 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 
       // Perbarui data sesi lokal instan agar tetap sinkron dan tidak salah ditendang keluar
       try {
-        const storedSession = sessionStorage.getItem('psks_active_session');
+        const storedSession = sessionStorage.getItem('psks_active_session') || localStorage.getItem('psks_active_session');
         if (storedSession) {
           const parsed = JSON.parse(storedSession);
           delete parsed.passwordPolos;
           parsed.passwordHash = newHash;
           parsed.lastUpdatedTimestamp = nowMs;
+          if (nextSessionToken) {
+            parsed.sessionToken = nextSessionToken;
+          }
           sessionStorage.setItem('psks_active_session', JSON.stringify(parsed));
           localStorage.setItem('psks_active_session', JSON.stringify(parsed));
         }
         sessionStorage.setItem('session_user_password_hash', newHash);
         localStorage.setItem('session_user_password_hash', newHash);
+        if (nextSessionToken) {
+          sessionStorage.setItem('session_token', nextSessionToken);
+          localStorage.setItem('session_token', nextSessionToken);
+          sessionStorage.setItem('psks_session_token', nextSessionToken);
+          localStorage.setItem('psks_session_token', nextSessionToken);
+        }
       } catch {}
 
       if (onUpdateAdminAccount) {

@@ -983,11 +983,26 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
         const { supabase } = await import('../lib/supabase');
         const sbTables = ['dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'];
         for (const t of sbTables) {
-          const { data: sbUser } = await supabase
+          let sbUser: any = null;
+          const byUname = await supabase
             .from(t)
             .select('*')
-            .or(`username.ilike.${uLower},id.eq.${uLower}`)
+            .ilike('username', uLower)
+            .limit(1)
             .maybeSingle();
+          if (!byUname.error && byUname.data) {
+            sbUser = byUname.data;
+          } else {
+            const byId = await supabase
+              .from(t)
+              .select('*')
+              .eq('id', uLower)
+              .limit(1)
+              .maybeSingle();
+            if (!byId.error && byId.data) {
+              sbUser = byId.data;
+            }
+          }
 
           if (sbUser) {
             const restData = sbUser.data && typeof sbUser.data === 'object' ? sbUser.data : {};

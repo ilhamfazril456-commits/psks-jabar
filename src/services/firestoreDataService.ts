@@ -363,6 +363,24 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   };
 }
 
+function sanitizeForFirestorePayload(collectionName: string, rawData: Record<string, any>): Record<string, any> {
+  const cleaned = cleanFirestoreData(rawData || {});
+  if (
+    collectionName === 'dev_accounts' ||
+    collectionName === 'superadmin_accounts' ||
+    collectionName === 'admin_accounts' ||
+    collectionName === 'user_accounts'
+  ) {
+    delete cleaned.passwordPolos;
+    delete cleaned.superadminPin;
+    delete cleaned.developerPin;
+  } else if (collectionName === 'app_settings') {
+    delete cleaned.superadminPin;
+    delete cleaned.developerPin;
+  }
+  return cleaned;
+}
+
 /**
  * Passive, silent cold-backup write to Firestore (completely non-blocking)
  */
@@ -376,7 +394,7 @@ async function passiveFirestoreBackup(
     const { firestore, db } = await getFirestoreModule();
     if (action === 'set') {
       const docRef = firestore.doc(db, collectionName, docIdOrDocs);
-      await firestore.setDoc(docRef, cleanFirestoreData(dataOrMerge), { merge: true });
+      await firestore.setDoc(docRef, sanitizeForFirestorePayload(collectionName, dataOrMerge), { merge: true });
     } else if (action === 'delete') {
       const docRef = firestore.doc(db, collectionName, docIdOrDocs);
       await firestore.deleteDoc(docRef);
@@ -1169,7 +1187,7 @@ export async function setFirestoreDoc(
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, collectionName, docId);
-      await firestore.setDoc(docRef, cleanFirestoreData(data), { merge: true });
+      await firestore.setDoc(docRef, sanitizeForFirestorePayload(collectionName, data), { merge: true });
     } catch (fsErr) {
       console.warn(`Direct Firestore sync notice on ${collectionName}/${docId}:`, fsErr);
     }
@@ -1180,7 +1198,7 @@ export async function setFirestoreDoc(
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, collectionName, docId);
-      await firestore.setDoc(docRef, cleanFirestoreData(data), { merge: true });
+      await firestore.setDoc(docRef, sanitizeForFirestorePayload(collectionName, data), { merge: true });
     } catch (err) {
       console.warn(`Write error on ${collectionName}/${docId}:`, supabaseError || err);
       throw err;

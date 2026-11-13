@@ -1626,7 +1626,7 @@ export default function App() {
               ? accDataObj.data.allowedPillars
               : undefined;
 
-            loadedMap.set(docId, {
+            loadedMap.set(`${colName}:${docId}`, {
               id: docId,
               ...accData,
               username: safeUsername,
@@ -1653,11 +1653,11 @@ export default function App() {
             continue;
           }
 
-          const existing = Array.from(loadedMap.values()).find(
-            (a) => a.id === def.id || (a.username || '').toLowerCase().trim() === defUname
+          const matchingEntries = Array.from(loadedMap.entries()).filter(
+            ([, a]) => a.id === def.id || (a.username || '').toLowerCase().trim() === defUname
           );
 
-          if (!existing) {
+          if (matchingEntries.length === 0) {
             const enriched: AdminAccount = {
               ...def,
               username: def.username || '',
@@ -1668,17 +1668,20 @@ export default function App() {
             };
             loadedMap.set(def.id, enriched);
           } else {
-            const sanitized: AdminAccount = {
-              ...existing,
-              username: existing.username || def.username || '',
-              namaAdmin: existing.namaAdmin || def.namaAdmin || '',
-              wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
-              role: existing.role || def.role || 'admin',
-              passwordPolos: '',
-              passwordHash: existing.passwordHash || def.passwordHash || '',
-              passwordEncrypted: existing.passwordEncrypted || (existing as any).data?.passwordEncrypted || def.passwordEncrypted,
-            };
-            loadedMap.set(existing.id, sanitized);
+            matchingEntries.forEach(([mapKey, existing]) => {
+              const sanitized: AdminAccount = {
+                ...existing,
+                username: existing.username || def.username || '',
+                namaAdmin: existing.namaAdmin || def.namaAdmin || '',
+                wilayahTugas: existing.wilayahTugas || def.wilayahTugas || '',
+                role: existing.role || def.role || 'admin',
+                passwordPolos: '',
+                passwordHash: existing.passwordHash || def.passwordHash || '',
+                passwordEncrypted:
+                  existing.passwordEncrypted || (existing as any).data?.passwordEncrypted || def.passwordEncrypted,
+              };
+              loadedMap.set(mapKey, sanitized);
+            });
           }
         }
 
@@ -3466,7 +3469,8 @@ export default function App() {
           if (
             data.action === 'SUPERADMIN_SYNC' ||
             data.action === 'SUPERADMIN_UPDATED' ||
-            data.action === 'SELF_PIN_CHANGE'
+            data.action === 'SELF_PIN_CHANGE' ||
+            data.action === 'SELF_PASSWORD_CHANGE'
           ) {
             try {
               window.dispatchEvent(
@@ -3544,7 +3548,8 @@ export default function App() {
         if (
           data.action === 'SUPERADMIN_SYNC' ||
           data.action === 'SUPERADMIN_UPDATED' ||
-          data.action === 'SELF_PIN_CHANGE'
+          data.action === 'SELF_PIN_CHANGE' ||
+          data.action === 'SELF_PASSWORD_CHANGE'
         ) {
           try {
             window.dispatchEvent(
@@ -4456,10 +4461,12 @@ export default function App() {
       setSession((prev) => {
         const nextPin = sanitizedAdmin.pinOtoritas || prev.pinOtoritas;
         const nextHash = sanitizedAdmin.passwordHash || prev.passwordHash;
+        const nextToken = sanitizedAdmin.sessionToken || prev.sessionToken;
         const updated = {
           ...prev,
           passwordHash: nextHash,
           pinOtoritas: nextPin,
+          ...(nextToken ? { sessionToken: nextToken } : {}),
           lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
         };
         try {
@@ -4468,6 +4475,12 @@ export default function App() {
           if (nextHash) {
             sessionStorage.setItem('session_user_password_hash', nextHash);
             localStorage.setItem('session_user_password_hash', nextHash);
+          }
+          if (nextToken) {
+            sessionStorage.setItem('session_token', nextToken);
+            localStorage.setItem('session_token', nextToken);
+            sessionStorage.setItem('psks_session_token', nextToken);
+            localStorage.setItem('psks_session_token', nextToken);
           }
           if (nextPin) {
             sessionStorage.setItem('session_user_pin', nextPin);
