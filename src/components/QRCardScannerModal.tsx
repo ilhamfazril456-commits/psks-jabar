@@ -38,6 +38,7 @@ interface QRCardScannerModalProps {
       userId?: string;
       sessionToken?: string;
       allowedPillars?: string[];
+      allowedKepahlawanan?: string[];
       pinOtoritas?: string;
     }
   ) => void;
@@ -613,6 +614,7 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
                 userId: verifiedData?.userId,
                 sessionToken: verifiedData?.sessionToken,
                 allowedPillars: verifiedData?.allowedPillars,
+                allowedKepahlawanan: verifiedData?.allowedKepahlawanan,
                 pinOtoritas: verifiedData?.pinOtoritas,
               }
             );

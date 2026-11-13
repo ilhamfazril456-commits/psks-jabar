@@ -307,6 +307,7 @@ async function startServer() {
     issuedAt: number;
     expiresAt: number;
     allowedPillars?: string[];
+    allowedKepahlawanan?: string[];
     pinOtoritas?: string;
   }
 
@@ -552,6 +553,7 @@ async function startServer() {
           wilayahTugas: verified.wilayahTugas,
           statusActive: verified.statusActive,
           allowedPillars: verified.allowedPillars,
+          allowedKepahlawanan: verified.allowedKepahlawanan,
           pinOtoritas: verified.pinOtoritas,
           sessionToken,
         },
@@ -650,6 +652,13 @@ async function startServer() {
                 : resolvedRole === 'superadmin'
                 ? ['all']
                 : undefined,
+              allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan)
+                ? data.allowedKepahlawanan
+                : Array.isArray(rest.allowedKepahlawanan)
+                ? rest.allowedKepahlawanan
+                : resolvedRole === 'superadmin'
+                ? ['all']
+                : undefined,
               pinOtoritas: String(data.pinOtoritas || rest.pinOtoritas || '').trim(),
               pinEncrypted: String(data.pinEncrypted || rest.pinEncrypted || '').trim(),
               rawData: rest,
@@ -681,6 +690,7 @@ async function startServer() {
                 isFrozen: d.isFrozen === true,
                 statusAkun: d.statusAkun || 'AKTIF',
                 allowedPillars: Array.isArray(d.allowedPillars) ? d.allowedPillars : resolvedRole === 'superadmin' ? ['all'] : undefined,
+                allowedKepahlawanan: Array.isArray(d.allowedKepahlawanan) ? d.allowedKepahlawanan : resolvedRole === 'superadmin' ? ['all'] : undefined,
                 pinOtoritas: String(d.pinOtoritas || '').trim(),
                 pinEncrypted: String(d.pinEncrypted || '').trim(),
                 rawData: d,
@@ -703,6 +713,7 @@ async function startServer() {
                 isFrozen: d.isFrozen === true,
                 statusAkun: d.statusAkun || 'AKTIF',
                 allowedPillars: Array.isArray(d.allowedPillars) ? d.allowedPillars : resolvedRole === 'superadmin' ? ['all'] : undefined,
+                allowedKepahlawanan: Array.isArray(d.allowedKepahlawanan) ? d.allowedKepahlawanan : resolvedRole === 'superadmin' ? ['all'] : undefined,
                 pinOtoritas: String(d.pinOtoritas || '').trim(),
                 pinEncrypted: String(d.pinEncrypted || '').trim(),
                 rawData: d,
@@ -882,6 +893,12 @@ async function startServer() {
             ? finalAcc.allowedPillars
             : ['all']
           : undefined;
+      const resolvedAllowedKepahlawanan =
+        authorizedRole === 'superadmin'
+          ? Array.isArray(finalAcc?.allowedKepahlawanan)
+            ? finalAcc.allowedKepahlawanan
+            : ['all']
+          : undefined;
       const resolvedPinOtoritas = personalPin || usedPin;
 
       const authorityToken = crypto
@@ -898,6 +915,7 @@ async function startServer() {
         wilayahTugas: resolvedWilayah,
         statusActive: 'SAH_TERDAFTAR',
         allowedPillars: resolvedAllowedPillars,
+        allowedKepahlawanan: resolvedAllowedKepahlawanan,
         pinOtoritas: resolvedPinOtoritas,
       });
 
@@ -911,6 +929,7 @@ async function startServer() {
         nama: resolvedNama,
         wilayah: resolvedWilayah,
         allowedPillars: resolvedAllowedPillars,
+        allowedKepahlawanan: resolvedAllowedKepahlawanan,
         pinOtoritas: resolvedPinOtoritas,
         message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
       });
@@ -1296,6 +1315,13 @@ async function startServer() {
         : targetRole === 'superadmin'
         ? ['all']
         : undefined;
+      const targetAllowedKepahlawanan = Array.isArray(matchedRow?.allowedKepahlawanan)
+        ? matchedRow.allowedKepahlawanan
+        : Array.isArray(existingDataObj.allowedKepahlawanan)
+        ? existingDataObj.allowedKepahlawanan
+        : targetRole === 'superadmin'
+        ? ['all']
+        : undefined;
       const targetPinOtoritas =
         matchedRow?.pinOtoritas || existingDataObj.pinOtoritas || authSession?.pinOtoritas || undefined;
 
@@ -1316,6 +1342,7 @@ async function startServer() {
         wilayahTugas: targetWilayah,
         statusActive: targetStatusActive,
         allowedPillars: targetAllowedPillars,
+        allowedKepahlawanan: targetAllowedKepahlawanan,
         pinOtoritas: targetPinOtoritas,
       });
 
@@ -1330,6 +1357,7 @@ async function startServer() {
         wilayahTugas: targetWilayah,
         statusActive: targetStatusActive,
         ...(targetAllowedPillars ? { allowedPillars: targetAllowedPillars } : {}),
+        ...(targetAllowedKepahlawanan ? { allowedKepahlawanan: targetAllowedKepahlawanan } : {}),
         passwordHash: newHash,
         passwordEncrypted: encPassword,
         previousPasswordHashes: updatedPrevHashes,
@@ -1385,6 +1413,7 @@ async function startServer() {
             wilayahTugas: targetWilayah,
             statusActive: targetStatusActive,
             ...(targetAllowedPillars ? { allowedPillars: targetAllowedPillars } : {}),
+            ...(targetAllowedKepahlawanan ? { allowedKepahlawanan: targetAllowedKepahlawanan } : {}),
             passwordHash: newHash,
             passwordEncrypted: encPassword,
             previousPasswordHashes: updatedPrevHashes,
@@ -1506,6 +1535,7 @@ async function startServer() {
               nikHash: data.nikHash || restData.nikHash || '',
               noWhatsapp: data.noWhatsapp || restData.noWhatsapp || '',
               allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : (Array.isArray(restData.allowedPillars) ? restData.allowedPillars : ['all']),
+              allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan) ? data.allowedKepahlawanan : (Array.isArray(restData.allowedKepahlawanan) ? restData.allowedKepahlawanan : ['all']),
               pinOtoritas: data.pinOtoritas || restData.pinOtoritas || '',
               pinEncrypted: data.pinEncrypted || restData.pinEncrypted || '',
             };
@@ -1546,6 +1576,7 @@ async function startServer() {
                 statusAkun: data.statusAkun || 'AKTIF',
                 resetTicket: data.resetTicket || null,
                 allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : ['all'],
+                allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan) ? data.allowedKepahlawanan : ['all'],
                 pinOtoritas: data.pinOtoritas || '',
                 pinEncrypted: data.pinEncrypted || '',
               };
@@ -1575,6 +1606,7 @@ async function startServer() {
                 statusAkun: data.statusAkun || 'AKTIF',
                 resetTicket: data.resetTicket || null,
                 allowedPillars: Array.isArray(data.allowedPillars) ? data.allowedPillars : ['all'],
+                allowedKepahlawanan: Array.isArray(data.allowedKepahlawanan) ? data.allowedKepahlawanan : ['all'],
                 pinOtoritas: data.pinOtoritas || '',
                 pinEncrypted: data.pinEncrypted || '',
               };
@@ -1680,6 +1712,9 @@ async function startServer() {
       const finalAllowedPillars = Array.isArray(matchedAccount.allowedPillars)
         ? matchedAccount.allowedPillars
         : (finalRole === 'superadmin' ? ['all'] : undefined);
+      const finalAllowedKepahlawanan = Array.isArray(matchedAccount.allowedKepahlawanan)
+        ? matchedAccount.allowedKepahlawanan
+        : (finalRole === 'superadmin' ? ['all'] : undefined);
 
       const sessionToken = signSessionToken({
         id: matchedAccount.id,
@@ -1689,6 +1724,7 @@ async function startServer() {
         wilayahTugas: finalWilayah,
         statusActive: matchedAccount.statusActive,
         allowedPillars: finalAllowedPillars,
+        allowedKepahlawanan: finalAllowedKepahlawanan,
         pinOtoritas: matchedAccount.pinOtoritas,
       });
 
@@ -1703,6 +1739,7 @@ async function startServer() {
           wilayahTugas: finalWilayah,
           statusActive: matchedAccount.statusActive,
           allowedPillars: finalAllowedPillars,
+          allowedKepahlawanan: finalAllowedKepahlawanan,
           pinOtoritas: matchedAccount.pinOtoritas,
           sessionToken,
         },

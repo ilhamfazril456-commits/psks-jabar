@@ -67,7 +67,7 @@ interface SmartGateModalProps {
     username?: string,
     userId?: string,
     sessionToken?: string,
-    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+    extra?: { allowedPillars?: string[]; allowedKepahlawanan?: string[]; pinOtoritas?: string }
   ) => void;
   adminAccounts: AdminAccount[];
   onRegisterAccount?: (newAccount: Omit<AdminAccount, 'id'>) => Promise<void> | void;
@@ -212,6 +212,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     userId?: string;
     sessionToken?: string;
     allowedPillars?: string[];
+    allowedKepahlawanan?: string[];
     pinOtoritas?: string;
   } | null>(null);
 
@@ -228,7 +229,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     username?: string,
     userId?: string,
     sessionToken?: string,
-    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+    extra?: { allowedPillars?: string[]; allowedKepahlawanan?: string[]; pinOtoritas?: string }
   ) => {
     setIsLoggingIn(true);
     setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
@@ -899,7 +900,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       username?: string,
       userId?: string,
       token?: string,
-      extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+      extra?: { allowedPillars?: string[]; allowedKepahlawanan?: string[]; pinOtoritas?: string }
     ) => {
       // Privileged Access Management: Superadmin and Developer MUST pass 6-digit PIN verification
       if (role === 'superadmin' || role === 'developer') {
@@ -911,6 +912,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           userId,
           sessionToken: token,
           allowedPillars: extra?.allowedPillars,
+          allowedKepahlawanan: extra?.allowedKepahlawanan,
           pinOtoritas: extra?.pinOtoritas,
         });
         return;
@@ -940,6 +942,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           data.session.sessionToken,
           {
             allowedPillars: data.session.allowedPillars,
+            allowedKepahlawanan: data.session.allowedKepahlawanan,
             pinOtoritas: data.session.pinOtoritas,
           }
         );
@@ -1029,6 +1032,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 : Array.isArray(restData.allowedPillars)
                 ? restData.allowedPillars
                 : undefined,
+              allowedKepahlawanan: Array.isArray(sbUser.allowedKepahlawanan)
+                ? sbUser.allowedKepahlawanan
+                : Array.isArray(restData.allowedKepahlawanan)
+                ? restData.allowedKepahlawanan
+                : undefined,
               pinOtoritas: sbUser.pinOtoritas || restData.pinOtoritas || '',
               pinEncrypted: sbUser.pinEncrypted || restData.pinEncrypted || '',
             } as AdminAccount;
@@ -1117,6 +1125,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           undefined,
           {
             allowedPillars: matchedAccount.allowedPillars,
+            allowedKepahlawanan: matchedAccount.allowedKepahlawanan,
             pinOtoritas: matchedAccount.pinOtoritas,
           }
         );
@@ -2927,6 +2936,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               onClose();
               onPerformLogin(role, nama, wilayah, extra?.username, extra?.userId, extra?.sessionToken, {
                 allowedPillars: extra?.allowedPillars,
+                allowedKepahlawanan: extra?.allowedKepahlawanan,
                 pinOtoritas: extra?.pinOtoritas,
               });
             }}
@@ -2979,6 +2989,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               verifiedData?.sessionToken || auth.sessionToken,
               {
                 allowedPillars: verifiedData?.allowedPillars ?? auth.allowedPillars,
+                allowedKepahlawanan: verifiedData?.allowedKepahlawanan ?? auth.allowedKepahlawanan,
                 pinOtoritas: verifiedData?.pinOtoritas ?? auth.pinOtoritas,
               }
             );

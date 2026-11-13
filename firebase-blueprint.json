@@ -56,7 +56,9 @@
         "wilayahTugas": { "type": "string" },
         "role": { "type": "string" },
         "passwordHash": { "type": "string" },
-        "terakhirLogin": { "type": "string" }
+        "terakhirLogin": { "type": "string" },
+        "allowedPillars": { "type": "array", "items": { "type": "string" } },
+        "allowedKepahlawanan": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["username", "role"]
     },

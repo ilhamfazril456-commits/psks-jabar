@@ -19,6 +19,7 @@ interface AuthorityPinVerificationModalProps {
     username?: string;
     userId?: string;
     allowedPillars?: string[];
+    allowedKepahlawanan?: string[];
     pinOtoritas?: string;
   }) => void;
   onCancel: () => void;
@@ -241,6 +242,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
             username: data.username || username,
             userId: data.id || userId,
             allowedPillars: data.allowedPillars,
+            allowedKepahlawanan: data.allowedKepahlawanan,
             pinOtoritas: data.pinOtoritas,
           });
         }, 400);

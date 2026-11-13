@@ -196,8 +196,13 @@ export default function App() {
       const rawAllowed = getStored('session_user_allowed_pillars');
       if (rawAllowed) allowedPillars = JSON.parse(rawAllowed);
     } catch {}
+    let allowedKepahlawanan: string[] | undefined = undefined;
+    try {
+      const rawAllowedKep = getStored('session_user_allowed_kepahlawanan');
+      if (rawAllowedKep) allowedKepahlawanan = JSON.parse(rawAllowedKep);
+    } catch {}
     const pinOtoritas = getStored('session_user_pin') || undefined;
-    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash, allowedPillars, pinOtoritas };
+    return { role, nama, wilayah, statusActive, isDeveloper, sessionToken, loginTimestamp, username, userId, deviceId, passwordHash, allowedPillars, allowedKepahlawanan, pinOtoritas };
   });
 
   // Pending NFC SmartCard 6-Digit PIN Authority Gate State
@@ -652,11 +657,18 @@ export default function App() {
               const s = data.session;
               setSession((prev) => {
                 const nextAllowedPillars = Array.isArray(s.allowedPillars) ? s.allowedPillars : prev.allowedPillars;
+                const nextAllowedKepahlawanan = Array.isArray(s.allowedKepahlawanan)
+                  ? s.allowedKepahlawanan
+                  : prev.allowedKepahlawanan;
                 const nextPinOtoritas = s.pinOtoritas || prev.pinOtoritas;
                 try {
                   if (nextAllowedPillars) {
                     sessionStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
                     localStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
+                  }
+                  if (nextAllowedKepahlawanan) {
+                    sessionStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKepahlawanan));
+                    localStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKepahlawanan));
                   }
                   if (nextPinOtoritas) {
                     sessionStorage.setItem('session_user_pin', nextPinOtoritas);
@@ -683,6 +695,7 @@ export default function App() {
                   statusActive: 'SAH_TERDAFTAR',
                   isDeveloper: s.role === 'developer',
                   allowedPillars: nextAllowedPillars,
+                  allowedKepahlawanan: nextAllowedKepahlawanan,
                   pinOtoritas: nextPinOtoritas,
                 };
               });
@@ -1636,6 +1649,11 @@ export default function App() {
               : Array.isArray(accDataObj.data?.allowedPillars)
               ? accDataObj.data.allowedPillars
               : undefined;
+            const rawAllowedKepahlawanan = Array.isArray(accData.allowedKepahlawanan)
+              ? accData.allowedKepahlawanan
+              : Array.isArray(accDataObj.data?.allowedKepahlawanan)
+              ? accDataObj.data.allowedKepahlawanan
+              : undefined;
 
             loadedMap.set(`${colName}:${docId}`, {
               id: docId,
@@ -1649,6 +1667,7 @@ export default function App() {
               pinOtoritas: rawPinPlain || undefined,
               pinEncrypted: rawPinEnc || undefined,
               allowedPillars: rawAllowed,
+              allowedKepahlawanan: rawAllowedKepahlawanan,
               terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
               passwordPolos: '',
               registeredIp: accData.registeredIp || undefined,
@@ -2377,6 +2396,7 @@ export default function App() {
   const [activeKepahlawananMenu, setActiveKepahlawananMenu] = useState<KepahlawananMenuId | null>(null);
   const [pahlawanManageInitialSlot, setPahlawanManageInitialSlot] = useState<number | null>(null);
   const [restrictedPillarTarget, setRestrictedPillarTarget] = useState<PillarId | null>(null);
+  const [restrictedKepahlawananTarget, setRestrictedKepahlawananTarget] = useState<KepahlawananMenuId | null>(null);
   const dashboardScrollYRef = useRef<number>(0);
   const shouldRestoreDashboardScrollRef = useRef<boolean>(false);
 
@@ -2601,6 +2621,13 @@ export default function App() {
       return session.allowedPillars.includes(pillarId);
     };
 
+    const isKepahlawananAllowed = (menuId: KepahlawananMenuId): boolean => {
+      if (session.role !== 'superadmin') return true;
+      if (!Array.isArray(session.allowedKepahlawanan)) return true;
+      if (session.allowedKepahlawanan.includes('all') || session.allowedKepahlawanan.includes('*')) return true;
+      return session.allowedKepahlawanan.includes(menuId);
+    };
+
     if (targetTab === 'pillar_detail') {
       const targetPillar = options?.pillarId;
       if (targetPillar && !isPillarAllowed(targetPillar)) {
@@ -2613,11 +2640,21 @@ export default function App() {
     }
 
     if (targetTab === 'kepahlawanan_detail') {
-      if (options?.kepahlawananMenuId) {
-        setActiveKepahlawananMenu(options.kepahlawananMenuId);
+      const targetMenu = options?.kepahlawananMenuId;
+      if (targetMenu && !isKepahlawananAllowed(targetMenu)) {
+        setRestrictedKepahlawananTarget(targetMenu);
+        return;
+      }
+      if (targetMenu) {
+        setActiveKepahlawananMenu(targetMenu);
       }
     } else {
       setActiveKepahlawananMenu(null);
+    }
+
+    if (targetTab === 'pahlawan_nasional_manage' && !isKepahlawananAllowed('pahlawan_nasional')) {
+      setRestrictedKepahlawananTarget('pahlawan_nasional');
+      return;
     }
 
     if (options?.detailData) {
@@ -2661,7 +2698,17 @@ export default function App() {
     [session.role, session.allowedPillars]
   );
 
-  // Real-time enforcement of allowedPillars and live PIN/pillar sync for Superadmin sessions
+  const isKepahlawananAllowedForSession = useCallback(
+    (menuId: KepahlawananMenuId): boolean => {
+      if (session.role !== 'superadmin') return true;
+      if (!Array.isArray(session.allowedKepahlawanan)) return true;
+      if (session.allowedKepahlawanan.includes('all') || session.allowedKepahlawanan.includes('*')) return true;
+      return session.allowedKepahlawanan.includes(menuId);
+    },
+    [session.role, session.allowedKepahlawanan]
+  );
+
+  // Real-time enforcement of allowedPillars, allowedKepahlawanan, and live PIN/access sync for Superadmin sessions
   useEffect(() => {
     if (session.statusActive !== 'SAH_TERDAFTAR') return;
 
@@ -2679,19 +2726,26 @@ export default function App() {
 
       if (matched) {
         const nextAllowed = Array.isArray(matched.allowedPillars) ? matched.allowedPillars : undefined;
+        const nextAllowedKep = Array.isArray(matched.allowedKepahlawanan)
+          ? matched.allowedKepahlawanan
+          : undefined;
         const nextPin = matched.pinOtoritas || (matched.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
 
         const prevAllowedStr = JSON.stringify(session.allowedPillars ?? null);
         const nextAllowedStr = JSON.stringify(nextAllowed ?? null);
+        const prevAllowedKepStr = JSON.stringify(session.allowedKepahlawanan ?? null);
+        const nextAllowedKepStr = JSON.stringify(nextAllowedKep ?? null);
         const pinChanged = Boolean(nextPin && nextPin !== session.pinOtoritas);
         const pillarsChanged = nextAllowedStr !== prevAllowedStr;
+        const kepahlawananChanged = nextAllowedKepStr !== prevAllowedKepStr;
 
-        if (pillarsChanged || pinChanged) {
+        if (pillarsChanged || kepahlawananChanged || pinChanged) {
           setSession((prev) => ({
             ...prev,
             userId: prev.userId || matched.id,
             username: prev.username || matched.username,
             allowedPillars: nextAllowed,
+            allowedKepahlawanan: nextAllowedKep,
             pinOtoritas: nextPin || prev.pinOtoritas,
           }));
           try {
@@ -2701,6 +2755,13 @@ export default function App() {
             } else {
               sessionStorage.removeItem('session_user_allowed_pillars');
               localStorage.removeItem('session_user_allowed_pillars');
+            }
+            if (nextAllowedKep) {
+              sessionStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKep));
+              localStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKep));
+            } else {
+              sessionStorage.removeItem('session_user_allowed_kepahlawanan');
+              localStorage.removeItem('session_user_allowed_kepahlawanan');
             }
             if (nextPin) {
               sessionStorage.setItem('session_user_pin', nextPin);
@@ -2719,6 +2780,22 @@ export default function App() {
         setRestrictedPillarTarget(blocked);
       }
     }
+
+    if (session.role === 'superadmin' && currentTab === 'kepahlawanan_detail' && activeKepahlawananMenu) {
+      if (!isKepahlawananAllowedForSession(activeKepahlawananMenu)) {
+        const blockedMenu = activeKepahlawananMenu;
+        setActiveKepahlawananMenu(null);
+        setCurrentTab('beranda');
+        setRestrictedKepahlawananTarget(blockedMenu);
+      }
+    }
+
+    if (session.role === 'superadmin' && currentTab === 'pahlawan_nasional_manage') {
+      if (!isKepahlawananAllowedForSession('pahlawan_nasional')) {
+        setCurrentTab('beranda');
+        setRestrictedKepahlawananTarget('pahlawan_nasional');
+      }
+    }
   }, [
     adminAccounts,
     session.statusActive,
@@ -2727,10 +2804,13 @@ export default function App() {
     session.username,
     session.nama,
     session.allowedPillars,
+    session.allowedKepahlawanan,
     session.pinOtoritas,
     currentTab,
     activePillar,
+    activeKepahlawananMenu,
     isPillarAllowedForSession,
+    isKepahlawananAllowedForSession,
   ]);
 
   // Handlers using unified navigateToTab
@@ -2743,6 +2823,10 @@ export default function App() {
   };
 
   const handleSelectKepahlawananMenu = (menuId: KepahlawananMenuId) => {
+    if (!isKepahlawananAllowedForSession(menuId)) {
+      setRestrictedKepahlawananTarget(menuId);
+      return;
+    }
     navigateToTab('kepahlawanan_detail', { kepahlawananMenuId: menuId });
   };
 
@@ -2815,6 +2899,10 @@ export default function App() {
   };
 
   const handleOpenPahlawanNasionalConsole = (slotNumber?: number) => {
+    if (!isKepahlawananAllowedForSession('pahlawan_nasional')) {
+      setRestrictedKepahlawananTarget('pahlawan_nasional');
+      return;
+    }
     setPahlawanManageInitialSlot(typeof slotNumber === 'number' ? slotNumber : null);
     navigateToTab('pahlawan_nasional_manage');
   };
@@ -2914,7 +3002,7 @@ export default function App() {
     username?: string,
     userId?: string,
     incomingSessionToken?: string,
-    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+    extra?: { allowedPillars?: string[]; allowedKepahlawanan?: string[]; pinOtoritas?: string }
   ) => {
     const statusActive = 'SAH_TERDAFTAR';
     const isDeveloper = role === 'developer';
@@ -2961,6 +3049,13 @@ export default function App() {
       : role === 'superadmin'
       ? ['all']
       : undefined;
+    const resolvedAllowedKepahlawanan = Array.isArray(extra?.allowedKepahlawanan)
+      ? extra.allowedKepahlawanan
+      : Array.isArray(matched?.allowedKepahlawanan)
+      ? matched.allowedKepahlawanan
+      : role === 'superadmin'
+      ? ['all']
+      : undefined;
     const matchedDecryptedPin =
       matched?.pinOtoritas || (matched?.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
     const resolvedPinOtoritas = extra?.pinOtoritas || matchedDecryptedPin || undefined;
@@ -2979,6 +3074,7 @@ export default function App() {
       passwordHash: initialPasswordHash,
       lastUpdatedTimestamp: initialLastUpdated,
       allowedPillars: resolvedAllowedPillars,
+      allowedKepahlawanan: resolvedAllowedKepahlawanan,
       pinOtoritas: resolvedPinOtoritas,
     };
     setSession(newSession);
@@ -2999,11 +3095,16 @@ export default function App() {
     if (resolvedUserId) sessionItems.push(['session_user_id', resolvedUserId]);
     if (initialPasswordHash) sessionItems.push(['session_user_password_hash', initialPasswordHash]);
     if (resolvedAllowedPillars) sessionItems.push(['session_user_allowed_pillars', JSON.stringify(resolvedAllowedPillars)]);
+    if (resolvedAllowedKepahlawanan) sessionItems.push(['session_user_allowed_kepahlawanan', JSON.stringify(resolvedAllowedKepahlawanan)]);
     if (resolvedPinOtoritas) sessionItems.push(['session_user_pin', resolvedPinOtoritas]);
 
     if (!resolvedAllowedPillars) {
       try { sessionStorage.removeItem('session_user_allowed_pillars'); } catch {}
       try { localStorage.removeItem('session_user_allowed_pillars'); } catch {}
+    }
+    if (!resolvedAllowedKepahlawanan) {
+      try { sessionStorage.removeItem('session_user_allowed_kepahlawanan'); } catch {}
+      try { localStorage.removeItem('session_user_allowed_kepahlawanan'); } catch {}
     }
     if (!resolvedPinOtoritas) {
       try { sessionStorage.removeItem('session_user_pin'); } catch {}
@@ -3036,6 +3137,7 @@ export default function App() {
         ...matched,
         ...loginAccountPayload,
         ...(resolvedAllowedPillars ? { allowedPillars: resolvedAllowedPillars } : {}),
+        ...(resolvedAllowedKepahlawanan ? { allowedKepahlawanan: resolvedAllowedKepahlawanan } : {}),
         ...(resolvedPinOtoritas ? { pinOtoritas: resolvedPinOtoritas } : {}),
       };
 
@@ -3220,6 +3322,7 @@ export default function App() {
       'session_user_password_hash',
       'session_user_password_polos',
       'session_user_allowed_pillars',
+      'session_user_allowed_kepahlawanan',
       'session_user_pin',
     ];
     sessionKeysToClear.forEach((k) => {
@@ -3229,6 +3332,7 @@ export default function App() {
     setIsFloatingAnnouncementOpen(false);
     hasTriggeredAnnouncementRef.current = false;
     setActivePillar(null);
+    setActiveKepahlawananMenu(null);
     navigateToTab('beranda');
     setGateModalOpen(true);
   };
@@ -4508,10 +4612,18 @@ export default function App() {
         const nextPin = sanitizedAdmin.pinOtoritas || prev.pinOtoritas;
         const nextHash = sanitizedAdmin.passwordHash || prev.passwordHash;
         const nextToken = sanitizedAdmin.sessionToken || prev.sessionToken;
+        const nextAllowedPillars = Array.isArray(sanitizedAdmin.allowedPillars)
+          ? sanitizedAdmin.allowedPillars
+          : prev.allowedPillars;
+        const nextAllowedKepahlawanan = Array.isArray(sanitizedAdmin.allowedKepahlawanan)
+          ? sanitizedAdmin.allowedKepahlawanan
+          : prev.allowedKepahlawanan;
         const updated = {
           ...prev,
           passwordHash: nextHash,
           pinOtoritas: nextPin,
+          allowedPillars: nextAllowedPillars,
+          allowedKepahlawanan: nextAllowedKepahlawanan,
           ...(nextToken ? { sessionToken: nextToken } : {}),
           lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
         };
@@ -4531,6 +4643,14 @@ export default function App() {
           if (nextPin) {
             sessionStorage.setItem('session_user_pin', nextPin);
             localStorage.setItem('session_user_pin', nextPin);
+          }
+          if (nextAllowedPillars) {
+            sessionStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
+            localStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
+          }
+          if (nextAllowedKepahlawanan) {
+            sessionStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKepahlawanan));
+            localStorage.setItem('session_user_allowed_kepahlawanan', JSON.stringify(nextAllowedKepahlawanan));
           }
         } catch {}
         return updated;
@@ -4833,6 +4953,7 @@ export default function App() {
             verifiedData?.sessionToken,
             {
               allowedPillars: verifiedData?.allowedPillars,
+              allowedKepahlawanan: verifiedData?.allowedKepahlawanan,
               pinOtoritas: verifiedData?.pinOtoritas,
             }
           );
@@ -4989,7 +5110,7 @@ export default function App() {
             session={session}
           />
 
-          <KepahlawananSection onSelectMenu={handleSelectKepahlawananMenu} />
+          <KepahlawananSection onSelectMenu={handleSelectKepahlawananMenu} session={session} />
 
           <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData, regionalSummary]}>
             <React.Suspense fallback={null}>
@@ -5797,6 +5918,7 @@ export default function App() {
               verifiedData?.sessionToken,
               {
                 allowedPillars: verifiedData?.allowedPillars,
+                allowedKepahlawanan: verifiedData?.allowedKepahlawanan,
                 pinOtoritas: verifiedData?.pinOtoritas,
               }
             );
@@ -5821,15 +5943,20 @@ export default function App() {
         />
       )}
 
-      {/* Modal Terkunci Akses Pilar PSKS (Bagi Superadmin dengan hak akses terbatas yang disetel Developer) */}
+      {/* Modal Terkunci Akses Pilar PSKS / Kepahlawanan (Bagi Superadmin dengan hak akses terbatas yang disetel Developer) */}
       <React.Suspense fallback={null}>
         <PillarAccessRestrictedModal
-          isOpen={!!restrictedPillarTarget}
-          pillarId={restrictedPillarTarget}
+          isOpen={!!restrictedPillarTarget || !!restrictedKepahlawananTarget}
+          pillarId={restrictedKepahlawananTarget || restrictedPillarTarget}
+          restrictionType={restrictedKepahlawananTarget ? 'kepahlawanan' : 'pillar'}
           session={session}
-          onClose={() => setRestrictedPillarTarget(null)}
+          onClose={() => {
+            setRestrictedPillarTarget(null);
+            setRestrictedKepahlawananTarget(null);
+          }}
           onBackToHome={() => {
             setRestrictedPillarTarget(null);
+            setRestrictedKepahlawananTarget(null);
             handleBackToHome();
           }}
         />

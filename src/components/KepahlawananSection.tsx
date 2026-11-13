@@ -9,6 +9,7 @@ import {
   UserRound,
   X,
   Settings2,
+  Lock,
 } from 'lucide-react';
 import { BackToHomeButton } from './BackToHomeButton';
 import { PahlawanNasionalItem, UserSession } from '../types';
@@ -63,9 +64,17 @@ export const KEPAHLAWANAN_MENUS: KepahlawananMenuItem[] = [
 
 interface KepahlawananSectionProps {
   onSelectMenu: (menuId: KepahlawananMenuId) => void;
+  session?: UserSession;
 }
 
-export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSelectMenu }) => {
+export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSelectMenu, session }) => {
+  const isMenuRestricted = (menuId: KepahlawananMenuId): boolean => {
+    if (!session || session.statusActive !== 'SAH_TERDAFTAR' || session.role !== 'superadmin') return false;
+    if (!Array.isArray(session.allowedKepahlawanan)) return false;
+    if (session.allowedKepahlawanan.includes('all') || session.allowedKepahlawanan.includes('*')) return false;
+    return !session.allowedKepahlawanan.includes(menuId);
+  };
+
   return (
     <div id="section-gerbang-kepahlawanan" className="w-full">
       {/* Banner Biru Gerbang Kepahlawanan (seukuran dengan banner biru Gerbang Digital PSKS) */}
@@ -86,21 +95,33 @@ export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSele
       {/* 4 Menu Kotak Berjajar (4 kolom pada HP maupun Laptop) */}
       <section className="py-4 sm:py-10 px-2 sm:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-4 gap-1.5 sm:gap-4 md:gap-5 auto-rows-fr items-stretch">
-          {KEPAHLAWANAN_MENUS.map((menu) => (
+          {KEPAHLAWANAN_MENUS.map((menu) => {
+            const restricted = isMenuRestricted(menu.id);
+            return (
             <button
               key={menu.id}
               type="button"
               onClick={() => onSelectMenu(menu.id)}
               aria-label={menu.fullTitle}
-              className="group relative bg-white border border-slate-200/90 hover:border-[#d4af37] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f2b5c] rounded-xl sm:rounded-3xl p-1.5 sm:p-5 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full overflow-hidden"
+              className={`group relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f2b5c] rounded-xl sm:rounded-3xl p-1.5 sm:p-5 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full overflow-hidden ${
+                restricted
+                  ? 'bg-slate-50/95 border border-rose-200/90 hover:border-rose-400'
+                  : 'bg-white border border-slate-200/90 hover:border-[#d4af37]'
+              }`}
             >
               {/* Subtle accent bar on hover */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0f2b5c] via-amber-500 to-[#1a4a9c] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${restricted ? 'from-rose-500 via-amber-500 to-rose-600' : 'from-[#0f2b5c] via-amber-500 to-[#1a4a9c]'}`} />
+
+              {restricted && (
+                <div className="absolute top-1 right-1 sm:top-2.5 sm:right-2.5 z-10 inline-flex items-center justify-center w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-rose-100 border border-rose-300 text-rose-700 shadow-2xs" title="Akses Kepahlawanan Dikunci Developer">
+                  <Lock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
+                </div>
+              )}
 
               {/* Icon Badge */}
               <div className="relative mt-0.5 sm:mt-1 mb-1.5 sm:mb-3 flex items-center justify-center shrink-0">
                 <div
-                  className={`w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-gradient-to-br ${menu.iconBg} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-white/25`}
+                  className={`w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-gradient-to-br ${menu.iconBg} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-white/25 ${restricted ? 'opacity-65 grayscale-[35%]' : ''}`}
                 >
                   {menu.icon}
                 </div>
@@ -108,7 +129,7 @@ export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSele
 
               {/* Title & Optional Subtitle */}
               <div className="flex-1 flex flex-col items-center justify-center w-full px-0.5 my-1 sm:my-2">
-                <h3 className="text-[8px] min-[380px]:text-[9px] sm:text-xs md:text-sm font-black uppercase tracking-tight sm:tracking-wider text-[#0f2b5c] group-hover:text-[#b8901c] transition-colors leading-[1.15] sm:leading-snug text-center break-words hyphens-none w-full">
+                <h3 className={`text-[8px] min-[380px]:text-[9px] sm:text-xs md:text-sm font-black uppercase tracking-tight sm:tracking-wider transition-colors leading-[1.15] sm:leading-snug text-center break-words hyphens-none w-full ${restricted ? 'text-slate-600' : 'text-[#0f2b5c] group-hover:text-[#b8901c]'}`}>
                   {menu.title}
                 </h3>
                 {menu.subtitle && (
@@ -120,13 +141,21 @@ export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSele
 
               {/* Bottom Action Footer */}
               <div className="mt-auto pt-1.5 sm:pt-2.5 border-t border-slate-100 w-full flex items-center justify-center gap-0.5 shrink-0">
-                <span className="text-[7.5px] min-[380px]:text-[8px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
-                  <span>Buka</span>
-                  <ArrowRight className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transform group-hover:translate-x-1 transition-transform" />
-                </span>
+                {restricted ? (
+                  <span className="text-[7.5px] min-[380px]:text-[8px] sm:text-xs font-black text-rose-600 flex items-center gap-0.5 sm:gap-1">
+                    <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <span>Terkunci</span>
+                  </span>
+                ) : (
+                  <span className="text-[7.5px] min-[380px]:text-[8px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
+                    <span>Buka</span>
+                    <ArrowRight className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
               </div>
             </button>
-          ))}
+          );
+          })}
         </div>
       </section>
     </div>

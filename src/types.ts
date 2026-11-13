@@ -19,6 +19,7 @@ export interface UserSession {
   passwordPolos?: string;
   lastUpdatedTimestamp?: number;
   allowedPillars?: string[];
+  allowedKepahlawanan?: string[];
   pinOtoritas?: string;
   pinEncrypted?: string;
 }
@@ -234,6 +235,7 @@ export interface AdminAccount {
   lastEditedByRole?: string;
   isSelfUpdate?: boolean;
   allowedPillars?: string[];
+  allowedKepahlawanan?: string[];
   pinOtoritas?: string;
   pinEncrypted?: string;
 }

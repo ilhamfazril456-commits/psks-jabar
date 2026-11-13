@@ -23,7 +23,7 @@ interface AccountPageProps {
     rawUsername?: string,
     userId?: string,
     sessionToken?: string,
-    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+    extra?: { allowedPillars?: string[]; allowedKepahlawanan?: string[]; pinOtoritas?: string }
   ) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
@@ -391,6 +391,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           role: session.role === 'developer' ? 'developer' : 'superadmin',
           statusActive: 'SAH_TERDAFTAR',
           allowedPillars: session.allowedPillars,
+          allowedKepahlawanan: session.allowedKepahlawanan,
         };
         await onUpdateAdminAccount(
           {
@@ -499,6 +500,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         statusActive: 'SAH_TERDAFTAR',
         passwordHash: session.passwordHash || sessionStorage.getItem('session_user_password_hash') || undefined,
         allowedPillars: session.allowedPillars,
+        allowedKepahlawanan: session.allowedKepahlawanan,
         pinOtoritas: session.pinOtoritas,
       };
 
@@ -753,6 +755,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           data.session.sessionToken,
           {
             allowedPillars: data.session.allowedPillars,
+            allowedKepahlawanan: data.session.allowedKepahlawanan,
             pinOtoritas: data.session.pinOtoritas,
           }
         );
@@ -810,6 +813,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         undefined,
         {
           allowedPillars: matchedAccount.allowedPillars,
+          allowedKepahlawanan: matchedAccount.allowedKepahlawanan,
           pinOtoritas: matchedAccount.pinOtoritas,
         }
       );

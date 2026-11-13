@@ -20,10 +20,12 @@ import {
   Sliders,
   Phone,
   Fingerprint,
-  User
+  User,
+  Award,
 } from 'lucide-react';
 import { AdminAccount, UserSession, PillarId, AppSettings } from '../types';
 import { PILLARS_CONFIG } from '../data/initialData';
+import { KEPAHLAWANAN_MENUS, type KepahlawananMenuId } from './KepahlawananSection';
 import { hashPassword, encryptSensitiveData, decryptSensitiveData } from '../utils/crypto';
 import { BackToHomeButton } from './BackToHomeButton';
 
@@ -48,6 +50,13 @@ const ALL_PILLAR_KEYS: PillarId[] = [
   'tksk',
   'badanusaha',
   'slrt_puskesos',
+];
+
+const ALL_KEPAHLAWANAN_KEYS: KepahlawananMenuId[] = [
+  'pahlawan_nasional',
+  'pkri',
+  'janda_pkri',
+  'keluarga_pahlawan',
 ];
 
 // Validasi Password: Min 12 karakter kombinasi huruf besar, kecil, angka
@@ -148,6 +157,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
   const [formPhone, setFormPhone] = useState('');
   const [formAccessType, setFormAccessType] = useState<'all' | 'custom'>('all');
   const [formSelectedPillars, setFormSelectedPillars] = useState<string[]>(ALL_PILLAR_KEYS);
+  const [formKepahlawananAccessType, setFormKepahlawananAccessType] = useState<'all' | 'custom'>('all');
+  const [formSelectedKepahlawanan, setFormSelectedKepahlawanan] = useState<string[]>(ALL_KEPAHLAWANAN_KEYS);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Modal State for Delete Confirmation
@@ -191,6 +202,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     setFormPhone('');
     setFormAccessType('all');
     setFormSelectedPillars(ALL_PILLAR_KEYS);
+    setFormKepahlawananAccessType('all');
+    setFormSelectedKepahlawanan(ALL_KEPAHLAWANAN_KEYS);
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -227,6 +240,15 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       setFormSelectedPillars(allowed);
     }
 
+    const allowedKep = acc.allowedKepahlawanan || ['all'];
+    if (allowedKep.includes('all') || allowedKep.includes('*') || allowedKep.length >= ALL_KEPAHLAWANAN_KEYS.length) {
+      setFormKepahlawananAccessType('all');
+      setFormSelectedKepahlawanan(ALL_KEPAHLAWANAN_KEYS);
+    } else {
+      setFormKepahlawananAccessType('custom');
+      setFormSelectedKepahlawanan(allowedKep);
+    }
+
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -247,6 +269,20 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
 
   const handleClearAllPillars = () => {
     setFormSelectedPillars([]);
+  };
+
+  const handleToggleKepahlawanan = (kKey: string) => {
+    setFormSelectedKepahlawanan((prev) =>
+      prev.includes(kKey) ? prev.filter((k) => k !== kKey) : [...prev, kKey]
+    );
+  };
+
+  const handleSelectAllKepahlawanan = () => {
+    setFormSelectedKepahlawanan(ALL_KEPAHLAWANAN_KEYS);
+  };
+
+  const handleClearAllKepahlawanan = () => {
+    setFormSelectedKepahlawanan([]);
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
@@ -292,8 +328,13 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       return;
     }
 
-    if (formAccessType === 'custom' && formSelectedPillars.length === 0) {
-      setFormError('Pilih minimal 1 pilar PSKS untuk hak akses kustom.');
+    if (
+      formAccessType === 'custom' &&
+      formSelectedPillars.length === 0 &&
+      formKepahlawananAccessType === 'custom' &&
+      formSelectedKepahlawanan.length === 0
+    ) {
+      setFormError('Pilih minimal 1 pilar PSKS atau 1 menu Kepahlawanan untuk hak akses kustom.');
       return;
     }
 
@@ -309,6 +350,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     }
 
     const finalAllowedPillars = formAccessType === 'all' ? ['all'] : formSelectedPillars;
+    const finalAllowedKepahlawanan =
+      formKepahlawananAccessType === 'all' ? ['all'] : formSelectedKepahlawanan;
 
     // Zero-Leakage Cryptographic Construction
     const passwordHash = isPasswordBeingChanged
@@ -331,6 +374,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
         pinOtoritas: pinClean,
         pinEncrypted,
         allowedPillars: finalAllowedPillars,
+        allowedKepahlawanan: finalAllowedKepahlawanan,
         nik: formNik.trim(),
         noWhatsapp: formPhone.trim(),
         role: 'superadmin',
@@ -356,6 +400,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
         pinOtoritas: pinClean,
         pinEncrypted,
         allowedPillars: finalAllowedPillars,
+        allowedKepahlawanan: finalAllowedKepahlawanan,
         nik: formNik.trim(),
         noWhatsapp: formPhone.trim(),
         role: 'superadmin',
@@ -450,7 +495,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
               <span>Manajemen Superadmin Provinsi</span>
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 font-medium max-w-2xl mt-1.5 leading-relaxed">
-              Konsol otoritas penuh untuk menambah superadmin, mengatur hak akses ke 10 pilar PSKS Jabar, serta mengelola kata sandi dan PIN tanpa celah kebocoran data.
+              Konsol otoritas penuh untuk menambah superadmin, mengatur hak akses ke 10 pilar PSKS Jabar serta Gerbang Kepahlawanan, dan mengelola kata sandi serta PIN tanpa celah kebocoran data.
             </p>
           </div>
 
@@ -535,6 +580,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
 
             const allowed = item.allowedPillars || ['all'];
             const isFullAccess = allowed.includes('all') || allowed.includes('*') || allowed.length >= ALL_PILLAR_KEYS.length;
+            const allowedKep = item.allowedKepahlawanan || ['all'];
+            const isFullKepAccess = allowedKep.includes('all') || allowedKep.includes('*') || allowedKep.length >= ALL_KEPAHLAWANAN_KEYS.length;
 
             return (
               <div
@@ -698,6 +745,11 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>Akses Penuh — Bebas Membuka Seluruh 10 Pilar PSKS Jabar</span>
                       </div>
+                    ) : allowed.length === 0 ? (
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center gap-2 text-rose-800 text-xs font-bold">
+                        <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Terkunci Penuh — Tidak Ada Pilar PSKS Diizinkan</span>
+                      </div>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {allowed.map((pKey) => {
@@ -709,6 +761,45 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                             >
                               <span>{cfg?.icon || '•'}</span>
                               <span>{cfg?.title || pKey.toUpperCase()}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hak Akses Kepahlawanan */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5 text-[#0f2b5c]" />
+                        Kewenangan Kepahlawanan:
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600">
+                        {isFullKepAccess ? 'Semua Menu (4)' : `${allowedKep.length} Menu`}
+                      </span>
+                    </div>
+
+                    {isFullKepAccess ? (
+                      <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-2.5 flex items-center gap-2 text-[#0f2b5c] text-xs font-bold">
+                        <CheckCircle2 className="w-4 h-4 text-blue-700 shrink-0" />
+                        <span>Akses Penuh — Bebas Membuka Seluruh 4 Menu Kepahlawanan</span>
+                      </div>
+                    ) : allowedKep.length === 0 ? (
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex items-center gap-2 text-rose-800 text-xs font-bold">
+                        <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>Terkunci Penuh — Tidak Ada Menu Kepahlawanan Diizinkan</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {allowedKep.map((kKey) => {
+                          const cfg = KEPAHLAWANAN_MENUS.find((m) => m.id === kKey);
+                          return (
+                            <span
+                              key={kKey}
+                              className="px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-300 text-[#0f2b5c] text-[10px] font-bold flex items-center gap-1"
+                            >
+                              <span>{cfg?.title || kKey.toUpperCase()}</span>
                             </span>
                           );
                         })}
@@ -1024,6 +1115,115 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                         );
                       })}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 5: HAK AKSES KEPAHLAWANAN (Granular Kepahlawanan Access Control) */}
+              <div className="pt-3 border-t border-slate-100">
+                <label className="block text-xs font-black uppercase text-slate-800 tracking-wider mb-2 flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-[#0f2b5c]" />
+                  <span>Pengaturan Hak Akses Kepahlawanan:</span>
+                </label>
+
+                {/* Radio Type Kepahlawanan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                  <label
+                    className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formKepahlawananAccessType === 'all'
+                        ? 'border-blue-600 bg-blue-50/60 text-[#0f2b5c] font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="kepahlawananAccessType"
+                      checked={formKepahlawananAccessType === 'all'}
+                      onChange={() => setFormKepahlawananAccessType('all')}
+                      className="text-blue-700 focus:ring-blue-600"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold">Akses Penuh (4 Menu)</div>
+                      <div className="text-[10px] text-slate-500">Boleh membuka seluruh Kepahlawanan</div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formKepahlawananAccessType === 'custom'
+                        ? 'border-amber-500 bg-amber-50/60 text-amber-950 font-bold'
+                        : 'border-slate-200 bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="kepahlawananAccessType"
+                      checked={formKepahlawananAccessType === 'custom'}
+                      onChange={() => setFormKepahlawananAccessType('custom')}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <div className="text-xs">
+                      <div className="font-bold">Kustom Kepahlawanan</div>
+                      <div className="text-[10px] text-slate-500">Pilih menu spesifik yang diizinkan</div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Custom Kepahlawanan Checklist Panel */}
+                {formKepahlawananAccessType === 'custom' && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Pilih Menu Kepahlawanan: ({formSelectedKepahlawanan.length}/4)
+                      </span>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={handleSelectAllKepahlawanan}
+                          className="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
+                        >
+                          Pilih Semua
+                        </button>
+                        <span>•</span>
+                        <button
+                          type="button"
+                          onClick={handleClearAllKepahlawanan}
+                          className="text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                        >
+                          Hapus Semua
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      {KEPAHLAWANAN_MENUS.map((menu) => {
+                        const isChecked = formSelectedKepahlawanan.includes(menu.id);
+                        return (
+                          <label
+                            key={menu.id}
+                            className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer select-none transition-all ${
+                              isChecked
+                                ? 'bg-white border-blue-400 text-[#0f2b5c] font-bold shadow-2xs'
+                                : 'bg-slate-100/60 border-slate-200 text-slate-500'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleKepahlawanan(menu.id)}
+                              className="rounded text-blue-700 focus:ring-blue-600"
+                            />
+                            <span className="truncate">{menu.fullTitle}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {formSelectedKepahlawanan.length === 0 && (
+                      <p className="text-[11px] font-semibold text-rose-700 pt-1">
+                        Semua 4 menu Gerbang Kepahlawanan akan dikunci bagi akun Superadmin ini.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
