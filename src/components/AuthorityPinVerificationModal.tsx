@@ -44,13 +44,20 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
-  // References to the 6 input elements for smooth auto-focus navigation
+  // References to the 6 input elements & synchronous ref for digits (prevents stale-closure dropped digits on fast typing)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const digitsRef = useRef<string[]>(['', '', '', '', '', '']);
   const verifyingRef = useRef<boolean>(false);
+  const modalInstanceId = useRef<string>(Math.random().toString(36).slice(2, 8)).current;
 
   const accountScope = (userId || username || method || 'global').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
   const LOCKOUT_KEY = `psks_pin_lockout_${role}_${accountScope}`;
   const ATTEMPTS_KEY = `psks_pin_attempts_${role}_${accountScope}`;
+
+  const syncDigits = (nextDigits: string[]) => {
+    digitsRef.current = nextDigits;
+    setDigits(nextDigits);
+  };
 
   // Focus the first empty digit or first input on mount & load persistent lockout
   useEffect(() => {
@@ -107,40 +114,43 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     if (lockoutRemaining > 0 || isSuccess || verifyingRef.current) return;
 
     const cleanVal = value.replace(/\D/g, '');
+    const currentDigits = [...digitsRef.current];
 
-    // Handle paste or OS OTP autofill of multiple characters
-    if (cleanVal.length > 1) {
-      const pasteDigits = cleanVal.slice(0, 6).split('');
-      const newDigits = [...digits];
-      const startIndex = cleanVal.length >= 6 ? 0 : index;
-      pasteDigits.forEach((d, idx) => {
-        if (startIndex + idx < 6) {
-          newDigits[startIndex + idx] = d;
-        }
-      });
-      setDigits(newDigits);
+    // Full 6-digit OS SMS/OTP autofill into a single input
+    if (cleanVal.length >= 6) {
+      const nextDigits = cleanVal.slice(0, 6).split('');
+      syncDigits(nextDigits);
       setErrorMessage(null);
-      const nextIndex = Math.min(startIndex + pasteDigits.length, 5);
-      inputRefs.current[nextIndex]?.focus();
-
-      if (newDigits.every((d) => d !== '')) {
-        validatePin(newDigits.join(''));
-      }
+      inputRefs.current[5]?.focus();
+      validatePin(nextDigits.join(''));
       return;
     }
 
-    const singleDigit = cleanVal.slice(-1);
-    const newDigits = [...digits];
-    newDigits[index] = singleDigit;
-    setDigits(newDigits);
+    // If user typed into a box that already held a digit (e.g. "1" -> "15" or "51"), keep ONLY the newly typed digit in THIS box
+    let singleDigit = '';
+    if (cleanVal.length === 1) {
+      singleDigit = cleanVal;
+    } else if (cleanVal.length > 1) {
+      const prevChar = currentDigits[index] || '';
+      if (prevChar && cleanVal.startsWith(prevChar)) {
+        singleDigit = cleanVal.slice(prevChar.length).slice(-1);
+      } else if (prevChar && cleanVal.endsWith(prevChar)) {
+        singleDigit = cleanVal.slice(0, cleanVal.length - prevChar.length).slice(-1);
+      } else {
+        singleDigit = cleanVal.slice(-1);
+      }
+    }
+
+    currentDigits[index] = singleDigit;
+    syncDigits(currentDigits);
     setErrorMessage(null);
 
     if (singleDigit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    if (singleDigit && newDigits.every((d) => d !== '')) {
-      validatePin(newDigits.join(''));
+    if (singleDigit && currentDigits.every((d) => d !== '')) {
+      validatePin(currentDigits.join(''));
     }
   };
 
@@ -151,18 +161,18 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     e.preventDefault();
     const startIndex = pasted.length >= 6 ? 0 : index;
     const pasteDigits = pasted.slice(0, 6 - startIndex).split('');
-    const newDigits = [...digits];
+    const nextDigits = [...digitsRef.current];
     pasteDigits.forEach((d, idx) => {
       if (startIndex + idx < 6) {
-        newDigits[startIndex + idx] = d;
+        nextDigits[startIndex + idx] = d;
       }
     });
-    setDigits(newDigits);
+    syncDigits(nextDigits);
     setErrorMessage(null);
     const nextIndex = Math.min(startIndex + pasteDigits.length, 5);
     inputRefs.current[nextIndex]?.focus();
-    if (newDigits.every((d) => d !== '')) {
-      validatePin(newDigits.join(''));
+    if (nextDigits.every((d) => d !== '')) {
+      validatePin(nextDigits.join(''));
     }
   };
 
@@ -171,13 +181,13 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
 
     if (e.key === 'Backspace') {
       e.preventDefault();
-      const newDigits = [...digits];
-      if (newDigits[index]) {
-        newDigits[index] = '';
-        setDigits(newDigits);
+      const nextDigits = [...digitsRef.current];
+      if (nextDigits[index]) {
+        nextDigits[index] = '';
+        syncDigits(nextDigits);
       } else if (index > 0) {
-        newDigits[index - 1] = '';
-        setDigits(newDigits);
+        nextDigits[index - 1] = '';
+        syncDigits(nextDigits);
         inputRefs.current[index - 1]?.focus();
       }
       setErrorMessage(null);
@@ -186,7 +196,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
     } else if (e.key === 'ArrowRight' && index < 5) {
       inputRefs.current[index + 1]?.focus();
     } else if (e.key === 'Enter') {
-      const fullPin = digits.join('');
+      const fullPin = digitsRef.current.join('');
       if (fullPin.length === 6) {
         validatePin(fullPin);
       }
@@ -292,6 +302,11 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
           localStorage.setItem(LOCKOUT_KEY, String(Date.now() + lockoutSec * 1000));
           localStorage.setItem(ATTEMPTS_KEY, '5');
         } catch {}
+      } else if (res.status === 429) {
+        // Global API rate limit: DO NOT count as wrong PIN attempt or trigger 15-min local lockout
+        syncDigits(['', '', '', '', '', '']);
+        setTimeout(() => inputRefs.current[0]?.focus(), 30);
+        setErrorMessage(data.message || 'Terlalu banyak permintaan ke server. Silakan tunggu beberapa detik lalu coba lagi.');
       } else {
         const newFailed = typeof data.remainingAttempts === 'number'
           ? Math.max(0, 5 - data.remainingAttempts)
@@ -309,7 +324,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
           } catch {}
           setErrorMessage('⚠️ 5 kali percobaan PIN salah! Sistem otorisasi dibekukan selama 15 menit.');
         } else {
-          setDigits(['', '', '', '', '', '']);
+          syncDigits(['', '', '', '', '', '']);
           setTimeout(() => inputRefs.current[0]?.focus(), 30);
           setErrorMessage(data.message || `❌ PIN salah. Sisa kesempatan: ${Math.max(0, 5 - newFailed)} kali.`);
         }
@@ -323,7 +338,7 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    validatePin(digits.join(''));
+    validatePin(digitsRef.current.join(''));
   };
 
   const roleLabel = role === 'developer' ? 'DEVELOPER UTAMA' : 'SUPERADMIN PROVINSI';
@@ -376,34 +391,49 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
             </div>
           )}
 
-          {/* Pure 6-Box PIN Inputs */}
-          <form onSubmit={handleManualSubmit} className="w-full mt-6">
+          {/* Pure 6-Box PIN Inputs (type="text" + visual mask overlay to prevent password-manager corruption) */}
+          <form onSubmit={handleManualSubmit} autoComplete="off" className="w-full mt-6">
             <div className="flex justify-center items-center gap-2 sm:gap-3">
               {digits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={(el) => {
-                    inputRefs.current[idx] = el;
-                  }}
-                  type={showPinDigits ? 'text' : 'password'}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  disabled={lockoutRemaining > 0 || isVerifying || isSuccess}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(idx, e.target.value)}
-                  onPaste={(e) => handlePaste(idx, e)}
-                  onKeyDown={(e) => handleKeyDown(idx, e)}
-                  autoComplete="one-time-code"
-                  aria-label={`Digit PIN ${idx + 1}`}
-                  className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl transition-all outline-none select-none
-                    ${digit 
-                      ? 'bg-blue-50/70 border-2 border-blue-600 text-blue-900 shadow-sm' 
-                      : 'bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:border-2 focus:border-blue-500 focus:shadow-md'
-                    }
-                    ${errorMessage && !isSuccess ? 'border-red-400 bg-red-50/40 text-red-900' : ''}
-                    ${lockoutRemaining > 0 ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200' : ''}
-                  `}
-                />
+                <div key={idx} className="relative w-10 h-12 sm:w-12 sm:h-14">
+                  <input
+                    ref={(el) => {
+                      inputRefs.current[idx] = el;
+                    }}
+                    type="text"
+                    name={`psks_pin_${modalInstanceId}_${idx}`}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    disabled={lockoutRemaining > 0 || isVerifying || isSuccess}
+                    value={digit}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => handleDigitChange(idx, e.target.value)}
+                    onPaste={(e) => handlePaste(idx, e)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    aria-label={`Digit PIN ${idx + 1}`}
+                    className={`w-full h-full text-center text-xl sm:text-2xl font-bold rounded-xl transition-all outline-none select-none
+                      ${digit 
+                        ? `bg-blue-50/70 border-2 border-blue-600 shadow-sm ${showPinDigits ? 'text-blue-900' : 'text-transparent caret-blue-600'}` 
+                        : 'bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:border-2 focus:border-blue-500 focus:shadow-md'
+                      }
+                      ${errorMessage && !isSuccess ? `border-red-400 bg-red-50/40 ${showPinDigits || !digit ? 'text-red-900' : 'text-transparent caret-red-600'}` : ''}
+                      ${lockoutRemaining > 0 ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200' : ''}
+                    `}
+                  />
+                  {!showPinDigits && digit && (
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute inset-0 flex items-center justify-center text-xl sm:text-2xl font-bold ${
+                        errorMessage && !isSuccess ? 'text-red-900' : 'text-blue-900'
+                      }`}
+                    >
+                      •
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
 
