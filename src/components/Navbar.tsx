@@ -345,15 +345,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* BRAND / LOGO LEFT */}
           <div
             onClick={() => handleNav('beranda')}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group/brand shrink-0"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group/brand min-w-0"
           >
-            <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-10 h-10 sm:w-11 sm:h-11 md:w-11 md:h-11 lg:w-12 lg:h-12" />
+            <OfficialPsksLogo logoUrl={logoUrl} sizeClassName="w-9 h-9 sm:w-11 sm:h-11 lg:w-12 lg:h-12 shrink-0" />
             <div className="flex flex-col text-left min-w-0">
-              <span className="text-white font-extrabold text-xs sm:text-sm md:text-sm lg:text-base xl:text-lg tracking-tight leading-none group-hover/brand:text-amber-200 transition-colors whitespace-nowrap">
-                PSKS JABAR
+              <span className="text-white font-extrabold text-[11px] min-[380px]:text-xs sm:text-sm lg:text-base xl:text-lg tracking-tight leading-none group-hover/brand:text-amber-200 transition-colors whitespace-nowrap truncate">
+                PSKS & KEPAHLAWANAN
               </span>
               <span
-                className="text-[9px] sm:text-[10px] md:text-[10.5px] lg:text-xs font-semibold mt-1 tracking-wide whitespace-nowrap text-amber-300/90"
+                className="text-[9px] sm:text-[10px] lg:text-xs font-semibold mt-1 tracking-wide whitespace-nowrap truncate text-amber-300/90"
               >
                 Dinas Sosial Provinsi Jawa Barat
               </span>
@@ -363,12 +363,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* MAIN DESKTOP & TABLET NAVIGATION MENU (TEKS BERSIH, MODERN & BEBAS AI SLOP) */}
           <nav 
             ref={navContainerRef}
-            className="hidden md:flex items-center gap-2 lg:gap-4 xl:gap-7 shrink-0"
+            className="hidden md:flex items-center gap-1 lg:gap-4 xl:gap-6 shrink-0"
           >
             {/* 1. BERANDA (TANPA SUB-MENU) */}
             <button
               onClick={() => handleNav('beranda')}
-              className={`relative px-3 py-2 rounded-lg text-sm lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              className={`relative px-2 lg:px-3 py-2 rounded-lg text-xs lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
                 currentTab === 'beranda'
                   ? 'text-amber-300 font-bold'
                   : 'text-slate-100 hover:text-amber-200 hover:bg-white/[0.05]'
@@ -389,7 +389,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => toggleDropdown('profil')}
-                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                className={`relative flex items-center gap-1 lg:gap-1.5 px-2 lg:px-3 py-2 rounded-lg text-xs lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
                   currentTab === 'profil' || activeDropdown === 'profil'
                     ? 'text-amber-300 font-bold'
                     : 'text-slate-100 hover:text-amber-200 hover:bg-white/[0.05]'
@@ -447,7 +447,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => toggleDropdown('contact')}
-                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                className={`relative flex items-center gap-1 lg:gap-1.5 px-2 lg:px-3 py-2 rounded-lg text-xs lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
                   currentTab === 'contact' || activeDropdown === 'contact'
                     ? 'text-amber-300 font-bold'
                     : 'text-slate-100 hover:text-amber-200 hover:bg-white/[0.05]'
@@ -505,7 +505,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => toggleDropdown('akun')}
-                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                className={`relative flex items-center gap-1 lg:gap-1.5 px-2 lg:px-3 py-2 rounded-lg text-xs lg:text-[15px] font-semibold tracking-normal transition-all duration-200 cursor-pointer whitespace-nowrap ${
                   currentTab === 'akun' || activeDropdown === 'akun'
                     ? 'text-amber-300 font-bold'
                     : 'text-slate-100 hover:text-amber-200 hover:bg-white/[0.05]'

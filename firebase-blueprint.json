@@ -314,6 +314,24 @@
         "updatedBy": { "type": "string" }
       },
       "required": ["id", "title", "category", "nomorRegulasi", "status"]
+    },
+    "pahlawan_nasional": {
+      "title": "Pahlawan Nasional",
+      "description": "Galeri 18 Pahlawan Nasional beserta foto terkompresi jernih dan biografi lengkap yang dikelola oleh Superadmin dan Developer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 32, "pattern": "^slot_([1-9]|1[0-8])$" },
+        "slotNumber": { "type": "number" },
+        "nama": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "gelar": { "type": "string", "maxLength": 200 },
+        "biografi": { "type": "string", "minLength": 1, "maxLength": 15000 },
+        "fotoBase64": { "type": "string", "minLength": 10, "maxLength": 450000 },
+        "fotoSizeKb": { "type": "number" },
+        "originalSizeKb": { "type": "number" },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "updatedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["slotNumber", "nama", "biografi", "fotoBase64", "updatedAt"]
     }
   },
   "firestore": {
@@ -380,6 +398,10 @@
     "/document_repository/{docId}": {
       "schema": "document_repository",
       "description": "Repositori resmi berkas regulasi Kemensos RI, Pergub Jabar, SOP dan blanko"
+    },
+    "/pahlawan_nasional/{heroId}": {
+      "schema": "pahlawan_nasional",
+      "description": "Koleksi 18 Pahlawan Nasional dengan foto terkompresi dan biografi realtime"
     }
   }
 }

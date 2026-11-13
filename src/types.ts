@@ -397,3 +397,17 @@ export interface DocumentRepoItem {
   fileDataUrl?: string;
 }
 
+export interface PahlawanNasionalItem {
+  id: string;
+  slotNumber: number;
+  nama: string;
+  gelar?: string;
+  biografi: string;
+  fotoBase64: string;
+  fotoSizeKb?: number;
+  originalSizeKb?: number;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+

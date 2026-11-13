@@ -9,6 +9,7 @@ import {
   PillarRegistrationSubmission,
   AnnouncementConfig,
   TaskItem,
+  PahlawanNasionalItem,
 } from './types';
 import {
   DEFAULT_PILLAR_DATA,
@@ -27,6 +28,11 @@ import { HeroSection } from './components/HeroSection';
 import { AboutSection } from './components/AboutSection';
 import { BannerBadge } from './components/BannerBadge';
 import { PillarsGrid } from './components/PillarsGrid';
+import {
+  KepahlawananSection,
+  KepahlawananDetailView,
+  type KepahlawananMenuId,
+} from './components/KepahlawananSection';
 import { Footer } from './components/Footer';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
@@ -81,7 +87,12 @@ const SocialMediaManagementPage = lazyWithRetry(() => import('./components/Socia
 const RegionalLogoManagementPage = lazyWithRetry(() => import('./components/RegionalLogoManagementPage').then(m => ({ default: m.RegionalLogoManagementPage })));
 const PinSecurityManagementPage = lazyWithRetry(() => import('./components/PinSecurityManagementPage').then(m => ({ default: m.PinSecurityManagementPage })));
 const WebsiteInfoManagementPage = lazyWithRetry(() => import('./components/WebsiteInfoManagementPage').then(m => ({ default: m.WebsiteInfoManagementPage })));
+const PahlawanNasionalManagementPage = lazyWithRetry(() => import('./components/PahlawanNasionalManagementPage').then(m => ({ default: m.PahlawanNasionalManagementPage })));
 import { subscribeToRegionalLogos, getLocalCachedRegionalLogos } from './services/regionalLogoService';
+import {
+  subscribeToPahlawanNasional,
+  getCachedPahlawanNasional,
+} from './services/pahlawanNasionalService';
 import { PortalFaqItem, DocumentRepoItem } from './types';
 import { subscribeToFaqs, saveFaqToFirestore, deleteFaqFromFirestore, seedDefaultFaqsToFirestore } from './services/faqFirestoreService';
 import { DEFAULT_PORTAL_FAQS } from './data/defaultFaqs';
@@ -2343,12 +2354,28 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Realtime Data Pahlawan Nasional (18 Slot - Live Firestore Sync ke seluruh role)
+  const [pahlawanNasionalList, setPahlawanNasionalList] = useState<PahlawanNasionalItem[]>(
+    () => getCachedPahlawanNasional()
+  );
+
+  useEffect(() => {
+    const unsubscribe = subscribeToPahlawanNasional((items) => {
+      React.startTransition(() => {
+        setPahlawanNasionalList(items);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
   // 4. Navigation State & Scroll Position Memory
   const [currentTab, setCurrentTab] = useState<string>('beranda');
   const [profileSubView, setProfileSubView] = useState<'kadinas' | 'visi_misi' | 'struktur' | 'tupoksi'>('kadinas');
   const [contactSubView, setContactSubView] = useState<'medsos' | 'lokasi'>('medsos');
   const [accountSubView, setAccountSubView] = useState<'profil' | 'ubah_password' | 'ubah_pin'>('profil');
   const [activePillar, setActivePillar] = useState<PillarId | null>(null);
+  const [activeKepahlawananMenu, setActiveKepahlawananMenu] = useState<KepahlawananMenuId | null>(null);
+  const [pahlawanManageInitialSlot, setPahlawanManageInitialSlot] = useState<number | null>(null);
   const [restrictedPillarTarget, setRestrictedPillarTarget] = useState<PillarId | null>(null);
   const dashboardScrollYRef = useRef<number>(0);
   const shouldRestoreDashboardScrollRef = useRef<boolean>(false);
@@ -2500,6 +2527,7 @@ export default function App() {
       'regional_logo_manage',
       'pin_security_manage',
       'website_info_manage',
+      'pahlawan_nasional_manage',
     ];
 
     if (superadminTabs.includes(currentTab) && !isSuperadminOrDev) {
@@ -2514,6 +2542,7 @@ export default function App() {
     tab: string,
     options?: {
       pillarId?: PillarId | null;
+      kepahlawananMenuId?: KepahlawananMenuId | null;
       detailData?: AnnouncementConfig | null;
       subView?: string | null;
     }
@@ -2581,6 +2610,14 @@ export default function App() {
       if (targetPillar) setActivePillar(targetPillar);
     } else {
       setActivePillar(null);
+    }
+
+    if (targetTab === 'kepahlawanan_detail') {
+      if (options?.kepahlawananMenuId) {
+        setActiveKepahlawananMenu(options.kepahlawananMenuId);
+      }
+    } else {
+      setActiveKepahlawananMenu(null);
     }
 
     if (options?.detailData) {
@@ -2705,6 +2742,10 @@ export default function App() {
     navigateToTab('pillar_detail', { pillarId });
   };
 
+  const handleSelectKepahlawananMenu = (menuId: KepahlawananMenuId) => {
+    navigateToTab('kepahlawanan_detail', { kepahlawananMenuId: menuId });
+  };
+
   const handleOpenSuperadminManageConsole = () => {
     navigateToTab('superadmin_manage');
   };
@@ -2771,6 +2812,11 @@ export default function App() {
 
   const handleOpenWebsiteInfoConsole = () => {
     navigateToTab('website_info_manage');
+  };
+
+  const handleOpenPahlawanNasionalConsole = (slotNumber?: number) => {
+    setPahlawanManageInitialSlot(typeof slotNumber === 'number' ? slotNumber : null);
+    navigateToTab('pahlawan_nasional_manage');
   };
 
   const handleOpenFloatingWhatsApp = useCallback(() => {
@@ -4943,6 +4989,8 @@ export default function App() {
             session={session}
           />
 
+          <KepahlawananSection onSelectMenu={handleSelectKepahlawananMenu} />
+
           <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData, regionalSummary]}>
             <React.Suspense fallback={null}>
               <HomePSKSAnalytics
@@ -5088,6 +5136,7 @@ export default function App() {
                   onOpenRegionalLogoConsole={handleOpenRegionalLogoConsole}
                   onOpenPinSecurityConsole={handleOpenPinSecurityConsole}
                   onOpenWebsiteInfoConsole={handleOpenWebsiteInfoConsole}
+                  onOpenPahlawanNasionalConsole={() => handleOpenPahlawanNasionalConsole()}
                 />
               </React.Suspense>
             )}
@@ -5189,6 +5238,19 @@ export default function App() {
             regionalSummary={regionalSummary}
             regionalLogos={regionalLogos}
           />
+        )}
+
+        {currentTab === 'kepahlawanan_detail' && activeKepahlawananMenu && (
+          <>
+            <KepahlawananDetailView
+              menuId={activeKepahlawananMenu}
+              session={session}
+              pahlawanList={pahlawanNasionalList}
+              onOpenManagePahlawan={(slotNum) => handleOpenPahlawanNasionalConsole(slotNum)}
+              onBackToHome={handleBackToDashboard}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
         )}
 
         {currentTab === 'profil' && (
@@ -5429,6 +5491,20 @@ export default function App() {
             adminAccounts={adminAccounts}
             adminMessages={adminMessages}
           />
+        )}
+
+        {currentTab === 'pahlawan_nasional_manage' && session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper === true) && (
+          <>
+            <PahlawanNasionalManagementPage
+              session={session}
+              pahlawanList={pahlawanNasionalList}
+              initialEditSlot={pahlawanManageInitialSlot}
+              onClearInitialSlot={() => setPahlawanManageInitialSlot(null)}
+              onBackToHome={handleBackToHome}
+              onOpenPublicGallery={() => navigateToTab('kepahlawanan_detail', { kepahlawananMenuId: 'pahlawan_nasional' })}
+            />
+            <Footer logoUrl={appSettings?.logoUrl} />
+          </>
         )}
         </React.Suspense>
       </main>

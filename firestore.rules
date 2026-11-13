@@ -7,6 +7,45 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
+    function isValidPahlawanId(id) {
+      return id is string && id.matches('^slot_([1-9]|1[0-8])$');
+    }
+
+    function isValidPahlawan(data) {
+      return data.keys().hasAll(['slotNumber', 'nama', 'biografi', 'fotoBase64', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'id',
+          'slotNumber',
+          'nama',
+          'gelar',
+          'biografi',
+          'fotoBase64',
+          'fotoSizeKb',
+          'originalSizeKb',
+          'updatedAt',
+          'updatedBy'
+        ]) &&
+        data.slotNumber is int &&
+        data.slotNumber >= 1 &&
+        data.slotNumber <= 18 &&
+        data.nama is string &&
+        data.nama.size() >= 1 &&
+        data.nama.size() <= 200 &&
+        data.biografi is string &&
+        data.biografi.size() >= 1 &&
+        data.biografi.size() <= 15000 &&
+        data.fotoBase64 is string &&
+        data.fotoBase64.size() >= 10 &&
+        data.fotoBase64.size() <= 450000 &&
+        data.updatedAt is string &&
+        data.updatedAt.size() <= 64 &&
+        (!('id' in data) || (data.id is string && data.id.size() <= 32)) &&
+        (!('gelar' in data) || (data.gelar is string && data.gelar.size() <= 200)) &&
+        (!('fotoSizeKb' in data) || (data.fotoSizeKb is number && data.fotoSizeKb >= 0)) &&
+        (!('originalSizeKb' in data) || (data.originalSizeKb is number && data.originalSizeKb >= 0)) &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 128));
+    }
+
     // 1. Audit Trail System Logs: STRICT APPEND-ONLY (No one can tamper with or erase logs)
     match /system_logs/{logId} {
       allow read: if true;
@@ -161,7 +200,14 @@ service cloud.firestore {
       allow read, write: if isValidId(videoId);
     }
 
-    // 14. Default Deny Catch-All: Block any unlisted or arbitrary paths
+    // 14. Galeri 18 Pahlawan Nasional (Dapat dibaca realtime semua pengguna, validasi skema ketat)
+    match /pahlawan_nasional/{heroId} {
+      allow read: if true;
+      allow create, update: if isValidPahlawanId(heroId) && isValidPahlawan(request.resource.data);
+      allow delete: if isValidPahlawanId(heroId);
+    }
+
+    // 15. Default Deny Catch-All: Block any unlisted or arbitrary paths
     match /{document=**} {
       allow read, write: if false;
     }
