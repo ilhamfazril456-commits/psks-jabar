@@ -1,6 +1,6 @@
 import { supabase, safeSubscribeRealtime } from '../lib/supabase';
 import { OperationType, handleFirestoreError, isQuotaError } from '../lib/firebaseErrors';
-import { encryptSensitiveData, decryptSensitiveData, hashSearchableField } from '../utils/crypto';
+import { encryptSensitiveData, decryptSensitiveData, hashSearchableField, hashPassword } from '../utils/crypto';
 
 let firestoreModulePromise: Promise<{
   firestore: typeof import('firebase/firestore');
@@ -79,6 +79,12 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
 
   if (collectionName === 'admin_accounts' || collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
     const restData = row.data && typeof row.data === 'object' ? row.data : {};
+    const rawPinEnc = row.pinEncrypted || restData.pinEncrypted || '';
+    const decPin = rawPinEnc ? decryptSensitiveData(rawPinEnc) : '';
+    const legacyPlainPin = row.pinOtoritas || restData.pinOtoritas || '';
+    const resolvedPin = /^\d{6}$/.test(decPin) ? decPin : (/^\d{6}$/.test(legacyPlainPin) ? legacyPlainPin : '');
+    const resolvedPinEnc = rawPinEnc || (resolvedPin ? encryptSensitiveData(resolvedPin) : undefined);
+
     return {
       id: row.id,
       ...restData,
@@ -89,6 +95,8 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
       wilayahTugas: row.wilayahTugas || restData.wilayahTugas || '',
       passwordHash: row.passwordHash || restData.passwordHash || '',
       passwordPolos: '',
+      pinOtoritas: resolvedPin || undefined,
+      pinEncrypted: resolvedPinEnc || undefined,
       sessionToken: row.sessionToken || restData.sessionToken || '',
       loginTimestamp: typeof row.loginTimestamp === 'number' ? row.loginTimestamp : (typeof restData.loginTimestamp === 'number' ? restData.loginTimestamp : 0),
     };
@@ -161,7 +169,16 @@ export function mapSupabaseRowToDoc(collectionName: string, row: any): any {
   }
 
   if (collectionName === 'app_settings' || collectionName === 'psks_records_meta' || collectionName === 'psks_app_settings') {
-    return row.data || {};
+    const d = row.data && typeof row.data === 'object' ? { ...row.data } : {};
+    if (d.superadminPinEncrypted) {
+      const decSuper = decryptSensitiveData(d.superadminPinEncrypted);
+      if (/^\d{6}$/.test(decSuper)) d.superadminPin = decSuper;
+    }
+    if (d.developerPinEncrypted) {
+      const decDev = decryptSensitiveData(d.developerPinEncrypted);
+      if (/^\d{6}$/.test(decDev)) d.developerPin = decDev;
+    }
+    return d;
   }
 
   const restData = row.data && typeof row.data === 'object' ? row.data : {};
@@ -196,7 +213,22 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   }
 
   if (collectionName === 'admin_accounts' || collectionName === 'user_accounts' || collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
-    const { id: _id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, passwordPolos, ...rest } = cleaned;
+    const {
+      id: _id,
+      username,
+      namaAdmin,
+      role,
+      statusActive,
+      wilayahTugas,
+      passwordHash,
+      sessionToken,
+      passwordPolos: _pp1,
+      pinOtoritas: _pinPlain,
+      superadminPin: _sp1,
+      developerPin: _dp1,
+      _previousUsername: _prevU1,
+      ...rest
+    } = cleaned;
 
     // Strict protection for master accounts: prevent accidental downgrade or ID-as-username overwrite
     const safeRole =
@@ -222,18 +254,35 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
         ? 'Pusat Developer Jabar'
         : wilayahTugas || '';
 
-    const { passwordPolos: _ignoredPass, ...sanitizedRest } = rest;
+    const sanitizedRest: Record<string, any> = { ...rest };
+    delete sanitizedRest.passwordPolos;
+    delete sanitizedRest.pinOtoritas;
+    delete sanitizedRest.superadminPin;
+    delete sanitizedRest.developerPin;
+    delete sanitizedRest._previousUsername;
+
+    // Zero-Plaintext PIN Hardening: derive pinEncrypted & pinHash from pinOtoritas if supplied in-memory, never save plaintext pinOtoritas
+    const rawPlainPin = typeof _pinPlain === 'string' && /^\d{6}$/.test(_pinPlain.trim()) ? _pinPlain.trim() : '';
+    const existingPinEnc = typeof sanitizedRest.pinEncrypted === 'string' ? sanitizedRest.pinEncrypted.trim() : '';
+    const finalPinEnc = rawPlainPin ? encryptSensitiveData(rawPlainPin) : existingPinEnc;
+    const decPinForHash = rawPlainPin || (finalPinEnc ? decryptSensitiveData(finalPinEnc) : '');
+    const finalPinHash = /^\d{6}$/.test(decPinForHash)
+      ? hashPassword(decPinForHash)
+      : (typeof sanitizedRest.pinHash === 'string' ? sanitizedRest.pinHash : '');
+
+    if (finalPinEnc) sanitizedRest.pinEncrypted = finalPinEnc;
+    if (finalPinHash) sanitizedRest.pinHash = finalPinHash;
 
     // Encrypt sensitive PII (NIK & WhatsApp) before persisting to Supabase
-    const rawNik = (sanitizedRest as any).nik || '';
-    const rawWa = (sanitizedRest as any).noWhatsapp || '';
+    const rawNik = sanitizedRest.nik || '';
+    const rawWa = sanitizedRest.noWhatsapp || '';
     const encNik = rawNik ? encryptSensitiveData(rawNik) : '';
-    const nikHash = rawNik ? hashSearchableField(rawNik) : ((sanitizedRest as any).nikHash || '');
+    const nikHash = rawNik ? hashSearchableField(rawNik) : (sanitizedRest.nikHash || '');
     const encWa = rawWa ? encryptSensitiveData(rawWa) : '';
 
-    if (rawNik) (sanitizedRest as any).nik = encNik;
-    if (nikHash) (sanitizedRest as any).nikHash = nikHash;
-    if (rawWa) (sanitizedRest as any).noWhatsapp = encWa;
+    if (rawNik) sanitizedRest.nik = encNik;
+    if (nikHash) sanitizedRest.nikHash = nikHash;
+    if (rawWa) sanitizedRest.noWhatsapp = encWa;
 
     return {
       id: docId,
@@ -250,7 +299,7 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
         ...sanitizedRest,
         ...(encNik ? { nik: encNik, nikHash } : {}),
         ...(encWa ? { noWhatsapp: encWa } : {}),
-        loginTimestamp: cleaned.loginTimestamp || rest.loginTimestamp || 0,
+        loginTimestamp: cleaned.loginTimestamp || sanitizedRest.loginTimestamp || 0,
       },
     };
   }
@@ -349,9 +398,18 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
   }
 
   if (collectionName === 'app_settings' || collectionName === 'psks_records_meta' || collectionName === 'psks_app_settings') {
+    const safeSettings = { ...cleaned };
+    if (typeof safeSettings.superadminPin === 'string' && /^\d{6}$/.test(safeSettings.superadminPin.trim())) {
+      safeSettings.superadminPinEncrypted = encryptSensitiveData(safeSettings.superadminPin.trim());
+    }
+    if (typeof safeSettings.developerPin === 'string' && /^\d{6}$/.test(safeSettings.developerPin.trim())) {
+      safeSettings.developerPinEncrypted = encryptSensitiveData(safeSettings.developerPin.trim());
+    }
+    delete safeSettings.superadminPin;
+    delete safeSettings.developerPin;
     return {
       id: docId,
-      data: cleaned,
+      data: safeSettings,
       updatedAt: new Date().toISOString(),
     };
   }
@@ -371,10 +429,35 @@ function sanitizeForFirestorePayload(collectionName: string, rawData: Record<str
     collectionName === 'admin_accounts' ||
     collectionName === 'user_accounts'
   ) {
+    const rawPlainPin = typeof cleaned.pinOtoritas === 'string' && /^\d{6}$/.test(cleaned.pinOtoritas.trim())
+      ? cleaned.pinOtoritas.trim()
+      : '';
+    if (rawPlainPin && !cleaned.pinEncrypted) {
+      cleaned.pinEncrypted = encryptSensitiveData(rawPlainPin);
+    }
+    if (rawPlainPin && !cleaned.pinHash) {
+      cleaned.pinHash = hashPassword(rawPlainPin);
+    }
+    if (typeof cleaned.nik === 'string' && cleaned.nik && !cleaned.nik.startsWith('ENC::')) {
+      const encNik = encryptSensitiveData(cleaned.nik);
+      cleaned.nikHash = hashSearchableField(cleaned.nik);
+      cleaned.nik = encNik;
+    }
+    if (typeof cleaned.noWhatsapp === 'string' && cleaned.noWhatsapp && !cleaned.noWhatsapp.startsWith('ENC::')) {
+      cleaned.noWhatsapp = encryptSensitiveData(cleaned.noWhatsapp);
+    }
     delete cleaned.passwordPolos;
+    delete cleaned.pinOtoritas;
     delete cleaned.superadminPin;
     delete cleaned.developerPin;
+    delete cleaned._previousUsername;
   } else if (collectionName === 'app_settings') {
+    if (typeof cleaned.superadminPin === 'string' && /^\d{6}$/.test(cleaned.superadminPin.trim())) {
+      cleaned.superadminPinEncrypted = encryptSensitiveData(cleaned.superadminPin.trim());
+    }
+    if (typeof cleaned.developerPin === 'string' && /^\d{6}$/.test(cleaned.developerPin.trim())) {
+      cleaned.developerPinEncrypted = encryptSensitiveData(cleaned.developerPin.trim());
+    }
     delete cleaned.superadminPin;
     delete cleaned.developerPin;
   }
@@ -437,7 +520,17 @@ export function subscribeToDoc(
       const snap = await firestore.getDoc(docRef);
       if (isCancelled) return;
       if (snap.exists()) {
-        const d = snap.data();
+        const raw = snap.data() || {};
+        const d =
+          collectionName === 'app_settings' ||
+          collectionName === 'psks_records_meta' ||
+          collectionName === 'psks_app_settings' ||
+          collectionName === 'admin_accounts' ||
+          collectionName === 'user_accounts' ||
+          collectionName === 'superadmin_accounts' ||
+          collectionName === 'dev_accounts'
+            ? mapSupabaseRowToDoc(collectionName, { id: snap.id, ...raw, data: raw })
+            : raw;
         const hash = JSON.stringify(d);
         if (hash !== lastDataHash) {
           lastDataHash = hash;
@@ -635,6 +728,38 @@ async function loadAllSupabaseCollectionRows(collectionName: string): Promise<an
       console.warn('Supabase psks_records load failed completeness check:', err);
       throw err;
     }
+  }
+
+  if (collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts') {
+    // Merge BOTH Supabase and Firestore by id using highest lastUpdatedTimestamp so neither source shadows updates
+    const mergedMap = new Map<string, any>();
+    const upsertCandidate = (row: any) => {
+      if (!row || !row.id) return;
+      const prev = mergedMap.get(row.id);
+      const nextTs = Number(row.lastUpdatedTimestamp || row.data?.lastUpdatedTimestamp || 0);
+      const prevTs = Number(prev?.lastUpdatedTimestamp || prev?.data?.lastUpdatedTimestamp || 0);
+      if (!prev || nextTs >= prevTs) {
+        mergedMap.set(row.id, row);
+      }
+    };
+
+    try {
+      const { data, error } = await supabase.from(collectionName).select('*');
+      if (!error && Array.isArray(data)) {
+        data.forEach(upsertCandidate);
+      }
+    } catch {}
+
+    try {
+      const { firestore, db } = await getFirestoreModule();
+      const snap = await firestore.getDocs(firestore.collection(db, collectionName));
+      snap.docs.forEach((docSnap) => {
+        const d = docSnap.data();
+        upsertCandidate({ id: docSnap.id, data: d, ...d });
+      });
+    } catch {}
+
+    return Array.from(mergedMap.values());
   }
 
   try {
@@ -1052,8 +1177,35 @@ export async function setFirestoreDoc(
         partialUpdate.noWhatsapp = encryptSensitiveData(data.noWhatsapp);
       }
 
-      // Extract non-column fields to store in JSONB data (never persist plaintext passwordPolos)
-      const { id: _id, username: _u, namaAdmin: _na, role: _r, statusActive: _sa, wilayahTugas: _wt, passwordHash: _ph, sessionToken: _st, passwordPolos: _pp, nik: _nik, noWhatsapp: _wa, ...rest } = data;
+      // Extract non-column fields to store in JSONB data (ZERO PLAINTEXT: never persist passwordPolos or pinOtoritas)
+      const {
+        id: _id,
+        username: _u,
+        namaAdmin: _na,
+        role: _r,
+        statusActive: _sa,
+        wilayahTugas: _wt,
+        passwordHash: _ph,
+        sessionToken: _st,
+        passwordPolos: _pp,
+        pinOtoritas: _pinPlain,
+        superadminPin: _sp,
+        developerPin: _dp,
+        _previousUsername: _prevU,
+        nik: _nik,
+        noWhatsapp: _wa,
+        ...rest
+      } = data;
+
+      const rawPinStr = typeof _pinPlain === 'string' && /^\d{6}$/.test(_pinPlain.trim()) ? _pinPlain.trim() : '';
+      const computedPinEnc = rawPinStr
+        ? encryptSensitiveData(rawPinStr)
+        : (typeof data.pinEncrypted === 'string' && data.pinEncrypted.trim() ? data.pinEncrypted.trim() : '');
+      const decPinForHash = rawPinStr || (computedPinEnc ? decryptSensitiveData(computedPinEnc) : '');
+      const computedPinHash = /^\d{6}$/.test(decPinForHash)
+        ? hashPassword(decPinForHash)
+        : (typeof data.pinHash === 'string' && data.pinHash ? data.pinHash : '');
+
       const encNik = _nik ? encryptSensitiveData(_nik) : '';
       const nikHash = _nik ? hashSearchableField(_nik) : '';
       const encWa = _wa ? encryptSensitiveData(_wa) : '';
@@ -1071,7 +1223,10 @@ export async function setFirestoreDoc(
           const row = mapDocToSupabaseRow(collectionName, docId, data);
           if (row.data && typeof row.data === 'object') {
             delete (row.data as any).passwordPolos;
+            delete (row.data as any).pinOtoritas;
             delete (row.data as any).superadminPin;
+            delete (row.data as any).developerPin;
+            delete (row.data as any)._previousUsername;
           }
           const { error } = await supabase.from(chosenTable).upsert(row);
           if (!error) supabaseOk = true;
@@ -1079,10 +1234,23 @@ export async function setFirestoreDoc(
         } else {
           const existingData = existing.data?.data && typeof existing.data.data === 'object' ? { ...existing.data.data } : {};
           delete (existingData as any).passwordPolos;
+          delete (existingData as any).pinOtoritas;
           delete (existingData as any).superadminPin;
+          delete (existingData as any).developerPin;
+          delete (existingData as any)._previousUsername;
+
+          const cleanedRest = { ...rest };
+          delete (cleanedRest as any).passwordPolos;
+          delete (cleanedRest as any).pinOtoritas;
+          delete (cleanedRest as any).superadminPin;
+          delete (cleanedRest as any).developerPin;
+          delete (cleanedRest as any)._previousUsername;
+
           partialUpdate.data = {
             ...existingData,
-            ...rest,
+            ...cleanedRest,
+            ...(computedPinEnc ? { pinEncrypted: computedPinEnc } : {}),
+            ...(computedPinHash ? { pinHash: computedPinHash } : {}),
             ...(encNik ? { nik: encNik, nikHash } : {}),
             ...(encWa ? { noWhatsapp: encWa } : {}),
             ...(data.passwordHash !== undefined ? { passwordHash: data.passwordHash } : {}),
@@ -1172,6 +1340,13 @@ export async function setFirestoreDoc(
         supabaseError = res.error;
       }
     }
+
+    // Remove stale duplicate copies in admin_accounts when saving a superadmin or developer account
+    if (isAccountCol && (targetTable === 'superadmin_accounts' || targetTable === 'dev_accounts')) {
+      try {
+        await supabase.from('admin_accounts').delete().eq('id', docId);
+      } catch {}
+    }
   } catch (sbErr) {
     supabaseError = sbErr;
   }
@@ -1184,17 +1359,28 @@ export async function setFirestoreDoc(
     collectionName === 'dev_accounts' ||
     collectionName === 'security_signals'
   ) {
+    const resolvedFsCollection =
+      collectionName === 'security_signals'
+        ? 'security_signals'
+        : data.role === 'user' || collectionName === 'user_accounts'
+        ? 'user_accounts'
+        : data.role === 'developer' || collectionName === 'dev_accounts' || docId === 'adm-dev'
+        ? 'dev_accounts'
+        : data.role === 'superadmin' || collectionName === 'superadmin_accounts' || docId === 'adm-super'
+        ? 'superadmin_accounts'
+        : collectionName;
+
     try {
       const { firestore, db } = await getFirestoreModule();
-      const docRef = firestore.doc(db, collectionName, docId);
-      await firestore.setDoc(docRef, sanitizeForFirestorePayload(collectionName, data), { merge: true });
+      const docRef = firestore.doc(db, resolvedFsCollection, docId);
+      await firestore.setDoc(docRef, sanitizeForFirestorePayload(resolvedFsCollection, data), { merge: true });
     } catch (fsErr) {
-      console.warn(`Direct Firestore sync notice on ${collectionName}/${docId}:`, fsErr);
+      console.warn(`Direct Firestore sync notice on ${resolvedFsCollection}/${docId}:`, fsErr);
     }
   }
 
   // If Supabase write failed or table doesn't exist, fallback to Firestore write
-  if (!supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'security_signals') {
+  if (!supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'superadmin_accounts' && collectionName !== 'dev_accounts' && collectionName !== 'user_accounts' && collectionName !== 'security_signals') {
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, collectionName, docId);
@@ -1203,7 +1389,7 @@ export async function setFirestoreDoc(
       console.warn(`Write error on ${collectionName}/${docId}:`, supabaseError || err);
       throw err;
     }
-  } else if (supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'security_signals') {
+  } else if (supabaseOk && collectionName !== 'admin_accounts' && collectionName !== 'superadmin_accounts' && collectionName !== 'dev_accounts' && collectionName !== 'user_accounts' && collectionName !== 'security_signals') {
     // Silent background backup to Firestore without throwing or blocking
     passiveFirestoreBackup('set', collectionName, docId, data);
   }

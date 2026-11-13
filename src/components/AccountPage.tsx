@@ -295,14 +295,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   }, [adminAccounts, session.userId, session.username, session.nama]);
 
   const effectiveOwnPin = useMemo(() => {
-    if (currentUserAccount?.pinOtoritas && /^\d{6}$/.test(currentUserAccount.pinOtoritas.trim())) {
-      return currentUserAccount.pinOtoritas.trim();
-    }
     if (currentUserAccount?.pinEncrypted) {
       try {
         const dec = decryptSensitiveData(currentUserAccount.pinEncrypted).trim();
         if (/^\d{6}$/.test(dec)) return dec;
       } catch {}
+    }
+    if (currentUserAccount?.pinOtoritas && /^\d{6}$/.test(currentUserAccount.pinOtoritas.trim())) {
+      return currentUserAccount.pinOtoritas.trim();
     }
     if (session.pinOtoritas && /^\d{6}$/.test(session.pinOtoritas.trim())) {
       return session.pinOtoritas.trim();
@@ -353,38 +353,61 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       const targetUsername = currentUserAccount?.username || session.username;
 
       let serverOk = false;
+      let serverReachable = false;
       let serverErrMsg = '';
+      let serverData: any = null;
+
       try {
         const res = await fetch('/api/auth/update-pin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'x-session-token': token,
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-session-token': token } : {}),
           },
           body: JSON.stringify({
             newPin: cleanPin,
+            currentPin: effectiveOwnPin,
             pinType: targetPinType,
             userId: targetUserId,
             username: targetUsername,
+            sessionToken: token,
           }),
         });
-        const data = await res.json();
+        serverReachable = true;
+        const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
           serverOk = true;
+          serverData = data;
         } else {
-          serverErrMsg = data.message || 'Gagal menyimpan PIN ke server';
+          serverErrMsg = data?.message || 'Gagal menyimpan PIN ke server';
         }
       } catch (fetchErr: any) {
+        serverReachable = false;
         serverErrMsg = fetchErr?.message || 'Koneksi server gagal';
       }
 
-      // Sinkronkan juga ke record akun pribadi (superadmin_accounts / dev_accounts) agar tampil realtime di Manajemen Superadmin Developer!
-      const encPin = encryptSensitiveData(cleanPin);
-      const nowMs = Date.now();
+      if (serverReachable && !serverOk) {
+        throw new Error(serverErrMsg || 'Gagal memperbarui PIN di server.');
+      }
+
+      // Sinkronkan juga ke record akun pribadi (superadmin_accounts / dev_accounts) & session token terbaru agar tampil realtime di Manajemen Superadmin Developer!
+      const encPin = serverData?.pinEncrypted || encryptSensitiveData(cleanPin);
+      const hashedPin = serverData?.pinHash || hashPassword(cleanPin);
+      const nowMs = serverData?.lastUpdatedTimestamp || Date.now();
+      const nextToken = serverData?.sessionToken || session.sessionToken || token;
+
+      if (nextToken) {
+        try {
+          sessionStorage.setItem('session_token', nextToken);
+          localStorage.setItem('session_token', nextToken);
+          sessionStorage.setItem('psks_session_token', nextToken);
+          localStorage.setItem('psks_session_token', nextToken);
+        } catch {}
+      }
+
       if (onUpdateAdminAccount && (currentUserAccount || targetUserId)) {
         const baseAcc: AdminAccount = currentUserAccount || {
-          id: targetUserId || (session.role === 'developer' ? 'adm-dev' : 'adm-super'),
+          id: serverData?.updatedAccountId || targetUserId || (session.role === 'developer' ? 'adm-dev' : 'adm-super'),
           username: targetUsername || session.nama || 'superadmin',
           namaAdmin: session.nama || 'Superadmin Jabar',
           wilayahTugas: session.wilayah || 'PROVINSI JAWA BARAT',
@@ -396,8 +419,11 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         await onUpdateAdminAccount(
           {
             ...baseAcc,
+            id: serverData?.updatedAccountId || baseAcc.id,
             pinOtoritas: cleanPin,
             pinEncrypted: encPin,
+            pinHash: hashedPin,
+            ...(nextToken ? { sessionToken: nextToken } : {}),
             lastUpdatedTimestamp: nowMs,
             lastEditedBy: session.nama || session.username,
             lastEditedByRole: session.role,
@@ -423,7 +449,13 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         });
       }
 
-      setSuperadminPinSuccess('✅ PIN pribadi Anda berhasil diperbarui dan otomatis tersinkron ke sistem Manajemen Superadmin!');
+      try {
+        window.dispatchEvent(
+          new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } })
+        );
+      } catch {}
+
+      setSuperadminPinSuccess('✅ PIN pribadi Anda berhasil diperbarui aman (terenkripsi) & otomatis tersinkron ke sistem Manajemen Superadmin!');
       setTimeout(() => setSuperadminPinSuccess(null), 5000);
     } catch (err: any) {
       setSuperadminPinError('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));
@@ -623,6 +655,12 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       if (onUpdateAdminAccount) {
         await onUpdateAdminAccount(updatedAccount, 'SELF_PASSWORD_CHANGE');
       }
+
+      try {
+        window.dispatchEvent(
+          new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } })
+        );
+      } catch {}
 
       setPasswordChangeSuccess(
         session.role === 'superadmin'

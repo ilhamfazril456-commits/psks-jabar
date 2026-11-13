@@ -38,7 +38,7 @@ import { BackToHomeButton } from './components/BackToHomeButton';
 import { SmartGateModal } from './components/SmartGateModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { compareRecordsChronological } from './utils/regionSort';
-import { decryptSensitiveData } from './utils/crypto';
+import { decryptSensitiveData, encryptSensitiveData } from './utils/crypto';
 import { FloatingAnnouncementModal } from './components/FloatingAnnouncementModal';
 import { lazyWithRetry } from './utils/lazyRetry';
 
@@ -512,13 +512,21 @@ export default function App() {
         }
       );
 
-      // Sinkronkan akun admin jika ada
+      // Sinkronkan akun admin sesuai koleksi perannya (Zero-Plaintext & Segregated)
       try {
         if (adminAccounts && adminAccounts.length > 0) {
-          await batchSetFirestoreDocs(
-            'admin_accounts',
-            adminAccounts.map((acc) => ({ id: acc.id, data: cleanFirestoreData(acc) }))
-          );
+          for (const acc of adminAccounts) {
+            const targetCol =
+              acc.role === 'developer'
+                ? 'dev_accounts'
+                : acc.role === 'superadmin'
+                ? 'superadmin_accounts'
+                : acc.role === 'user'
+                ? 'user_accounts'
+                : 'admin_accounts';
+            const { passwordPolos: _pp, pinOtoritas: _po, _previousUsername: _pu, ...safeAcc } = acc as any;
+            await setFirestoreDoc(targetCol, acc.id, cleanFirestoreData(safeAcc), { merge: true });
+          }
         }
       } catch (accErr) {
         console.warn('Admin accounts sync error in rescue flow:', accErr);
@@ -1640,10 +1648,12 @@ export default function App() {
                 : accData.wilayahTugas || defaultMatch?.wilayahTugas || '';
 
             const rawPinEnc = accData.pinEncrypted || accDataObj.data?.pinEncrypted;
+            const decPinFromEnc = rawPinEnc ? decryptSensitiveData(rawPinEnc).trim() : '';
             const rawPinPlain =
+              (/^\d{6}$/.test(decPinFromEnc) ? decPinFromEnc : '') ||
               accData.pinOtoritas ||
               accDataObj.data?.pinOtoritas ||
-              (rawPinEnc ? decryptSensitiveData(rawPinEnc) : undefined);
+              undefined;
             const rawAllowed = Array.isArray(accData.allowedPillars)
               ? accData.allowedPillars
               : Array.isArray(accDataObj.data?.allowedPillars)
@@ -1742,7 +1752,7 @@ export default function App() {
         const finalList = Array.from(dedupedMap.values());
         setAdminAccounts(finalList);
         try {
-          const sanitizedForStorage = finalList.map(({ passwordPolos, ...rest }) => rest);
+          const sanitizedForStorage = finalList.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
           sessionStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
         } catch {}
       };
@@ -2729,7 +2739,8 @@ export default function App() {
         const nextAllowedKep = Array.isArray(matched.allowedKepahlawanan)
           ? matched.allowedKepahlawanan
           : undefined;
-        const nextPin = matched.pinOtoritas || (matched.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
+        const decMatchedPin = matched.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted).trim() : '';
+        const nextPin = (/^\d{6}$/.test(decMatchedPin) ? decMatchedPin : '') || matched.pinOtoritas;
 
         const prevAllowedStr = JSON.stringify(session.allowedPillars ?? null);
         const nextAllowedStr = JSON.stringify(nextAllowed ?? null);
@@ -3056,8 +3067,9 @@ export default function App() {
       : role === 'superadmin'
       ? ['all']
       : undefined;
+    const matchedPinDec = matched?.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted).trim() : '';
     const matchedDecryptedPin =
-      matched?.pinOtoritas || (matched?.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
+      (/^\d{6}$/.test(matchedPinDec) ? matchedPinDec : '') || matched?.pinOtoritas || undefined;
     const resolvedPinOtoritas = extra?.pinOtoritas || matchedDecryptedPin || undefined;
 
     const newSession: UserSession = { 
@@ -3150,7 +3162,8 @@ export default function App() {
             : a
         );
         try {
-          localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+          const sanitizedForStorage = next.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
+          localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
         } catch {}
         return next;
       });
@@ -4455,12 +4468,17 @@ export default function App() {
     }
   };
 
-  const handleAddAdminAccount = async (newAdmin: Omit<AdminAccount, 'id'>) => {
+  const handleAddAdminAccount = async (newAdmin: Omit<AdminAccount, 'id'> & { id?: string }) => {
     const isUser = newAdmin.role === 'user';
     const isDev = newAdmin.role === 'developer';
     const isSuper = newAdmin.role === 'superadmin';
     const targetCollection = isUser ? 'user_accounts' : isDev ? 'dev_accounts' : isSuper ? 'superadmin_accounts' : 'admin_accounts';
-    const adminId = isUser ? `usr-${Date.now()}` : `adm-${Date.now()}`;
+    const adminId = newAdmin.id && newAdmin.id.trim() ? newAdmin.id.trim() : isUser ? `usr-${Date.now()}` : `adm-${Date.now()}`;
+    const resolvedPinEnc =
+      newAdmin.pinEncrypted ||
+      (newAdmin.pinOtoritas && /^\d{6}$/.test(newAdmin.pinOtoritas.trim())
+        ? encryptSensitiveData(newAdmin.pinOtoritas.trim())
+        : undefined);
     const fullAdmin: AdminAccount = {
       ...newAdmin,
       id: adminId,
@@ -4468,9 +4486,12 @@ export default function App() {
       namaAdmin: newAdmin.namaAdmin || '',
       wilayahTugas: newAdmin.wilayahTugas || '',
       role: newAdmin.role || (isUser ? 'user' : 'admin'),
+      ...(resolvedPinEnc ? { pinEncrypted: resolvedPinEnc } : {}),
       registeredIp: newAdmin.registeredIp,
       deviceId: newAdmin.deviceId,
+      lastUpdatedTimestamp: newAdmin.lastUpdatedTimestamp || Date.now(),
     };
+    delete (fullAdmin as any).passwordPolos;
 
     const newUname = (fullAdmin.username || '').toLowerCase().trim();
 
@@ -4487,10 +4508,11 @@ export default function App() {
     });
 
     setAdminAccounts((prev) => {
-      const filtered = prev.filter((a) => (a.username || '').toLowerCase().trim() !== newUname);
+      const filtered = prev.filter((a) => (a.username || '').toLowerCase().trim() !== newUname && a.id !== adminId);
       const next = [...filtered, fullAdmin];
       try {
-        localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+        const sanitizedForStorage = next.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
+        localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
       } catch {}
       return next;
     });
@@ -4508,14 +4530,15 @@ export default function App() {
       details: `${actorLabel} telah MENAMBAHKAN akun baru [${fullAdmin.namaAdmin}] (${fullAdmin.username}) untuk wilayah [${fullAdmin.wilayahTugas}] dengan peran [${fullAdmin.role}] ke koleksi [${targetCollection}]`,
     });
 
+    const { passwordPolos: _pp, pinOtoritas: _po, _previousUsername: _pu, ...dbSafePayload } = fullAdmin as any;
     try {
-      await setFirestoreDoc(targetCollection, adminId, cleanFirestoreData(fullAdmin));
+      await setFirestoreDoc(targetCollection, adminId, cleanFirestoreData(dbSafePayload));
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      addToSyncQueue({ collection: targetCollection, docId: adminId, type: 'SET', data: cleanFirestoreData(fullAdmin) });
+      addToSyncQueue({ collection: targetCollection, docId: adminId, type: 'SET', data: cleanFirestoreData(dbSafePayload) });
     }
   };
 
@@ -4523,6 +4546,11 @@ export default function App() {
     updatedAdmin: AdminAccount,
     securitySignal?: string
   ) => {
+    const resolvedPinEnc =
+      updatedAdmin.pinEncrypted ||
+      (updatedAdmin.pinOtoritas && /^\d{6}$/.test(updatedAdmin.pinOtoritas.trim())
+        ? encryptSensitiveData(updatedAdmin.pinOtoritas.trim())
+        : undefined);
     const sanitizedAdmin: AdminAccount = {
       ...updatedAdmin,
       username: updatedAdmin.username || '',
@@ -4531,8 +4559,10 @@ export default function App() {
       role: updatedAdmin.role || 'admin',
       isFrozen: updatedAdmin.isFrozen,
       statusAkun: updatedAdmin.statusAkun,
+      ...(resolvedPinEnc ? { pinEncrypted: resolvedPinEnc } : {}),
       lastUpdatedTimestamp: updatedAdmin.lastUpdatedTimestamp || Date.now(),
     };
+    delete (sanitizedAdmin as any).passwordPolos;
 
     const targetId = (sanitizedAdmin.id || '').toLowerCase().trim();
     const targetUname = (sanitizedAdmin.username || '').toLowerCase().trim();
@@ -4552,7 +4582,8 @@ export default function App() {
       const finalList = matched ? next : [...next, sanitizedAdmin];
       adminAccountsRef.current = finalList;
       try {
-        localStorage.setItem('psks_admin_accounts', JSON.stringify(finalList));
+        const sanitizedForStorage = finalList.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
+        localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
       } catch {}
       return finalList;
     });
@@ -4755,14 +4786,15 @@ export default function App() {
     const isSuper = sanitizedAdmin.role === 'superadmin';
     const targetCollection = isUser ? 'user_accounts' : isDev ? 'dev_accounts' : isSuper ? 'superadmin_accounts' : 'admin_accounts';
 
+    const { passwordPolos: _pp, pinOtoritas: _po, _previousUsername: _pu, ...dbSafePayload } = sanitizedAdmin as any;
     try {
-      await setFirestoreDoc(targetCollection, sanitizedAdmin.id, cleanFirestoreData(sanitizedAdmin), { merge: true });
+      await setFirestoreDoc(targetCollection, sanitizedAdmin.id, cleanFirestoreData(dbSafePayload), { merge: true });
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
-      addToSyncQueue({ collection: targetCollection, docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(sanitizedAdmin) });
+      addToSyncQueue({ collection: targetCollection, docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(dbSafePayload) });
     }
   };
 
@@ -4838,7 +4870,8 @@ export default function App() {
         return !nextDeleted.includes(aId) && !nextDeleted.includes(aUname);
       });
       try {
-        localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+        const sanitizedForStorage = next.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
+        localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
 
         // Auto-decrement device registration limit for deleted accounts
         const rawDevice = localStorage.getItem('simpsks_device_registered_accounts');
@@ -4997,7 +5030,8 @@ export default function App() {
               const next = prev.map((a) => (a.id === acc.id || (a.username && a.username === acc.username) ? acc : a));
               adminAccountsRef.current = next;
               try {
-                localStorage.setItem('psks_admin_accounts', JSON.stringify(next));
+                const sanitizedForStorage = next.map(({ passwordPolos, pinOtoritas, ...rest }) => rest);
+                localStorage.setItem('psks_admin_accounts', JSON.stringify(sanitizedForStorage));
               } catch {}
               return next;
             });
@@ -5010,7 +5044,8 @@ export default function App() {
                   : acc.role === 'user'
                   ? 'user_accounts'
                   : 'admin_accounts';
-              setFirestoreDoc(targetCol, acc.id, cleanFirestoreData(acc)).catch(() => {});
+              const { passwordPolos: _pp, pinOtoritas: _po, _previousUsername: _pu, ...safeAcc } = acc as any;
+              setFirestoreDoc(targetCol, acc.id, cleanFirestoreData(safeAcc), { merge: true }).catch(() => {});
             }
           }}
           appSettings={appSettings}

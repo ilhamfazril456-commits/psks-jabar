@@ -888,7 +888,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       return;
     }
 
-    const { comparePassword } = await import('../utils/crypto');
+    const { comparePassword, decryptSensitiveData } = await import('../utils/crypto');
 
     const uLower = usernameInput.trim().toLowerCase();
     const pInput = passwordInput.trim();
@@ -1009,6 +1009,10 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
 
           if (sbUser) {
             const restData = sbUser.data && typeof sbUser.data === 'object' ? sbUser.data : {};
+            const rawPinEnc = sbUser.pinEncrypted || restData.pinEncrypted || '';
+            const decPin = rawPinEnc ? decryptSensitiveData(rawPinEnc) : '';
+            const fallbackPlainPin = sbUser.pinOtoritas || restData.pinOtoritas || '';
+            const resolvedPin = /^\d{6}$/.test(decPin) ? decPin : (/^\d{6}$/.test(fallbackPlainPin) ? fallbackPlainPin : '');
             matchedAccount = {
               id: sbUser.id,
               username: sbUser.username || restData.username || sbUser.id,
@@ -1037,8 +1041,9 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
                 : Array.isArray(restData.allowedKepahlawanan)
                 ? restData.allowedKepahlawanan
                 : undefined,
-              pinOtoritas: sbUser.pinOtoritas || restData.pinOtoritas || '',
-              pinEncrypted: sbUser.pinEncrypted || restData.pinEncrypted || '',
+              pinOtoritas: resolvedPin,
+              pinEncrypted: rawPinEnc,
+              pinHash: sbUser.pinHash || restData.pinHash || '',
             } as AdminAccount;
             break;
           }
@@ -1116,6 +1121,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             ? 'Pusat Developer Jabar'
             : matchedAccount.wilayahTugas || 'Jawa Barat';
 
+        const decMatchedPin = matchedAccount.pinEncrypted ? decryptSensitiveData(matchedAccount.pinEncrypted) : '';
+        const safeMatchedPin = /^\d{6}$/.test(decMatchedPin)
+          ? decMatchedPin
+          : (/^\d{6}$/.test(matchedAccount.pinOtoritas || '') ? matchedAccount.pinOtoritas : undefined);
+
         handleLoginSuccess(
           assignedRole,
           matchedAccount.namaAdmin || matchedAccount.username,
@@ -1126,7 +1136,7 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           {
             allowedPillars: matchedAccount.allowedPillars,
             allowedKepahlawanan: matchedAccount.allowedKepahlawanan,
-            pinOtoritas: matchedAccount.pinOtoritas,
+            pinOtoritas: safeMatchedPin,
           }
         );
         return;

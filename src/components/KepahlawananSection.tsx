@@ -1,9 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Award,
-  Flag,
-  ShieldCheck,
-  Users,
   ArrowRight,
   FolderOpen,
   UserRound,
@@ -14,6 +10,12 @@ import {
 import { BackToHomeButton } from './BackToHomeButton';
 import { PahlawanNasionalItem, UserSession } from '../types';
 import { TOTAL_PAHLAWAN_SLOTS } from '../services/pahlawanNasionalService';
+import {
+  PahlawanNasionalEmblem,
+  PkriEmblem,
+  JandaPkriEmblem,
+  KeluargaPahlawanEmblem,
+} from './KepahlawananEmblems';
 
 export type KepahlawananMenuId =
   | 'pahlawan_nasional'
@@ -27,6 +29,7 @@ export interface KepahlawananMenuItem {
   subtitle?: string;
   fullTitle: string;
   iconBg: string;
+  pedestalClass: string;
   icon: React.ReactElement<{ className?: string }>;
 }
 
@@ -35,30 +38,34 @@ export const KEPAHLAWANAN_MENUS: KepahlawananMenuItem[] = [
     id: 'pahlawan_nasional',
     title: 'Pahlawan Nasional',
     fullTitle: 'Pahlawan Nasional',
-    iconBg: 'from-[#0f2b5c] via-[#1a3f7e] to-[#0a1d3f]',
-    icon: <Award className="w-4 h-4 sm:w-7 sm:h-7 text-white" />,
+    iconBg: 'from-slate-50 via-blue-50/70 to-amber-50/60',
+    pedestalClass: 'border-blue-200/80 group-hover:border-[#d4af37]/80',
+    icon: <PahlawanNasionalEmblem className="w-7 h-7 sm:w-12 sm:h-12 md:w-14 md:h-14 drop-shadow-xs" />,
   },
   {
     id: 'pkri',
     title: 'PKRI',
     subtitle: '(Perintis Kemerdekaan Republik Indonesia)',
     fullTitle: 'PKRI (Perintis Kemerdekaan Republik Indonesia)',
-    iconBg: 'from-rose-700 via-red-700 to-rose-800',
-    icon: <Flag className="w-4 h-4 sm:w-7 sm:h-7 text-white" />,
+    iconBg: 'from-slate-50 via-rose-50/70 to-amber-50/50',
+    pedestalClass: 'border-rose-200/80 group-hover:border-[#d4af37]/80',
+    icon: <PkriEmblem className="w-7 h-7 sm:w-12 sm:h-12 md:w-14 md:h-14 drop-shadow-xs" />,
   },
   {
     id: 'janda_pkri',
     title: 'Janda PKRI',
     fullTitle: 'Janda PKRI',
-    iconBg: 'from-amber-600 via-amber-700 to-yellow-700',
-    icon: <ShieldCheck className="w-4 h-4 sm:w-7 sm:h-7 text-white" />,
+    iconBg: 'from-slate-50 via-amber-50/80 to-stone-100/80',
+    pedestalClass: 'border-amber-200/80 group-hover:border-[#d4af37]/80',
+    icon: <JandaPkriEmblem className="w-7 h-7 sm:w-12 sm:h-12 md:w-14 md:h-14 drop-shadow-xs" />,
   },
   {
     id: 'keluarga_pahlawan',
     title: 'Keluarga Pahlawan',
     fullTitle: 'Keluarga Pahlawan',
-    iconBg: 'from-emerald-700 via-teal-700 to-emerald-800',
-    icon: <Users className="w-4 h-4 sm:w-7 sm:h-7 text-white" />,
+    iconBg: 'from-slate-50 via-emerald-50/70 to-amber-50/50',
+    pedestalClass: 'border-emerald-200/80 group-hover:border-[#d4af37]/80',
+    icon: <KeluargaPahlawanEmblem className="w-7 h-7 sm:w-12 sm:h-12 md:w-14 md:h-14 drop-shadow-xs" />,
   },
 ];
 
@@ -118,10 +125,10 @@ export const KepahlawananSection: React.FC<KepahlawananSectionProps> = ({ onSele
                 </div>
               )}
 
-              {/* Icon Badge */}
+              {/* Ceremonial Heraldic Emblem Medallion */}
               <div className="relative mt-0.5 sm:mt-1 mb-1.5 sm:mb-3 flex items-center justify-center shrink-0">
                 <div
-                  className={`w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-gradient-to-br ${menu.iconBg} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-white/25 ${restricted ? 'opacity-65 grayscale-[35%]' : ''}`}
+                  className={`w-10 h-10 min-[380px]:w-11 min-[380px]:h-11 sm:w-[68px] sm:h-[68px] md:w-[76px] md:h-[76px] rounded-xl sm:rounded-2xl bg-gradient-to-b ${menu.iconBg} border ${menu.pedestalClass} flex items-center justify-center shadow-xs group-hover:shadow-md group-hover:scale-105 transition-all duration-300 ${restricted ? 'opacity-60 grayscale-[45%]' : ''}`}
                 >
                   {menu.icon}
                 </div>
@@ -234,10 +241,10 @@ export const KepahlawananDetailView: React.FC<KepahlawananDetailViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${menu.iconBg} flex items-center justify-center shadow-sm shrink-0`}
+                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-b ${menu.iconBg} border ${menu.pedestalClass} flex items-center justify-center shadow-xs shrink-0`}
                 >
                   {React.cloneElement(menu.icon, {
-                    className: 'w-6 h-6 sm:w-7 sm:h-7 text-white',
+                    className: 'w-11 h-11 sm:w-13 sm:h-13 drop-shadow-xs',
                   })}
                 </div>
                 <div>
@@ -426,10 +433,10 @@ export const KepahlawananDetailView: React.FC<KepahlawananDetailViewProps> = ({
         <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-xs">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 border-b border-slate-100 pb-6 text-center sm:text-left">
             <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${menu.iconBg} flex items-center justify-center shadow-sm shrink-0`}
+              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-b ${menu.iconBg} border ${menu.pedestalClass} flex items-center justify-center shadow-xs shrink-0`}
             >
               {React.cloneElement(menu.icon, {
-                className: 'w-7 h-7 sm:w-8 sm:h-8 text-white',
+                className: 'w-11 h-11 sm:w-13 sm:h-13 drop-shadow-xs',
               })}
             </div>
             <div className="space-y-1">

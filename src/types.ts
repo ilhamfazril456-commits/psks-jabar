@@ -238,6 +238,7 @@ export interface AdminAccount {
   allowedKepahlawanan?: string[];
   pinOtoritas?: string;
   pinEncrypted?: string;
+  pinHash?: string;
 }
 
 export interface ResetPasswordTicket {

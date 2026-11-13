@@ -33,7 +33,7 @@ interface SuperadminManagementPageProps {
   session: UserSession;
   adminAccounts: AdminAccount[];
   appSettings?: AppSettings;
-  onAddSuperadmin: (newAdmin: Omit<AdminAccount, 'id'>) => void;
+  onAddSuperadmin: (newAdmin: Omit<AdminAccount, 'id'> & { id?: string }) => void;
   onUpdateSuperadmin: (updated: AdminAccount, securitySignal?: string) => void;
   onDeleteSuperadmin: (id: string) => void;
   onBackToHome: () => void;
@@ -95,12 +95,14 @@ function getPlainSuperadminPassword(item: AdminAccount): string {
 }
 
 function getSuperadminPin(item: AdminAccount): string {
-  if (item.pinOtoritas) return item.pinOtoritas;
   if (item.pinEncrypted) {
     try {
-      const dec = decryptSensitiveData(item.pinEncrypted);
+      const dec = decryptSensitiveData(item.pinEncrypted).trim();
       if (dec && /^\d{6}$/.test(dec)) return dec;
     } catch {}
+  }
+  if (item.pinOtoritas && /^\d{6}$/.test(item.pinOtoritas.trim())) {
+    return item.pinOtoritas.trim();
   }
   return '150109';
 }
@@ -160,6 +162,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
   const [formKepahlawananAccessType, setFormKepahlawananAccessType] = useState<'all' | 'custom'>('all');
   const [formSelectedKepahlawanan, setFormSelectedKepahlawanan] = useState<string[]>(ALL_KEPAHLAWANAN_KEYS);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal State for Delete Confirmation
   const [deletingAccount, setDeletingAccount] = useState<AdminAccount | null>(null);
@@ -209,16 +212,23 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
   };
 
   const resolveEffectivePin = (item: AdminAccount): string => {
-    const personal = getSuperadminPin(item);
-    if (item.pinOtoritas || item.pinEncrypted) return personal;
+    if (item.pinEncrypted) {
+      try {
+        const dec = decryptSensitiveData(item.pinEncrypted).trim();
+        if (/^\d{6}$/.test(dec)) return dec;
+      } catch {}
+    }
+    if (item.pinOtoritas && /^\d{6}$/.test(item.pinOtoritas.trim())) {
+      return item.pinOtoritas.trim();
+    }
     if (
-      (item.id === 'adm-super' || (item.username || '').toLowerCase().includes('superadmin')) &&
+      (item.id === 'adm-super' || (item.username || '').toLowerCase() === 'superadmin' || (item.username || '').toLowerCase() === 'superadmin jabar') &&
       appSettings?.superadminPin &&
       /^\d{6}$/.test(appSettings.superadminPin.trim())
     ) {
       return appSettings.superadminPin.trim();
     }
-    return personal;
+    return getSuperadminPin(item);
   };
 
   const handleOpenEditModal = (acc: AdminAccount) => {
@@ -228,8 +238,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     const currentPass = getPlainSuperadminPassword(acc);
     setFormPassword(currentPass || '');
     setFormPin(resolveEffectivePin(acc));
-    setFormNik(acc.nik || '');
-    setFormPhone(acc.noWhatsapp || '');
+    setFormNik(acc.nik ? decryptSensitiveData(acc.nik) : '');
+    setFormPhone(acc.noWhatsapp ? decryptSensitiveData(acc.noWhatsapp) : '');
     
     const allowed = acc.allowedPillars || ['all'];
     if (allowed.includes('all') || allowed.includes('*') || allowed.length >= ALL_PILLAR_KEYS.length) {
@@ -285,14 +295,15 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     setFormSelectedKepahlawanan([]);
   };
 
-  const handleSubmitForm = (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setFormError(null);
 
     const namaClean = formNama.trim();
     const unameClean = formUsername.trim().toLowerCase().replace(/\s+/g, '_');
     const passClean = formPassword.trim();
-    const pinClean = formPin.trim();
+    const pinClean = formPin.trim().replace(/[^0-9]/g, '');
 
     if (!namaClean) {
       setFormError('Nama lengkap Superadmin wajib diisi.');
@@ -354,70 +365,141 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       formKepahlawananAccessType === 'all' ? ['all'] : formSelectedKepahlawanan;
 
     // Zero-Leakage Cryptographic Construction
+    const prevHashes = Array.isArray(editingAccount?.previousPasswordHashes)
+      ? editingAccount!.previousPasswordHashes!
+      : [];
     const passwordHash = isPasswordBeingChanged
       ? hashPassword(passClean)
       : editingAccount!.passwordHash || hashPassword(passClean);
     const passwordEncrypted = isPasswordBeingChanged
       ? encryptSensitiveData(passClean)
       : editingAccount!.passwordEncrypted || (passClean ? encryptSensitiveData(passClean) : undefined);
+    const nextPrevHashes =
+      editingAccount && isPasswordBeingChanged && editingAccount.passwordHash
+        ? [editingAccount.passwordHash, ...prevHashes].slice(0, 5)
+        : prevHashes;
     const pinEncrypted = encryptSensitiveData(pinClean);
+    const pinHash = hashPassword(pinClean);
+    const nowMs = Date.now();
+    const targetId = editingAccount ? editingAccount.id : `adm-super-${nowMs}`;
 
-    if (editingAccount) {
-      // Update Superadmin
-      const updatedAccount: AdminAccount & { _previousUsername?: string } = {
-        ...editingAccount,
-        _previousUsername: editingAccount.username,
-        namaAdmin: namaClean,
-        username: unameClean,
-        passwordHash,
-        passwordEncrypted,
-        pinOtoritas: pinClean,
-        pinEncrypted,
-        allowedPillars: finalAllowedPillars,
-        allowedKepahlawanan: finalAllowedKepahlawanan,
-        nik: formNik.trim(),
-        noWhatsapp: formPhone.trim(),
-        role: 'superadmin',
-        wilayahTugas: 'PROVINSI JAWA BARAT',
-        statusActive: 'SAH_TERDAFTAR',
-        lastUpdatedTimestamp: Date.now(),
-        lastEditedBy: session.nama || 'Lead Developer',
-        lastEditedByRole: 'developer',
-      };
-      // Hapus password polos telanjang sebelum dikirim ke database
-      delete updatedAccount.passwordPolos;
+    setIsSubmitting(true);
+    try {
+      const token =
+        session.sessionToken ||
+        sessionStorage.getItem('session_token') ||
+        sessionStorage.getItem('psks_session_token') ||
+        localStorage.getItem('session_token') ||
+        localStorage.getItem('psks_session_token') ||
+        '';
 
-      onUpdateSuperadmin(updatedAccount, 'SUPERADMIN_UPDATED');
-      showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui (PIN & Hak Akses langsung aktif)!`);
-    } else {
-      // Tambah Superadmin Baru
-      const newId = `adm-super-${Date.now()}`;
-      const newAccountPayload: Omit<AdminAccount, 'id'> = {
-        namaAdmin: namaClean,
-        username: unameClean,
-        passwordHash,
-        passwordEncrypted,
-        pinOtoritas: pinClean,
-        pinEncrypted,
-        allowedPillars: finalAllowedPillars,
-        allowedKepahlawanan: finalAllowedKepahlawanan,
-        nik: formNik.trim(),
-        noWhatsapp: formPhone.trim(),
-        role: 'superadmin',
-        wilayahTugas: 'PROVINSI JAWA BARAT',
-        statusActive: 'SAH_TERDAFTAR',
-        statusAkun: 'AKTIF',
-        isFrozen: false,
-        lastUpdatedTimestamp: Date.now(),
-        lastEditedBy: session.nama || 'Lead Developer',
-        lastEditedByRole: 'developer',
-      };
+      let serverAccount: any = null;
+      try {
+        const res = await fetch('/api/developer/save-superadmin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}`, 'x-session-token': token } : {}),
+          },
+          body: JSON.stringify({
+            id: targetId,
+            _previousUsername: editingAccount?.username,
+            namaAdmin: namaClean,
+            username: unameClean,
+            ...(isPasswordBeingChanged || !editingAccount ? { password: passClean } : {}),
+            pin: pinClean,
+            nik: formNik.trim(),
+            noWhatsapp: formPhone.trim(),
+            allowedPillars: finalAllowedPillars,
+            allowedKepahlawanan: finalAllowedKepahlawanan,
+            isFrozen: editingAccount?.isFrozen === true,
+            statusAkun: editingAccount?.statusAkun || 'AKTIF',
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          // Only abort on explicit validation/auth failure (400/403); allow local DB fallback if server token not available
+          if (res.status === 400 || res.status === 403) {
+            setFormError(data?.message || 'Gagal menyimpan akun Superadmin.');
+            return;
+          }
+        } else if (data?.success && data?.account) {
+          serverAccount = data.account;
+        }
+      } catch {
+        // Network error: proceed with client-side encrypted persistence fallback
+      }
 
-      onAddSuperadmin(newAccountPayload);
-      showToast(`✅ Akun Superadmin "${namaClean}" (@${unameClean}) berhasil ditambahkan!`);
+      if (editingAccount) {
+        const updatedAccount: AdminAccount & { _previousUsername?: string } = {
+          ...editingAccount,
+          ...(serverAccount || {}),
+          id: serverAccount?.id || targetId,
+          _previousUsername: editingAccount.username,
+          namaAdmin: namaClean,
+          username: unameClean,
+          passwordHash: serverAccount?.passwordHash || passwordHash,
+          passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
+          previousPasswordHashes: serverAccount?.previousPasswordHashes || nextPrevHashes,
+          pinOtoritas: pinClean,
+          pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
+          pinHash: serverAccount?.pinHash || pinHash,
+          allowedPillars: finalAllowedPillars,
+          allowedKepahlawanan: finalAllowedKepahlawanan,
+          nik: formNik.trim(),
+          noWhatsapp: formPhone.trim(),
+          role: 'superadmin',
+          wilayahTugas: 'PROVINSI JAWA BARAT',
+          statusActive: 'SAH_TERDAFTAR',
+          lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
+          lastEditedBy: session.nama || 'Lead Developer',
+          lastEditedByRole: 'developer',
+        };
+        delete updatedAccount.passwordPolos;
+
+        onUpdateSuperadmin(updatedAccount, 'SUPERADMIN_UPDATED');
+        showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui (PIN, Sandi & Hak Akses langsung aktif)!`);
+      } else {
+        const newAccountPayload: Omit<AdminAccount, 'id'> & { id?: string } = {
+          ...(serverAccount || {}),
+          id: serverAccount?.id || targetId,
+          namaAdmin: namaClean,
+          username: unameClean,
+          passwordHash: serverAccount?.passwordHash || passwordHash,
+          passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
+          previousPasswordHashes: serverAccount?.previousPasswordHashes || [],
+          pinOtoritas: pinClean,
+          pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
+          pinHash: serverAccount?.pinHash || pinHash,
+          allowedPillars: finalAllowedPillars,
+          allowedKepahlawanan: finalAllowedKepahlawanan,
+          nik: formNik.trim(),
+          noWhatsapp: formPhone.trim(),
+          role: 'superadmin',
+          wilayahTugas: 'PROVINSI JAWA BARAT',
+          statusActive: 'SAH_TERDAFTAR',
+          statusAkun: 'AKTIF',
+          isFrozen: false,
+          lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
+          lastEditedBy: session.nama || 'Lead Developer',
+          lastEditedByRole: 'developer',
+        };
+        delete (newAccountPayload as any).passwordPolos;
+
+        onAddSuperadmin(newAccountPayload);
+        showToast(`✅ Akun Superadmin "${namaClean}" (@${unameClean}) berhasil ditambahkan!`);
+      }
+
+      try {
+        window.dispatchEvent(
+          new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } })
+        );
+      } catch {}
+
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsModalOpen(false);
   };
 
   const handleToggleFreeze = (acc: AdminAccount) => {
@@ -1239,10 +1321,11 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                 </button>
                 <button
                   type="submit"
-                  className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-[#043e2e] to-[#0f2b5c] hover:from-[#06533e] hover:to-[#143b7d] text-amber-300 text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-[#043e2e] to-[#0f2b5c] hover:from-[#06533e] hover:to-[#143b7d] disabled:opacity-60 text-amber-300 text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4 text-amber-300" />
-                  <span>{editingAccount ? 'Simpan Perubahan' : 'Tambahkan Superadmin'}</span>
+                  <span>{isSubmitting ? 'Menyimpan...' : editingAccount ? 'Simpan Perubahan' : 'Tambahkan Superadmin'}</span>
                 </button>
               </div>
             </form>

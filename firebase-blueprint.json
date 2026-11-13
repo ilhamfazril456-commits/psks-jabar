@@ -56,9 +56,14 @@
         "wilayahTugas": { "type": "string" },
         "role": { "type": "string" },
         "passwordHash": { "type": "string" },
+        "passwordEncrypted": { "type": "string" },
+        "previousPasswordHashes": { "type": "array", "items": { "type": "string" } },
+        "pinHash": { "type": "string" },
+        "pinEncrypted": { "type": "string" },
         "terakhirLogin": { "type": "string" },
         "allowedPillars": { "type": "array", "items": { "type": "string" } },
-        "allowedKepahlawanan": { "type": "array", "items": { "type": "string" } }
+        "allowedKepahlawanan": { "type": "array", "items": { "type": "string" } },
+        "lastUpdatedTimestamp": { "type": "number" }
       },
       "required": ["username", "role"]
     },
@@ -73,7 +78,12 @@
         "wilayahTugas": { "type": "string" },
         "role": { "type": "string" },
         "passwordHash": { "type": "string" },
-        "terakhirLogin": { "type": "string" }
+        "passwordEncrypted": { "type": "string" },
+        "previousPasswordHashes": { "type": "array", "items": { "type": "string" } },
+        "pinHash": { "type": "string" },
+        "pinEncrypted": { "type": "string" },
+        "terakhirLogin": { "type": "string" },
+        "lastUpdatedTimestamp": { "type": "number" }
       },
       "required": ["username", "role"]
     },

@@ -65,6 +65,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidId(devId) &&
         !('passwordPolos' in request.resource.data) &&
+        !('pinOtoritas' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
       allow delete: if false; // Developer root account cannot be deleted
@@ -74,6 +75,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidId(superadminId) &&
         !('passwordPolos' in request.resource.data) &&
+        !('pinOtoritas' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
       allow delete: if isValidId(superadminId) && superadminId != 'adm-super';
@@ -83,6 +85,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidId(accountId) &&
         !('passwordPolos' in request.resource.data) &&
+        !('pinOtoritas' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
       allow delete: if isValidId(accountId) && accountId != 'adm-dev' && accountId != 'adm-super';
@@ -92,6 +95,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isValidId(userId) &&
         !('passwordPolos' in request.resource.data) &&
+        !('pinOtoritas' in request.resource.data) &&
         !('superadminPin' in request.resource.data) &&
         !('developerPin' in request.resource.data);
       allow delete: if isValidId(userId);
