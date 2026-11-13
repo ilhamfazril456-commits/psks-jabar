@@ -431,7 +431,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
   };
 
-  // Ubah Kata Sandi Mandiri (Khusus User Terdaftar & Admin Wilayah)
+  // Ubah Kata Sandi Mandiri (Semua Role Terdaftar termasuk Superadmin, Developer, Admin Wilayah & User)
   const [oldPasswordInput, setOldPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
@@ -441,6 +441,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState<string | null>(null);
   const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  const isPrivilegedAuthorityRole = session.role === 'superadmin' || session.role === 'developer';
 
   const handleSaveNewPassword = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -459,12 +461,21 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       setPasswordChangeError('❌ Silakan masukkan kata sandi baru yang diinginkan.');
       return;
     }
-    if (newTrim.length < 6) {
-      setPasswordChangeError('❌ Kata sandi baru minimal 6 karakter demi keamanan akun!');
-      return;
-    }
     if (newTrim === oldTrim) {
       setPasswordChangeError('❌ Kata sandi baru tidak boleh sama dengan kata sandi lama!');
+      return;
+    }
+    if (isPrivilegedAuthorityRole) {
+      if (newTrim.length < 12) {
+        setPasswordChangeError('❌ Kata sandi Superadmin/Developer minimal 12 karakter demi keamanan otoritas.');
+        return;
+      }
+      if (!/[A-Z]/.test(newTrim) || !/[a-z]/.test(newTrim) || !/[0-9]/.test(newTrim)) {
+        setPasswordChangeError('❌ Kata sandi wajib kombinasi huruf besar (A-Z), huruf kecil (a-z), dan angka (0-9).');
+        return;
+      }
+    } else if (newTrim.length < 6) {
+      setPasswordChangeError('❌ Kata sandi baru minimal 6 karakter demi keamanan akun!');
       return;
     }
     if (newTrim !== confirmTrim) {
@@ -472,42 +483,115 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       return;
     }
 
-    // Cari akun aktif di adminAccounts
-    const targetAccount = adminAccounts.find(
-      (a) =>
-        (session.userId && a.id === session.userId) ||
-        (session.username && (a.username || '').toLowerCase().trim() === session.username.toLowerCase().trim()) ||
-        (session.nama && (a.namaAdmin || '').toLowerCase().trim() === session.nama.toLowerCase().trim())
-    );
+    const targetAccount: AdminAccount =
+      currentUserAccount ||
+      adminAccounts.find(
+        (a) =>
+          (session.userId && a.id === session.userId) ||
+          (session.username && (a.username || '').toLowerCase().trim() === session.username.toLowerCase().trim()) ||
+          (session.nama && (a.namaAdmin || '').toLowerCase().trim() === session.nama.toLowerCase().trim())
+      ) || {
+        id: session.userId || (session.role === 'developer' ? 'adm-dev' : session.role === 'superadmin' ? 'adm-super' : ''),
+        username: session.username || session.nama || '',
+        namaAdmin: session.nama || session.username || '',
+        wilayahTugas: session.wilayah || (session.role === 'superadmin' ? 'PROVINSI JAWA BARAT' : ''),
+        role: session.role,
+        statusActive: 'SAH_TERDAFTAR',
+        passwordHash: session.passwordHash || sessionStorage.getItem('session_user_password_hash') || undefined,
+        allowedPillars: session.allowedPillars,
+        pinOtoritas: session.pinOtoritas,
+      };
 
-    if (!targetAccount) {
+    if (!targetAccount.id && !targetAccount.username) {
       setPasswordChangeError('❌ Data akun Anda tidak ditemukan di sistem.');
       return;
     }
 
-    // Verifikasi kata sandi lama via Bcrypt Hash
-    const matchesOld = targetAccount.passwordHash
-      ? comparePassword(oldTrim, targetAccount.passwordHash)
-      : false;
-
-    if (!matchesOld) {
-      setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
-      return;
+    // Verifikasi lokal bila hash tersedia (authoritative server verify tetap berjalan di bawah)
+    if (targetAccount.passwordHash) {
+      const matchesOld = comparePassword(oldTrim, targetAccount.passwordHash);
+      if (!matchesOld) {
+        setPasswordChangeError('❌ Kata sandi saat ini yang Anda masukkan salah!');
+        return;
+      }
+      const prevHashes = Array.isArray(targetAccount.previousPasswordHashes) ? targetAccount.previousPasswordHashes : [];
+      if (comparePassword(newTrim, targetAccount.passwordHash) || prevHashes.some((h) => comparePassword(newTrim, h))) {
+        setPasswordChangeError('❌ Kata sandi lama tidak boleh digunakan kembali! Gunakan kata sandi baru yang berbeda.');
+        return;
+      }
     }
 
     setIsSavingPassword(true);
     try {
-      const newHash = hashPassword(newTrim);
-      const nowMs = Date.now();
+      const token =
+        session.sessionToken ||
+        sessionStorage.getItem('session_token') ||
+        sessionStorage.getItem('psks_session_token') ||
+        localStorage.getItem('session_token') ||
+        localStorage.getItem('psks_session_token') ||
+        '';
+
+      let serverResult: any = null;
+      let serverReachable = false;
+
+      if (token) {
+        try {
+          const res = await fetch('/api/auth/update-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'x-session-token': token,
+            },
+            body: JSON.stringify({
+              oldPassword: oldTrim,
+              newPassword: newTrim,
+              userId: targetAccount.id,
+              username: targetAccount.username,
+            }),
+          });
+          serverReachable = true;
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.success) {
+            setPasswordChangeError(data?.message || '❌ Gagal memperbarui kata sandi di server.');
+            return;
+          }
+          serverResult = data;
+        } catch {
+          serverReachable = false;
+        }
+      }
+
+      if (!serverReachable && !targetAccount.passwordHash) {
+        setPasswordChangeError('❌ Koneksi ke server otentikasi terputus. Silakan coba lagi.');
+        return;
+      }
+
+      // Enkripsi AES-256 & Bcrypt Hash (ZERO PLAINTEXT: passwordPolos tidak pernah disimpan)
+      const newHash = serverResult?.passwordHash || hashPassword(newTrim);
+      const clientEncryptedPassword = encryptSensitiveData(newTrim);
+      const updatedPrevHashes: string[] = Array.isArray(serverResult?.previousPasswordHashes)
+        ? serverResult.previousPasswordHashes
+        : [
+            ...(targetAccount.passwordHash ? [targetAccount.passwordHash] : []),
+            ...(Array.isArray(targetAccount.previousPasswordHashes) ? targetAccount.previousPasswordHashes : []),
+          ].slice(0, 5);
+      const nowMs = serverResult?.lastUpdatedTimestamp || Date.now();
+
       const updatedAccount: AdminAccount = {
         ...targetAccount,
+        id: serverResult?.updatedAccountId || targetAccount.id,
         passwordHash: newHash,
+        passwordEncrypted: clientEncryptedPassword,
+        previousPasswordHashes: updatedPrevHashes,
         passwordPolos: undefined,
+        resetTicket: undefined,
         lastUpdatedTimestamp: nowMs,
         lastEditedBy: session.username || session.nama,
         lastEditedByRole: session.role,
         isSelfUpdate: true,
       };
+      delete (updatedAccount as any).passwordPolos;
 
       // Perbarui data sesi lokal instan agar tetap sinkron dan tidak salah ditendang keluar
       try {
@@ -520,17 +604,23 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           sessionStorage.setItem('psks_active_session', JSON.stringify(parsed));
           localStorage.setItem('psks_active_session', JSON.stringify(parsed));
         }
+        sessionStorage.setItem('session_user_password_hash', newHash);
+        localStorage.setItem('session_user_password_hash', newHash);
       } catch {}
 
       if (onUpdateAdminAccount) {
         await onUpdateAdminAccount(updatedAccount, 'SELF_PASSWORD_CHANGE');
       }
 
-      setPasswordChangeSuccess('✅ Kata sandi berhasil diperbarui dan tersimpan langsung ke database!');
+      setPasswordChangeSuccess(
+        session.role === 'superadmin'
+          ? '✅ Kata sandi baru berhasil diamankan (enkripsi & hash), kata sandi lama dinonaktifkan permanen, dan langsung tersinkron ke Manajemen Superadmin!'
+          : '✅ Kata sandi berhasil diperbarui secara aman ke database dan kata sandi lama tidak dapat digunakan kembali!'
+      );
       setOldPasswordInput('');
       setNewPasswordInput('');
       setConfirmPasswordInput('');
-      setTimeout(() => setPasswordChangeSuccess(null), 5000);
+      setTimeout(() => setPasswordChangeSuccess(null), 6000);
     } catch (err: any) {
       setPasswordChangeError('❌ Gagal memperbarui kata sandi: ' + (err?.message || 'Terjadi kesalahan sistem'));
     } finally {
@@ -1118,7 +1208,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 <span>Kembali ke Beranda Utama</span>
               </button>
 
-              {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && (
+              {session.statusActive === 'SAH_TERDAFTAR' && (
                 <button
                   type="button"
                   onClick={() => switchSubView('ubah_password')}
@@ -1363,9 +1453,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         )}
 
         {/* ========================================================================= */}
-        {/* SUBVIEW 3: KHUSUS UBAH KATA SANDI (USER TERDAFTAR & ADMIN WILAYAH)       */}
+        {/* SUBVIEW 3: KHUSUS UBAH KATA SANDI (SEMUA ROLE SAH TERDAFTAR)            */}
         {/* ========================================================================= */}
-        {session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'user' || session.role === 'admin') && activeSubView === 'ubah_password' && (
+        {session.statusActive === 'SAH_TERDAFTAR' && activeSubView === 'ubah_password' && (
           <div
             id="ubah-password-section"
             className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 shadow-xl relative overflow-hidden space-y-5 animate-fadeIn"
@@ -1393,7 +1483,16 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     Ubah Kata Sandi Akun
                   </h3>
                   <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    Perbarui kata sandi akun {session.role === 'admin' ? `Admin Wilayah (${session.wilayah})` : 'User Terdaftar'} Anda secara mandiri untuk menjaga keamanan data. Perubahan langsung tersimpan ke sistem.
+                    Perbarui kata sandi akun{' '}
+                    {session.role === 'developer'
+                      ? 'Developer Sistem'
+                      : session.role === 'superadmin'
+                      ? 'Superadmin Provinsi Jawa Barat'
+                      : session.role === 'admin'
+                      ? `Admin Wilayah (${session.wilayah})`
+                      : 'User Terdaftar'}{' '}
+                    Anda secara mandiri. Kata sandi lama otomatis diganti dan tidak dapat digunakan kembali; perubahan tersimpan terenkripsi tanpa teks polos
+                    {session.role === 'superadmin' ? ' serta langsung tersinkron ke Manajemen Superadmin' : ''}.
                   </p>
                 </div>
               </div>
@@ -1459,7 +1558,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                         setNewPasswordInput(e.target.value);
                         setPasswordChangeError(null);
                       }}
-                      placeholder="Minimal 6 karakter"
+                      placeholder={isPrivilegedAuthorityRole ? 'Min. 12 karakter (A-Z, a-z, 0-9)' : 'Minimal 6 karakter'}
                       className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border-2 border-emerald-300 focus:border-emerald-600 font-medium text-xs sm:text-sm text-slate-900 bg-white shadow-xs focus:outline-none transition-all"
                     />
                     <button
@@ -1505,7 +1604,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200">
                 <span className="text-[10px] text-slate-500 font-medium">
-                  *Kata sandi baru akan otomatis tersinkronisasi dan digunakan untuk otentikasi berikutnya.
+                  {isPrivilegedAuthorityRole
+                    ? '*Wajib minimal 12 karakter kombinasi huruf besar, huruf kecil, dan angka. Kata sandi lama tidak dapat digunakan kembali.'
+                    : '*Kata sandi baru otomatis menggantikan sandi lama (sandi lama tidak bisa dipakai ulang).'}
                 </span>
 
                 <button

@@ -4455,15 +4455,20 @@ export default function App() {
       // Perbarui sesi aktif lokal dan storage secara instan agar kredensial baru aktif
       setSession((prev) => {
         const nextPin = sanitizedAdmin.pinOtoritas || prev.pinOtoritas;
+        const nextHash = sanitizedAdmin.passwordHash || prev.passwordHash;
         const updated = {
           ...prev,
-          passwordHash: sanitizedAdmin.passwordHash || prev.passwordHash,
+          passwordHash: nextHash,
           pinOtoritas: nextPin,
           lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
         };
         try {
           sessionStorage.setItem('psks_active_session', JSON.stringify(updated));
           localStorage.setItem('psks_active_session', JSON.stringify(updated));
+          if (nextHash) {
+            sessionStorage.setItem('session_user_password_hash', nextHash);
+            localStorage.setItem('session_user_password_hash', nextHash);
+          }
           if (nextPin) {
             sessionStorage.setItem('session_user_pin', nextPin);
             localStorage.setItem('session_user_pin', nextPin);
@@ -4472,8 +4477,11 @@ export default function App() {
         return updated;
       });
 
-      // Jika Superadmin memperbarui PIN secara mandiri, kirim sinyal sinkronisasi agar Manajemen Superadmin milik Developer ikut terbarui realtime
-      if (securitySignal === 'SELF_PIN_CHANGE') {
+      // Jika Superadmin memperbarui PIN atau Kata Sandi secara mandiri, kirim sinyal sinkronisasi agar Manajemen Superadmin milik Developer ikut terbarui realtime
+      if (
+        securitySignal === 'SELF_PIN_CHANGE' ||
+        (securitySignal === 'SELF_PASSWORD_CHANGE' && sanitizedAdmin.role === 'superadmin')
+      ) {
         const syncPayload = {
           action: 'SUPERADMIN_SYNC',
           targetUsername: sanitizedAdmin.username,

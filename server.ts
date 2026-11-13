@@ -1045,6 +1045,242 @@ async function startServer() {
     }
   });
 
+  // Endpoint Update Password Mandiri Terautentikasi (Bcrypt Hash + AES-256 Encrypted, Anti Reuse Password Lama, Zero Plaintext)
+  app.post('/api/auth/update-password', rateLimitAuth, async (req, res) => {
+    try {
+      const authHeader = req.headers['authorization'] || '';
+      const tokenFromHeader = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const token = tokenFromHeader || (req.headers['x-session-token'] as string) || (req.body && req.body.sessionToken);
+
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'Sesi otentikasi tidak ditemukan. Silakan login ulang.' });
+      }
+
+      const authSession = verifySessionToken(token);
+      if (!authSession) {
+        return res.status(401).json({ success: false, message: 'Token sesi tidak sah atau kedaluwarsa. Silakan login ulang.' });
+      }
+
+      const { oldPassword, newPassword } = req.body || {};
+      const oldTrim = typeof oldPassword === 'string' ? oldPassword.trim() : '';
+      const newTrim = typeof newPassword === 'string' ? newPassword.trim() : '';
+
+      if (!oldTrim) {
+        return res.status(400).json({ success: false, message: 'Kata sandi saat ini wajib diisi.' });
+      }
+      if (!newTrim) {
+        return res.status(400).json({ success: false, message: 'Kata sandi baru wajib diisi.' });
+      }
+      if (oldTrim === newTrim) {
+        return res.status(400).json({ success: false, message: '❌ Kata sandi baru tidak boleh sama dengan kata sandi lama!' });
+      }
+
+      const cleanRole = (authSession.role || 'user').toLowerCase();
+      if (cleanRole === 'superadmin' || cleanRole === 'developer') {
+        if (newTrim.length < 12) {
+          return res.status(400).json({ success: false, message: '❌ Kata sandi Superadmin/Developer minimal 12 karakter.' });
+        }
+        if (!/[A-Z]/.test(newTrim) || !/[a-z]/.test(newTrim) || !/[0-9]/.test(newTrim)) {
+          return res.status(400).json({
+            success: false,
+            message: '❌ Kata sandi wajib kombinasi huruf besar (A-Z), huruf kecil (a-z), dan angka (0-9).',
+          });
+        }
+      } else if (newTrim.length < 6) {
+        return res.status(400).json({ success: false, message: '❌ Kata sandi baru minimal 6 karakter.' });
+      }
+
+      const identifiers = [authSession.id, authSession.username]
+        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+      const preferredTable =
+        cleanRole === 'developer'
+          ? 'dev_accounts'
+          : cleanRole === 'superadmin'
+          ? 'superadmin_accounts'
+          : cleanRole === 'user'
+          ? 'user_accounts'
+          : 'admin_accounts';
+
+      const tablesToSearch = Array.from(
+        new Set([preferredTable, 'dev_accounts', 'superadmin_accounts', 'admin_accounts', 'user_accounts'])
+      );
+
+      let matchedRow: any = null;
+      let matchedTable = preferredTable;
+
+      for (const tbl of tablesToSearch) {
+        for (const ident of identifiers) {
+          const cleanIdent = ident.trim();
+          const lowerIdent = cleanIdent.toLowerCase();
+          try {
+            const { data: byId, error: byIdErr } = await supabase
+              .from(tbl)
+              .select('*')
+              .eq('id', cleanIdent)
+              .maybeSingle();
+
+            if (!byIdErr && byId) {
+              matchedRow = byId;
+              matchedTable = tbl;
+              break;
+            }
+
+            const { data: byUname, error: byUnameErr } = await supabase
+              .from(tbl)
+              .select('*')
+              .ilike('username', lowerIdent)
+              .maybeSingle();
+
+            if (!byUnameErr && byUname) {
+              matchedRow = byUname;
+              matchedTable = tbl;
+              break;
+            }
+          } catch {}
+        }
+        if (matchedRow) break;
+      }
+
+      // Fallback lookup from DEFAULT_ADMIN_ACCOUNTS if root account row hasn't been seeded yet
+      let defMatch: any = null;
+      if (!matchedRow) {
+        defMatch = DEFAULT_ADMIN_ACCOUNTS.find(
+          (a) =>
+            identifiers.some((idVal) => idVal.toLowerCase().trim() === a.id.toLowerCase().trim()) ||
+            identifiers.some((idVal) => idVal.toLowerCase().trim() === (a.username || '').toLowerCase().trim())
+        );
+      }
+
+      if (!matchedRow && !defMatch) {
+        return res.status(404).json({ success: false, message: '❌ Data akun Anda tidak ditemukan di database.' });
+      }
+
+      const existingDataObj =
+        matchedRow?.data && typeof matchedRow.data === 'object' ? { ...matchedRow.data } : {};
+      const currentHash: string =
+        matchedRow?.passwordHash || existingDataObj.passwordHash || defMatch?.passwordHash || '';
+
+      if (!currentHash || !comparePassword(oldTrim, currentHash)) {
+        return res.status(401).json({ success: false, message: '❌ Kata sandi saat ini yang Anda masukkan salah!' });
+      }
+
+      // Cegah penggunaan ulang kata sandi lama maupun riwayat kata sandi sebelumnya
+      const prevHashes: string[] = Array.isArray(existingDataObj.previousPasswordHashes)
+        ? existingDataObj.previousPasswordHashes.filter((h: any) => typeof h === 'string' && h.length > 0)
+        : [];
+      if (comparePassword(newTrim, currentHash) || prevHashes.some((h) => comparePassword(newTrim, h))) {
+        return res.status(400).json({
+          success: false,
+          message: '❌ Kata sandi lama tidak boleh digunakan kembali! Gunakan kata sandi baru yang berbeda.',
+        });
+      }
+
+      const newHash = hashPassword(newTrim);
+      const encPassword = encryptSensitiveData(newTrim);
+      const nowMs = Date.now();
+      const updatedPrevHashes = [currentHash, ...prevHashes].slice(0, 5);
+
+      const targetId = matchedRow?.id || defMatch?.id || authSession.id;
+      const targetUsername =
+        matchedRow?.username || existingDataObj.username || defMatch?.username || authSession.username;
+      const targetNama =
+        matchedRow?.namaAdmin || existingDataObj.namaAdmin || defMatch?.namaAdmin || authSession.namaAdmin || targetUsername;
+      const targetRole =
+        matchedRow?.role || existingDataObj.role || defMatch?.role || authSession.role;
+      const targetWilayah =
+        matchedRow?.wilayahTugas || existingDataObj.wilayahTugas || defMatch?.wilayahTugas || authSession.wilayahTugas || '';
+      const targetStatusActive =
+        matchedRow?.statusActive || existingDataObj.statusActive || 'SAH_TERDAFTAR';
+
+      // ZERO PLAINTEXT GUARANTEE: pastikan passwordPolos tidak pernah ada di JSON/kolom
+      delete existingDataObj.passwordPolos;
+
+      const nextDataJson = {
+        ...existingDataObj,
+        username: targetUsername,
+        namaAdmin: targetNama,
+        role: targetRole,
+        wilayahTugas: targetWilayah,
+        statusActive: targetStatusActive,
+        passwordHash: newHash,
+        passwordEncrypted: encPassword,
+        previousPasswordHashes: updatedPrevHashes,
+        resetTicket: null,
+        lastUpdatedTimestamp: nowMs,
+        lastEditedBy: targetUsername || targetNama,
+        lastEditedByRole: targetRole,
+        isSelfUpdate: true,
+      };
+
+      const upsertPayload = {
+        id: targetId,
+        username: targetUsername,
+        namaAdmin: targetNama,
+        role: targetRole,
+        statusActive: targetStatusActive,
+        wilayahTugas: targetWilayah,
+        passwordHash: newHash,
+        sessionToken: matchedRow?.sessionToken || '',
+        data: nextDataJson,
+      };
+
+      const { error: sbSaveErr } = await supabase
+        .from(matchedTable)
+        .upsert(upsertPayload, { onConflict: 'id' });
+
+      if (sbSaveErr) {
+        console.error('[Server Update Password Supabase Error]:', sbSaveErr);
+        return res.status(500).json({ success: false, message: 'Gagal memperbarui kata sandi di database.' });
+      }
+
+      // Bersihkan duplikat lama di admin_accounts bila ada untuk adm-super / superadmin agar password lama tidak mungkin bisa login
+      if (matchedTable === 'superadmin_accounts' && targetId) {
+        try {
+          await supabase.from('admin_accounts').delete().eq('id', targetId);
+        } catch {}
+      }
+
+      // Non-blocking Firestore cold backup sync (strictly encrypted & hashed, zero plaintext)
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('./src/lib/firebase');
+        await setDoc(
+          doc(db, matchedTable, targetId),
+          {
+            id: targetId,
+            username: targetUsername,
+            namaAdmin: targetNama,
+            role: targetRole,
+            wilayahTugas: targetWilayah,
+            statusActive: targetStatusActive,
+            passwordHash: newHash,
+            passwordEncrypted: encPassword,
+            previousPasswordHashes: updatedPrevHashes,
+            resetTicket: null,
+            lastUpdatedTimestamp: nowMs,
+            lastEditedBy: targetUsername || targetNama,
+            lastEditedByRole: targetRole,
+            isSelfUpdate: true,
+          },
+          { merge: true }
+        );
+      } catch {}
+
+      return res.json({
+        success: true,
+        updatedAccountId: targetId,
+        passwordHash: newHash,
+        passwordEncrypted: encPassword,
+        previousPasswordHashes: updatedPrevHashes,
+        lastUpdatedTimestamp: nowMs,
+        message: '✅ Kata sandi berhasil diperbarui secara aman dan langsung tersinkron ke Manajemen Superadmin!',
+      });
+    } catch (err: any) {
+      console.error('[Update Password Server Error]:', err);
+      return res.status(500).json({ success: false, message: 'Terjadi kesalahan server saat memperbarui kata sandi.' });
+    }
+  });
+
   // Authoritative Server-Side User & Admin Login Endpoint (Zero Client-Side Credential Leakage)
   app.post('/api/auth/login', rateLimitAuth, async (req, res) => {
     try {

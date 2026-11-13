@@ -283,8 +283,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
 
     // 3. KHUSUS AKUN SUPERADMIN & DEVELOPER:
-    // Submenu "Ubah PIN" (diubah dari "Ubah PIN SmartCard"), isinya terpisah dari Detail Profil Akun.
+    // Submenu "Ubah Kata Sandi" ditempatkan tepat di atas "Ubah PIN", isinya terpisah dari Detail Profil Akun.
     else if (session.statusActive === 'SAH_TERDAFTAR' && (session.role === 'superadmin' || session.role === 'developer')) {
+      list.push({
+        id: 'ubah_password_authority',
+        title: 'Ubah Kata Sandi',
+        desc: session.role === 'developer' ? 'Perbarui Kata Sandi Akun Developer' : 'Perbarui Kata Sandi Akun Superadmin',
+        icon: Lock,
+        onClick: () => {
+          navigateAndScroll('akun', undefined, 'ubah_password');
+        },
+      });
+
       list.push({
         id: 'ubah_pin_authority',
         title: 'Ubah PIN',

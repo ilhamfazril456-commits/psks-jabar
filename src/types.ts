@@ -199,6 +199,7 @@ export interface AdminAccount {
   passwordPolos?: string;
   passwordEncrypted?: string;
   passwordHash?: string;
+  previousPasswordHashes?: string[];
   terakhirLogin?: string;
   sessionToken?: string;
   loginTimestamp?: number;
