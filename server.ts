@@ -583,10 +583,143 @@ async function startServer() {
     developerPin: process.env.DEVELOPER_PIN || '992211',
   };
 
+  async function findPrivilegedAccount(identifiers: string[], expectedRole?: 'developer' | 'superadmin' | string) {
+    const cleanIds = Array.from(
+      new Set(
+        identifiers
+          .map((s) => (typeof s === 'string' ? s.trim() : ''))
+          .filter(Boolean)
+      )
+    );
+    if (cleanIds.length === 0) return null;
+
+    const sbTables =
+      expectedRole === 'developer'
+        ? ['dev_accounts', 'admin_accounts']
+        : expectedRole === 'superadmin'
+        ? ['superadmin_accounts', 'admin_accounts']
+        : ['dev_accounts', 'superadmin_accounts', 'admin_accounts'];
+
+    for (const table of sbTables) {
+      for (const ident of cleanIds) {
+        const lower = ident.toLowerCase();
+        try {
+          const { data, error } = await supabase
+            .from(table)
+            .select('*')
+            .or(`id.eq.${ident},username.ilike.${lower}`)
+            .maybeSingle();
+
+          if (!error && data) {
+            const rest = data.data && typeof data.data === 'object' ? data.data : {};
+            const resolvedRole =
+              data.role ||
+              rest.role ||
+              (table === 'dev_accounts' ? 'developer' : table === 'superadmin_accounts' ? 'superadmin' : 'admin');
+            if (expectedRole && resolvedRole !== expectedRole && table === 'admin_accounts') {
+              continue;
+            }
+            return {
+              id: data.id,
+              table,
+              username: data.username || rest.username || data.id,
+              namaAdmin: data.namaAdmin || rest.namaAdmin || data.username || data.id,
+              role: resolvedRole,
+              statusActive: data.statusActive || rest.statusActive || 'SAH_TERDAFTAR',
+              wilayahTugas: data.wilayahTugas || rest.wilayahTugas || (resolvedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT'),
+              isFrozen: data.isFrozen === true || rest.isFrozen === true,
+              statusAkun: data.statusAkun || rest.statusAkun || 'AKTIF',
+              allowedPillars: Array.isArray(data.allowedPillars)
+                ? data.allowedPillars
+                : Array.isArray(rest.allowedPillars)
+                ? rest.allowedPillars
+                : resolvedRole === 'superadmin'
+                ? ['all']
+                : undefined,
+              pinOtoritas: String(data.pinOtoritas || rest.pinOtoritas || '').trim(),
+              pinEncrypted: String(data.pinEncrypted || rest.pinEncrypted || '').trim(),
+              rawData: rest,
+            };
+          }
+        } catch {}
+      }
+    }
+
+    // Fallback to Firestore
+    try {
+      const { collection, getDocs, query, where, doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('./src/lib/firebase');
+      for (const colName of sbTables) {
+        for (const ident of cleanIds) {
+          try {
+            const directSnap = await getDoc(doc(db, colName, ident));
+            if (directSnap.exists()) {
+              const d = directSnap.data();
+              const resolvedRole = d.role || (colName === 'dev_accounts' ? 'developer' : colName === 'superadmin_accounts' ? 'superadmin' : 'admin');
+              return {
+                id: directSnap.id,
+                table: colName,
+                username: d.username || directSnap.id,
+                namaAdmin: d.namaAdmin || d.username || directSnap.id,
+                role: resolvedRole,
+                statusActive: d.statusActive || 'SAH_TERDAFTAR',
+                wilayahTugas: d.wilayahTugas || (resolvedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT'),
+                isFrozen: d.isFrozen === true,
+                statusAkun: d.statusAkun || 'AKTIF',
+                allowedPillars: Array.isArray(d.allowedPillars) ? d.allowedPillars : resolvedRole === 'superadmin' ? ['all'] : undefined,
+                pinOtoritas: String(d.pinOtoritas || '').trim(),
+                pinEncrypted: String(d.pinEncrypted || '').trim(),
+                rawData: d,
+              };
+            }
+            const q = query(collection(db, colName), where('username', '==', ident.toLowerCase()));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              const docSnap = snap.docs[0];
+              const d = docSnap.data();
+              const resolvedRole = d.role || (colName === 'dev_accounts' ? 'developer' : colName === 'superadmin_accounts' ? 'superadmin' : 'admin');
+              return {
+                id: docSnap.id,
+                table: colName,
+                username: d.username || docSnap.id,
+                namaAdmin: d.namaAdmin || d.username || docSnap.id,
+                role: resolvedRole,
+                statusActive: d.statusActive || 'SAH_TERDAFTAR',
+                wilayahTugas: d.wilayahTugas || (resolvedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT'),
+                isFrozen: d.isFrozen === true,
+                statusAkun: d.statusAkun || 'AKTIF',
+                allowedPillars: Array.isArray(d.allowedPillars) ? d.allowedPillars : resolvedRole === 'superadmin' ? ['all'] : undefined,
+                pinOtoritas: String(d.pinOtoritas || '').trim(),
+                pinEncrypted: String(d.pinEncrypted || '').trim(),
+                rawData: d,
+              };
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+
+    return null;
+  }
+
+  function extractPersonalPin(acc: { pinOtoritas?: string; pinEncrypted?: string } | null | undefined): string {
+    if (!acc) return '';
+    if (acc.pinOtoritas && /^\d{6}$/.test(acc.pinOtoritas.trim())) {
+      return acc.pinOtoritas.trim();
+    }
+    if (acc.pinEncrypted) {
+      try {
+        const dec = decryptSensitiveData(acc.pinEncrypted).trim();
+        if (/^\d{6}$/.test(dec)) return dec;
+      } catch {}
+    }
+    return '';
+  }
+
   // Endpoint Validasi PIN 6-Digit di Server (Perlindungan Anti-Brute-Force & Rate-Limiting Ketat)
   app.post('/api/auth/verify-pin', rateLimitAuth, async (req, res) => {
     try {
-      const { pin, targetRole, challengeToken } = req.body;
+      const { pin, targetRole, challengeToken, username, userId, nama } = req.body;
       const forwarded = req.headers['x-forwarded-for'];
       const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress) || 'unknown';
 
@@ -617,55 +750,83 @@ async function startServer() {
 
       const cleanPin = pin.trim();
 
-      // Prioritas 1: Ambil dari memory terkini server
+      // Prioritas 1: Ambil default PIN global dari memory terkini server + Firestore/Supabase app_settings
       let validSuperadminPin = serverPinStore.superadminPin;
       let validDeveloperPin = serverPinStore.developerPin;
 
-      // Prioritas 2: Sinkronisasi dari Firestore jika tersedia update yang lebih baru
+      try {
+        const { data } = await supabase.from('app_settings').select('data').eq('id', 'global').maybeSingle();
+        if (data && data.data) {
+          if (data.data.superadminPin && /^\d{6}$/.test(String(data.data.superadminPin).trim())) {
+            validSuperadminPin = String(data.data.superadminPin).trim();
+            serverPinStore.superadminPin = validSuperadminPin;
+          }
+          if (data.data.developerPin && /^\d{6}$/.test(String(data.data.developerPin).trim())) {
+            validDeveloperPin = String(data.data.developerPin).trim();
+            serverPinStore.developerPin = validDeveloperPin;
+          }
+        }
+      } catch {}
+
       try {
         const { doc, getDoc } = await import('firebase/firestore');
         const { db } = await import('./src/lib/firebase');
         const snap = await getDoc(doc(db, 'app_settings', 'global'));
         if (snap.exists()) {
           const fsData = snap.data();
-          if (fsData.superadminPin) {
+          if (fsData.superadminPin && /^\d{6}$/.test(String(fsData.superadminPin).trim())) {
             validSuperadminPin = String(fsData.superadminPin).trim();
             serverPinStore.superadminPin = validSuperadminPin;
           }
-          if (fsData.developerPin) {
+          if (fsData.developerPin && /^\d{6}$/.test(String(fsData.developerPin).trim())) {
             validDeveloperPin = String(fsData.developerPin).trim();
             serverPinStore.developerPin = validDeveloperPin;
           }
         }
       } catch {}
 
-      // Prioritas 3: Supabase fallback jika Firestore belum mengembalikan data
-      try {
-        const { data } = await supabase.from('app_settings').select('*').eq('id', 'global').maybeSingle();
-        if (data && data.data) {
-          if (!validSuperadminPin && data.data.superadminPin) validSuperadminPin = String(data.data.superadminPin).trim();
-          if (!validDeveloperPin && data.data.developerPin) validDeveloperPin = String(data.data.developerPin).trim();
-        }
-      } catch {}
+      // Cari akun spesifik (jika username/userId dikirim dari login manual atau profil)
+      const matchedAcc = await findPrivilegedAccount(
+        [userId, username, nama].filter((v): v is string => typeof v === 'string' && v.trim().length > 0),
+        targetRole
+      );
+
+      if (matchedAcc && (matchedAcc.isFrozen || matchedAcc.statusAkun === 'DIBEKUKAN' || matchedAcc.statusActive === 'FROZEN')) {
+        return res.status(403).json({
+          valid: false,
+          message: '❌ AKUN DIBEKUKAN! Akun Anda sedang dinonaktifkan oleh Administrator.',
+        });
+      }
+
+      const personalPin = extractPersonalPin(matchedAcc);
 
       let isMatch = false;
       let authorizedRole = '';
+      let usedPin = cleanPin;
 
-      // STRICT VALIDATION: Tidak boleh ada PIN ganda. Setiap role HANYA bisa dibuka oleh PIN aktifnya sendiri!
+      // STRICT PER-ACCOUNT VALIDATION:
+      // Jika akun memiliki PIN pribadi di superadmin_accounts / dev_accounts, WAJIB cocok dengan PIN pribadi akun tersebut!
       if (targetRole === 'developer') {
-        isMatch = (cleanPin === validDeveloperPin);
+        const expectedDevPin = personalPin || validDeveloperPin;
+        isMatch = (cleanPin === expectedDevPin);
         authorizedRole = 'developer';
+        usedPin = expectedDevPin;
       } else if (targetRole === 'superadmin') {
-        isMatch = (cleanPin === validSuperadminPin);
+        const expectedSuperPin = personalPin || validSuperadminPin;
+        isMatch = (cleanPin === expectedSuperPin);
         authorizedRole = 'superadmin';
+        usedPin = expectedSuperPin;
       } else {
-        // Fallback jika targetRole tidak terdefinisi
-        if (cleanPin === validDeveloperPin) {
+        const expectedDevPin = validDeveloperPin;
+        const expectedSuperPin = personalPin || validSuperadminPin;
+        if (cleanPin === expectedDevPin) {
           isMatch = true;
           authorizedRole = 'developer';
-        } else if (cleanPin === validSuperadminPin) {
+          usedPin = expectedDevPin;
+        } else if (cleanPin === expectedSuperPin) {
           isMatch = true;
           authorizedRole = 'superadmin';
+          usedPin = expectedSuperPin;
         }
       }
 
@@ -688,28 +849,55 @@ async function startServer() {
 
       clearPinRateLimit(ip);
 
+      // Pastikan apabila akses dari QR/NFC tanpa userId/username, kita tetap coba cari akun root adm-super / adm-dev agar data lengkap
+      let finalAcc = matchedAcc;
+      if (!finalAcc) {
+        finalAcc = await findPrivilegedAccount(
+          authorizedRole === 'developer' ? ['adm-dev', 'ilhamfazril'] : ['adm-super', 'superadmin jabar', 'superadmin'],
+          authorizedRole
+        );
+      }
+
+      const resolvedId = finalAcc?.id || (authorizedRole === 'developer' ? 'adm-dev' : 'adm-super');
+      const resolvedUsername = finalAcc?.username || (authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin');
+      const resolvedNama = finalAcc?.namaAdmin || nama || (authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar');
+      const resolvedWilayah = finalAcc?.wilayahTugas || (authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT');
+      const resolvedAllowedPillars =
+        authorizedRole === 'superadmin'
+          ? Array.isArray(finalAcc?.allowedPillars)
+            ? finalAcc.allowedPillars
+            : ['all']
+          : undefined;
+      const resolvedPinOtoritas = personalPin || usedPin;
+
       const authorityToken = crypto
         .createHmac('sha256', SESSION_SECRET)
-        .update(`${authorizedRole}_${Date.now() + 30 * 60 * 1000}`)
+        .update(`${authorizedRole}_${resolvedId}_${Date.now() + 30 * 60 * 1000}`)
         .digest('hex');
 
       // Issue signed session token for privileged login sessions
       const sessionToken = signSessionToken({
-        id: authorizedRole === 'developer' ? 'adm-dev' : 'adm-super',
-        username: authorizedRole === 'developer' ? 'ilhamfazril' : 'superadmin',
+        id: resolvedId,
+        username: resolvedUsername,
         role: authorizedRole as 'developer' | 'superadmin',
-        namaAdmin: authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar',
-        wilayahTugas: authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT',
+        namaAdmin: resolvedNama,
+        wilayahTugas: resolvedWilayah,
         statusActive: 'SAH_TERDAFTAR',
+        allowedPillars: resolvedAllowedPillars,
+        pinOtoritas: resolvedPinOtoritas,
       });
 
       return res.json({
         valid: true,
         role: authorizedRole,
+        id: resolvedId,
+        username: resolvedUsername,
         authorityToken,
         sessionToken,
-        nama: authorizedRole === 'developer' ? 'Ilham Fazril' : 'Superadmin Jabar',
-        wilayah: authorizedRole === 'developer' ? 'Pusat Developer Jabar' : 'PROVINSI JAWA BARAT',
+        nama: resolvedNama,
+        wilayah: resolvedWilayah,
+        allowedPillars: resolvedAllowedPillars,
+        pinOtoritas: resolvedPinOtoritas,
         message: `Verifikasi PIN 6 digit sah. Otoritas ${authorizedRole} disetujui.`,
       });
     } catch (err: any) {
@@ -721,7 +909,7 @@ async function startServer() {
   // Endpoint Update PIN 6-Digit Server-Side (Khusus Developer / Superadmin Terautentikasi)
   app.post('/api/auth/update-pin', rateLimitAuth, requireAdminOrDev, async (req, res) => {
     try {
-      const { newPin, pinType } = req.body;
+      const { newPin, pinType, userId, username } = req.body;
       const user = (req as any).user;
 
       if (!newPin || typeof newPin !== 'string' || !/^\d{6}$/.test(newPin.trim())) {
@@ -729,44 +917,127 @@ async function startServer() {
       }
 
       const cleanPin = newPin.trim();
+      const requestedRole = pinType === 'developer' ? 'developer' : 'superadmin';
 
-      if (pinType === 'developer' && user.role !== 'developer') {
+      if (requestedRole === 'developer' && user.role !== 'developer') {
         return res.status(403).json({ success: false, message: 'Hanya Developer Utama yang berwenang mengubah PIN Developer.' });
       }
 
-      // Update in server memory
-      if (pinType === 'developer') {
-        serverPinStore.developerPin = cleanPin;
-      } else {
-        serverPinStore.superadminPin = cleanPin;
+      // Keamanan mutlak: Superadmin hanya boleh mengubah PIN miliknya sendiri
+      const targetId = user.role === 'developer' ? (userId || user.id) : user.id;
+      const targetUname = user.role === 'developer' ? (username || user.username) : user.username;
+      const targetRoleForLookup = requestedRole === 'developer' ? 'developer' : 'superadmin';
+
+      const targetAcc = await findPrivilegedAccount(
+        [targetId, targetUname].filter((v): v is string => typeof v === 'string' && v.trim().length > 0),
+        targetRoleForLookup
+      );
+
+      const encPin = encryptSensitiveData(cleanPin);
+      const nowMs = Date.now();
+
+      // 1. Update akun spesifik di tabel akun (superadmin_accounts / dev_accounts) agar sinkron dengan Manajemen Superadmin
+      if (targetAcc) {
+        try {
+          const { data: existingRow } = await supabase
+            .from(targetAcc.table)
+            .select('id, data')
+            .eq('id', targetAcc.id)
+            .maybeSingle();
+
+          const existingJsonData =
+            existingRow?.data && typeof existingRow.data === 'object' ? existingRow.data : targetAcc.rawData || {};
+
+          await supabase
+            .from(targetAcc.table)
+            .update({
+              data: {
+                ...existingJsonData,
+                pinOtoritas: cleanPin,
+                pinEncrypted: encPin,
+                lastUpdatedTimestamp: nowMs,
+                lastEditedBy: user.namaAdmin || user.username,
+                lastEditedByRole: user.role,
+                isSelfUpdate: targetAcc.id === user.id,
+              },
+            })
+            .eq('id', targetAcc.id);
+        } catch (accErr) {
+          console.warn('[Server Pin Update Account DB notice]:', accErr);
+        }
+
+        // Firestore backup non-blocking
+        try {
+          const { doc, setDoc } = await import('firebase/firestore');
+          const { db } = await import('./src/lib/firebase');
+          await setDoc(
+            doc(db, targetAcc.table, targetAcc.id),
+            {
+              pinOtoritas: cleanPin,
+              pinEncrypted: encPin,
+              lastUpdatedTimestamp: nowMs,
+            },
+            { merge: true }
+          );
+        } catch {}
       }
 
-      // Sync securely to Supabase without exposing to public
-      try {
-        const updatePayload: any = {};
-        if (pinType === 'developer') updatePayload.developerPin = cleanPin;
-        else updatePayload.superadminPin = cleanPin;
-        await supabase.from('app_settings').upsert({ id: 'global', data: updatePayload }, { onConflict: 'id' });
-      } catch (dbErr) {
-        console.warn('[Server Pin Update DB notice]:', dbErr);
-      }
+      const isRootAccount =
+        !targetAcc ||
+        targetAcc.id === 'adm-super' ||
+        targetAcc.id === 'adm-dev' ||
+        (targetAcc.username || '').toLowerCase().trim() === 'superadmin' ||
+        (targetAcc.username || '').toLowerCase().trim() === 'superadmin jabar' ||
+        (targetAcc.username || '').toLowerCase().trim() === 'ilhamfazril';
 
-      // Sync securely to Firestore
-      try {
-        const { doc, setDoc } = await import('firebase/firestore');
-        const { db } = await import('./src/lib/firebase');
-        const pinField = pinType === 'developer' ? 'developerPin' : 'superadminPin';
-        await setDoc(doc(db, 'app_settings', 'global'), {
-          [pinField]: cleanPin,
-          pinSecurityUpdatedAt: Date.now(),
-        }, { merge: true });
-      } catch (fsErr) {
-        console.warn('[Server Pin Update Firestore notice]:', fsErr);
+      // 2. Hanya update PIN global serverPinStore & app_settings jika Developer mengubah pengaturan global / akun root
+      if (requestedRole === 'developer' || (user.role === 'developer' && !userId && !username) || isRootAccount) {
+        if (requestedRole === 'developer') {
+          serverPinStore.developerPin = cleanPin;
+        } else {
+          serverPinStore.superadminPin = cleanPin;
+        }
+
+        try {
+          const { data: existingGlobal } = await supabase
+            .from('app_settings')
+            .select('data')
+            .eq('id', 'global')
+            .maybeSingle();
+
+          const mergedGlobalData = {
+            ...(existingGlobal?.data && typeof existingGlobal.data === 'object' ? existingGlobal.data : {}),
+            ...(requestedRole === 'developer' ? { developerPin: cleanPin } : { superadminPin: cleanPin }),
+            pinSecurityUpdatedAt: nowMs,
+          };
+
+          await supabase.from('app_settings').upsert({ id: 'global', data: mergedGlobalData }, { onConflict: 'id' });
+        } catch (dbErr) {
+          console.warn('[Server Pin Update DB notice]:', dbErr);
+        }
+
+        try {
+          const { doc, setDoc } = await import('firebase/firestore');
+          const { db } = await import('./src/lib/firebase');
+          const pinField = requestedRole === 'developer' ? 'developerPin' : 'superadminPin';
+          await setDoc(
+            doc(db, 'app_settings', 'global'),
+            {
+              [pinField]: cleanPin,
+              pinSecurityUpdatedAt: nowMs,
+            },
+            { merge: true }
+          );
+        } catch (fsErr) {
+          console.warn('[Server Pin Update Firestore notice]:', fsErr);
+        }
       }
 
       return res.json({
         success: true,
-        message: `PIN ${pinType === 'developer' ? 'Developer' : 'Superadmin'} berhasil diperbarui dengan aman di server!`,
+        pinOtoritas: cleanPin,
+        updatedAccountId: targetAcc?.id || targetId,
+        message: `PIN ${requestedRole === 'developer' ? 'Developer' : 'Superadmin'} berhasil diperbarui & disinkronkan ke database!`,
       });
     } catch (err: any) {
       console.error('[Update PIN Server Error]:', err);

@@ -6,10 +6,21 @@ interface AuthorityPinVerificationModalProps {
   role: 'superadmin' | 'developer' | 'admin';
   nama?: string;
   wilayah?: string;
+  username?: string;
+  userId?: string;
   method?: 'manual' | 'qr' | 'nfc';
   challengeToken?: string;
   appSettings?: AppSettings;
-  onSuccess: (sessionData?: { sessionToken?: string; role?: string; nama?: string; wilayah?: string }) => void;
+  onSuccess: (sessionData?: {
+    sessionToken?: string;
+    role?: string;
+    nama?: string;
+    wilayah?: string;
+    username?: string;
+    userId?: string;
+    allowedPillars?: string[];
+    pinOtoritas?: string;
+  }) => void;
   onCancel: () => void;
 }
 
@@ -17,6 +28,8 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
   role,
   nama,
   wilayah,
+  username,
+  userId,
   method = 'manual',
   challengeToken,
   appSettings,
@@ -165,7 +178,15 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
       const res = await fetch('/api/auth/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: pinToTest, targetRole: role, challengeToken }),
+        body: JSON.stringify({
+          pin: pinToTest,
+          targetRole: role,
+          challengeToken,
+          username,
+          userId,
+          nama,
+          wilayah,
+        }),
       });
 
       const data = await res.json();
@@ -186,6 +207,8 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
           try {
             sessionStorage.setItem('psks_session_token', data.sessionToken);
             localStorage.setItem('psks_session_token', data.sessionToken);
+            sessionStorage.setItem('session_token', data.sessionToken);
+            localStorage.setItem('session_token', data.sessionToken);
           } catch {}
         }
 
@@ -215,6 +238,10 @@ export const AuthorityPinVerificationModal: React.FC<AuthorityPinVerificationMod
             role: data.role || role,
             nama: data.nama || nama,
             wilayah: data.wilayah || wilayah,
+            username: data.username || username,
+            userId: data.id || userId,
+            allowedPillars: data.allowedPillars,
+            pinOtoritas: data.pinOtoritas,
           });
         }, 400);
         return;

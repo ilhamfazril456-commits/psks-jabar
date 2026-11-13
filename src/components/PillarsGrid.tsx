@@ -1,6 +1,4 @@
 import React from 'react';
-import { PillarId, PSKSDataRecord } from '../types';
-import { PILLARS_CONFIG } from '../data/initialData';
 import {
   UserCheck,
   HeartHandshake,
@@ -14,13 +12,16 @@ import {
   ShieldCheck,
   ArrowRight,
   Layers,
-  Users
+  Lock
 } from 'lucide-react';
+import { PillarId, PSKSDataRecord, UserSession } from '../types';
+import { PILLARS_CONFIG } from '../data/initialData';
 
 interface PillarsGridProps {
   onSelectPillar: (pillarId: PillarId) => void;
   allPillarData?: Record<string, PSKSDataRecord[]>;
   summaryCounts?: Record<string, number>;
+  session?: UserSession;
 }
 
 export const PILLAR_ICON_MAP: Record<
@@ -105,7 +106,7 @@ export const PILLAR_ICON_MAP: Record<
   },
 };
 
-export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPillarData, summaryCounts }) => {
+export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPillarData, summaryCounts, session }) => {
   const pillarKeys: PillarId[] = [
     'peksos',
     'psm',
@@ -118,6 +119,13 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
     'badanusaha',
     'slrt_puskesos',
   ];
+
+  const isPillarRestricted = (key: PillarId): boolean => {
+    if (!session || session.statusActive !== 'SAH_TERDAFTAR' || session.role !== 'superadmin') return false;
+    if (!Array.isArray(session.allowedPillars)) return false;
+    if (session.allowedPillars.includes('all') || session.allowedPillars.includes('*')) return false;
+    return !session.allowedPillars.includes(key);
+  };
 
   return (
     <section className="py-4 sm:py-10 px-2 sm:px-6 max-w-7xl mx-auto">
@@ -133,6 +141,8 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
             tag: 'PSKS',
           };
 
+          const restricted = isPillarRestricted(key);
+
           // Hitung jumlah data terdaftar secara realtime (prioritaskan summary count realtime dari cloud)
           const count = summaryCounts?.[key] !== undefined ? summaryCounts[key] : (allPillarData?.[key]?.length ?? 0);
           const unit = pillar?.unitLabel || (key === 'lks' || key === 'slrt_puskesos' ? 'Lembaga' : key === 'badanusaha' ? 'Kelompok' : 'Orang');
@@ -141,15 +151,25 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
             <div
               key={key}
               onClick={() => onSelectPillar(key)}
-              className="group relative bg-white border border-slate-200/90 rounded-xl sm:rounded-3xl p-1 sm:p-4 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#d4af37] transition-all duration-300 h-full overflow-hidden"
+              className={`group relative rounded-xl sm:rounded-3xl p-1 sm:p-4 text-center flex flex-col items-center justify-between cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 h-full overflow-hidden ${
+                restricted
+                  ? 'bg-slate-50/95 border border-rose-200/90 hover:border-rose-400'
+                  : 'bg-white border border-slate-200/90 hover:border-[#d4af37]'
+              }`}
             >
               {/* Subtle accent bar on hover */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-[#0f2b5c] via-amber-500 to-[#1a4a9c]" />
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${restricted ? 'from-rose-500 via-amber-500 to-rose-600' : 'from-[#0f2b5c] via-amber-500 to-[#1a4a9c]'}`} />
+
+              {restricted && (
+                <div className="absolute top-1 right-1 sm:top-2.5 sm:right-2.5 z-10 inline-flex items-center justify-center w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-rose-100 border border-rose-300 text-rose-700 shadow-2xs" title="Akses Pilar Dikunci Developer">
+                  <Lock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
+                </div>
+              )}
 
               {/* Icon / Logo Badge */}
               <div className="relative mb-1 sm:mb-3 mt-0.5 sm:mt-1 flex items-center justify-center">
                 <div
-                  className={`w-7 h-7 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-gradient-to-br ${style.bgGradient} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-white/25`}
+                  className={`w-7 h-7 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-gradient-to-br ${style.bgGradient} flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 border border-white/25 ${restricted ? 'opacity-65 grayscale-[35%]' : ''}`}
                 >
                   {/* Clone icon with responsive sizing */}
                   {React.cloneElement(style.icon as React.ReactElement<any>, {
@@ -166,7 +186,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
 
               {/* Title & Description section */}
               <div className="flex-1 flex flex-col items-center justify-center w-full px-0 sm:px-0.5 my-0.5 sm:my-1.5">
-                <h3 className="text-[6.5px] min-[380px]:text-[7.5px] sm:text-xs md:text-sm font-black text-[#0f2b5c] uppercase tracking-tight sm:tracking-wider group-hover:text-[#b8901c] transition-colors leading-[1.12] sm:leading-snug min-h-[26px] sm:min-h-[36px] flex items-center justify-center text-center break-words hyphens-none w-full">
+                <h3 className={`text-[6.5px] min-[380px]:text-[7.5px] sm:text-xs md:text-sm font-black uppercase tracking-tight sm:tracking-wider transition-colors leading-[1.12] sm:leading-snug min-h-[26px] sm:min-h-[36px] flex items-center justify-center text-center break-words hyphens-none w-full ${restricted ? 'text-slate-600 group-hover:text-rose-700' : 'text-[#0f2b5c] group-hover:text-[#b8901c]'}`}>
                   {pillar?.title || key}
                 </h3>
                 {/* Sub-title / shortName is hidden on mobile screens, visible on desktop/laptop (sm:) */}
@@ -192,10 +212,17 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ onSelectPillar, allPil
 
               {/* Bottom Action Footer */}
               <div className="mt-auto pt-1 sm:pt-2 border-t border-slate-100 w-full flex items-center justify-center gap-0.5 shrink-0">
-                <span className="text-[7px] min-[380px]:text-[7.5px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
-                  <span>Buka</span>
-                  <ArrowRight className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transform group-hover:translate-x-1 transition-transform" />
-                </span>
+                {restricted ? (
+                  <span className="text-[7px] min-[380px]:text-[7.5px] sm:text-xs font-black text-rose-600 group-hover:text-rose-700 transition-colors flex items-center gap-0.5 sm:gap-1">
+                    <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <span>Terkunci</span>
+                  </span>
+                ) : (
+                  <span className="text-[7px] min-[380px]:text-[7.5px] sm:text-xs font-black text-[#b8901c] group-hover:text-amber-700 transition-colors flex items-center gap-0.5 sm:gap-1">
+                    <span>Buka</span>
+                    <ArrowRight className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
               </div>
             </div>
           );

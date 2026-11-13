@@ -669,24 +669,42 @@ export function subscribeToCollection(
   // 1. Initial bulk fetch from Supabase
   refreshCollection();
 
-  // 2. Bandwidth-efficient fallback sync (60s interval instead of aggressive 1.2s polling to protect Supabase Egress quota)
+  // Listen for explicit fast refresh signals (e.g. from security_signals or cross-tab BroadcastChannel)
+  const handleForceRefreshEvent = (ev: Event) => {
+    if (isCancelled) return;
+    const customEv = ev as CustomEvent<{ collection?: string }>;
+    const target = customEv?.detail?.collection;
+    if (!target || target === collectionName) {
+      refreshCollection();
+    }
+  };
+  if (typeof window !== 'undefined') {
+    window.addEventListener('psks_force_refresh_collection', handleForceRefreshEvent);
+  }
+
+  // 2. Adaptive fallback sync: 5s for small high-priority superadmin_accounts/dev_accounts (PIN/pillar permissions), 60s for others
   if (
     collectionName === 'admin_accounts' ||
     collectionName === 'user_accounts' ||
     collectionName === 'superadmin_accounts' ||
+    collectionName === 'dev_accounts' ||
     collectionName === 'registration_submissions' ||
     collectionName === 'app_settings'
   ) {
+    const intervalMs =
+      collectionName === 'superadmin_accounts' || collectionName === 'dev_accounts' ? 5000 : 60000;
     pollInterval = setInterval(() => {
       if (!isCancelled && typeof document !== 'undefined' && !document.hidden) {
         refreshCollection();
       }
-    }, 60000); // 60 seconds safe interval: saves 98% bandwidth while realtime handles instant push
+    }, intervalMs);
   }
 
   // 3. Concurrent Real-time Firestore onSnapshot listener for instant sub-second trigger
   if (
     collectionName === 'admin_accounts' ||
+    collectionName === 'superadmin_accounts' ||
+    collectionName === 'dev_accounts' ||
     collectionName === 'registration_submissions' ||
     collectionName === 'security_signals'
   ) {
@@ -735,6 +753,9 @@ export function subscribeToCollection(
     isCancelled = true;
     if (debounceTimer) clearTimeout(debounceTimer);
     if (pollInterval) clearInterval(pollInterval);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('psks_force_refresh_collection', handleForceRefreshEvent);
+    }
     if (unsubFirestore) {
       try {
         unsubFirestore();
@@ -968,9 +989,9 @@ export async function setFirestoreDoc(
     const targetTable =
       collectionName === 'user_accounts' || data.role === 'user'
         ? 'user_accounts'
-        : collectionName === 'superadmin_accounts' || docId === 'adm-super'
+        : collectionName === 'superadmin_accounts' || data.role === 'superadmin' || docId === 'adm-super'
         ? 'superadmin_accounts'
-        : collectionName === 'dev_accounts' || docId === 'adm-dev'
+        : collectionName === 'dev_accounts' || data.role === 'developer' || docId === 'adm-dev'
         ? 'dev_accounts'
         : 'admin_accounts';
 

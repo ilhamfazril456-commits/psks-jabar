@@ -60,7 +60,15 @@ interface SmartGateModalProps {
   onClose: () => void;
   targetPillarTitle?: string;
   onConfirmGuestRegion: (region: string) => void;
-  onPerformLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', nama: string, wilayah: string, username?: string, userId?: string, sessionToken?: string) => void;
+  onPerformLogin: (
+    role: 'user' | 'admin' | 'superadmin' | 'developer',
+    nama: string,
+    wilayah: string,
+    username?: string,
+    userId?: string,
+    sessionToken?: string,
+    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+  ) => void;
   adminAccounts: AdminAccount[];
   onRegisterAccount?: (newAccount: Omit<AdminAccount, 'id'>) => Promise<void> | void;
   onUpdateAccountLocal?: (account: AdminAccount) => void;
@@ -203,6 +211,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     username?: string;
     userId?: string;
     sessionToken?: string;
+    allowedPillars?: string[];
+    pinOtoritas?: string;
   } | null>(null);
 
   // Input & Scroll Refs
@@ -217,13 +227,14 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
     wilayah: string,
     username?: string,
     userId?: string,
-    sessionToken?: string
+    sessionToken?: string,
+    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
   ) => {
     setIsLoggingIn(true);
     setSuccessMessage(`✅ OTENTIKASI BERHASIL! Selamat datang, ${nama} (${wilayah}).`);
     setErrorMessage('');
 
-    onPerformLogin(role, nama, wilayah, username, userId, sessionToken);
+    onPerformLogin(role, nama, wilayah, username, userId, sessionToken, extra);
 
     setTimeout(() => {
       setFailedAttempts(0);
@@ -887,7 +898,8 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
       wilayah: string,
       username?: string,
       userId?: string,
-      token?: string
+      token?: string,
+      extra?: { allowedPillars?: string[]; pinOtoritas?: string }
     ) => {
       // Privileged Access Management: Superadmin and Developer MUST pass 6-digit PIN verification
       if (role === 'superadmin' || role === 'developer') {
@@ -898,10 +910,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           username,
           userId,
           sessionToken: token,
+          allowedPillars: extra?.allowedPillars,
+          pinOtoritas: extra?.pinOtoritas,
         });
         return;
       }
-      executeDirectLoginSuccess(role, nama, wilayah, username, userId, token);
+      executeDirectLoginSuccess(role, nama, wilayah, username, userId, token, extra);
     };
 
     // 0. Primary Secure Server-Side Login (Protects Passwords & Hashes from Client-Side Exposure)
@@ -923,7 +937,11 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           data.session.wilayahTugas,
           data.session.username,
           data.session.id,
-          data.session.sessionToken
+          data.session.sessionToken,
+          {
+            allowedPillars: data.session.allowedPillars,
+            pinOtoritas: data.session.pinOtoritas,
+          }
         );
         return;
       }
@@ -991,6 +1009,13 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
               nik: sbUser.nik || restData.nik || '',
               nikHash: sbUser.nikHash || restData.nikHash || '',
               noWhatsapp: sbUser.noWhatsapp || restData.noWhatsapp || '',
+              allowedPillars: Array.isArray(sbUser.allowedPillars)
+                ? sbUser.allowedPillars
+                : Array.isArray(restData.allowedPillars)
+                ? restData.allowedPillars
+                : undefined,
+              pinOtoritas: sbUser.pinOtoritas || restData.pinOtoritas || '',
+              pinEncrypted: sbUser.pinEncrypted || restData.pinEncrypted || '',
             } as AdminAccount;
             break;
           }
@@ -1073,7 +1098,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           matchedAccount.namaAdmin || matchedAccount.username,
           assignedWilayah,
           matchedAccount.username,
-          matchedAccount.id
+          matchedAccount.id,
+          undefined,
+          {
+            allowedPillars: matchedAccount.allowedPillars,
+            pinOtoritas: matchedAccount.pinOtoritas,
+          }
         );
         return;
       } else {
@@ -2878,9 +2908,12 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
             defaultTab={scannerDefaultTab}
             appSettings={appSettings}
             onClose={() => setIsQrScannerOpen(false)}
-            onSuccessLogin={(role, nama, wilayah) => {
+            onSuccessLogin={(role, nama, wilayah, extra) => {
               onClose();
-              onPerformLogin(role, nama, wilayah);
+              onPerformLogin(role, nama, wilayah, extra?.username, extra?.userId, extra?.sessionToken, {
+                allowedPillars: extra?.allowedPillars,
+                pinOtoritas: extra?.pinOtoritas,
+              });
             }}
             onOpenPrintCards={() => setIsPrintCardsOpen(true)}
           />
@@ -2915,12 +2948,25 @@ export const SmartGateModal: React.FC<SmartGateModalProps> = ({
           role={pendingPrivilegedAuth.role}
           nama={pendingPrivilegedAuth.nama}
           wilayah={pendingPrivilegedAuth.wilayah}
+          username={pendingPrivilegedAuth.username}
+          userId={pendingPrivilegedAuth.userId}
           method="manual"
           appSettings={appSettings}
-          onSuccess={() => {
+          onSuccess={(verifiedData) => {
             const auth = pendingPrivilegedAuth;
             setPendingPrivilegedAuth(null);
-            executeDirectLoginSuccess(auth.role, auth.nama, auth.wilayah, auth.username, auth.userId, auth.sessionToken);
+            executeDirectLoginSuccess(
+              auth.role,
+              verifiedData?.nama || auth.nama,
+              verifiedData?.wilayah || auth.wilayah,
+              verifiedData?.username || auth.username,
+              verifiedData?.userId || auth.userId,
+              verifiedData?.sessionToken || auth.sessionToken,
+              {
+                allowedPillars: verifiedData?.allowedPillars ?? auth.allowedPillars,
+                pinOtoritas: verifiedData?.pinOtoritas ?? auth.pinOtoritas,
+              }
+            );
           }}
           onCancel={() => {
             setPendingPrivilegedAuth(null);

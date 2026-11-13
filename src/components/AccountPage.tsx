@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserSession, AdminAccount, PillarRegistrationSubmission, AppSettings } from '../types';
 import { KAB_KOTA_ONLY } from '../data/initialData';
 import { Shield, User, Key, LogOut, LogIn, UserPlus, RefreshCw, CheckCircle2, ShieldCheck, Lock, AlertTriangle, X, Code2, QrCode, CreditCard, ArrowLeft, Camera, Sparkles, Clock, Wifi, Eye, EyeOff, KeyRound } from 'lucide-react';
-import { comparePassword, hashPassword } from '../utils/crypto';
+import { comparePassword, hashPassword, encryptSensitiveData, decryptSensitiveData } from '../utils/crypto';
 import { CaptchaWidget } from './CaptchaWidget';
 import { QRCardScannerModal } from './QRCardScannerModal';
 import { PrintableQRCardModal } from './PrintableQRCardModal';
@@ -16,7 +16,15 @@ interface AccountPageProps {
   submissions?: PillarRegistrationSubmission[];
   appSettings?: AppSettings;
   onSaveAppSettings?: (newSettings: AppSettings) => Promise<void> | void;
-  onLogin: (role: 'user' | 'admin' | 'superadmin' | 'developer', username: string, wilayah: string) => void;
+  onLogin: (
+    role: 'user' | 'admin' | 'superadmin' | 'developer',
+    username: string,
+    wilayah: string,
+    rawUsername?: string,
+    userId?: string,
+    sessionToken?: string,
+    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
+  ) => void;
   onLogout: () => void;
   onAddAdminAccount: (newAdmin: Omit<AdminAccount, 'id'>) => void;
   onUpdateAdminAccount?: (updated: AdminAccount, securitySignal?: string) => void | Promise<void>;
@@ -274,18 +282,47 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     role?: string;
   } | null>(null);
 
-  // Superadmin PIN Management State (Dedicated Self-Service PIN Change)
-  const [superadminPinInput, setSuperadminPinInput] = useState(() => appSettings?.superadminPin || '123456');
+  const currentUserAccount = useMemo(() => {
+    const uid = (session.userId || '').toLowerCase().trim();
+    const uname = (session.username || '').toLowerCase().trim();
+    const namaClean = (session.nama || '').toLowerCase().trim();
+    return (
+      adminAccounts.find((a) => uid && (a.id || '').toLowerCase().trim() === uid) ||
+      adminAccounts.find((a) => uname && (a.username || '').toLowerCase().trim() === uname) ||
+      adminAccounts.find((a) => namaClean && (a.namaAdmin || '').toLowerCase().trim() === namaClean) ||
+      null
+    );
+  }, [adminAccounts, session.userId, session.username, session.nama]);
+
+  const effectiveOwnPin = useMemo(() => {
+    if (currentUserAccount?.pinOtoritas && /^\d{6}$/.test(currentUserAccount.pinOtoritas.trim())) {
+      return currentUserAccount.pinOtoritas.trim();
+    }
+    if (currentUserAccount?.pinEncrypted) {
+      try {
+        const dec = decryptSensitiveData(currentUserAccount.pinEncrypted).trim();
+        if (/^\d{6}$/.test(dec)) return dec;
+      } catch {}
+    }
+    if (session.pinOtoritas && /^\d{6}$/.test(session.pinOtoritas.trim())) {
+      return session.pinOtoritas.trim();
+    }
+    if (session.role === 'developer') {
+      return appSettings?.developerPin || '992211';
+    }
+    return appSettings?.superadminPin || '123456';
+  }, [currentUserAccount, session.pinOtoritas, session.role, appSettings?.developerPin, appSettings?.superadminPin]);
+
+  // Superadmin / Developer PIN Management State (Dedicated Self-Service PIN Change)
+  const [superadminPinInput, setSuperadminPinInput] = useState(() => effectiveOwnPin);
   const [showSuperadminPin, setShowSuperadminPin] = useState(false);
   const [isSavingSuperadminPin, setIsSavingSuperadminPin] = useState(false);
   const [superadminPinSuccess, setSuperadminPinSuccess] = useState<string | null>(null);
   const [superadminPinError, setSuperadminPinError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (appSettings?.superadminPin) {
-      setSuperadminPinInput(appSettings.superadminPin);
-    }
-  }, [appSettings?.superadminPin]);
+    setSuperadminPinInput(effectiveOwnPin);
+  }, [effectiveOwnPin]);
 
   const handleRandomizeSuperadminPin = () => {
     const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
@@ -303,31 +340,89 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     }
     setIsSavingSuperadminPin(true);
     try {
-      const token = session.sessionToken || sessionStorage.getItem('psks_session_token') || localStorage.getItem('psks_session_token') || '';
-      const res = await fetch('/api/auth/update-pin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          newPin: cleanPin,
-          pinType: 'superadmin',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Gagal menyimpan PIN ke server');
+      const token =
+        session.sessionToken ||
+        sessionStorage.getItem('session_token') ||
+        sessionStorage.getItem('psks_session_token') ||
+        localStorage.getItem('session_token') ||
+        localStorage.getItem('psks_session_token') ||
+        '';
+
+      const targetPinType = session.role === 'developer' ? 'developer' : 'superadmin';
+      const targetUserId = currentUserAccount?.id || session.userId;
+      const targetUsername = currentUserAccount?.username || session.username;
+
+      let serverOk = false;
+      let serverErrMsg = '';
+      try {
+        const res = await fetch('/api/auth/update-pin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          },
+          body: JSON.stringify({
+            newPin: cleanPin,
+            pinType: targetPinType,
+            userId: targetUserId,
+            username: targetUsername,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          serverOk = true;
+        } else {
+          serverErrMsg = data.message || 'Gagal menyimpan PIN ke server';
+        }
+      } catch (fetchErr: any) {
+        serverErrMsg = fetchErr?.message || 'Koneksi server gagal';
       }
 
-      if (onSaveAppSettings && appSettings) {
+      // Sinkronkan juga ke record akun pribadi (superadmin_accounts / dev_accounts) agar tampil realtime di Manajemen Superadmin Developer!
+      const encPin = encryptSensitiveData(cleanPin);
+      const nowMs = Date.now();
+      if (onUpdateAdminAccount && (currentUserAccount || targetUserId)) {
+        const baseAcc: AdminAccount = currentUserAccount || {
+          id: targetUserId || (session.role === 'developer' ? 'adm-dev' : 'adm-super'),
+          username: targetUsername || session.nama || 'superadmin',
+          namaAdmin: session.nama || 'Superadmin Jabar',
+          wilayahTugas: session.wilayah || 'PROVINSI JAWA BARAT',
+          role: session.role === 'developer' ? 'developer' : 'superadmin',
+          statusActive: 'SAH_TERDAFTAR',
+          allowedPillars: session.allowedPillars,
+        };
+        await onUpdateAdminAccount(
+          {
+            ...baseAcc,
+            pinOtoritas: cleanPin,
+            pinEncrypted: encPin,
+            lastUpdatedTimestamp: nowMs,
+            lastEditedBy: session.nama || session.username,
+            lastEditedByRole: session.role,
+            isSelfUpdate: true,
+          },
+          'SELF_PIN_CHANGE'
+        );
+      } else if (!serverOk) {
+        throw new Error(serverErrMsg || 'Gagal menyimpan PIN ke server');
+      }
+
+      const isRootAccount =
+        session.role === 'developer' ||
+        targetUserId === 'adm-super' ||
+        (targetUsername || '').toLowerCase().trim() === 'superadmin' ||
+        (targetUsername || '').toLowerCase().trim() === 'superadmin jabar';
+
+      if (onSaveAppSettings && appSettings && isRootAccount) {
         await onSaveAppSettings({
           ...appSettings,
-          superadminPin: cleanPin,
-          pinSecurityUpdatedAt: Date.now(),
+          ...(session.role === 'developer' ? { developerPin: cleanPin } : { superadminPin: cleanPin }),
+          pinSecurityUpdatedAt: nowMs,
         });
       }
-      setSuperadminPinSuccess('✅ PIN Smart Access Card Superadmin berhasil diperbarui dan aktif realtime di server!');
+
+      setSuperadminPinSuccess('✅ PIN pribadi Anda berhasil diperbarui dan otomatis tersinkron ke sistem Manajemen Superadmin!');
       setTimeout(() => setSuperadminPinSuccess(null), 5000);
     } catch (err: any) {
       setSuperadminPinError('Gagal menyimpan PIN: ' + (err?.message || 'Terjadi kesalahan sistem'));
@@ -549,7 +644,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         setPasswordInput('');
         setCaptchaInput('');
         setCaptchaError(false);
-        onLogin(data.session.role, data.session.namaAdmin, data.session.wilayahTugas);
+        onLogin(
+          data.session.role,
+          data.session.namaAdmin,
+          data.session.wilayahTugas,
+          data.session.username,
+          data.session.id,
+          data.session.sessionToken,
+          {
+            allowedPillars: data.session.allowedPillars,
+            pinOtoritas: data.session.pinOtoritas,
+          }
+        );
         setIsLoginModalOpen(false);
         return;
       }
@@ -595,7 +701,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({
       setPasswordInput('');
       setCaptchaInput('');
       setCaptchaError(false);
-      onLogin(resolvedRole, matchedAccount.namaAdmin, resolvedWilayah);
+      onLogin(
+        resolvedRole,
+        matchedAccount.namaAdmin,
+        resolvedWilayah,
+        matchedAccount.username,
+        matchedAccount.id,
+        undefined,
+        {
+          allowedPillars: matchedAccount.allowedPillars,
+          pinOtoritas: matchedAccount.pinOtoritas,
+        }
+      );
       setIsLoginModalOpen(false);
       return;
     } else {
@@ -1159,7 +1276,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-indigo-700" />
-                    <span>6 Digit PIN Baru Superadmin:</span>
+                    <span>{session.role === 'developer' ? '6 Digit PIN Baru Developer:' : '6 Digit PIN Baru Superadmin:'}</span>
                   </label>
                   <span className={`text-[10px] font-bold ${superadminPinInput.length === 6 ? 'text-emerald-700' : 'text-slate-500'}`}>
                     {superadminPinInput.length === 6 ? '✓ 6 Digit Lengkap' : `${superadminPinInput.length}/6 Digit`}

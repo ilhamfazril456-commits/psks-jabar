@@ -639,18 +639,42 @@ export default function App() {
             if (!data) return;
             if (data.valid && data.session) {
               const s = data.session;
-              setSession((prev) => ({
-                ...prev,
-                id: s.id,
-                username: s.username,
-                role: s.role,
-                nama: s.namaAdmin || s.nama || prev.nama,
-                wilayah: s.wilayahTugas || s.wilayah || prev.wilayah,
-                statusActive: 'SAH_TERDAFTAR',
-                isDeveloper: s.role === 'developer',
-              }));
-              try { sessionStorage.setItem('session_user_role', s.role); } catch {}
-              try { localStorage.setItem('session_user_role', s.role); } catch {}
+              setSession((prev) => {
+                const nextAllowedPillars = Array.isArray(s.allowedPillars) ? s.allowedPillars : prev.allowedPillars;
+                const nextPinOtoritas = s.pinOtoritas || prev.pinOtoritas;
+                try {
+                  if (nextAllowedPillars) {
+                    sessionStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
+                    localStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowedPillars));
+                  }
+                  if (nextPinOtoritas) {
+                    sessionStorage.setItem('session_user_pin', nextPinOtoritas);
+                    localStorage.setItem('session_user_pin', nextPinOtoritas);
+                  }
+                  sessionStorage.setItem('session_user_role', s.role);
+                  localStorage.setItem('session_user_role', s.role);
+                  if (s.id) {
+                    sessionStorage.setItem('session_user_id', s.id);
+                    localStorage.setItem('session_user_id', s.id);
+                  }
+                  if (s.username) {
+                    sessionStorage.setItem('session_user_username', s.username);
+                    localStorage.setItem('session_user_username', s.username);
+                  }
+                } catch {}
+                return {
+                  ...prev,
+                  userId: s.id || prev.userId,
+                  username: s.username || prev.username,
+                  role: s.role,
+                  nama: s.namaAdmin || s.nama || prev.nama,
+                  wilayah: s.wilayahTugas || s.wilayah || prev.wilayah,
+                  statusActive: 'SAH_TERDAFTAR',
+                  isDeveloper: s.role === 'developer',
+                  allowedPillars: nextAllowedPillars,
+                  pinOtoritas: nextPinOtoritas,
+                };
+              });
             } else if (data.valid === false && data.message?.includes('kedaluwarsa')) {
               console.warn('[Security Shield] Sesi telah kedaluwarsa setelah 7 hari.');
               sessionStorage.clear();
@@ -1491,6 +1515,8 @@ export default function App() {
     return [];
   });
 
+  const [hasLoadedAllAccountCollections, setHasLoadedAllAccountCollections] = useState(false);
+
   const adminAccountsRef = useRef(adminAccounts);
   useEffect(() => {
     adminAccountsRef.current = adminAccounts;
@@ -1503,12 +1529,15 @@ export default function App() {
       (session.role === 'superadmin' || session.role === 'developer' || session.isDeveloper);
 
     if (!isAuthorized) {
+      setHasLoadedAllAccountCollections(false);
       setAdminAccounts([]);
       try {
         localStorage.removeItem('psks_admin_accounts');
       } catch {}
       return;
     }
+
+    setHasLoadedAllAccountCollections(false);
 
     const unsubs: Array<() => void> = [];
     const delay = 100;
@@ -1586,6 +1615,17 @@ export default function App() {
                 ? 'Pusat Developer Jabar'
                 : accData.wilayahTugas || defaultMatch?.wilayahTugas || '';
 
+            const rawPinEnc = accData.pinEncrypted || accDataObj.data?.pinEncrypted;
+            const rawPinPlain =
+              accData.pinOtoritas ||
+              accDataObj.data?.pinOtoritas ||
+              (rawPinEnc ? decryptSensitiveData(rawPinEnc) : undefined);
+            const rawAllowed = Array.isArray(accData.allowedPillars)
+              ? accData.allowedPillars
+              : Array.isArray(accDataObj.data?.allowedPillars)
+              ? accDataObj.data.allowedPillars
+              : undefined;
+
             loadedMap.set(docId, {
               id: docId,
               ...accData,
@@ -1595,6 +1635,9 @@ export default function App() {
               role: safeRole,
               passwordHash: passHash,
               passwordEncrypted: accData.passwordEncrypted || (accData as any).data?.passwordEncrypted || defaultMatch?.passwordEncrypted,
+              pinOtoritas: rawPinPlain || undefined,
+              pinEncrypted: rawPinEnc || undefined,
+              allowedPillars: rawAllowed,
               terakhirLogin: accData.terakhirLogin || defaultMatch?.terakhirLogin || '2026-08-01 08:00',
               passwordPolos: '',
               registeredIp: accData.registeredIp || undefined,
@@ -1644,12 +1687,20 @@ export default function App() {
           return u !== 'admin_ilham';
         });
 
+        const rolePriority = (role?: string) =>
+          role === 'developer' ? 4 : role === 'superadmin' ? 3 : role === 'admin' ? 2 : 1;
+
         const dedupedMap = new Map<string, AdminAccount>();
         rawList.forEach((acc) => {
           const key = (acc.username || acc.id || '').toLowerCase().trim();
           if (key) {
             const prev = dedupedMap.get(key);
-            if (!prev || (acc.lastUpdatedTimestamp || 0) >= (prev.lastUpdatedTimestamp || 0)) {
+            if (
+              !prev ||
+              (acc.lastUpdatedTimestamp || 0) > (prev.lastUpdatedTimestamp || 0) ||
+              ((acc.lastUpdatedTimestamp || 0) === (prev.lastUpdatedTimestamp || 0) &&
+                rolePriority(acc.role) >= rolePriority(prev.role))
+            ) {
               dedupedMap.set(key, acc);
             }
           }
@@ -1663,14 +1714,23 @@ export default function App() {
         } catch {}
       };
 
+      const loadedCollectionsSet = new Set<string>();
       collections.forEach((col) => {
         const u = subscribeToCollection(
           col,
           (colDocs) => {
             store[col] = colDocs || [];
+            loadedCollectionsSet.add(col);
+            if (loadedCollectionsSet.size >= collections.length) {
+              setHasLoadedAllAccountCollections(true);
+            }
             processAllAccounts();
           },
           (error) => {
+            loadedCollectionsSet.add(col);
+            if (loadedCollectionsSet.size >= collections.length) {
+              setHasLoadedAllAccountCollections(true);
+            }
             handleFirestoreError(error, OperationType.LIST, col);
           }
         );
@@ -1682,7 +1742,7 @@ export default function App() {
       clearTimeout(timer);
       unsubs.forEach((u) => u());
     };
-  }, [session.statusActive, gateModalOpen]);
+  }, [session.statusActive, session.role, session.isDeveloper, gateModalOpen]);
 
   // 3.2 Real-Time Presencing Heartbeat & Screen Visibility/Activity Tracking for Active Admin Sessions
   useEffect(() => {
@@ -1701,17 +1761,33 @@ export default function App() {
     window.addEventListener('scroll', updateActivity, { passive: true });
     window.addEventListener('touchstart', updateActivity, { passive: true });
 
-    const sendHeartbeat = async () => {
-      const currentList = adminAccountsRef.current;
-      const matched = currentList.find(
+    const findMatchedSessionAccount = (list: AdminAccount[]) => {
+      const sId = (session.userId || '').toLowerCase().trim();
+      const sUname = (session.username || '').toLowerCase().trim();
+      const sNama = (session.nama || '').toLowerCase().trim();
+      const sWilayah = (session.wilayah || '').toLowerCase().trim();
+      return list.find(
         (a) =>
-          (session.role === 'developer' && a.role === 'developer') ||
-          (session.role === 'superadmin' && a.role === 'superadmin') ||
-          (a.username || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.namaAdmin || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.id || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.role === session.role && (a.wilayahTugas || '').toLowerCase().trim() === (session.wilayah || '').toLowerCase().trim())
+          (sId && (a.id || '').toLowerCase().trim() === sId) ||
+          (sUname && (a.username || '').toLowerCase().trim() === sUname) ||
+          (sNama && (a.username || '').toLowerCase().trim() === sNama) ||
+          (sNama && (a.namaAdmin || '').toLowerCase().trim() === sNama && a.role === session.role) ||
+          (session.role === 'admin' && a.role === 'admin' && sWilayah && (a.wilayahTugas || '').toLowerCase().trim() === sWilayah) ||
+          (session.role === 'developer' && a.role === 'developer')
       );
+    };
+
+    const resolveAccountCollection = (accRole?: string) =>
+      accRole === 'superadmin'
+        ? 'superadmin_accounts'
+        : accRole === 'developer'
+        ? 'dev_accounts'
+        : accRole === 'user'
+        ? 'user_accounts'
+        : 'admin_accounts';
+
+    const sendHeartbeat = async () => {
+      const matched = findMatchedSessionAccount(adminAccountsRef.current);
       if (!matched) return;
 
       const isVisible = document.visibilityState === 'visible';
@@ -1747,9 +1823,8 @@ export default function App() {
       setAdminAccounts((prev) =>
         prev.map((acc) =>
           acc.id === matched.id ||
-          (acc.role === matched.role && (acc.wilayahTugas || '').toLowerCase().trim() === (matched.wilayahTugas || '').toLowerCase().trim()) ||
-          (acc.role === 'developer' && matched.role === 'developer') ||
-          (acc.role === 'superadmin' && matched.role === 'superadmin')
+          ((acc.username || '').toLowerCase().trim() !== '' &&
+            (acc.username || '').toLowerCase().trim() === (matched.username || '').toLowerCase().trim())
             ? {
                 ...acc,
                 isOnline,
@@ -1764,10 +1839,11 @@ export default function App() {
       );
 
       // Attempt remote Firestore write if quota not exceeded
+      const targetCol = resolveAccountCollection(matched.role);
       if (!quotaExceededRef.current && !isQuotaExceeded) {
         try {
           await setFirestoreDoc(
-            'admin_accounts',
+            targetCol,
             matched.id,
             {
               isOnline,
@@ -1780,7 +1856,7 @@ export default function App() {
             { merge: true }
           );
         } catch (err) {
-          handleFirestoreError(err, OperationType.UPDATE, `admin_accounts/${matched.id}`);
+          handleFirestoreError(err, OperationType.UPDATE, `${targetCol}/${matched.id}`);
           if (isQuotaError(err)) {
             quotaExceededRef.current = true;
             setIsQuotaExceeded(true);
@@ -1800,22 +1876,14 @@ export default function App() {
 
     const handleUnload = () => {
       if (quotaExceededRef.current) return;
-      const currentList = adminAccountsRef.current;
-      const matched = currentList.find(
-        (a) =>
-          (session.role === 'developer' && a.role === 'developer') ||
-          (session.role === 'superadmin' && a.role === 'superadmin') ||
-          (a.username || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.namaAdmin || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.id || '').toLowerCase().trim() === (session.nama || '').toLowerCase().trim() ||
-          (a.role === session.role && (a.wilayahTugas || '').toLowerCase().trim() === (session.wilayah || '').toLowerCase().trim())
-      );
+      const matched = findMatchedSessionAccount(adminAccountsRef.current);
       if (!matched) return;
 
+      const targetCol = resolveAccountCollection(matched.role);
       const nowIso = new Date().toISOString();
       try {
         setFirestoreDoc(
-          'admin_accounts',
+          targetCol,
           matched.id,
           {
             isOnline: false,
@@ -1851,7 +1919,7 @@ export default function App() {
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
     };
-  }, [session.statusActive, session.role, session.nama, session.isDeveloper, session.wilayah, isQuotaExceeded]);
+  }, [session.statusActive, session.role, session.userId, session.username, session.nama, session.isDeveloper, session.wilayah, isQuotaExceeded]);
 
   // 3.5 Firestore Real-Time Listener for Admin Messages
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>([]);
@@ -2494,15 +2562,18 @@ export default function App() {
     }
 
     // 4. Update state directly for instantaneous 0ms tab navigation
+    const isPillarAllowed = (pillarId: PillarId): boolean => {
+      if (session.role !== 'superadmin') return true;
+      if (!Array.isArray(session.allowedPillars)) return true;
+      if (session.allowedPillars.includes('all') || session.allowedPillars.includes('*')) return true;
+      return session.allowedPillars.includes(pillarId);
+    };
+
     if (targetTab === 'pillar_detail') {
       const targetPillar = options?.pillarId;
-      if (targetPillar && session.role === 'superadmin') {
-        const allowed = session.allowedPillars || ['all'];
-        const isAll = allowed.includes('all') || allowed.includes('*');
-        if (!isAll && !allowed.includes(targetPillar)) {
-          setRestrictedPillarTarget(targetPillar);
-          return;
-        }
+      if (targetPillar && !isPillarAllowed(targetPillar)) {
+        setRestrictedPillarTarget(targetPillar);
+        return;
       }
       if (targetPillar) setActivePillar(targetPillar);
     } else {
@@ -2540,15 +2611,93 @@ export default function App() {
     setCurrentTab(targetTab);
   }, [currentTab, handlePrefetchTab, session]);
 
+  const isPillarAllowedForSession = useCallback(
+    (pillarId: PillarId): boolean => {
+      if (session.role !== 'superadmin') return true;
+      if (!Array.isArray(session.allowedPillars)) return true;
+      if (session.allowedPillars.includes('all') || session.allowedPillars.includes('*')) return true;
+      return session.allowedPillars.includes(pillarId);
+    },
+    [session.role, session.allowedPillars]
+  );
+
+  // Real-time enforcement of allowedPillars and live PIN/pillar sync for Superadmin sessions
+  useEffect(() => {
+    if (session.statusActive !== 'SAH_TERDAFTAR') return;
+
+    const sId = (session.userId || '').toLowerCase().trim();
+    const sUname = (session.username || '').toLowerCase().trim();
+    const sNama = (session.nama || '').toLowerCase().trim();
+
+    if (adminAccounts.length > 0) {
+      const matched = adminAccounts.find(
+        (a) =>
+          (sId && (a.id || '').toLowerCase().trim() === sId) ||
+          (sUname && (a.username || '').toLowerCase().trim() === sUname) ||
+          (sNama && (a.namaAdmin || '').toLowerCase().trim() === sNama && a.role === session.role)
+      );
+
+      if (matched) {
+        const nextAllowed = Array.isArray(matched.allowedPillars) ? matched.allowedPillars : undefined;
+        const nextPin = matched.pinOtoritas || (matched.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
+
+        const prevAllowedStr = JSON.stringify(session.allowedPillars ?? null);
+        const nextAllowedStr = JSON.stringify(nextAllowed ?? null);
+        const pinChanged = Boolean(nextPin && nextPin !== session.pinOtoritas);
+        const pillarsChanged = nextAllowedStr !== prevAllowedStr;
+
+        if (pillarsChanged || pinChanged) {
+          setSession((prev) => ({
+            ...prev,
+            userId: prev.userId || matched.id,
+            username: prev.username || matched.username,
+            allowedPillars: nextAllowed,
+            pinOtoritas: nextPin || prev.pinOtoritas,
+          }));
+          try {
+            if (nextAllowed) {
+              sessionStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowed));
+              localStorage.setItem('session_user_allowed_pillars', JSON.stringify(nextAllowed));
+            } else {
+              sessionStorage.removeItem('session_user_allowed_pillars');
+              localStorage.removeItem('session_user_allowed_pillars');
+            }
+            if (nextPin) {
+              sessionStorage.setItem('session_user_pin', nextPin);
+              localStorage.setItem('session_user_pin', nextPin);
+            }
+          } catch {}
+        }
+      }
+    }
+
+    if (session.role === 'superadmin' && currentTab === 'pillar_detail' && activePillar) {
+      if (!isPillarAllowedForSession(activePillar)) {
+        const blocked = activePillar;
+        setActivePillar(null);
+        setCurrentTab('beranda');
+        setRestrictedPillarTarget(blocked);
+      }
+    }
+  }, [
+    adminAccounts,
+    session.statusActive,
+    session.role,
+    session.userId,
+    session.username,
+    session.nama,
+    session.allowedPillars,
+    session.pinOtoritas,
+    currentTab,
+    activePillar,
+    isPillarAllowedForSession,
+  ]);
+
   // Handlers using unified navigateToTab
   const handleSelectPillar = (pillarId: PillarId) => {
-    if (session.role === 'superadmin') {
-      const allowed = session.allowedPillars || ['all'];
-      const isAll = allowed.includes('all') || allowed.includes('*');
-      if (!isAll && !allowed.includes(pillarId)) {
-        setRestrictedPillarTarget(pillarId);
-        return;
-      }
+    if (!isPillarAllowedForSession(pillarId)) {
+      setRestrictedPillarTarget(pillarId);
+      return;
     }
     navigateToTab('pillar_detail', { pillarId });
   };
@@ -2715,7 +2864,8 @@ export default function App() {
     wilayah: string,
     username?: string,
     userId?: string,
-    incomingSessionToken?: string
+    incomingSessionToken?: string,
+    extra?: { allowedPillars?: string[]; pinOtoritas?: string }
   ) => {
     const statusActive = 'SAH_TERDAFTAR';
     const isDeveloper = role === 'developer';
@@ -2755,8 +2905,16 @@ export default function App() {
     const initialPasswordHash = matched?.passwordHash || '';
     const initialLastUpdated = matched?.lastUpdatedTimestamp || loginTimestamp;
 
-    const resolvedAllowedPillars = matched?.allowedPillars || (role === 'superadmin' ? ['all'] : undefined);
-    const resolvedPinOtoritas = matched?.pinOtoritas;
+    const resolvedAllowedPillars = Array.isArray(extra?.allowedPillars)
+      ? extra.allowedPillars
+      : Array.isArray(matched?.allowedPillars)
+      ? matched.allowedPillars
+      : role === 'superadmin'
+      ? ['all']
+      : undefined;
+    const matchedDecryptedPin =
+      matched?.pinOtoritas || (matched?.pinEncrypted ? decryptSensitiveData(matched.pinEncrypted) : undefined);
+    const resolvedPinOtoritas = extra?.pinOtoritas || matchedDecryptedPin || undefined;
 
     const newSession: UserSession = { 
       role, 
@@ -2794,6 +2952,15 @@ export default function App() {
     if (resolvedAllowedPillars) sessionItems.push(['session_user_allowed_pillars', JSON.stringify(resolvedAllowedPillars)]);
     if (resolvedPinOtoritas) sessionItems.push(['session_user_pin', resolvedPinOtoritas]);
 
+    if (!resolvedAllowedPillars) {
+      try { sessionStorage.removeItem('session_user_allowed_pillars'); } catch {}
+      try { localStorage.removeItem('session_user_allowed_pillars'); } catch {}
+    }
+    if (!resolvedPinOtoritas) {
+      try { sessionStorage.removeItem('session_user_pin'); } catch {}
+      try { localStorage.removeItem('session_user_pin'); } catch {}
+    }
+
     sessionItems.forEach(([k, v]) => {
       try { sessionStorage.setItem(k, v); } catch {}
       try { localStorage.setItem(k, v); } catch {}
@@ -2819,6 +2986,8 @@ export default function App() {
       const updatedAccount: AdminAccount = {
         ...matched,
         ...loginAccountPayload,
+        ...(resolvedAllowedPillars ? { allowedPillars: resolvedAllowedPillars } : {}),
+        ...(resolvedPinOtoritas ? { pinOtoritas: resolvedPinOtoritas } : {}),
       };
 
       // Sinkronkan langsung ke local state & ref agar tidak ada selisih pembacaan token di siklus render berikutnya
@@ -2837,8 +3006,15 @@ export default function App() {
 
       handleUpdateAdminAccount(updatedAccount);
     } else if (resolvedUserId) {
-      // Jika akun baru terdaftar belum ada di currentAccounts, sinkronkan via Firestore doc
-      setFirestoreDoc('admin_accounts', resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
+      const fallbackCollection =
+        role === 'superadmin'
+          ? 'superadmin_accounts'
+          : role === 'developer'
+          ? 'dev_accounts'
+          : role === 'user'
+          ? 'user_accounts'
+          : 'admin_accounts';
+      setFirestoreDoc(fallbackCollection, resolvedUserId, loginAccountPayload, { merge: true }).catch(() => {});
     }
 
     // DISPATCH KICK SESI LAMA: Berlaku untuk akun non-superadmin (user terdaftar & admin wilayah)
@@ -2942,10 +3118,16 @@ export default function App() {
 
     // Set offline status for logging out admin account
     if (session.statusActive === 'SAH_TERDAFTAR') {
+      const sId = (session.userId || '').toLowerCase().trim();
+      const sUname = (session.username || '').toLowerCase().trim();
+      const sNama = (session.nama || '').toLowerCase().trim();
+      const sWilayah = (session.wilayah || '').toLowerCase().trim();
       const matched = adminAccounts.find(
         (a) =>
-          (a.username || '').toLowerCase() === (session.nama || '').toLowerCase() ||
-          (a.wilayahTugas || '').toLowerCase() === (session.wilayah || '').toLowerCase()
+          (sId && (a.id || '').toLowerCase().trim() === sId) ||
+          (sUname && (a.username || '').toLowerCase().trim() === sUname) ||
+          (sNama && (a.namaAdmin || '').toLowerCase().trim() === sNama && a.role === session.role) ||
+          (session.role === 'admin' && a.role === 'admin' && sWilayah && (a.wilayahTugas || '').toLowerCase().trim() === sWilayah)
       );
       if (matched) {
         handleUpdateAdminAccount({
@@ -2963,6 +3145,7 @@ export default function App() {
       wilayah: '',
       statusActive: 'GUEST',
     };
+    setHasLoadedAllAccountCollections(false);
     setShowAccountDeletedModal(false);
     setShowAccountEditedModal(false);
     setShowAccountFrozenModal(false);
@@ -2980,12 +3163,15 @@ export default function App() {
       'session_user_wilayah',
       'statusLoginActive',
       'session_token',
+      'psks_session_token',
       'login_timestamp',
       'session_user_username',
       'session_user_id',
       'session_device_id',
       'session_user_password_hash',
       'session_user_password_polos',
+      'session_user_allowed_pillars',
+      'session_user_pin',
     ];
     sessionKeysToClear.forEach((k) => {
       try { sessionStorage.removeItem(k); } catch {}
@@ -3062,7 +3248,7 @@ export default function App() {
       (userUname && deletedAdminIds.includes(userUname))
     );
 
-    if ((adminAccounts.length > 0 && !isAccountCurrentlyActive) || isDeletedByIds) {
+    if ((hasLoadedAllAccountCollections && adminAccounts.length > 0 && !isAccountCurrentlyActive) || isDeletedByIds) {
       if (!showAccountDeletedModal) {
         setShowAccountDeletedModal(true);
       }
@@ -3277,6 +3463,18 @@ export default function App() {
             setShowMultipleSessionModal(true);
           }
         } else if (data.type === 'SECURITY_SIGNAL') {
+          if (
+            data.action === 'SUPERADMIN_SYNC' ||
+            data.action === 'SUPERADMIN_UPDATED' ||
+            data.action === 'SELF_PIN_CHANGE'
+          ) {
+            try {
+              window.dispatchEvent(
+                new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } })
+              );
+            } catch {}
+          }
+
           const myUname = (session.username || session.nama || '').toLowerCase().trim();
           const myUserId = (session.userId || '').toLowerCase().trim();
           const targetUname = (data.targetUsername || '').toLowerCase().trim();
@@ -3294,6 +3492,8 @@ export default function App() {
             if (
               data.isSelfUpdate === true ||
               data.action === 'SELF_PASSWORD_CHANGE' ||
+              data.action === 'SELF_PIN_CHANGE' ||
+              data.action === 'SUPERADMIN_SYNC' ||
               (data.by && (data.by.toLowerCase().trim() === myUname || data.by.toLowerCase().trim() === myUserId))
             ) {
               return;
@@ -3341,6 +3541,18 @@ export default function App() {
         // 1. Drop stale signals older than 60 seconds
         if (Date.now() - data.timestamp > 60000) return;
 
+        if (
+          data.action === 'SUPERADMIN_SYNC' ||
+          data.action === 'SUPERADMIN_UPDATED' ||
+          data.action === 'SELF_PIN_CHANGE'
+        ) {
+          try {
+            window.dispatchEvent(
+              new CustomEvent('psks_force_refresh_collection', { detail: { collection: 'superadmin_accounts' } })
+            );
+          } catch {}
+        }
+
         const userUname = (session.username || session.nama || '').toLowerCase().trim();
         const sessionUserId = (session.userId || '').toLowerCase().trim();
         const targetUname = (data.targetUsername || '').toLowerCase().trim();
@@ -3363,6 +3575,8 @@ export default function App() {
           if (
             data.isSelfUpdate === true ||
             data.action === 'SELF_PASSWORD_CHANGE' ||
+            data.action === 'SELF_PIN_CHANGE' ||
+            data.action === 'SUPERADMIN_SYNC' ||
             (data.by && (data.by.toLowerCase().trim() === userUname || data.by.toLowerCase().trim() === sessionUserId))
           ) {
             return;
@@ -4227,12 +4441,12 @@ export default function App() {
     // Identifikasi apakah ini perubahan akun secara MANDIRI oleh pemilik akun sendiri:
     const isSelfUpdate = Boolean(
       securitySignal === 'SELF_PASSWORD_CHANGE' ||
+      securitySignal === 'SELF_PIN_CHANGE' ||
       securitySignal === 'SELF_UPDATE' ||
       sanitizedAdmin.isSelfUpdate === true ||
       (isTargetingCurrentSession && (
         session.role === sanitizedAdmin.role ||
-        !securitySignal ||
-        securitySignal === 'SELF_PASSWORD_CHANGE'
+        !securitySignal
       ))
     );
 
@@ -4240,20 +4454,49 @@ export default function App() {
       // 1. SINKRONISASI SESI AKTIF PENGGUNA MANDIRI:
       // Perbarui sesi aktif lokal dan storage secara instan agar kredensial baru aktif
       setSession((prev) => {
+        const nextPin = sanitizedAdmin.pinOtoritas || prev.pinOtoritas;
         const updated = {
           ...prev,
           passwordHash: sanitizedAdmin.passwordHash || prev.passwordHash,
+          pinOtoritas: nextPin,
           lastUpdatedTimestamp: sanitizedAdmin.lastUpdatedTimestamp || Date.now(),
         };
         try {
           sessionStorage.setItem('psks_active_session', JSON.stringify(updated));
           localStorage.setItem('psks_active_session', JSON.stringify(updated));
+          if (nextPin) {
+            sessionStorage.setItem('session_user_pin', nextPin);
+            localStorage.setItem('session_user_pin', nextPin);
+          }
         } catch {}
         return updated;
       });
 
+      // Jika Superadmin memperbarui PIN secara mandiri, kirim sinyal sinkronisasi agar Manajemen Superadmin milik Developer ikut terbarui realtime
+      if (securitySignal === 'SELF_PIN_CHANGE') {
+        const syncPayload = {
+          action: 'SUPERADMIN_SYNC',
+          targetUsername: sanitizedAdmin.username,
+          targetId: sanitizedAdmin.id,
+          isSelfUpdate: true,
+          timestamp: Date.now(),
+          by: session.username || session.nama,
+          byRole: session.role,
+        };
+        try {
+          const authChannel = new BroadcastChannel('psks_auth_channel');
+          authChannel.postMessage({ type: 'SECURITY_SIGNAL', ...syncPayload });
+          setTimeout(() => {
+            try { authChannel.close(); } catch {}
+          }, 500);
+        } catch {}
+        try {
+          setFirestoreDoc('security_signals', 'live', syncPayload).catch(() => {});
+        } catch {}
+      }
+
       // 2. Sesuai instruksi mutlak user:
-      // KETIKA USER MENGUBAH PASSWORD SECARA MANDIRI MAKA DILARANG UNTUK DIBERI POP-UP
+      // KETIKA USER MENGUBAH PASSWORD/PIN SECARA MANDIRI MAKA DILARANG UNTUK DIBERI POP-UP
       // BAHWA AKUN TELAH DIEDIT DAN DILARANG DITENDANG KELUAR!
       // Sesi tetap login normal tanpa pop-up dan tanpa penendangan keluar.
     } else {
@@ -4301,7 +4544,7 @@ export default function App() {
           setShowAccountFrozenModal(true);
         } else if ((sanitizedAdmin.statusAkun as any) === 'DIHAPUS' || (sanitizedAdmin as any).isDeleted) {
           setShowAccountDeletedModal(true);
-        } else {
+        } else if (derivedSignal !== 'SUPERADMIN_UPDATED') {
           setShowAccountEditedModal(true);
         }
       }
@@ -4511,10 +4754,21 @@ export default function App() {
         wilayah={pendingNfcPinAuth.wilayah}
         method="nfc"
         appSettings={appSettings}
-        onSuccess={() => {
+        onSuccess={(verifiedData) => {
           const auth = pendingNfcPinAuth;
           setPendingNfcPinAuth(null);
-          handleLogin(auth.role, auth.nama, auth.wilayah);
+          handleLogin(
+            auth.role,
+            auth.nama,
+            auth.wilayah,
+            verifiedData?.username,
+            verifiedData?.userId,
+            verifiedData?.sessionToken,
+            {
+              allowedPillars: verifiedData?.allowedPillars,
+              pinOtoritas: verifiedData?.pinOtoritas,
+            }
+          );
           recordSystemActivity({
             session: {
               role: auth.role,
@@ -4560,7 +4814,15 @@ export default function App() {
               return next;
             });
             if (acc.id) {
-              setFirestoreDoc('admin_accounts', acc.id, cleanFirestoreData(acc)).catch(() => {});
+              const targetCol =
+                acc.role === 'superadmin'
+                  ? 'superadmin_accounts'
+                  : acc.role === 'developer'
+                  ? 'dev_accounts'
+                  : acc.role === 'user'
+                  ? 'user_accounts'
+                  : 'admin_accounts';
+              setFirestoreDoc(targetCol, acc.id, cleanFirestoreData(acc)).catch(() => {});
             }
           }}
           appSettings={appSettings}
@@ -4653,7 +4915,12 @@ export default function App() {
           />
           <AboutSection />
           <BannerBadge session={session} />
-          <PillarsGrid onSelectPillar={handleSelectPillar} allPillarData={allPillarData} summaryCounts={pillarSummaryCounts} />
+          <PillarsGrid
+            onSelectPillar={handleSelectPillar}
+            allPillarData={allPillarData}
+            summaryCounts={pillarSummaryCounts}
+            session={session}
+          />
 
           <ErrorBoundary fallbackMode="inline" fallbackTitle="Statistik & Sebaran PSKS" resetKeys={[allPillarData, regionalSummary]}>
             <React.Suspense fallback={null}>
@@ -4937,8 +5204,8 @@ export default function App() {
               onSaveAppSettings={handleSaveAppSettings}
               subView={accountSubView}
               onSwitchSubView={(v) => setAccountSubView(v)}
-              onLogin={(role, nama, wilayah) => {
-                handleLogin(role, nama, wilayah);
+              onLogin={(role, nama, wilayah, rawUsername, userId, sessionToken, extra) => {
+                handleLogin(role, nama, wilayah, rawUsername, userId, sessionToken, extra);
                 setOpenLoginModalOnAkun(false);
               }}
               onLogout={handleLogout}
@@ -4971,6 +5238,7 @@ export default function App() {
           <SuperadminManagementPage
             session={session}
             adminAccounts={adminAccounts}
+            appSettings={appSettings}
             onAddSuperadmin={handleAddAdminAccount}
             onUpdateSuperadmin={handleUpdateAdminAccount}
             onDeleteSuperadmin={handleDeleteAdminAccount}
@@ -5420,10 +5688,21 @@ export default function App() {
           wilayah={pendingNfcPinAuth.wilayah}
           method="nfc"
           appSettings={appSettings}
-          onSuccess={() => {
+          onSuccess={(verifiedData) => {
             const auth = pendingNfcPinAuth;
             setPendingNfcPinAuth(null);
-            handleLogin(auth.role, auth.nama, auth.wilayah);
+            handleLogin(
+              auth.role,
+              auth.nama,
+              auth.wilayah,
+              verifiedData?.username,
+              verifiedData?.userId,
+              verifiedData?.sessionToken,
+              {
+                allowedPillars: verifiedData?.allowedPillars,
+                pinOtoritas: verifiedData?.pinOtoritas,
+              }
+            );
             recordSystemActivity({
               session: {
                 role: auth.role,

@@ -29,7 +29,18 @@ import { AppSettings } from '../types';
 interface QRCardScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccessLogin?: (role: 'superadmin' | 'developer', nama: string, wilayah: string) => void;
+  onSuccessLogin?: (
+    role: 'superadmin' | 'developer',
+    nama: string,
+    wilayah: string,
+    extra?: {
+      username?: string;
+      userId?: string;
+      sessionToken?: string;
+      allowedPillars?: string[];
+      pinOtoritas?: string;
+    }
+  ) => void;
   onOpenPrintCards?: () => void;
   mode?: 'login' | 'check';
   defaultTab?: 'qr' | 'nfc';
@@ -590,10 +601,21 @@ export const QRCardScannerModal: React.FC<QRCardScannerModalProps> = ({
         method={pendingCardAuth.method}
         challengeToken={pendingCardAuth.challengeToken}
         appSettings={appSettings}
-        onSuccess={() => {
+        onSuccess={(verifiedData) => {
           triggerSuccessFeedback();
           if (onSuccessLogin) {
-            onSuccessLogin(pendingCardAuth.role, pendingCardAuth.nama, pendingCardAuth.wilayah);
+            onSuccessLogin(
+              (verifiedData?.role as 'superadmin' | 'developer') || pendingCardAuth.role,
+              verifiedData?.nama || pendingCardAuth.nama,
+              verifiedData?.wilayah || pendingCardAuth.wilayah,
+              {
+                username: verifiedData?.username,
+                userId: verifiedData?.userId,
+                sessionToken: verifiedData?.sessionToken,
+                allowedPillars: verifiedData?.allowedPillars,
+                pinOtoritas: verifiedData?.pinOtoritas,
+              }
+            );
           }
           onClose();
         }}

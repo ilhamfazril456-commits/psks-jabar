@@ -19,9 +19,10 @@ import {
   RefreshCw,
   Sliders,
   Phone,
-  Fingerprint
+  Fingerprint,
+  User
 } from 'lucide-react';
-import { AdminAccount, UserSession, PillarId } from '../types';
+import { AdminAccount, UserSession, PillarId, AppSettings } from '../types';
 import { PILLARS_CONFIG } from '../data/initialData';
 import { hashPassword, encryptSensitiveData, decryptSensitiveData } from '../utils/crypto';
 import { BackToHomeButton } from './BackToHomeButton';
@@ -29,6 +30,7 @@ import { BackToHomeButton } from './BackToHomeButton';
 interface SuperadminManagementPageProps {
   session: UserSession;
   adminAccounts: AdminAccount[];
+  appSettings?: AppSettings;
   onAddSuperadmin: (newAdmin: Omit<AdminAccount, 'id'>) => void;
   onUpdateSuperadmin: (updated: AdminAccount, securitySignal?: string) => void;
   onDeleteSuperadmin: (id: string) => void;
@@ -97,6 +99,7 @@ function getSuperadminPin(item: AdminAccount): string {
 export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> = ({
   session,
   adminAccounts,
+  appSettings,
   onAddSuperadmin,
   onUpdateSuperadmin,
   onDeleteSuperadmin,
@@ -126,7 +129,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     );
   }, [superadminList, searchQuery]);
 
-  // Visibility toggle map for passwords
+  // Visibility toggle map for username, passwords, and PIN
+  const [visibleUsernameMap, setVisibleUsernameMap] = useState<Record<string, boolean>>({});
   const [visiblePasswordMap, setVisiblePasswordMap] = useState<Record<string, boolean>>({});
   const [visiblePinMap, setVisiblePinMap] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -191,13 +195,26 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     setIsModalOpen(true);
   };
 
+  const resolveEffectivePin = (item: AdminAccount): string => {
+    const personal = getSuperadminPin(item);
+    if (item.pinOtoritas || item.pinEncrypted) return personal;
+    if (
+      (item.id === 'adm-super' || (item.username || '').toLowerCase().includes('superadmin')) &&
+      appSettings?.superadminPin &&
+      /^\d{6}$/.test(appSettings.superadminPin.trim())
+    ) {
+      return appSettings.superadminPin.trim();
+    }
+    return personal;
+  };
+
   const handleOpenEditModal = (acc: AdminAccount) => {
     setEditingAccount(acc);
     setFormNama(acc.namaAdmin || acc.username || '');
     setFormUsername(acc.username || '');
     const currentPass = getPlainSuperadminPassword(acc);
     setFormPassword(currentPass || '');
-    setFormPin(getSuperadminPin(acc));
+    setFormPin(resolveEffectivePin(acc));
     setFormNik(acc.nik || '');
     setFormPhone(acc.noWhatsapp || '');
     
@@ -250,9 +267,23 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       return;
     }
 
-    const passVal = validateSuperPassword(passClean);
-    if (!passVal.isValid) {
-      setFormError(passVal.message);
+    const existingPlainPass = editingAccount ? getPlainSuperadminPassword(editingAccount) : '';
+    const isPasswordBeingChanged = !editingAccount || (passClean.length > 0 && passClean !== existingPlainPass);
+
+    if (!editingAccount) {
+      const passVal = validateSuperPassword(passClean);
+      if (!passVal.isValid) {
+        setFormError(passVal.message);
+        return;
+      }
+    } else if (isPasswordBeingChanged) {
+      const passVal = validateSuperPassword(passClean);
+      if (!passVal.isValid) {
+        setFormError(passVal.message);
+        return;
+      }
+    } else if (!editingAccount.passwordHash && !passClean) {
+      setFormError('Kata sandi wajib diisi untuk akun yang belum memiliki kata sandi.');
       return;
     }
 
@@ -280,14 +311,19 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     const finalAllowedPillars = formAccessType === 'all' ? ['all'] : formSelectedPillars;
 
     // Zero-Leakage Cryptographic Construction
-    const passwordHash = hashPassword(passClean);
-    const passwordEncrypted = encryptSensitiveData(passClean);
+    const passwordHash = isPasswordBeingChanged
+      ? hashPassword(passClean)
+      : editingAccount!.passwordHash || hashPassword(passClean);
+    const passwordEncrypted = isPasswordBeingChanged
+      ? encryptSensitiveData(passClean)
+      : editingAccount!.passwordEncrypted || (passClean ? encryptSensitiveData(passClean) : undefined);
     const pinEncrypted = encryptSensitiveData(pinClean);
 
     if (editingAccount) {
       // Update Superadmin
-      const updatedAccount: AdminAccount = {
+      const updatedAccount: AdminAccount & { _previousUsername?: string } = {
         ...editingAccount,
+        _previousUsername: editingAccount.username,
         namaAdmin: namaClean,
         username: unameClean,
         passwordHash,
@@ -308,7 +344,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       delete updatedAccount.passwordPolos;
 
       onUpdateSuperadmin(updatedAccount, 'SUPERADMIN_UPDATED');
-      showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui!`);
+      showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui (PIN & Hak Akses langsung aktif)!`);
     } else {
       // Tambah Superadmin Baru
       const newId = `adm-super-${Date.now()}`;
@@ -492,7 +528,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
           {filteredList.map((item) => {
             const isFrozen = item.isFrozen === true || item.statusAkun === 'DIBEKUKAN';
             const plainPass = getPlainSuperadminPassword(item);
-            const plainPin = getSuperadminPin(item);
+            const plainPin = resolveEffectivePin(item);
+            const isUsernameVisible = visibleUsernameMap[item.id] || false;
             const isPassVisible = visiblePasswordMap[item.id] || false;
             const isPinVisible = visiblePinMap[item.id] || false;
 
@@ -507,7 +544,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                 }`}
               >
                 <div>
-                  {/* Card Header: Avatar & Status */}
+                  {/* Card Header: Avatar & Status (Username dipindahkan ke kotak kredensial sesuai urutan) */}
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#043e2e] to-[#0f2b5c] text-amber-300 flex items-center justify-center font-black text-base shadow-sm shrink-0">
@@ -519,8 +556,8 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                             {item.namaAdmin || item.username}
                           </h3>
                         </div>
-                        <div className="text-xs font-mono font-bold text-slate-500 mt-0.5">
-                          @{item.username}
+                        <div className="text-[11px] font-bold text-slate-500 mt-0.5">
+                          Superadmin Provinsi Jawa Barat
                         </div>
                       </div>
                     </div>
@@ -536,10 +573,45 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                     </span>
                   </div>
 
-                  {/* Kredensial Box: Password & PIN (Zero-Leakage) */}
+                  {/* Kredensial Box: Urutan Wajib -> Username, Password, PIN Otoritas */}
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 mb-4">
-                    {/* Password Row */}
+                    {/* 1. Username Row (Bisa dibuka/tutup) */}
                     <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-600 font-bold shrink-0">
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Username:</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-slate-900 truncate">
+                        <span className="bg-white px-2 py-1 rounded-lg border border-slate-200 truncate max-w-[160px] sm:max-w-[210px]">
+                          {isUsernameVisible ? item.username || '—' : '••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisibleUsernameMap((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                          }
+                          className="p-1 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                          title={isUsernameVisible ? 'Tutup Username' : 'Lihat Username'}
+                        >
+                          {isUsernameVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(item.username || '', `user-${item.id}`)}
+                          className="p-1 rounded-md hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                          title="Salin Username"
+                        >
+                          {copiedId === `user-${item.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. Password Row */}
+                    <div className="flex items-center justify-between gap-2 text-xs pt-2 border-t border-slate-200/60">
                       <div className="flex items-center gap-1.5 text-slate-600 font-bold shrink-0">
                         <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
                         <span>Kata Sandi:</span>
@@ -573,7 +645,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                       </div>
                     </div>
 
-                    {/* PIN Otoritas Row */}
+                    {/* 3. PIN Otoritas Row */}
                     <div className="flex items-center justify-between gap-2 text-xs pt-2 border-t border-slate-200/60">
                       <div className="flex items-center gap-1.5 text-slate-600 font-bold shrink-0">
                         <Lock className="w-3.5 h-3.5 text-amber-600" />
@@ -797,7 +869,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-slate-700">
-                      Kata Sandi <span className="text-rose-500">*</span>
+                      Kata Sandi {!editingAccount && <span className="text-rose-500">*</span>}
                     </label>
                     <button
                       type="button"
@@ -810,14 +882,14 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
                   </div>
                   <input
                     type="text"
-                    required
+                    required={!editingAccount}
                     value={formPassword}
                     onChange={(e) => setFormPassword(e.target.value)}
-                    placeholder="Min. 12 karakter kombinasi"
+                    placeholder={editingAccount ? 'Kosongkan jika tidak mengubah sandi' : 'Min. 12 karakter kombinasi'}
                     className="w-full h-10 px-3 text-xs sm:text-sm font-mono font-bold rounded-xl border border-slate-300 focus:border-emerald-600 focus:outline-hidden"
                   />
                   <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Kombinasi huruf besar, kecil, & angka.
+                    {editingAccount ? 'Biarkan kosong/tetap jika hanya mengubah PIN atau hak akses.' : 'Kombinasi huruf besar, kecil, & angka.'}
                   </span>
                 </div>
 
