@@ -33,9 +33,9 @@ interface SuperadminManagementPageProps {
   session: UserSession;
   adminAccounts: AdminAccount[];
   appSettings?: AppSettings;
-  onAddSuperadmin: (newAdmin: Omit<AdminAccount, 'id'> & { id?: string }) => void;
-  onUpdateSuperadmin: (updated: AdminAccount, securitySignal?: string) => void;
-  onDeleteSuperadmin: (id: string) => void;
+  onAddSuperadmin: (newAdmin: Omit<AdminAccount, 'id'> & { id?: string }) => Promise<void> | void;
+  onUpdateSuperadmin: (updated: AdminAccount, securitySignal?: string) => Promise<void> | void;
+  onDeleteSuperadmin: (id: string) => Promise<void> | void;
   onBackToHome: () => void;
 }
 
@@ -82,10 +82,10 @@ function getPlainSuperadminPassword(item: AdminAccount): string {
   if (item.passwordEncrypted) {
     try {
       const dec = decryptSensitiveData(item.passwordEncrypted);
-      if (dec) return dec;
+      if (dec && !dec.startsWith('ENC::')) return dec;
     } catch {}
   }
-  if (item.passwordPolos && item.passwordPolos !== '••••••••') {
+  if (item.passwordPolos && item.passwordPolos !== '••••••••' && !item.passwordPolos.startsWith('ENC::')) {
     return item.passwordPolos;
   }
   if (item.id === 'adm-super' || (item.username || '').toLowerCase() === 'superadmin') {
@@ -394,6 +394,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
         '';
 
       let serverAccount: any = null;
+      let serverErrorMessage: string | null = null;
       try {
         const res = await fetch('/api/developer/save-superadmin', {
           method: 'POST',
@@ -418,76 +419,91 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          // Only abort on explicit validation/auth failure (400/403); allow local DB fallback if server token not available
           if (res.status === 400 || res.status === 403) {
             setFormError(data?.message || 'Gagal menyimpan akun Superadmin.');
             return;
           }
+          serverErrorMessage = data?.message || `Server error (${res.status})`;
         } else if (data?.success && data?.account) {
           serverAccount = data.account;
         }
-      } catch {
-        // Network error: proceed with client-side encrypted persistence fallback
+      } catch (fetchErr: any) {
+        serverErrorMessage = fetchErr?.message || 'Gagal menghubungi server API.';
       }
 
-      if (editingAccount) {
-        const updatedAccount: AdminAccount & { _previousUsername?: string } = {
-          ...editingAccount,
-          ...(serverAccount || {}),
-          id: serverAccount?.id || targetId,
-          _previousUsername: editingAccount.username,
-          namaAdmin: namaClean,
-          username: unameClean,
-          passwordHash: serverAccount?.passwordHash || passwordHash,
-          passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
-          previousPasswordHashes: serverAccount?.previousPasswordHashes || nextPrevHashes,
-          pinOtoritas: pinClean,
-          pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
-          pinHash: serverAccount?.pinHash || pinHash,
-          allowedPillars: finalAllowedPillars,
-          allowedKepahlawanan: finalAllowedKepahlawanan,
-          nik: formNik.trim(),
-          noWhatsapp: formPhone.trim(),
-          role: 'superadmin',
-          wilayahTugas: 'PROVINSI JAWA BARAT',
-          statusActive: 'SAH_TERDAFTAR',
-          lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
-          lastEditedBy: session.nama || 'Lead Developer',
-          lastEditedByRole: 'developer',
-        };
-        delete updatedAccount.passwordPolos;
+      const resolvedNikEnc = serverAccount?.nik || (formNik.trim() ? encryptSensitiveData(formNik.trim()) : '');
+      const resolvedWaEnc = serverAccount?.noWhatsapp || (formPhone.trim() ? encryptSensitiveData(formPhone.trim()) : '');
 
-        onUpdateSuperadmin(updatedAccount, 'SUPERADMIN_UPDATED');
-        showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui (PIN, Sandi & Hak Akses langsung aktif)!`);
-      } else {
-        const newAccountPayload: Omit<AdminAccount, 'id'> & { id?: string } = {
-          ...(serverAccount || {}),
-          id: serverAccount?.id || targetId,
-          namaAdmin: namaClean,
-          username: unameClean,
-          passwordHash: serverAccount?.passwordHash || passwordHash,
-          passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
-          previousPasswordHashes: serverAccount?.previousPasswordHashes || [],
-          pinOtoritas: pinClean,
-          pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
-          pinHash: serverAccount?.pinHash || pinHash,
-          allowedPillars: finalAllowedPillars,
-          allowedKepahlawanan: finalAllowedKepahlawanan,
-          nik: formNik.trim(),
-          noWhatsapp: formPhone.trim(),
-          role: 'superadmin',
-          wilayahTugas: 'PROVINSI JAWA BARAT',
-          statusActive: 'SAH_TERDAFTAR',
-          statusAkun: 'AKTIF',
-          isFrozen: false,
-          lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
-          lastEditedBy: session.nama || 'Lead Developer',
-          lastEditedByRole: 'developer',
-        };
-        delete (newAccountPayload as any).passwordPolos;
+      try {
+        if (editingAccount) {
+          const updatedAccount: AdminAccount & { _previousUsername?: string } = {
+            ...editingAccount,
+            ...(serverAccount || {}),
+            id: serverAccount?.id || targetId,
+            _previousUsername: editingAccount.username,
+            namaAdmin: namaClean,
+            username: unameClean,
+            passwordHash: serverAccount?.passwordHash || passwordHash,
+            passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
+            previousPasswordHashes: serverAccount?.previousPasswordHashes || nextPrevHashes,
+            pinOtoritas: pinClean,
+            pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
+            pinHash: serverAccount?.pinHash || pinHash,
+            allowedPillars: finalAllowedPillars,
+            allowedKepahlawanan: finalAllowedKepahlawanan,
+            nik: resolvedNikEnc,
+            noWhatsapp: resolvedWaEnc,
+            role: 'superadmin',
+            wilayahTugas: 'PROVINSI JAWA BARAT',
+            statusActive: 'SAH_TERDAFTAR',
+            lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
+            lastEditedBy: session.nama || 'Lead Developer',
+            lastEditedByRole: 'developer',
+          };
+          delete updatedAccount.passwordPolos;
 
-        onAddSuperadmin(newAccountPayload);
-        showToast(`✅ Akun Superadmin "${namaClean}" (@${unameClean}) berhasil ditambahkan!`);
+          await Promise.resolve(onUpdateSuperadmin(updatedAccount, 'SUPERADMIN_UPDATED'));
+          showToast(`✅ Akun Superadmin "${namaClean}" berhasil diperbarui (PIN, Sandi & Hak Akses langsung aktif)!`);
+        } else {
+          const newAccountPayload: Omit<AdminAccount, 'id'> & { id?: string } = {
+            ...(serverAccount || {}),
+            id: serverAccount?.id || targetId,
+            namaAdmin: namaClean,
+            username: unameClean,
+            passwordHash: serverAccount?.passwordHash || passwordHash,
+            passwordEncrypted: serverAccount?.passwordEncrypted || passwordEncrypted,
+            previousPasswordHashes: serverAccount?.previousPasswordHashes || [],
+            pinOtoritas: pinClean,
+            pinEncrypted: serverAccount?.pinEncrypted || pinEncrypted,
+            pinHash: serverAccount?.pinHash || pinHash,
+            allowedPillars: finalAllowedPillars,
+            allowedKepahlawanan: finalAllowedKepahlawanan,
+            nik: resolvedNikEnc,
+            noWhatsapp: resolvedWaEnc,
+            role: 'superadmin',
+            wilayahTugas: 'PROVINSI JAWA BARAT',
+            statusActive: 'SAH_TERDAFTAR',
+            statusAkun: 'AKTIF',
+            isFrozen: false,
+            lastUpdatedTimestamp: serverAccount?.lastUpdatedTimestamp || nowMs,
+            lastEditedBy: session.nama || 'Lead Developer',
+            lastEditedByRole: 'developer',
+          };
+          delete (newAccountPayload as any).passwordPolos;
+
+          await Promise.resolve(onAddSuperadmin(newAccountPayload));
+          showToast(`✅ Akun Superadmin "${namaClean}" (@${unameClean}) berhasil ditambahkan!`);
+        }
+      } catch (persistErr: any) {
+        if (!serverAccount) {
+          setFormError(serverErrorMessage || persistErr?.message || 'Gagal menyimpan perubahan akun Superadmin ke database.');
+          return;
+        }
+        showToast(
+          editingAccount
+            ? `✅ Akun Superadmin "${namaClean}" berhasil diperbarui!`
+            : `✅ Akun Superadmin "${namaClean}" (@${unameClean}) berhasil ditambahkan!`
+        );
       }
 
       try {
@@ -502,7 +518,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
     }
   };
 
-  const handleToggleFreeze = (acc: AdminAccount) => {
+  const handleToggleFreeze = async (acc: AdminAccount) => {
     const isCurrentlyFrozen = acc.isFrozen === true || acc.statusAkun === 'DIBEKUKAN';
     const nextFrozen = !isCurrentlyFrozen;
     const updated: AdminAccount = {
@@ -511,7 +527,7 @@ export const SuperadminManagementPage: React.FC<SuperadminManagementPageProps> =
       statusAkun: nextFrozen ? 'DIBEKUKAN' : 'AKTIF',
       lastUpdatedTimestamp: Date.now(),
     };
-    onUpdateSuperadmin(updated);
+    await Promise.resolve(onUpdateSuperadmin(updated, nextFrozen ? 'FREEZE' : 'UNFREEZE'));
     showToast(
       nextFrozen
         ? `⚠️ Akun Superadmin "${acc.namaAdmin}" berhasil DIBEKUKAN.`

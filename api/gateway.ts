@@ -369,16 +369,38 @@ async function handleSaveSuperadmin(req: any, res: any) {
   if (!/^\d{6}$/.test(pinClean)) return sendJson(res, 400, { success: false, message: 'PIN Otoritas wajib berupa tepat 6 digit angka.' });
 
   const targetId = typeof id === 'string' && id.trim() ? id.trim() : `adm-super-${Date.now()}`;
+  const lookupIdents = Array.from(new Set([targetId, _previousUsername, unameClean].filter((v): v is string => typeof v === 'string' && v.trim().length > 0)));
   let existingRow: any = null;
-  for (const ident of [targetId, _previousUsername, unameClean].filter(Boolean)) {
-    const { data } = await supabase.from('superadmin_accounts').select('*').or(`id.eq.${ident},username.ilike.${String(ident).toLowerCase()}`).limit(1).maybeSingle();
-    if (data) { existingRow = data; break; }
+  for (const ident of lookupIdents) {
+    try {
+      const { data: byId } = await supabase.from('superadmin_accounts').select('*').eq('id', ident.trim()).limit(1).maybeSingle();
+      if (byId) { existingRow = byId; break; }
+      const { data: byUname } = await supabase.from('superadmin_accounts').select('*').ilike('username', ident.trim().toLowerCase()).limit(1).maybeSingle();
+      if (byUname) { existingRow = byUname; break; }
+    } catch {}
   }
-  const existingDataObj: Record<string, any> = existingRow?.data && typeof existingRow.data === 'object' ? { ...existingRow.data } : {};
+
+  let fsExistingData: Record<string, any> | null = null;
+  try {
+    const db = getDb();
+    const directSnap = await getDoc(doc(db, 'superadmin_accounts', targetId));
+    if (directSnap.exists()) {
+      fsExistingData = directSnap.data() as Record<string, any>;
+    }
+  } catch {}
+
+  const sbDataObj: Record<string, any> = existingRow?.data && typeof existingRow.data === 'object' ? { ...existingRow.data } : {};
+  const sbTs = Number(sbDataObj.lastUpdatedTimestamp || 0);
+  const fsTs = Number(fsExistingData?.lastUpdatedTimestamp || 0);
+  const existingDataObj: Record<string, any> =
+    fsExistingData && (!existingRow || fsTs >= sbTs)
+      ? { ...sbDataObj, ...fsExistingData }
+      : { ...(fsExistingData || {}), ...sbDataObj };
+
   const defMatch = DEFAULT_ROOT.find((a) => a.id === targetId || a.username === unameClean);
   const existingHash = existingRow?.passwordHash || existingDataObj.passwordHash || defMatch?.passwordHash || '';
   const existingDecryptedPass = existingDataObj.passwordEncrypted ? decryptSensitiveData(existingDataObj.passwordEncrypted) : '';
-  const isCreating = !existingRow && !defMatch && !(typeof id === 'string' && id.trim());
+  const isCreating = !existingRow && !fsExistingData && !defMatch && !(typeof id === 'string' && id.trim());
   const isPasswordChanged = Boolean(passClean && passClean !== existingDecryptedPass);
 
   if (isCreating || isPasswordChanged || (!existingHash && passClean)) {
@@ -396,14 +418,21 @@ async function handleSaveSuperadmin(req: any, res: any) {
   const encPin = encryptSensitiveData(pinClean);
   const hashedPin = hashPassword(pinClean);
   const nowMs = Date.now();
-  const encNik = typeof nik === 'string' && nik.trim() ? encryptSensitiveData(nik.trim()) : existingDataObj.nik || '';
-  const nikHash = typeof nik === 'string' && nik.trim() ? hashSearchableField(nik.trim()) : existingDataObj.nikHash || '';
-  const encWa = typeof noWhatsapp === 'string' && noWhatsapp.trim() ? encryptSensitiveData(noWhatsapp.trim()) : existingDataObj.noWhatsapp || '';
+  const hasNikParam = nik !== undefined;
+  const nikTrim = typeof nik === 'string' ? nik.trim() : '';
+  const encNik = hasNikParam ? (nikTrim ? encryptSensitiveData(nikTrim) : '') : (existingDataObj.nik || '');
+  const nikHash = hasNikParam ? (nikTrim ? hashSearchableField(nikTrim) : '') : (existingDataObj.nikHash || '');
+  const hasWaParam = noWhatsapp !== undefined;
+  const waTrim = typeof noWhatsapp === 'string' ? noWhatsapp.trim() : '';
+  const encWa = hasWaParam ? (waTrim ? encryptSensitiveData(waTrim) : '') : (existingDataObj.noWhatsapp || '');
   const finalAllowedPillars = Array.isArray(allowedPillars) ? allowedPillars : Array.isArray(existingDataObj.allowedPillars) ? existingDataObj.allowedPillars : ['all'];
   const finalAllowedKepahlawanan = Array.isArray(allowedKepahlawanan) ? allowedKepahlawanan : Array.isArray(existingDataObj.allowedKepahlawanan) ? existingDataObj.allowedKepahlawanan : ['all'];
 
-  delete existingDataObj.passwordPolos; delete existingDataObj.pinOtoritas; delete existingDataObj.superadminPin; delete existingDataObj.developerPin;
-  const nextDataJson = {
+  delete existingDataObj.passwordPolos; delete existingDataObj.pinOtoritas; delete existingDataObj.superadminPin; delete existingDataObj.developerPin; delete existingDataObj._previousUsername;
+  if (hasNikParam && !nikTrim) { delete existingDataObj.nik; delete existingDataObj.nikHash; }
+  if (hasWaParam && !waTrim) { delete existingDataObj.noWhatsapp; }
+
+  const nextDataJson: Record<string, any> = {
     ...existingDataObj,
     id: targetId, username: unameClean, namaAdmin: namaClean, role: 'superadmin', wilayahTugas: 'PROVINSI JAWA BARAT',
     statusActive: 'SAH_TERDAFTAR', statusAkun: statusAkun || (isFrozen ? 'DIBEKUKAN' : 'AKTIF'), isFrozen: Boolean(isFrozen),
@@ -414,15 +443,29 @@ async function handleSaveSuperadmin(req: any, res: any) {
     lastUpdatedTimestamp: nowMs, lastEditedBy: actor.namaAdmin || actor.username || 'Lead Developer', lastEditedByRole: 'developer', isSelfUpdate: false,
   };
 
+  // Note: Supabase table superadmin_accounts columns are strictly id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, data
   const { error: sbErr } = await supabase.from('superadmin_accounts').upsert({
     id: targetId, username: unameClean, namaAdmin: namaClean, role: 'superadmin', statusActive: 'SAH_TERDAFTAR', wilayahTugas: 'PROVINSI JAWA BARAT',
-    passwordHash: nextPasswordHash, sessionToken: existingRow?.sessionToken || '', ...(encNik ? { nik: encNik, nikHash } : {}), ...(encWa ? { noWhatsapp: encWa } : {}), data: nextDataJson,
+    passwordHash: nextPasswordHash, sessionToken: existingRow?.sessionToken || '', data: nextDataJson,
   }, { onConflict: 'id' });
-  if (sbErr) return sendJson(res, 500, { success: false, message: 'Gagal menyimpan data Superadmin ke database.' });
+  if (sbErr) {
+    console.error('[Vercel Save Superadmin Supabase Error]:', sbErr);
+    return sendJson(res, 500, { success: false, message: 'Gagal menyimpan data Superadmin ke database.' });
+  }
+
+  try {
+    await supabase.from('admin_accounts').delete().eq('id', targetId);
+  } catch {}
 
   try {
     const db = getDb();
-    await setDoc(doc(db, 'superadmin_accounts', targetId), nextDataJson, { merge: true });
+    const fsPayload: Record<string, any> = {
+      ...nextDataJson,
+      ...(hasNikParam && !nikTrim ? { nik: deleteField(), nikHash: deleteField() } : {}),
+      ...(hasWaParam && !waTrim ? { noWhatsapp: deleteField() } : {}),
+    };
+    await setDoc(doc(db, 'superadmin_accounts', targetId), fsPayload, { merge: true });
+    try { await deleteDoc(doc(db, 'admin_accounts', targetId)); } catch {}
     if (targetId === 'adm-super' || unameClean === 'superadmin' || unameClean === 'superadmin_jabar' || unameClean === 'superadmin jabar') {
       const { data: eg } = await supabase.from('app_settings').select('data').eq('id', 'global').maybeSingle();
       const bg = eg?.data && typeof eg.data === 'object' ? { ...eg.data } : {};

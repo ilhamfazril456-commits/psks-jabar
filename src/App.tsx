@@ -1727,23 +1727,41 @@ export default function App() {
 
         const rawList = Array.from(loadedMap.values()).filter((a) => {
           const u = (a.username || '').toLowerCase().trim();
-          return u !== 'admin_ilham';
+          if (u === 'admin_ilham') return false;
+          // Drop skeleton ghost presence-only rows (e.g. from presence heartbeat without real credentials)
+          const hasRealCreds = Boolean(a.passwordHash || a.passwordEncrypted || a.pinEncrypted || a.pinHash || a.pinOtoritas);
+          if (!hasRealCreds && (!u || u === (a.id || '').toLowerCase().trim())) return false;
+          return true;
         });
 
         const rolePriority = (role?: string) =>
           role === 'developer' ? 4 : role === 'superadmin' ? 3 : role === 'admin' ? 2 : 1;
 
-        const dedupedMap = new Map<string, AdminAccount>();
+        const isNewerOrHigherRole = (candidate: AdminAccount, prev: AdminAccount) => {
+          const cTs = Number(candidate.lastUpdatedTimestamp || 0);
+          const pTs = Number(prev.lastUpdatedTimestamp || 0);
+          if (cTs !== pTs) return cTs > pTs;
+          return rolePriority(candidate.role) >= rolePriority(prev.role);
+        };
+
+        // Pass 1: Deduplicate by canonical document id so renamed usernames never leave stale duplicates
+        const dedupedById = new Map<string, AdminAccount>();
         rawList.forEach((acc) => {
+          const idKey = (acc.id || acc.username || '').toLowerCase().trim();
+          if (!idKey) return;
+          const prev = dedupedById.get(idKey);
+          if (!prev || isNewerOrHigherRole(acc, prev)) {
+            dedupedById.set(idKey, acc);
+          }
+        });
+
+        // Pass 2: Deduplicate by username
+        const dedupedMap = new Map<string, AdminAccount>();
+        Array.from(dedupedById.values()).forEach((acc) => {
           const key = (acc.username || acc.id || '').toLowerCase().trim();
           if (key) {
             const prev = dedupedMap.get(key);
-            if (
-              !prev ||
-              (acc.lastUpdatedTimestamp || 0) > (prev.lastUpdatedTimestamp || 0) ||
-              ((acc.lastUpdatedTimestamp || 0) === (prev.lastUpdatedTimestamp || 0) &&
-                rolePriority(acc.role) >= rolePriority(prev.role))
-            ) {
+            if (!prev || isNewerOrHigherRole(acc, prev)) {
               dedupedMap.set(key, acc);
             }
           }
@@ -4544,7 +4562,8 @@ export default function App() {
 
   const handleUpdateAdminAccount = async (
     updatedAdmin: AdminAccount,
-    securitySignal?: string
+    securitySignal?: string,
+    throwOnError = false
   ) => {
     const resolvedPinEnc =
       updatedAdmin.pinEncrypted ||
@@ -4789,12 +4808,18 @@ export default function App() {
     const { passwordPolos: _pp, pinOtoritas: _po, _previousUsername: _pu, ...dbSafePayload } = sanitizedAdmin as any;
     try {
       await setFirestoreDoc(targetCollection, sanitizedAdmin.id, cleanFirestoreData(dbSafePayload), { merge: true });
+      if (targetCollection === 'superadmin_accounts' || targetCollection === 'dev_accounts') {
+        deleteFirestoreDoc('admin_accounts', sanitizedAdmin.id).catch(() => {});
+      }
     } catch (err) {
       if (isQuotaError(err)) {
         quotaExceededRef.current = true;
         setIsQuotaExceeded(true);
       }
       addToSyncQueue({ collection: targetCollection, docId: sanitizedAdmin.id, type: 'SET', data: cleanFirestoreData(dbSafePayload) });
+      if (throwOnError) {
+        throw err;
+      }
     }
   };
 
@@ -5479,7 +5504,7 @@ export default function App() {
             adminAccounts={adminAccounts}
             appSettings={appSettings}
             onAddSuperadmin={handleAddAdminAccount}
-            onUpdateSuperadmin={handleUpdateAdminAccount}
+            onUpdateSuperadmin={(acc, sig) => handleUpdateAdminAccount(acc, sig, true)}
             onDeleteSuperadmin={handleDeleteAdminAccount}
             onBackToHome={handleBackToHome}
           />

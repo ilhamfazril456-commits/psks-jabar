@@ -1573,11 +1573,13 @@ async function startServer() {
       const hashedPin = hashPassword(pinClean);
       const nowMs = Date.now();
 
+      const hasNikParam = nik !== undefined;
       const rawNik = typeof nik === 'string' ? nik.trim() : '';
+      const hasWaParam = noWhatsapp !== undefined;
       const rawWa = typeof noWhatsapp === 'string' ? noWhatsapp.trim() : '';
-      const encNik = rawNik ? encryptSensitiveData(rawNik) : (existingDataObj.nik || '');
-      const nikHash = rawNik ? hashSearchableField(rawNik) : (existingDataObj.nikHash || '');
-      const encWa = rawWa ? encryptSensitiveData(rawWa) : (existingDataObj.noWhatsapp || '');
+      const encNik = hasNikParam ? (rawNik ? encryptSensitiveData(rawNik) : '') : (existingDataObj.nik || '');
+      const nikHash = hasNikParam ? (rawNik ? hashSearchableField(rawNik) : '') : (existingDataObj.nikHash || '');
+      const encWa = hasWaParam ? (rawWa ? encryptSensitiveData(rawWa) : '') : (existingDataObj.noWhatsapp || '');
 
       const finalAllowedPillars = Array.isArray(allowedPillars)
         ? allowedPillars
@@ -1596,6 +1598,13 @@ async function startServer() {
       delete existingDataObj.superadminPin;
       delete existingDataObj.developerPin;
       delete existingDataObj._previousUsername;
+      if (hasNikParam && !rawNik) {
+        delete existingDataObj.nik;
+        delete existingDataObj.nikHash;
+      }
+      if (hasWaParam && !rawWa) {
+        delete existingDataObj.noWhatsapp;
+      }
 
       const nextDataJson = {
         ...existingDataObj,
@@ -1622,6 +1631,7 @@ async function startServer() {
         isSelfUpdate: false,
       };
 
+      // Note: Supabase table superadmin_accounts strictly has columns: id, username, namaAdmin, role, statusActive, wilayahTugas, passwordHash, sessionToken, data
       const sbRow = {
         id: targetId,
         username: unameClean,
@@ -1631,8 +1641,6 @@ async function startServer() {
         wilayahTugas: 'PROVINSI JAWA BARAT',
         passwordHash: nextPasswordHash,
         sessionToken: existingAcc?.rawRow?.sessionToken || '',
-        ...(encNik ? { nik: encNik, nikHash } : {}),
-        ...(encWa ? { noWhatsapp: encWa } : {}),
         data: nextDataJson,
       };
 
@@ -1655,9 +1663,14 @@ async function startServer() {
 
       // Firestore sync (strictly encrypted & hashed, ZERO plaintext)
       try {
-        const { doc, setDoc, deleteDoc } = await import('firebase/firestore');
+        const { doc, setDoc, deleteDoc, deleteField } = await import('firebase/firestore');
         const { db } = await import('./src/lib/firebase');
-        await setDoc(doc(db, 'superadmin_accounts', targetId), nextDataJson, { merge: true });
+        const fsPayload: Record<string, any> = {
+          ...nextDataJson,
+          ...(hasNikParam && !rawNik ? { nik: deleteField(), nikHash: deleteField() } : {}),
+          ...(hasWaParam && !rawWa ? { noWhatsapp: deleteField() } : {}),
+        };
+        await setDoc(doc(db, 'superadmin_accounts', targetId), fsPayload, { merge: true });
         try {
           await deleteDoc(doc(db, 'admin_accounts', targetId));
         } catch {}

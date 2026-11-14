@@ -293,8 +293,6 @@ export function mapDocToSupabaseRow(collectionName: string, docId: string, data:
       wilayahTugas: safeWilayah,
       passwordHash: passwordHash || '',
       sessionToken: sessionToken || '',
-      ...(encNik ? { nik: encNik, nikHash } : {}),
-      ...(encWa ? { noWhatsapp: encWa } : {}),
       data: {
         ...sanitizedRest,
         ...(encNik ? { nik: encNik, nikHash } : {}),
@@ -1193,14 +1191,6 @@ export async function setFirestoreDoc(
         partialUpdate.passwordHash = data.passwordHash;
       }
       if (data.sessionToken !== undefined) partialUpdate.sessionToken = data.sessionToken;
-      if (data.nik !== undefined) {
-        const enc = encryptSensitiveData(data.nik);
-        partialUpdate.nik = enc;
-        partialUpdate.nikHash = hashSearchableField(enc);
-      }
-      if (data.noWhatsapp !== undefined) {
-        partialUpdate.noWhatsapp = encryptSensitiveData(data.noWhatsapp);
-      }
 
       // Extract non-column fields to store in JSONB data (ZERO PLAINTEXT: never persist passwordPolos or pinOtoritas)
       const {
@@ -1231,9 +1221,13 @@ export async function setFirestoreDoc(
         ? hashPassword(decPinForHash)
         : (typeof data.pinHash === 'string' && data.pinHash ? data.pinHash : '');
 
-      const encNik = _nik ? encryptSensitiveData(_nik) : '';
-      const nikHash = _nik ? hashSearchableField(_nik) : '';
-      const encWa = _wa ? encryptSensitiveData(_wa) : '';
+      const hasNikField = data.nik !== undefined;
+      const nikTrimmed = typeof _nik === 'string' ? _nik.trim() : '';
+      const encNik = nikTrimmed ? encryptSensitiveData(nikTrimmed) : '';
+      const nikHash = nikTrimmed ? hashSearchableField(nikTrimmed) : '';
+      const hasWaField = data.noWhatsapp !== undefined;
+      const waTrimmed = typeof _wa === 'string' ? _wa.trim() : '';
+      const encWa = waTrimmed ? encryptSensitiveData(waTrimmed) : '';
 
       try {
         let chosenTable = targetTable;
@@ -1268,6 +1262,13 @@ export async function setFirestoreDoc(
           delete (existingData as any).superadminPin;
           delete (existingData as any).developerPin;
           delete (existingData as any)._previousUsername;
+          if (hasNikField && !nikTrimmed) {
+            delete (existingData as any).nik;
+            delete (existingData as any).nikHash;
+          }
+          if (hasWaField && !waTrimmed) {
+            delete (existingData as any).noWhatsapp;
+          }
 
           const cleanedRest = { ...rest };
           delete (cleanedRest as any).passwordPolos;
@@ -1275,6 +1276,9 @@ export async function setFirestoreDoc(
           delete (cleanedRest as any).superadminPin;
           delete (cleanedRest as any).developerPin;
           delete (cleanedRest as any)._previousUsername;
+          if (hasNikField && !nikTrimmed) {
+            delete (cleanedRest as any).nikHash;
+          }
 
           partialUpdate.data = {
             ...existingData,
@@ -1400,12 +1404,25 @@ export async function setFirestoreDoc(
         ? 'superadmin_accounts'
         : collectionName;
 
+    let firestoreOk = false;
+    let firestoreErr: any = null;
     try {
       const { firestore, db } = await getFirestoreModule();
       const docRef = firestore.doc(db, resolvedFsCollection, docId);
       await firestore.setDoc(docRef, sanitizeForFirestorePayload(resolvedFsCollection, data), { merge: true });
+      firestoreOk = true;
+      if (resolvedFsCollection === 'superadmin_accounts' || resolvedFsCollection === 'dev_accounts') {
+        try {
+          await firestore.deleteDoc(firestore.doc(db, 'admin_accounts', docId));
+        } catch {}
+      }
     } catch (fsErr) {
+      firestoreErr = fsErr;
       console.warn(`Direct Firestore sync notice on ${resolvedFsCollection}/${docId}:`, fsErr);
+    }
+
+    if (!supabaseOk && !firestoreOk) {
+      throw firestoreErr || supabaseError || new Error(`Failed to save ${resolvedFsCollection}/${docId}`);
     }
   }
 
